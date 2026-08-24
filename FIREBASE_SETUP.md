@@ -1,21 +1,21 @@
-# Firebase setup
+# Firebaseセットアップ
 
-The game runs in local-only mode when Firebase is not configured. Local saves are kept in browser storage and are not deleted when Firebase initialization or writes fail.
+Firebaseが設定されていない場合、ゲームはローカル専用モードで動作します。セーブデータはブラウザーのストレージに保持され、Firebaseの初期化や書き込みに失敗しても削除されません。
 
-This implementation uses **Cloud Firestore, not Firebase Realtime Database**. Firestore still provides real-time listeners (`onSnapshot`) for the current champion, while its document model and transactions fit saved 40-card decks and versioned crown updates.
+本実装で使用するデータベースは、Firebase Realtime Databaseではなく**Cloud Firestore**です。Firestoreでもリアルタイムリスナー（`onSnapshot`）を利用して現チャンピオンを購読できます。また、ドキュメント形式のデータモデルとトランザクションは、保存された40枚デッキやバージョン付き王座更新の管理に適しています。
 
-## 1. Create the project
+## 1. Firebaseプロジェクトを作成する
 
-1. Create a Firebase project and register a Web app.
-2. Enable **Authentication → Sign-in method → Anonymous**.
-3. Create a Cloud Firestore database.
-4. In Authentication settings, add the production GitHub Pages hostname (for example `YOUR_NAME.github.io`) to Authorized domains.
+1. Firebaseプロジェクトを作成し、Webアプリを登録します。
+2. **Authentication → Sign-in method → Anonymous（匿名）**を有効にします。
+3. Cloud Firestoreデータベースを作成します。
+4. Authenticationの設定で、本番GitHub Pagesのホスト名（例：`YOUR_NAME.github.io`）を承認済みドメインへ追加します。
 
-Firebase's current browser-module setup is documented at [Alternative ways to add Firebase](https://firebase.google.com/docs/web/alt-setup). This project pins the CDN modules to `12.17.1` in `src/persistence/firebase-sdk.js`.
+現在のFirebaseブラウザーモジュールの設定方法は、公式ドキュメントの[Firebaseを追加する別の方法](https://firebase.google.com/docs/web/alt-setup)を参照してください。本プロジェクトでは、`src/persistence/firebase-sdk.js`でCDNモジュールのバージョンを`12.17.1`に固定しています。
 
-## 2. Add the web configuration
+## 2. Webアプリの設定を追加する
 
-Edit `src/config/firebase-config.js` and replace `null` with the Web app configuration shown by Firebase Console:
+`src/config/firebase-config.js`を編集し、`null`をFirebase Consoleに表示されるWebアプリ設定へ置き換えます。
 
 ```js
 export const firebaseConfig = {
@@ -28,19 +28,19 @@ export const firebaseConfig = {
 };
 ```
 
-Alternatively, load a small script before `src/app.js` which assigns the same object to `window.__MC_FIREBASE_CONFIG__`; `firebase-config.example.js` shows the format.
+別の方法として、`src/app.js`より前に小さなスクリプトを読み込み、同じ設定オブジェクトを`window.__MC_FIREBASE_CONFIG__`へ代入することもできます。書式は`firebase-config.example.js`を参照してください。
 
-Firebase web configuration identifies the project and is not an administrator secret. Access control still depends on Authentication and `firestore.rules`. Restrict the API key to the required APIs and production host in Google Cloud Console.
+FirebaseのWeb設定は接続先プロジェクトを識別する情報であり、管理者用の秘密情報ではありません。アクセス制御はAuthenticationと`firestore.rules`で行います。Google Cloud Consoleでは、APIキーの利用先を必要なAPIと本番ホストに制限してください。
 
-## 3. Deploy security rules
+## 3. セキュリティルールをデプロイする
 
-Install the Firebase CLI, authenticate it, then copy `.firebaserc.example` to `.firebaserc` and replace the project id.
+Firebase CLIをインストールしてログインします。その後、`.firebaserc.example`を`.firebaserc`へコピーし、プロジェクトIDを書き換えます。
 
 ```sh
 firebase deploy --only firestore:rules,firestore:indexes
 ```
 
-The app uses this schema:
+アプリでは次のデータ構造を使用します。
 
 ```text
 users/{uid}
@@ -49,34 +49,42 @@ legendDecks/{uid--deckId}
 gameState/champion
 ```
 
-Saved deck documents contain 40 card instance/master-id pairs plus name, total play TP, deck-specific qualification, highest reach, representative monster, and timestamps.
+保存デッキのドキュメントには、40枚分のカードインスタンスIDとマスターIDの組、デッキ名、総プレイTP、デッキ単位の大会出場資格、最高到達大会、代表モンスター、各種日時を保存します。
 
-When a saved deck earns `qualification: "legend"`, the Repository also publishes a sanitized 40-card snapshot to `legendDecks`. Authenticated players may read these snapshots; only the owner can create, update, or delete one. Security Rules cross-check the public snapshot against the owner's private `savedDecks` document and profile. A Legend tournament loads up to 14 valid snapshots from other users, ignores invalid/stale master data, fills empty slots with generated Legend CPUs, and always reserves the final opponent for `gameState/champion`.
+保存デッキが`qualification: "legend"`を獲得すると、Repositoryは個人情報を除いた40枚スナップショットを`legendDecks`へ公開します。認証済みプレイヤーはこのスナップショットを読み込めますが、作成・更新・削除できるのは所有者だけです。Security Rulesでは、公開スナップショットを所有者の非公開`users/{uid}/savedDecks/{deckId}`ドキュメントおよびプロフィールと照合します。
 
-The champion document contains:
+レジェンドカップでは、他ユーザーの有効なスナップショットを最大14デッキ読み込みます。不正なデータや現在のマスターデータと整合しない古いデータは除外し、空き枠は自動生成したLegend CPUで補います。決勝の対戦相手は常に`gameState/champion`の現チャンピオンです。
+
+チャンピオンのドキュメントには、次の項目を保存します。
 
 - `championUserId`
 - `championDisplayName`
 - `championDeckId`
 - `championDeckName`
-- `championDeckSnapshot` (40 cards)
+- `championDeckSnapshot`（40枚）
 - `representativeMonsterId`
 - `crownedAt`
 - `defenseCount`
 - `championVersion`
 
-## 4. Verify public Legend decks
+## 4. 他プレイヤーのレジェンドデッキを確認する
 
-After deploying the rules, win Gold with a deck (granting Legend qualification), then inspect `legendDecks` in Firebase Console. Open the game with a second anonymous account/browser and start a Legend Cup; the first account's deck should appear in the 16-player bracket as an `他プレイヤー` entrant. The source owner's own snapshot is excluded from their own tournament.
+Security Rulesのデプロイ後、デッキでゴールドカップに優勝し、レジェンド出場資格を獲得します。その後、Firebase Consoleで`legendDecks`を確認してください。
 
-## 5. Champion concurrency policy
+別のブラウザーまたは別の匿名アカウントでゲームを開き、レジェンドカップを開始します。最初のアカウントのデッキが、16人トーナメント表へ`他プレイヤー`枠として登場すれば正常です。自分が所有する公開スナップショットは、自分の大会には登場しません。
 
-The Legend final captures `championVersion` at battle start. A win calls a Firestore transaction which reads the current champion and writes only if that version still matches. Concurrent changes cause `champion/version-conflict`; the old champion cannot overwrite the new champion. The active game policy is `strict-version-rechallenge` in `src/champion/policy.js`.
+## 5. 王座更新時の競合ポリシー
 
-Firestore transactions fail offline by design. The game therefore does not claim an authoritative online crown through its local fallback when an online transaction fails.
+レジェンド決勝の開始時に`championVersion`を取得します。勝利後はFirestore transactionで現在のチャンピオンを読み込み、バージョンが一致している場合だけ新チャンピオンを書き込みます。
 
-## 6. Production integrity limitation
+対戦中に別ユーザーが王座を更新していた場合は`champion/version-conflict`となり、古い王者データが新しい王者を上書きすることはありません。現在のゲームポリシーは、`src/champion/policy.js`の`strict-version-rechallenge`です。
 
-The static GitHub Pages client and Security Rules can enforce authentication, document shape, ownership, 40-card snapshots, and monotonic champion versions. They cannot prove that a user actually won a legal battle, because modified client code can forge a write. Before treating the crown as cheat-resistant production data, move the final win verification/claim to a trusted service (for example a callable Cloud Function that validates a signed replay) and consider App Check. The current transaction implementation is concurrency-safe, but not server-authoritative anti-cheat.
+Firestore transactionは、仕様上オフラインでは失敗します。そのため、オンラインでの王座更新に失敗した場合、ローカル保存へのフォールバックだけで正式な王座獲得とは判定しません。
 
-Anonymous accounts should be upgraded or linked to a durable sign-in method before launch if long-term ownership matters. Firebase can be configured to clean up old anonymous accounts; enabling that option would remove persistent identity for inactive users.
+## 6. 本番運用における整合性の制限
+
+静的なGitHub PagesクライアントとSecurity Rulesでは、認証、ドキュメント形式、所有権、40枚スナップショット、`championVersion`の単調増加を検証できます。一方、改変されたクライアントコードから勝利結果を偽装できるため、ユーザーが正規のバトルに実際に勝利したことまでは証明できません。
+
+不正耐性のある本番王座データとして運用する前に、最終勝利の検証と王座更新を信頼できるサーバー側処理へ移してください。例えば、署名付きリプレイを検証するCallable Cloud Functionsを利用し、App Checkの導入も検討します。現在のtransaction実装は同時更新に対して安全ですが、サーバー権威型のチート対策ではありません。
+
+長期的なデッキ所有権を維持する場合、正式公開前に匿名アカウントを永続的なログイン方法へアップグレードまたは連携できるようにしてください。Firebaseには古い匿名アカウントを自動削除する設定がありますが、これを有効にすると、長期間利用していないユーザーの永続IDも削除されます。
