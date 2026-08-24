@@ -1,13 +1,15 @@
 # HANDOFF
 
 基準: Sim8.7完全展開版 + 2026-08-24距離廃止差分  
-リリース: 1.0.0（プレイテスト可能な第1完成版）
+リリース: 1.2.1（UIリファレンス準拠・PWA版）
 
 ## 現在の状態
 
 ホームから保存40枚を選び、16人大会の4試合、各勝利後のカード奪取、敗退/優勝保存、次大会解禁、レジェンド決勝、王座transaction、ホームの王者リアルタイム表示まで接続済みです。Firebase未設定でもLocalStorageで同じゲームループを遊べます。
 
 距離システムはコード上も無効です。`RULES.distanceSystemEnabled` は `false`、合法行動にmovementはなく、盤面は汎用3枠です。`legacyDistance` は正本由来の追跡情報であり判定へ使わないでください。
+
+バトル画面は1.2.1で、左ステータス・中央テーブル・右コマンドの3列へ再設計しました。高さ430px以下ではカードを高さ基準で縮尺し、大会の次戦案内は右列へ移動します。レスポンシブ境界を変更する際は、手札と行動欄を同一セルへ戻さないでください。
 
 ## 最初に実行する確認
 
@@ -58,6 +60,7 @@ Pages workflowは `.github/workflows/pages.yml`。Firebase設定は `FIREBASE_SE
 | AI評価/探索 | `src/ai/public-evaluator.js`, `src/ai/search.js`, `src/ai/levels.js` |
 | CPU40枚 | `src/tournament/deck-generator.js`, `deck-analyzer.js` |
 | 大会進行 | `src/tournament/TournamentRun.js`, `src/game/GameSession.js` |
+| バトル/大会UI | `src/ui/battle-screen.js`, `src/ui/card-renderer.js`, `styles.css` |
 | 奪取 | `src/reward/CardStealSession.js`, `src/ui/reward-screen.js` |
 | 永続化/王座 | `src/persistence/`, `firestore.rules` |
 | Pages | `scripts/build-pages.mjs`, `.github/workflows/pages.yml` |

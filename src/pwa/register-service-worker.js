@@ -5,6 +5,13 @@ export function registerServiceWorker() {
   }
   const appRoot = new URL('../../', import.meta.url);
   const workerUrl = new URL('sw.js', appRoot);
+  const hadController = Boolean(navigator.serviceWorker.controller);
+  let reloadingForUpdate = false;
+  navigator.serviceWorker.addEventListener('controllerchange', () => {
+    if (!hadController || reloadingForUpdate) return;
+    reloadingForUpdate = true;
+    location.reload();
+  });
   document.documentElement.dataset.pwaStatus = 'registering';
   return navigator.serviceWorker.register(workerUrl, {
     scope: appRoot.pathname,

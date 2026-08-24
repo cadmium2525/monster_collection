@@ -45,5 +45,17 @@ test('page metadata and service worker cover install, activation, navigation and
   assert.match(worker, /addEventListener\('fetch'/);
   assert.match(worker, /networkFirstNavigation/);
   assert.match(worker, /PWA_PRECACHE_START/);
-  assert.match(text('src/pwa/register-service-worker.js'), /dataset\.pwaStatus = 'ready'/);
+  const registration = text('src/pwa/register-service-worker.js');
+  assert.match(registration, /dataset\.pwaStatus = 'ready'/);
+  assert.match(registration, /addEventListener\('controllerchange'/);
+  assert.match(registration, /location\.reload\(\)/);
+});
+
+test('release version cache-busts the page shell and service worker together', () => {
+  const version = JSON.parse(text('package.json')).version;
+  const html = text('index.html');
+  const worker = text('sw.js');
+  assert.match(html, new RegExp(`styles\\.css\\?v=${version.replaceAll('.', '\\.')}`));
+  assert.match(html, new RegExp(`src/app\\.js\\?v=${version.replaceAll('.', '\\.')}`));
+  assert.match(worker, new RegExp(`CACHE_VERSION = '${version.replaceAll('.', '\\.')}';`));
 });

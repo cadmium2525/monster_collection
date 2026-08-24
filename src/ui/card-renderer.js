@@ -15,6 +15,12 @@ const FACTION_SIGIL = Object.freeze({
   '無機': '◇', '創造': '✦', '幻霊': '☾', '魔族': '◆', '獣族': '牙', '怪物': '爪',
 });
 
+const CARD_KIND_SIGIL = Object.freeze({
+  training: '鍛',
+  shugyo: '修',
+  breeder: '契',
+});
+
 function monsterArtStyle(definition) {
   if (definition.kind !== 'monster') return null;
   const index = Number(definition.id.match(/(\d+)$/)?.[1]) - 1;
@@ -59,6 +65,7 @@ export function renderCard({ definition, unit = null, selected = false, disabled
   const name = unit?.specialForm ?? definition.name;
   const classes = [
     'game-card',
+    `kind-${definition.kind}`,
     FACTION_CLASS[meta.faction] ?? '',
     selected ? 'selected' : '',
     disabled ? 'disabled' : '',
@@ -80,7 +87,7 @@ export function renderCard({ definition, unit = null, selected = false, disabled
       className: `card-art${definition.kind === 'monster' ? ' monster-art' : ''}`,
       attrs: monsterArtStyle(definition) ? { style: monsterArtStyle(definition) } : null,
     }, [
-      el('span', { className: 'card-sigil', text: FACTION_SIGIL[meta.faction] ?? (definition.kind === 'breeder' ? '指' : '鍛') }),
+      el('span', { className: 'card-sigil', text: FACTION_SIGIL[meta.faction] ?? CARD_KIND_SIGIL[definition.kind] ?? '◆' }),
       el('span', { className: 'card-kind', text: meta.kind }),
     ]),
     meta.stats ? el('div', { className: 'card-stats' }, [

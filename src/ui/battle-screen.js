@@ -20,6 +20,15 @@ function actionTypeLabel(type) {
   })[type] ?? type;
 }
 
+const ACTION_SHORTCUTS = Object.freeze([
+  { key: 'summon', label: '召喚', types: ['summon'] },
+  { key: 'attack', label: '攻撃 / 技', types: ['move'] },
+  { key: 'training', label: 'Training', types: ['training'] },
+  { key: 'shugyo', label: '修行', types: ['shugyo'] },
+  { key: 'breeder', label: 'ブリーダー', types: ['breeder'] },
+  { key: 'fusion', label: '合体', types: ['fusion-normal', 'fusion-special'] },
+]);
+
 export class BattleScreen {
   constructor({ root, engine, humanPlayerId, chooseCpuAction, onComplete, speed = 'standard' }) {
     this.root = root;
@@ -48,28 +57,29 @@ export class BattleScreen {
     if (this.selection && !this.selectionStillExists(own, opponent)) this.selection = null;
 
     const screen = el('main', { className: 'battle-screen' }, [
-      this.renderHud(own, opponent, state),
-      el('section', { className: 'battle-stage' }, [
+      this.renderStatusRail(own, opponent),
+      el('section', { className: 'battle-table' }, [
+        this.renderOpponentHand(opponent),
         el('div', { className: 'boards', attrs: { 'aria-label': '距離のない3枠盤面' } }, [
           this.renderBoard(opponent, true),
+          el('div', { className: 'board-divider', attrs: { 'aria-hidden': 'true' } }),
           this.renderBoard(own, false),
         ]),
-        el('aside', { className: 'battle-sidebar' }, [
-          this.renderLog(observation.log),
-          el('div', { className: 'utility-bar' }, [
-            el('button', { className: 'utility-button', text: this.speed === 'fast' ? '演出: 高速' : '演出: 標準', onclick: () => { this.speed = this.speed === 'fast' ? 'standard' : 'fast'; this.render(); } }),
-            el('button', { className: 'utility-button', text: `Seed ${state.seed.slice(0, 8)}`, onclick: () => navigator.clipboard?.writeText(state.seed) }),
-            globalThis.__MC_DEBUG_MODE__ ? el('button', { className: 'utility-button debug-win', text: 'TEST WIN', onclick: () => { this.engine._finish(this.humanPlayerId, 'debug-test-win'); this.render(); } }) : null,
-          ]),
-        ]),
-      ]),
-      el('section', { className: 'hand-zone' }, [
-        el('div', { className: 'hand-panel' }, [
+        el('section', { className: 'hand-panel', attrs: { 'aria-label': '自分の手札' } }, [
           el('div', { className: 'zone-heading' }, [
-            el('span', { text: `手札 ${own.hand.length}/${8}` }),
-            el('span', { text: `山札 ${own.deck.length} / 墓地 ${own.graveyard.length}` }),
+            el('strong', { text: `YOUR HAND  ${own.hand.length}/${8}` }),
+            el('span', { text: `山札 ${own.deck.length}  /  墓地 ${own.graveyard.length}` }),
           ]),
           el('div', { className: 'card-strip' }, own.hand.map((card) => this.renderHandCard(card, own, humanTurn))),
+        ]),
+      ]),
+      el('aside', { className: 'battle-command-rail' }, [
+        this.renderTurnHud(state),
+        this.renderLog(observation.log),
+        el('div', { className: 'utility-bar' }, [
+          el('button', { className: 'utility-button speed-button', text: this.speed === 'fast' ? '▶▶ 高速' : '▶ 標準', onclick: () => { this.speed = this.speed === 'fast' ? 'standard' : 'fast'; this.render(); } }),
+          globalThis.__MC_DEBUG_MODE__ ? el('button', { className: 'utility-button seed-button', text: `Seed ${state.seed.slice(0, 8)}`, onclick: () => navigator.clipboard?.writeText(state.seed) }) : null,
+          globalThis.__MC_DEBUG_MODE__ ? el('button', { className: 'utility-button debug-win', text: 'TEST WIN', onclick: () => { this.engine._finish(this.humanPlayerId, 'debug-test-win'); this.render(); } }) : null,
         ]),
         this.renderActions(humanTurn),
       ]),
@@ -92,31 +102,68 @@ export class BattleScreen {
     return [...own.board, ...opponent.board].some((unit) => unit?.id === this.selection.id);
   }
 
-  renderHud(own, opponent, state) {
-    const fighter = (player, isOpponent) => el('section', { className: `fighter-hud ${isOpponent ? 'opponent' : 'player'}` }, [
-      el('div', {}, [
-        el('div', { className: 'fighter-name', text: player.displayName }),
-        el('div', { className: 'fighter-sub', text: isOpponent ? `手札 ${player.handCount} / 山札 ${player.deckCount}` : `手札 ${player.hand.length} / 山札 ${player.deck.length}` }),
-      ]),
-      el('div', {}, [
+  renderStatusRail(own, opponent) {
+    const fighter = (player, isOpponent) => {
+      const handCount = isOpponent ? player.handCount : player.hand.length;
+      const deckCount = isOpponent ? player.deckCount : player.deck.length;
+      const graveyardCount = player.graveyard.length;
+      return el('section', {
+        className: `fighter-hud ${isOpponent ? 'opponent' : 'player'}`,
+        attrs: { 'aria-label': `${isOpponent ? '相手' : '自分'} ${player.displayName} LIFE ${player.life} TP ${player.tp}` },
+      }, [
+        el('div', { className: 'fighter-banner' }, [
+          el('small', { text: isOpponent ? 'OPPONENT' : 'PLAYER' }),
+          el('strong', { className: 'fighter-name', text: player.displayName }),
+        ]),
+        el('div', { className: 'life-copy' }, [
+          el('span', { text: 'LIFE' }),
+          el('strong', { text: Math.max(0, player.life) }),
+          el('small', { text: '/ 100' }),
+        ]),
         el('div', { className: 'life-meter' }, el('i', { attrs: { style: `width:${Math.max(0, Math.min(100, player.life))}%` } })),
-        el('div', { className: 'life-copy', text: `LIFE ${Math.max(0, player.life)} / 100` }),
-      ]),
-      el('div', { className: 'tp-orb', text: `${player.tp}/${player.maxTp}` }),
-    ]);
-    const current = state.players[state.currentPlayerId];
-    return el('header', { className: 'battle-hud' }, [
-      fighter(own, false),
-      el('div', { className: 'turn-hud' }, [
-        el('strong', { text: `ROUND ${state.round}/40` }),
-        el('span', { text: state.status === 'active' ? `${current.displayName}のターン` : '決着' }),
-      ]),
+        el('div', { className: 'tp-copy' }, [
+          el('span', { text: 'TP' }),
+          el('strong', { text: `${player.tp} / ${player.maxTp}` }),
+        ]),
+        el('div', { className: 'tp-gems', attrs: { 'aria-hidden': 'true' } }, Array.from({ length: player.maxTp }, (_, index) => el('i', { className: index < player.tp ? 'active' : '' }))),
+        el('div', { className: 'pile-strip' }, [
+          el('span', {}, [el('small', { text: '手札' }), el('strong', { text: handCount })]),
+          el('span', {}, [el('small', { text: '山札' }), el('strong', { text: deckCount })]),
+          el('span', {}, [el('small', { text: '墓地' }), el('strong', { text: graveyardCount })]),
+        ]),
+      ]);
+    };
+    return el('aside', { className: 'battle-status-rail' }, [
       fighter(opponent, true),
+      el('div', { className: 'versus-mark', attrs: { 'aria-hidden': 'true' } }, 'VS'),
+      fighter(own, false),
+    ]);
+  }
+
+  renderTurnHud(state) {
+    const current = state.players[state.currentPlayerId];
+    const humanTurn = state.currentPlayerId === this.humanPlayerId;
+    return el('header', { className: `turn-hud ${humanTurn ? 'player-turn' : 'enemy-turn'}` }, [
+      el('span', { text: 'TURN' }),
+      el('strong', { text: `${state.round}` }),
+      el('small', { text: state.status === 'active' ? (humanTurn ? 'PLAYER TURN' : 'ENEMY TURN') : 'BATTLE END' }),
+      el('em', { text: state.status === 'active' ? `${current.displayName}のターン` : '決着' }),
+    ]);
+  }
+
+  renderOpponentHand(opponent) {
+    const count = Math.max(0, Math.min(8, opponent.handCount));
+    return el('section', { className: 'opponent-hand-panel', attrs: { 'aria-label': `相手の手札 ${opponent.handCount}枚` } }, [
+      el('strong', { text: `相手の手札  ${opponent.handCount}枚` }),
+      el('div', { className: 'opponent-hand-cards', attrs: { 'aria-hidden': 'true' } }, Array.from({ length: count }, () => el('i', { className: 'card-back' }, el('b', { text: '◆' })))),
     ]);
   }
 
   renderBoard(player, isOpponent) {
-    return el('div', { className: `board-row ${isOpponent ? 'opponent' : 'player'}` }, player.board.map((unit, slot) => {
+    return el('div', {
+      className: `board-row ${isOpponent ? 'opponent' : 'player'}`,
+      dataset: { fieldLabel: isOpponent ? 'ENEMY FIELD' : 'PLAYER FIELD' },
+    }, player.board.map((unit, slot) => {
       if (!unit) return el('div', { className: 'board-slot empty', attrs: { 'aria-label': `空き枠${slot + 1}` } });
       const definition = this.engine.masterIndex.monsters.get(unit.sourceMasterId);
       const selected = this.selection?.kind === 'unit' && this.selection.id === unit.id;
@@ -173,19 +220,49 @@ export class BattleScreen {
       ]),
       el('div', { className: 'action-list' }, [
         !humanTurn ? el('p', { className: 'action-hint', text: this.engine.state.status === 'active' ? '相手の行動を確認してください' : '結果を確認してください' }) : null,
-        humanTurn && !this.selection ? el('p', { className: 'action-hint', text: '手札または盤上モンスターをタップしてください。もう一度タップすると詳細を開きます。' }) : null,
+        ...(humanTurn && !this.selection ? this.renderActionShortcuts(all) : []),
         humanTurn && this.selection && !actions.length ? el('p', { className: 'action-hint', text: '現在、この対象で実行できる行動はありません。' }) : null,
         ...actions.map((action) => el('button', {
           className: 'action-button',
           onclick: () => this.performHumanAction(action),
-        }, [el('b', { text: `${actionTypeLabel(action.type)}${action.cost != null ? ` / ${action.cost}TP` : ''}` }), action.label])),
+        }, [
+          el('b', { text: `${actionTypeLabel(action.type)}${action.cost != null ? ` / ${action.cost}TP` : ''}` }),
+          el('span', { className: 'action-copy', text: action.label }),
+        ])),
         humanTurn && end ? el('button', { className: 'action-button end-turn', text: 'ターン終了', onclick: () => this.performHumanAction(end) }) : null,
       ]),
     ]);
   }
 
+  renderActionShortcuts(allActions) {
+    return ACTION_SHORTCUTS.map((shortcut) => {
+      const action = allActions.find((candidate) => shortcut.types.includes(candidate.type));
+      return el('button', {
+        className: `action-button action-shortcut shortcut-${shortcut.key}`,
+        disabled: !action,
+        onclick: action ? () => this.selectActionSource(action) : null,
+      }, [
+        el('b', { text: shortcut.label }),
+        el('span', { className: 'action-copy', text: action ? '選べる行動を表示' : '現在は使用不可' }),
+      ]);
+    });
+  }
+
+  selectActionSource(action) {
+    if (this.busy) return;
+    if (action.type === 'move' || action.type.startsWith('fusion-')) {
+      this.selection = { kind: 'unit', id: action.unitId, opponent: false };
+    } else {
+      this.selection = { kind: 'hand', id: action.cardInstanceId };
+    }
+    this.render();
+  }
+
   renderLog(log) {
-    return el('ol', { className: 'battle-log', attrs: { 'aria-label': 'バトルログ' } }, log.slice(-18).map((entry) => el('li', { text: `[${entry.round}] ${entry.message}` })));
+    return el('section', { className: 'battle-log-panel' }, [
+      el('h2', { text: 'バトルログ' }),
+      el('ol', { className: 'battle-log', attrs: { 'aria-label': 'バトルログ', 'aria-live': 'polite' } }, log.slice(-18).map((entry) => el('li', { text: `[${entry.round}] ${entry.message}` }))),
+    ]);
   }
 
   async performHumanAction(action) {
