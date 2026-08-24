@@ -5,6 +5,7 @@ import { DeckCollection } from './decks/DeckCollection.js';
 import { GameSession } from './game/GameSession.js';
 import { createGameRepository } from './persistence/index.js';
 import { registerServiceWorker } from './pwa/register-service-worker.js';
+import { TournamentSeedSource } from './core/tournament-seed.js';
 import { BattleScreen } from './ui/battle-screen.js';
 import { DeckDetailScreen, DeckListScreen } from './ui/deck-screens.js';
 import { el, replace } from './ui/dom.js';
@@ -19,11 +20,12 @@ const AI_BUDGET = Object.freeze({ bronze: 4, silver: 8, gold: 22, legend: 55, ch
 class MonsterConstructionApp {
   constructor(root) {
     this.root = root;
-    this.seed = new URLSearchParams(location.search).get('seed') ?? `web-${Date.now().toString(36)}`;
+    const params = new URLSearchParams(location.search);
+    this.seedSource = new TournamentSeedSource({ fixedSeed: params.has('seed') ? params.get('seed') : null });
+    this.seed = this.seedSource.sessionSeed;
     this.currentScreen = 'boot';
     this.session = null;
     this.installPromptEvent = null;
-    const params = new URLSearchParams(location.search);
     globalThis.__MC_DEBUG_MODE__ = params.get('debug') === '1' && ['localhost', '127.0.0.1', '::1'].includes(location.hostname);
     window.addEventListener('beforeinstallprompt', (event) => {
       event.preventDefault();
@@ -186,10 +188,10 @@ class MonsterConstructionApp {
         masterIndex: this.masterIndex,
         deckCollection: this.decks,
         repository: this.repository,
-        user: this.user,
-        champion: this.champion,
-        seed: this.seed,
-      });
+      user: this.user,
+      champion: this.champion,
+      seed: this.seedSource.next(),
+    });
       await this.session.startTournament(deck.deckId, rank);
       this.showTournament();
     } catch (error) {
