@@ -14,7 +14,14 @@ const ACTION_PRIOR = Object.freeze({
 
 export function quickActionScore(engine, playerId, action, options = {}) {
   if (action.type === 'end-turn') {
-    return evaluatePublicPosition(engine, playerId, options) - estimateCounterThreat(engine, playerId) * (options.counterWeight ?? 0.15);
+    // All other actions are scored as a delta. Returning the absolute board
+    // score here made a leading Silver AI end its turn instead of taking free
+    // attacks, so evaluate the transition on the same scale.
+    const next = engine.clone();
+    const before = evaluatePublicPosition(next, playerId, options);
+    next.applyAction(action);
+    const after = evaluatePublicPosition(next, playerId, options);
+    return after - before - estimateCounterThreat(next, playerId) * (options.counterWeight ?? 0.15);
   }
   const next = engine.clone();
   const before = evaluatePublicPosition(next, playerId, options);

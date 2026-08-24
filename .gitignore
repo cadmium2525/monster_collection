@@ -2,8 +2,8 @@
 MC_SavePoint_Sim8.7_FULL/
 node_modules/
 coverage/
+dist/
 .firebase/
 firebase-debug.log
 *.local.js
 playtest-artifacts/
-

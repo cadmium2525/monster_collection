@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { SeededRng } from '../../src/core/rng.js';
 import { determineFirstPlayer, totalPlayTp, validateDeck } from '../../src/battle/deck.js';
+import { createBaselineDeck } from '../../src/data/default-decks.js';
 import { legalDeck, masterData, masterIndex } from '../helpers.js';
 
 test('master data contains all canonical records', () => {
@@ -49,3 +50,10 @@ test('seeded RNG is reproducible', () => {
   assert.deepEqual(Array.from({ length: 10 }, () => a.next()), Array.from({ length: 10 }, () => b.next()));
 });
 
+test('starter 40 exposes every canonical card category and stays legal', () => {
+  const deck = createBaselineDeck(masterData, 'starter-test');
+  assert.equal(validateDeck(deck, masterIndex).valid, true);
+  const kinds = new Set(deck.map((card) => masterIndex.cards.get(card.masterId).kind));
+  assert.deepEqual(kinds, new Set(['monster', 'training', 'shugyo', 'breeder']));
+  assert.equal(deck.length, 40);
+});

@@ -63,6 +63,39 @@ test('all 36 special recipes are present and set their canonical form/trait', ()
   }
 });
 
+test('special fusion replaces base-trait statuses but preserves ordinary action state', () => {
+  const battle = engine();
+  const main = placeUnit(battle, 'p1', 'ゴースト', 0);
+  const material = monsterByName('デュラハン');
+  setHand(battle, 'p1', [card(material.id, 'ghost-fusion-material')]);
+  battle.player('p1').turnNumber = 6;
+  main.actionPoints = 0;
+  main.statuses.specialReviveUsed = true;
+  main.statuses.consecutiveAttackCount = 3;
+  assert.equal(main.statuses.evadeNext, true);
+
+  const action = battle.getLegalActions().find((candidate) => candidate.type === 'fusion-special');
+  battle.applyAction(action);
+
+  assert.equal(main.specialForm, 'オチムシャ');
+  assert.equal(main.statuses.evadeNext, false, 'ゴーストの通常特性は特殊合体後に残さない');
+  assert.equal(main.statuses.specialReviveUsed, false, '以前の特殊個体フラグも新形態へ持ち越さない');
+  assert.equal(main.statuses.consecutiveAttackCount, 0);
+  assert.equal(main.actionPoints, 0, '合体前の行動済み状態は維持する');
+});
+
+test('recoil damage does not count as being attacked for special traits', () => {
+  const battle = engine();
+  const unit = placeUnit(battle, 'p1', 'ワーム', 0);
+  unit.specialForm = 'トカゲムシ';
+  const beforeDef = unit.defMod;
+
+  battle._selfDamage(battle.player('p1'), unit, 5);
+
+  assert.equal(unit.life, unit.maxLife - 5);
+  assert.equal(unit.defMod, beforeDef, '反動で「被攻撃ごとDEF+3」は発動しない');
+});
+
 test('move TP and actual four-move data stay inside the monster card', () => {
   const battle = engine();
   const unit = placeUnit(battle, 'p1', 'ライガー', 0);
@@ -73,4 +106,3 @@ test('move TP and actual four-move data stay inside the monster card', () => {
   assert.equal(action.cost, 1, 'Liger first move discount should apply');
   assert.equal(battle.player('p1').hand.some((entry) => entry.masterId === move.id), false, 'moves are not deck cards');
 });
-

@@ -414,6 +414,7 @@ export class BattleEngine {
       playerId: player.id,
       unitId: unit.id,
       cardInstanceId: card.instanceId,
+      cardMasterId: monster.id,
       slot: action.slot,
       tp: player.tp,
     });
@@ -447,6 +448,7 @@ export class BattleEngine {
     this._log('training', `${unit.name}の${definition.stat.toUpperCase()}が${applied}上昇`, {
       playerId: player.id,
       unitId: unit.id,
+      cardMasterId: definition.id,
       stat: definition.stat,
       amount: applied,
     });
@@ -496,6 +498,7 @@ export class BattleEngine {
     this._log('shugyo', `${unit.name}が修行（LIFE+${lifeGain} / ${definition.stat.toUpperCase()}+${statGain}${learnedMove ? ` / ${learnedMove.name}習得` : ''}）`, {
       playerId: player.id,
       unitId: unit.id,
+      cardMasterId: definition.id,
       lifeGain,
       stat: definition.stat,
       statGain,
@@ -536,6 +539,21 @@ export class BattleEngine {
       main.specialTrait = fusion.trait;
       main.traitName = '特殊特性';
       main.traitEffect = fusion.trait;
+      // A special form replaces the base monster trait. Remove only statuses
+      // which were granted by that base trait; ordinary buffs/debuffs and
+      // learned-move state still belong to the tournament unit.
+      main.statuses.evadeNext = false;
+      main.statuses.knightWill = false;
+      main.statuses.hamKillBonus = 0;
+      main.statuses.specialReviveUsed = false;
+      main.statuses.firstIncomingUsed = false;
+      main.statuses.glaciaCharged = false;
+      main.statuses.temporaryTurnDamageBonus = 0;
+      main.statuses.gallionGuard = false;
+      main.statuses.benihimeCharged = false;
+      main.statuses.ochimushaTriggered = false;
+      main.statuses.lastAttackTargetId = null;
+      main.statuses.consecutiveAttackCount = 0;
       main.statuses.specialCounters = {};
       if (fusion.name === 'ダークハム') {
         main.defMod += 8;
@@ -553,6 +571,7 @@ export class BattleEngine {
       playerId: player.id,
       unitId: main.id,
       materialCardInstanceId: materialCard.instanceId,
+      materialMasterId: materialDef.id,
       fusionId: fusion?.id ?? null,
       newSp,
       stats: { life: main.maxLife, atk: main.atkBase, def: main.defBase },
@@ -636,10 +655,10 @@ export class BattleEngine {
     this._checkPlayerLife(opponent, player.id, 'overflow');
   }
 
-  _damageUnit(owner, unit, rawDamage, attacker) {
+  _damageUnit(owner, unit, rawDamage, attacker, { triggerAttacked = true } = {}) {
     if (unit.statuses.evadeNext) {
       unit.statuses.evadeNext = false;
-      this._onAttacked(unit, attacker, 0, false);
+      if (triggerAttacked) this._onAttacked(unit, attacker, 0, false);
       return { actual: 0, overflow: 0, defeated: false, evaded: true, incomingTriggers: ['完全回避'] };
     }
     const { damage, triggers } = applyIncomingModifiers(unit, rawDamage);
@@ -669,7 +688,7 @@ export class BattleEngine {
     }
 
     const actual = Math.min(before, damage);
-    this._onAttacked(unit, attacker, actual, defeated);
+    if (triggerAttacked) this._onAttacked(unit, attacker, actual, defeated);
     if (defeated) this._removeUnit(owner, unit);
     return { actual, overflow, defeated, evaded: false, incomingTriggers: triggers };
   }
@@ -802,7 +821,9 @@ export class BattleEngine {
   }
 
   _selfDamage(owner, unit, amount) {
-    const result = this._damageUnit(owner, unit, amount, null);
+    // Recoil is damage, but it is not an opponent attack and must not trigger
+    // "when attacked" special traits such as トカゲムシ or オキクサン.
+    const result = this._damageUnit(owner, unit, amount, null, { triggerAttacked: false });
     if (result.defeated) this._log('self-defeat', `${unit.name}は反動で撃破された`, { unitId: unit.id });
   }
 
@@ -840,7 +861,12 @@ export class BattleEngine {
         else {
           unit.life -= 5;
           this._heal(source, 5);
-          this._log('trait', `寄生根が${unit.name}へ5ダメージ`, { unitId: unit.id, sourceUnitId: source.id });
+          this._log('trait', `寄生根が${unit.name}へ5ダメージ`, {
+            playerId: sourcePlayer.id,
+            unitId: unit.id,
+            sourceUnitId: source.id,
+            traitName: '寄生根',
+          });
           if (unit.life <= 0) this._removeUnit(player, unit);
         }
       }
@@ -1024,6 +1050,7 @@ export class BattleEngine {
     this._log('breeder', `${player.displayName}は${definition.name}を使用`, {
       playerId: player.id,
       breederId: definition.id,
+      cardMasterId: definition.id,
       targetUnitId: action.targetUnitId,
     });
   }

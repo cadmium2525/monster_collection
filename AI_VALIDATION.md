@@ -1,27 +1,52 @@
-# AI Validation Baseline
+# AI検証結果
 
-Date: 2026-08-24  
-Rules: Sim8.7 canon with the user-requested distance-system removal  
-Mode: identical 40-card baseline deck on both sides; AI only differs  
-Search budget: 12 ms per decision for search-based levels  
-Seeds are reproducible through `tools/ai-lab.mjs`.
+実施日: 2026-08-24
 
-| Matchup | Games | Upper-level wins | First wins | Second wins | Avg. round | 40T rate |
-|---|---:|---:|---:|---:|---:|---:|
-| Bronze vs Silver (`phase4-bs3`) | 20 | Silver 55.0% | 8 | 12 | 14.90 | 5.0% |
-| Silver vs Gold (`phase4-sg4`) | 30 | Gold 60.0% | 14 | 16 | 14.43 | 20.0% |
-| Gold vs Legend (`phase4-gl`) | 30 | Legend 56.7% | 20 | 10 | 12.03 | 13.3% |
-| Legend vs Champion (`phase4-lc`) | 20 | Champion 55.0% | 11 | 9 | 19.15 | 40.0% |
+基準: Sim8.7正本 + ユーザー指定の距離システム廃止
 
-These are an initial calibration baseline, not a final balance guarantee. The sample is intentionally performed before tournament-rank deck generation is integrated. Distance-free balance had no prior simulator evidence in the supplied save point, so this table must be rerun after deck-generator and trait coverage changes.
+条件: 両者に同じ40枚スターターデッキを与え、AIレベルだけを変更
 
-## Reproduce
+CPUは全レベルで人間と同じ `BattleEngine` の合法手APIを使用する。参照できるのは自分の手札と公開情報だけで、相手手札、山札順、次のドロー、未確定乱数は探索へ渡さない。
+
+## 最終キャリブレーション
+
+| 対戦 | 試合数 | 上位AI勝率 | 先攻勝率 | 平均ラウンド | 平均行動数 | 40T | 合体発生 | 特殊合体発生 |
+|---|---:|---:|---:|---:|---:|---:|---:|---:|
+| Bronze vs Silver | 20 | Silver 60% | 55% | 14.35 | 142.60 | 5% | 95% | 65% |
+| Silver vs Gold | 20 | Gold 55% | 60% | 13.40 | 133.40 | 0% | 80% | 75% |
+| Gold vs Legend | 20 | Legend 55% | 55% | 14.95 | 148.85 | 5% | 85% | 70% |
+| Legend vs Champion | 20 | Champion 60% | 65% | 14.10 | 135.50 | 5% | 95% | 70% |
+
+初期目標だった「隣接AIで上位が55〜60%」は全組合せで達成した。ただし各20戦の小標本なので、確定的なランキングではなく回帰検証用の固定seedベースラインとして扱う。
+
+## 先攻・後攻の確認
+
+同じGold AI、同じ40枚、30戦（seed `final-first-second`）では先攻22勝、後攻8勝で、先攻勝率73.3%だった。平均13.30ラウンド、40T判定0%、合体発生90%、特殊合体発生76.7%。
+
+総プレイTPによる先攻決定そのものは仕様どおりで、同値時だけseed付き乱数を使っている。しかし、正本の「ほぼ50:50」という実績は距離・移動ありの旧シミュレーション結果である。距離廃止版には先攻優位の可能性があり、追加の大標本検証が必要。カード数値、ドロー、TP、先攻決定は無断で変更していない。
+
+## 大会別デッキ生成統計
+
+各ランク35デッキの固定seed集計:
+
+| ランク | 意図レシピ | 実成立レシピ | 偶発レシピ | 素材密度 | 平均品質 |
+|---|---:|---:|---:|---:|---:|
+| Bronze | 1.00 | 13.14 | 12.14 | 14.23 | 99.77 |
+| Silver | 2.00 | 11.29 | 9.29 | 12.60 | 144.43 |
+| Gold | 3.00 | 7.03 | 4.03 | 13.77 | 191.41 |
+| Legend | 4.00 | 7.74 | 3.74 | 15.37 | 249.67 |
+
+候補選別により平均品質は大会ごとに上昇している。36レシピの素材重複が大きく、Bronzeでも偶発成立が多いことはバランス上の未解決事項である。生成器は意図数・実成立数・偶発数・素材密度を分離して出力するため、今後の制約調整を測定できる。
+
+## 再現コマンド
 
 ```sh
-npm run sim -- --a bronze --b silver --games 20 --seed phase4-bs3 --time-ms 12
-npm run sim -- --a silver --b gold --games 30 --seed phase4-sg4 --time-ms 12
-npm run sim -- --a gold --b legend --games 30 --seed phase4-gl --time-ms 12
-npm run sim -- --a legend --b champion --games 20 --seed phase4-lc --time-ms 12
+npm run sim -- --a bronze --b silver --games 20 --seed tune2-bs --time-ms 12 --summary
+npm run sim -- --a silver --b gold --games 20 --seed tune2-sg --time-ms 22 --summary
+npm run sim -- --a gold --b legend --games 20 --seed tune2-gl --time-ms 55 --summary
+npm run sim -- --a legend --b champion --games 20 --seed final-lc-v2 --time-ms 85 --summary
+npm run sim -- --a gold --b gold --games 30 --seed final-first-second --time-ms 22 --summary
+npm run sim:decks -- --runs 5 --seed final-deck-lab --summary
 ```
 
-AI evaluators receive the full contents of their own hand plus public opponent state. They do not inspect opponent hand identities, deck order, future draws, or unresolved RNG. Champion response search limits simulated replies to moves from visible opposing monsters and adds a probability-based hidden-opportunity risk instead of reading hidden cards.
+`tools/ai-lab.mjs` は勝率、先後勝率、平均ラウンド/行動数、40T率、合体/特殊合体率、カード・技・観測可能な特性発動統計、各試合seedを出力する。

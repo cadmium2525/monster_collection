@@ -71,7 +71,8 @@ export function actionEventDelta(beforeLogLength, engine, perspectiveId) {
       if (event.defeated) score += mine ? 85 : -85;
     }
     if (event.type === 'direct-attack') score += mine ? (event.damage ?? 0) * 4.2 : -(event.damage ?? 0) * 4.2;
-    if (event.type === 'fusion') score += mine ? (event.special ? 55 : 28) : 0;
+    if (event.type === 'fusion-special') score += mine ? 55 : 0;
+    if (event.type === 'fusion-normal') score += mine ? 28 : 0;
     if (event.type === 'summon') score += mine ? 18 : 0;
     if (event.type === 'training' || event.type === 'shugyo') score += mine ? 15 : 0;
     if (event.type === 'breeder') score += mine ? 12 : 0;

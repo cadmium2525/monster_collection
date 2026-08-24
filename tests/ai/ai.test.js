@@ -4,7 +4,7 @@ import { SeededRng } from '../../src/core/rng.js';
 import { actionKey } from '../../src/battle/state.js';
 import { runAutomatedBattle } from '../../src/battle/simulation.js';
 import { AI_LEVELS, chooseAiAction, createAiPolicy } from '../../src/ai/index.js';
-import { engine } from '../helpers.js';
+import { engine, moveByName, placeUnit } from '../helpers.js';
 
 test('every AI level returns a legal action without changing battle state', () => {
   for (const level of AI_LEVELS) {
@@ -43,4 +43,14 @@ test('AI choice does not depend on opponent hidden hand identities', () => {
     const choiceB = chooseAiAction(level, b, 'p1', new SeededRng(`same-${level}`), options);
     assert.equal(actionKey(choiceA), actionKey(choiceB), `${level} used hidden opponent cards`);
   }
+});
+
+test('Silver takes a free attack instead of ending a favorable turn', () => {
+  const battle = engine({ seed: 'silver-free-attack', firstPlayerId: 'p1' });
+  const unit = placeUnit(battle, 'p1', 'ヒノトリ', 0);
+  unit.equippedMoveIds = [moveByName('ヒノトリ', '火炎').id];
+  battle.player('p2').board = [null, null, null];
+  const action = chooseAiAction('silver', battle, 'p1', new SeededRng('silver-free-attack'));
+  assert.equal(action.type, 'move');
+  assert.equal(action.targetPlayerId, 'p2');
 });

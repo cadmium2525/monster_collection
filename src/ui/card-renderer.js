@@ -15,8 +15,24 @@ const FACTION_SIGIL = Object.freeze({
   '無機': '◇', '創造': '✦', '幻霊': '☾', '魔族': '◆', '獣族': '牙', '怪物': '爪',
 });
 
+function monsterArtStyle(definition) {
+  if (definition.kind !== 'monster') return null;
+  const index = Number(definition.id.match(/(\d+)$/)?.[1]) - 1;
+  if (!Number.isInteger(index) || index < 0 || index >= 18) return null;
+  return `--art-x:${(index % 6) * 20}%;--art-y:${Math.floor(index / 6) * 50}%`;
+}
+
+export function resolvedTrait(definition, unit) {
+  if (!unit?.specialForm) return definition.trait;
+  return {
+    name: '特殊特性',
+    effect: typeof unit.specialTrait === 'string' ? unit.specialTrait : unit.specialTrait?.effect ?? definition.trait.effect,
+  };
+}
+
 function cardMeta(definition, unit) {
   if (definition.kind === 'monster') {
+    const trait = resolvedTrait(definition, unit);
     const stats = unit
       ? { life: `${Math.max(0, unit.life)}/${unit.maxLife}`, atk: effectiveAtk(unit), def: effectiveDef(unit) }
       : { life: definition.base.life, atk: definition.base.atk, def: definition.base.def };
@@ -24,7 +40,7 @@ function cardMeta(definition, unit) {
       cost: definition.summonTp,
       kind: unit?.specialForm ? `特殊合体 ${unit.fusionStage}` : `${definition.faction} / ${definition.role}`,
       stats,
-      effect: unit?.specialTrait?.effect ?? definition.trait.effect,
+      effect: trait.effect,
       faction: unit?.faction ?? definition.faction,
     };
   }
@@ -60,7 +76,10 @@ export function renderCard({ definition, unit = null, selected = false, disabled
       el('span', { className: 'card-name', text: name }),
       el('span', { className: 'card-cost', text: `${meta.cost}TP` }),
     ]),
-    el('div', { className: 'card-art' }, [
+    el('div', {
+      className: `card-art${definition.kind === 'monster' ? ' monster-art' : ''}`,
+      attrs: monsterArtStyle(definition) ? { style: monsterArtStyle(definition) } : null,
+    }, [
       el('span', { className: 'card-sigil', text: FACTION_SIGIL[meta.faction] ?? (definition.kind === 'breeder' ? '指' : '鍛') }),
       el('span', { className: 'card-kind', text: meta.kind }),
     ]),
@@ -95,8 +114,12 @@ function moveRows(definition, unit, masterIndex) {
 export function openCardDetails({ definition, unit = null, masterIndex, growth = null }) {
   const isMonster = definition.kind === 'monster';
   const name = unit?.specialForm ?? definition.name;
+  const trait = isMonster ? resolvedTrait(definition, unit) : null;
   const summary = isMonster ? el('section', { className: 'detail-summary' }, [
-    el('div', { className: `card-art ${FACTION_CLASS[unit?.faction ?? definition.faction] ?? ''}` }, [
+    el('div', {
+      className: `card-art monster-art ${FACTION_CLASS[unit?.faction ?? definition.faction] ?? ''}`,
+      attrs: { style: monsterArtStyle(definition) },
+    }, [
       el('span', { className: 'card-sigil', text: FACTION_SIGIL[unit?.faction ?? definition.faction] }),
     ]),
     el('dl', {}, [
@@ -109,9 +132,9 @@ export function openCardDetails({ definition, unit = null, masterIndex, growth =
       el('dt', { text: '行動権' }), el('dd', { text: unit ? Math.max(0, unit.actionPoints) : '—' }),
     ]),
     el('div', { className: 'trait-box' }, [
-      el('strong', { text: unit?.specialTrait?.name ?? definition.trait.name }),
+      el('strong', { text: trait.name }),
       el('br'),
-      unit?.specialTrait?.effect ?? definition.trait.effect,
+      trait.effect,
     ]),
     el('p', { className: 'legacy-note', text: '距離システムは廃止済みです。すべての実戦技は任意の合法対象へ使用できます。' }),
   ]) : el('section', { className: 'detail-summary' }, [

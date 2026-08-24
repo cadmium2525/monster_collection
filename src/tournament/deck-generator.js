@@ -74,11 +74,13 @@ function fillMonsterCounts(masterIndex, theme, config, recipes, rng) {
     if (cursor > 400) throw new Error('Unable to fill CPU monster slots');
   }
   while (total() > config.monsters) {
-    const removable = [...counts.entries()].filter(([, copies]) => copies > 0).reverse();
-    const entry = removable.find(([id]) => !recipes.some((fusion) => {
-      const names = [fusion.main, fusion.material];
-      return names.includes(masterIndex.monsters.get(id).name);
-    })) ?? removable[0];
+    const requiredNames = new Set(recipes.flatMap((fusion) => [fusion.main, fusion.material]));
+    const removable = [...counts.entries()].filter(([id, copies]) => {
+      const minimum = requiredNames.has(masterIndex.monsters.get(id).name) ? 1 : 0;
+      return copies > minimum;
+    }).reverse();
+    const entry = removable.find(([id]) => !requiredNames.has(masterIndex.monsters.get(id).name)) ?? removable[0];
+    if (!entry) throw new Error('Unable to trim monster slots without breaking a targeted fusion recipe');
     counts.set(entry[0], entry[1] - 1);
     if (!counts.get(entry[0])) counts.delete(entry[0]);
   }

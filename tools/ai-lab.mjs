@@ -24,4 +24,33 @@ const result = runAiMatchup({
   aiOptions: { timeBudgetMs },
 });
 
-console.log(JSON.stringify(result, null, 2));
+const printable = process.argv.includes('--summary') ? {
+  mode: result.mode,
+  seed: result.seed,
+  matchup: `${result.levelA}-vs-${result.levelB}`,
+  games: result.games,
+  wins: result.wins,
+  winRates: result.winRates,
+  firstPlayerWinRate: result.firstPlayerWinRate,
+  secondPlayerWinRate: result.secondPlayerWinRate,
+  averageRound: result.averageRound,
+  averageActions: result.averageActions,
+  turnLimitRate: result.turnLimitRate,
+  fusionGameRate: result.fusionGameRate,
+  specialFusionGameRate: result.specialFusionGameRate,
+  sideA: {
+    level: result.sides.a.level,
+    normalFusions: result.sides.a.normalFusions,
+    specialFusions: result.sides.a.metrics.specialFusions,
+    averageMetrics: result.sides.a.averageMetrics,
+  },
+  sideB: {
+    level: result.sides.b.level,
+    normalFusions: result.sides.b.normalFusions,
+    specialFusions: result.sides.b.metrics.specialFusions,
+    averageMetrics: result.sides.b.averageMetrics,
+  },
+  traitTriggers: result.traitTriggers,
+} : result;
+
+console.log(JSON.stringify(printable, null, process.argv.includes('--compact') ? 0 : 2));

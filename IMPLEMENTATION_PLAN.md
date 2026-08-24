@@ -28,9 +28,9 @@
 - [x] Ver5 ExcelをJSONへ変換（18モンスター、162技、20ブリーダー、36特殊合体）
 - [x] Sim8.0〜8.6dの進行・先後・40T・CPU生成検証を確認
 - [x] 距離廃止の影響範囲を確定
-- [ ] マスター読み込み・整合性テスト
+- [x] マスター読み込み・整合性テスト
 
-## Phase 2: BattleEngine
+## Phase 2: BattleEngine（完了）
 
 - 40枚検証、同名上限、総プレイTP、先攻決定
 - 初期手札、通常ドロー、手札上限、墓地再シャッフル
@@ -41,7 +41,7 @@
 - 40T残LIFE判定
 - seeded自動対戦と単体テスト
 
-## Phase 3: カード・バトルUI
+## Phase 3: カード・バトルUI（完了）
 
 - 動的カード描画（画像へ数値を焼き込まない）
 - 汎用3枠盤面、手札、山札/墓地、LIFE/TP、ターン、状態、ログ
@@ -49,7 +49,7 @@
 - 召喚、攻撃、Training、修行、ブリーダー、合体、ターン終了
 - 標準/高速テンポ、safe-area、iPhone横画面対応
 
-## Phase 4: CPU AI
+## Phase 4: CPU AI（完了）
 
 - Bronze: 単一合法手の局所評価と小さな揺らぎ
 - Silver: 撃破・打点・盤面・TP・育成・合体のスコアリング
@@ -58,7 +58,7 @@
 - Champion: 時間上限付きの自分→相手返し→自分探索
 - 同一40枚デッキAI比較と統計出力
 
-## Phase 5: トーナメント
+## Phase 5: トーナメント（完了）
 
 - 自分+CPU15名の16人ブラケット
 - 1回戦、2回戦、準決勝、決勝の4試合
@@ -67,7 +67,7 @@
 - Bronze/Silver/Gold/Legendで候補生成数と選別精度を変更
 - Legend決勝だけChampion Repositoryの40枚を使用
 
-## Phase 6: カード奪取・デッキ管理
+## Phase 6: カード奪取・デッキ管理（完了）
 
 - 敗者40枚からseed付きランダム5枚提示
 - 0〜2枚の仮選択、同数放出、最終確認、確定前キャンセル
@@ -75,7 +75,7 @@
 - 最大5デッキ、自由命名、総TP、代表モンスター、最高到達表示
 - 敗退時保存、優勝時だけ次大会資格付与
 
-## Phase 7: Firebase・王座
+## Phase 7: Firebase・王座（完了）
 
 - Local / Firebase / Resilient Repository
 - users、savedDecks、champion/current
@@ -83,14 +83,13 @@
 - championVersion付きFirestore transaction
 - Firebase Security Rules、設定例、障害時ローカル保護
 
-## Phase 8: 一連プレイ統合
+## Phase 8: 一連プレイ統合（完了）
 
 - ホーム→デッキ→大会→4試合→奪取→保存→次大会
 - レジェンド決勝→王座更新→ホーム反映
-- ページ再読込から大会を再開できるセッション保存
 - GitHub Pages workflowと公開手順
 
-## Phase 9: 検証・文書化
+## Phase 9: 検証・文書化（完了）
 
 - 全自動テスト
 - AI大量対戦CLI
@@ -98,3 +97,9 @@
 - 複数トーナメントの自動プレイと操作プレイ
 - `PLAYTEST_REPORT.md`、`CHANGELOG.md`、`HANDOFF.md`
 
+## 完了時点
+
+- 実装完了日: 2026-08-24
+- 自動テスト、AI固定seed検証、実エンジン大会走行、844×390横画面のブラウザ操作を実施。
+- Firebase資格情報なしでもLocalStorageで全ゲームループを実行可能。オンライン王座には利用者側Firebaseプロジェクト設定が必要。
+- 未確定仕様、バランス観測、静的クライアントの不正耐性限界は `IMPLEMENTATION_QUESTIONS.md` と `HANDOFF.md` に分離した。
