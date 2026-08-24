@@ -1,0 +1,130 @@
+import { ChampionConflictError } from './errors.js';
+import { loadFirebaseSdk } from './firebase-sdk.js';
+
+function clone(value) { return value == null ? value : structuredClone(value); }
+
+function normalizedTimestamp(value) {
+  if (!value) return null;
+  if (typeof value.toDate === 'function') return value.toDate().toISOString();
+  if (value instanceof Date) return value.toISOString();
+  return value;
+}
+
+function normalizeRecord(data) {
+  if (!data) return data;
+  return { ...clone(data), createdAt: normalizedTimestamp(data.createdAt), updatedAt: normalizedTimestamp(data.updatedAt), crownedAt: normalizedTimestamp(data.crownedAt) };
+}
+
+export class FirebaseGameRepository {
+  constructor({ config, sdkLoader = loadFirebaseSdk }) {
+    if (!config?.projectId) throw new Error('Firebase projectId is required');
+    this.config = config;
+    this.sdkLoader = sdkLoader;
+    this.sdk = null;
+    this.user = null;
+  }
+
+  async initialize() {
+    this.sdk = await this.sdkLoader();
+    this.app = this.sdk.initializeApp(this.config);
+    this.auth = this.sdk.getAuth(this.app);
+    this.db = this.sdk.getFirestore(this.app);
+    const credential = this.auth.currentUser ? { user: this.auth.currentUser } : await this.sdk.signInAnonymously(this.auth);
+    this.user = credential.user;
+    const profileRef = this.sdk.doc(this.db, 'users', this.user.uid);
+    const existing = await this.sdk.getDoc(profileRef);
+    if (!existing.exists()) {
+      await this.sdk.setDoc(profileRef, {
+        displayName: '名無しブリーダー', isAnonymous: this.user.isAnonymous, createdAt: this.sdk.serverTimestamp(), updatedAt: this.sdk.serverTimestamp(),
+      });
+    }
+    const profile = await this.getProfile();
+    return { id: this.user.uid, ...profile, mode: 'firebase' };
+  }
+
+  _requireUser() { if (!this.user) throw new Error('Firebase repository is not initialized'); }
+  _profileRef() { this._requireUser(); return this.sdk.doc(this.db, 'users', this.user.uid); }
+  _decksRef() { this._requireUser(); return this.sdk.collection(this.db, 'users', this.user.uid, 'savedDecks'); }
+  _deckRef(deckId) { this._requireUser(); return this.sdk.doc(this.db, 'users', this.user.uid, 'savedDecks', deckId); }
+  _championRef() { return this.sdk.doc(this.db, 'gameState', 'champion'); }
+
+  async getProfile() {
+    const snapshot = await this.sdk.getDoc(this._profileRef());
+    return snapshot.exists() ? normalizeRecord(snapshot.data()) : null;
+  }
+
+  async setDisplayName(displayName) {
+    const value = String(displayName ?? '').trim();
+    if (!value || [...value].length > 24) throw new Error('表示名は1〜24文字です');
+    await this.sdk.setDoc(this._profileRef(), { displayName: value, updatedAt: this.sdk.serverTimestamp() }, { merge: true });
+    return { ...(await this.getProfile()), id: this.user.uid };
+  }
+
+  async listDecks() {
+    const snapshots = await this.sdk.getDocs(this._decksRef());
+    return snapshots.docs.map((snapshot) => normalizeRecord({ ...snapshot.data(), deckId: snapshot.id }));
+  }
+
+  async saveDeck(deck) {
+    await this.sdk.setDoc(this._deckRef(deck.deckId), {
+      ...clone(deck),
+      ownerUserId: this.user.uid,
+      updatedAt: this.sdk.serverTimestamp(),
+    }, { merge: true });
+    return clone(deck);
+  }
+
+  async deleteDeck(deckId) { await this.sdk.deleteDoc(this._deckRef(deckId)); }
+
+  async getChampion() {
+    const snapshot = await this.sdk.getDoc(this._championRef());
+    return snapshot.exists() ? normalizeRecord(snapshot.data()) : null;
+  }
+
+  subscribeChampion(callback, onError = null) {
+    return this.sdk.onSnapshot(this._championRef(), (snapshot) => {
+      callback(snapshot.exists() ? normalizeRecord(snapshot.data()) : null);
+    }, onError ?? (() => {}));
+  }
+
+  async claimChampionship(payload) {
+    this._requireUser();
+    const reference = this._championRef();
+    await this.sdk.runTransaction(this.db, async (transaction) => {
+      const snapshot = await transaction.get(reference);
+      const current = snapshot.exists() ? snapshot.data() : null;
+      const actualVersion = current?.championVersion ?? 0;
+      if (actualVersion !== payload.expectedVersion) {
+        throw new ChampionConflictError({ expectedVersion: payload.expectedVersion, actualVersion });
+      }
+      transaction.set(reference, {
+        championUserId: this.user.uid,
+        championDisplayName: payload.championDisplayName,
+        championDeckId: payload.championDeckId,
+        championDeckName: payload.championDeckName,
+        championDeckSnapshot: clone(payload.championDeckSnapshot),
+        representativeMonsterId: payload.representativeMonsterId ?? null,
+        crownedAt: this.sdk.serverTimestamp(),
+        defenseCount: 0,
+        championVersion: actualVersion + 1,
+      });
+    });
+    return this.getChampion();
+  }
+
+  async recordDefense(expectedVersion) {
+    const reference = this._championRef();
+    await this.sdk.runTransaction(this.db, async (transaction) => {
+      const snapshot = await transaction.get(reference);
+      const current = snapshot.exists() ? snapshot.data() : null;
+      const actualVersion = current?.championVersion ?? 0;
+      if (!current || current.championUserId !== this.user.uid || actualVersion !== expectedVersion) {
+        throw new ChampionConflictError({ expectedVersion, actualVersion });
+      }
+      transaction.update(reference, { defenseCount: (current.defenseCount ?? 0) + 1, championVersion: actualVersion + 1 });
+    });
+    return this.getChampion();
+  }
+
+  getStatus() { return { mode: 'firebase', connected: true, userId: this.user?.uid ?? null, error: null }; }
+}
