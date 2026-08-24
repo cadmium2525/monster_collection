@@ -15,11 +15,12 @@ function howToPlayContent() {
       el('li', { text: '敗退しても確定済みの交換カードは保存。優勝したデッキだけ次大会へ進めます。' }),
     ]),
     el('p', { className: 'legacy-note', text: '旧資料の遠・中・近距離システムはユーザー要望により廃止されています。' }),
+    el('p', { className: 'legacy-note', text: 'アプリとして遊ぶ場合は「アプリに追加」を使用します。iPhone/iPadはSafariの共有メニューから「ホーム画面に追加」を選んでください。' }),
   ]);
 }
 
 export class HomeScreen {
-  constructor({ root, masterIndex, user, champion, repositoryStatus, decks, seed, onTournament, onDecks, onRename }) {
+  constructor({ root, masterIndex, user, champion, repositoryStatus, decks, seed, onTournament, onDecks, onRename, installAvailable = false, onInstall = null }) {
     this.root = root;
     this.masterIndex = masterIndex;
     this.user = user;
@@ -30,6 +31,8 @@ export class HomeScreen {
     this.onTournament = onTournament;
     this.onDecks = onDecks;
     this.onRename = onRename;
+    this.installAvailable = installAvailable;
+    this.onInstall = onInstall;
     this.render();
   }
 
@@ -67,7 +70,10 @@ export class HomeScreen {
         el('div', { className: 'profile-chip' }, [
           el('span', { text: this.repositoryStatus.mode === 'firebase' ? '● ONLINE' : '○ LOCAL' }),
           el('strong', { text: this.user.displayName }),
-          el('button', { className: 'utility-button', text: '名前変更', onclick: this.onRename }),
+          el('div', { className: 'profile-actions' }, [
+            el('button', { className: 'utility-button', text: '名前変更', onclick: this.onRename }),
+            this.installAvailable ? el('button', { className: 'utility-button install-button', text: 'アプリに追加', onclick: this.onInstall }) : null,
+          ]),
         ]),
       ]),
       el('section', { className: 'home-main' }, [

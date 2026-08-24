@@ -5,7 +5,7 @@ const projectRoot = path.resolve(import.meta.dirname, '..');
 const outputRoot = path.join(projectRoot, 'dist');
 const packageJson = JSON.parse(fs.readFileSync(path.join(projectRoot, 'package.json'), 'utf8'));
 const version = packageJson.version;
-const publicEntries = ['index.html', 'styles.css', 'assets', 'src', '.nojekyll'];
+const publicEntries = ['index.html', 'styles.css', 'manifest.webmanifest', 'sw.js', 'assets', 'src', '.nojekyll'];
 
 function copyEntry(source, destination) {
   const stats = fs.statSync(source);
@@ -57,6 +57,20 @@ const indexPath = path.join(outputRoot, 'index.html');
 const index = fs.readFileSync(indexPath, 'utf8').replace(/\?v=[\w.-]+/g, `?v=${version}`);
 fs.writeFileSync(indexPath, index);
 
-const outputFiles = filesUnder(outputRoot);
+let outputFiles = filesUnder(outputRoot);
+const cacheUrls = ['./', ...outputFiles
+  .filter((file) => !['sw.js', '.nojekyll'].includes(path.relative(outputRoot, file).replaceAll('\\', '/')))
+  .map((file) => `./${path.relative(outputRoot, file).replaceAll('\\', '/')}`)]
+  .filter((url, index, list) => list.indexOf(url) === index);
+const workerPath = path.join(outputRoot, 'sw.js');
+let worker = fs.readFileSync(workerPath, 'utf8')
+  .replace(/const CACHE_VERSION = '[^']+';/, `const CACHE_VERSION = '${version}';`)
+  .replace(
+    /\/\* PWA_PRECACHE_START \*\/[\s\S]*?\/\* PWA_PRECACHE_END \*\//,
+    `/* PWA_PRECACHE_START */\n${cacheUrls.map((url) => `  ${JSON.stringify(url)}`).join(',\n')}\n  /* PWA_PRECACHE_END */`,
+  );
+fs.writeFileSync(workerPath, worker);
+
+outputFiles = filesUnder(outputRoot);
 const bytes = outputFiles.reduce((sum, file) => sum + fs.statSync(file).size, 0);
 console.log(`Built GitHub Pages artifact: dist (${outputFiles.length} files, ${bytes} bytes, v${version})`);

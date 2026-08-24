@@ -10,6 +10,23 @@ test('both players start with 3 cards and first player skips turn-1 normal draw'
   assert.equal(battle.player('p2').hand.length, 5);
 });
 
+test('each battle shuffles both 40-card decks reproducibly from its seed', () => {
+  const order = (battle, playerId) => {
+    const player = battle.player(playerId);
+    return [...player.hand, ...player.deck].map((card) => card.instanceId);
+  };
+  const first = engine({ seed: 'shuffle-proof-a' });
+  const replay = engine({ seed: 'shuffle-proof-a' });
+  const other = engine({ seed: 'shuffle-proof-b' });
+
+  assert.deepEqual(order(first, 'p1'), order(replay, 'p1'));
+  assert.deepEqual(order(first, 'p2'), order(replay, 'p2'));
+  assert.notDeepEqual(order(first, 'p1'), order(other, 'p1'));
+  assert.notDeepEqual(order(first, 'p2'), order(other, 'p2'));
+  assert.equal(first.player('p1').hand.length + first.player('p1').deck.length, 40);
+  assert.equal(first.player('p2').hand.length + first.player('p2').deck.length, 40);
+});
+
 test('normal draw fills 0-3 cards to 5, otherwise draws 2 up to 8', () => {
   const battle = engine();
   const player = battle.player('p1');
@@ -40,4 +57,3 @@ test('empty deck reshuffles graveyard and continues drawing', () => {
   assert.equal(player.graveyard.length, 0);
   assert.equal(player.metrics.reshuffles, 1);
 });
-

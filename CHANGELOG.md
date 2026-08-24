@@ -1,5 +1,21 @@
 # Changelog
 
+## 1.1.0 — 2026-08-24
+
+### Added
+
+- GitHub Pagesのサブパスに対応したWeb App ManifestとService Worker。
+- 192px、512px、1024px maskable、iOS 180pxのアプリアイコン。
+- standalone横画面、オフラインアプリシェル、Firebase CDNの通信失敗時cache fallback。
+- 対応ブラウザーのホーム画面に「アプリに追加」導線、iOS向け追加手順。
+- 各試合開始時の双方40枚シャッフルを同一seed再現・異seed変化まで確認する回帰テスト。
+- 同じページ内で再挑戦しても、通常プレイの大会seedを使い回さないrun seed発行器。
+
+### Verified
+
+- シャッフルは初期3枚を引く前に実行され、山札切れ時も墓地を再シャッフルする。
+- PWAのstart URLとscopeは相対指定で、`/monster_collection/`配下から外れない。
+
 ## 1.0.0 — 2026-08-24
 
 プレイテスト可能な第1完成版。
