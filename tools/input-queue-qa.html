@@ -1,0 +1,52 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+    <link rel="stylesheet" href="../styles.css?v=1.4.1">
+    <title>Input queue QA</title>
+    <style>
+      #qa-controls { position: fixed; z-index: 500; top: 4px; left: 50%; translate: -50% 0; display: flex; gap: 8px; align-items: center; padding: 4px 8px; border: 1px solid #d8ad5c; border-radius: 6px; color: #fff0c1; background: #07111eee; font: 700 11px sans-serif; }
+      #qa-controls button { min-height: 30px; padding: 4px 12px; border: 1px solid #d8ad5c; border-radius: 5px; color: #fff; background: #684315; }
+    </style>
+  </head>
+  <body>
+    <div id="app" class="app-shell"></div>
+    <div id="modal-root"></div>
+    <div id="qa-controls"><span id="qa-state">演出中：カードを1回タップ</span><button id="qa-unlock" type="button">演出完了</button></div>
+    <script type="module">
+      import { BattleEngine } from '../src/battle/BattleEngine.js';
+      import { createBaselineDeck } from '../src/data/default-decks.js';
+      import { loadMasterData } from '../src/data/master-loader.js';
+      import { BattleScreen } from '../src/ui/battle-screen.js';
+
+      const masterData = await loadMasterData('../src/data/master-data.json');
+      const engine = new BattleEngine({
+        masterData,
+        players: [
+          { id: 'p1', displayName: 'QA PLAYER', cards: createBaselineDeck(masterData, 'input-qa-a') },
+          { id: 'p2', displayName: 'QA CPU', cards: createBaselineDeck(masterData, 'input-qa-b') },
+        ],
+        firstPlayerId: 'p1',
+        seed: 'input-queue-ui-qa',
+      });
+      for (let index = 1; index <= 24; index += 1) {
+        engine.state.log.push({ round: 1, type: 'qa', message: `QAログ ${String(index).padStart(2, '0')}` });
+      }
+      const screen = new BattleScreen({
+        root: document.querySelector('#app'),
+        engine,
+        humanPlayerId: 'p1',
+        chooseCpuAction: () => null,
+        onComplete: () => {},
+      });
+      screen.busy = true;
+      screen.render();
+      document.querySelector('#qa-unlock').addEventListener('click', () => {
+        screen.busy = false;
+        const applied = screen.applyQueuedCardSelection();
+        document.querySelector('#qa-state').textContent = applied ? '予約タップを選択へ反映' : '予約なし';
+      });
+    </script>
+  </body>
+</html>

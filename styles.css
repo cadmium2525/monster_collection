@@ -358,6 +358,7 @@ body:has(.battle-screen) {
 .drag-ghost { position: fixed !important; z-index: 160; margin: 0 !important; pointer-events: none !important; opacity: .9; transform: rotate(-3deg) scale(1.04) !important; box-shadow: 0 16px 34px rgba(0,0,0,.72), 0 0 0 3px rgba(232,186,98,.28) !important; }
 .game-card.static { cursor: default; }
 .game-card.selected { border-color: #fff1ae; box-shadow: 0 0 0 3px rgba(232,186,98,.25), 0 8px 17px rgba(0,0,0,.5); }
+.game-card.tap-queued { border-color: #fff1ae; filter: brightness(1.12); box-shadow: 0 0 0 3px rgba(232,186,98,.3), 0 8px 17px rgba(0,0,0,.5); }
 .game-card.disabled { filter: saturate(.45) brightness(.72); }
 .game-card.exhausted::after {
   content: "行動済";

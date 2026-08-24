@@ -23,6 +23,7 @@ export class BattleScreen {
     this.selection = null;
     this.pendingMove = null;
     this.busy = false;
+    this.queuedCardSelectionId = null;
     this.suppressCardClickUntil = 0;
     this.cpuRng = new SeededRng(`${engine.state.seed}:ui-cpu`);
     this.render();
@@ -104,11 +105,21 @@ export class BattleScreen {
     ]));
     replace(this.root, screen);
     this._renderLegalActions = null;
+    this.pinLatestLog();
 
     if (state.status === 'finished' && !this.resultShown) {
       this.resultShown = true;
       this.showResult(state);
     }
+  }
+
+  pinLatestLog() {
+    const followLatest = () => {
+      const log = this.root.querySelector('.battle-log');
+      if (log) log.scrollTop = log.scrollHeight;
+    };
+    if (typeof requestAnimationFrame === 'function') requestAnimationFrame(followLatest);
+    else setTimeout(followLatest, 0);
   }
 
   interactionHint() {
@@ -259,8 +270,12 @@ export class BattleScreen {
       showMonsterEffect: definition.kind !== 'monster',
       label: `手札の${definition.name}${selected ? ' 選択中。もう一度タップで詳細、盤面へスワイプで使用' : ' 選択'}`,
       onPointerDown: selected && humanTurn && hasAction ? (event) => this.beginHandDrag(event, card, definition) : null,
-      onClick: () => {
-        if (this.busy || performance.now() < this.suppressCardClickUntil) return;
+      onClick: (event) => {
+        if (performance.now() < this.suppressCardClickUntil) return;
+        if (this.busy) {
+          this.queueHandCardSelection(card.instanceId, event.currentTarget);
+          return;
+        }
         if (this.selection?.id === card.instanceId) {
           openCardDetails({ definition, masterIndex: this.engine.masterIndex, growth: player.tournamentGrowth[card.instanceId] });
         } else {
@@ -272,6 +287,27 @@ export class BattleScreen {
     });
     node.dataset.cardInstanceId = card.instanceId;
     return node;
+  }
+
+  queueHandCardSelection(cardInstanceId, sourceNode) {
+    if (!this.isHumanTurn()) return false;
+    this.queuedCardSelectionId = cardInstanceId;
+    this.root.querySelectorAll('.game-card.tap-queued').forEach((node) => node.classList.remove('tap-queued'));
+    sourceNode?.classList.add('tap-queued');
+    return true;
+  }
+
+  applyQueuedCardSelection() {
+    const cardInstanceId = this.queuedCardSelectionId;
+    this.queuedCardSelectionId = null;
+    if (!cardInstanceId || !this.isHumanTurn()) return false;
+    const stillInHand = this.engine.player(this.humanPlayerId).hand
+      .some((card) => card.instanceId === cardInstanceId);
+    if (!stillInHand) return false;
+    this.pendingMove = null;
+    this.selection = { kind: 'hand', id: cardInstanceId };
+    this.render();
+    return true;
   }
 
   actionsForSelectedCard() {
@@ -749,6 +785,7 @@ export class BattleScreen {
       openModal({ title: '行動できません', content: el('p', { text: error.message }) });
     } finally {
       this.busy = false;
+      this.applyQueuedCardSelection();
     }
   }
 
@@ -773,7 +810,7 @@ export class BattleScreen {
     } finally {
       this.cpuRunning = false;
       this.busy = false;
-      this.render();
+      if (!this.applyQueuedCardSelection()) this.render();
     }
   }
 
