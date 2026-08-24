@@ -64,6 +64,15 @@ function keepTacticalFloor(engine, playerId, planned, immediate, options, tolera
   return plannedScore >= immediateScore - tolerance ? planned : immediate;
 }
 
+function searchDeadline(options, defaultBudgetMs) {
+  // Wall-clock cutoffs are useful on a phone, but they make seeded validation
+  // depend on machine load. Tests and replay tools can request a fully bounded,
+  // deterministic beam search instead; beamWidth/branchLimit/maxDepth still cap
+  // the amount of work.
+  if (options.deterministicSearch) return Number.POSITIVE_INFINITY;
+  return performance.now() + (options.timeBudgetMs ?? defaultBudgetMs);
+}
+
 function sequenceChoice(engine, playerId, options) {
   const lines = searchTurnSequences(engine, playerId, options);
   if (!lines.length) return legal(engine, playerId).find((action) => action.type === 'end-turn');
@@ -80,7 +89,7 @@ function gold(engine, playerId, options = {}) {
     maxDepth: 2,
     counterWeight: .06,
     costWeight: 1.25,
-    deadline: performance.now() + (options.timeBudgetMs ?? 22),
+    deadline: searchDeadline(options, 22),
   };
   const planned = sequenceChoice(engine, playerId, searchOptions);
   const immediate = bestImmediate(engine, playerId, searchOptions);
@@ -96,7 +105,7 @@ function legend(engine, playerId, options = {}) {
     lifeWeight: 8.2,
     boardWeight: 1.2,
     costWeight: 1.05,
-    deadline: performance.now() + (options.timeBudgetMs ?? 55),
+    deadline: searchDeadline(options, 55),
   };
   const planned = sequenceChoice(engine, playerId, searchOptions);
   const immediate = bestImmediate(engine, playerId, searchOptions);
@@ -104,8 +113,6 @@ function legend(engine, playerId, options = {}) {
 }
 
 function champion(engine, playerId, options = {}) {
-  const start = performance.now();
-  const budgetMs = options.timeBudgetMs ?? 85;
   const searchOptions = {
     beamWidth: options.beamWidth ?? 10,
     branchLimit: options.branchLimit ?? 7,
@@ -114,7 +121,7 @@ function champion(engine, playerId, options = {}) {
     lifeWeight: 9,
     boardWeight: 1.3,
     costWeight: .9,
-    deadline: start + budgetMs,
+    deadline: searchDeadline(options, 85),
     replyWidth: 4,
   };
   const lines = searchTurnSequences(engine, playerId, searchOptions).slice(0, 6);

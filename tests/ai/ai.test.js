@@ -38,7 +38,10 @@ test('AI choice does not depend on opponent hidden hand identities', () => {
     opponentB.deck.push(...opponentB.hand);
     opponentB.hand = replacement;
     assert.equal(opponentA.hand.length, opponentB.hand.length);
-    const options = { timeBudgetMs: 20, beamWidth: 5, branchLimit: 4, maxDepth: 4 };
+    // Hidden-information invariance must test the same complete search tree on
+    // fast and slow CI hosts. Production keeps its wall-clock cap; validation
+    // uses the same bounded beam/depth with the clock cutoff disabled.
+    const options = { deterministicSearch: true, beamWidth: 5, branchLimit: 4, maxDepth: 4 };
     const choiceA = chooseAiAction(level, a, 'p1', new SeededRng(`same-${level}`), options);
     const choiceB = chooseAiAction(level, b, 'p1', new SeededRng(`same-${level}`), options);
     assert.equal(actionKey(choiceA), actionKey(choiceB), `${level} used hidden opponent cards`);
