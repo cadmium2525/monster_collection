@@ -1,16 +1,16 @@
 import { TOURNAMENT_LABELS } from '../battle/rules.js';
 import { representativeMonster } from '../battle/deck.js';
 import { el, formatDate, replace } from './dom.js';
-import { renderCard } from './card-renderer.js';
+import { renderMonsterPortrait } from './card-renderer.js';
 import { openModal } from './modal.js';
 
 function howToPlayContent() {
   return el('div', { className: 'how-to-play' }, [
     el('p', { text: '大会で4試合を勝ち抜き、勝つたびに相手の40枚から最大2枚を奪います。交換後もデッキは必ず40枚です。' }),
     el('ol', {}, [
-      el('li', { text: '手札のモンスターを召喚。召喚したターンは行動できません。' }),
-      el('li', { text: '盤上モンスターをタップし、内包する実戦技を選んで攻撃します。距離・移動はありません。' }),
-      el('li', { text: 'Training・修行で大会中だけ育成。通常/特殊合体は先攻6T・後攻5Tからです。' }),
+      el('li', { text: '手札をタップして選択し、モンスターは空き枠へ、育成カードは対象モンスターへスワイプします。' }),
+      el('li', { text: '盤上モンスターをタップし、詳細内の実戦技を選び、光った攻撃対象をタップします。距離・移動はありません。' }),
+      el('li', { text: '修行は候補一覧を確認してから実行し、覚える技はランダムです。通常/特殊合体は先攻6T・後攻5Tからです。' }),
       el('li', { text: '相手盤面が空ならプレイヤーへ直接攻撃。LIFEを0にすれば勝利です。' }),
       el('li', { text: '敗退しても確定済みの交換カードは保存。優勝したデッキだけ次大会へ進めます。' }),
     ]),
@@ -44,7 +44,7 @@ export class HomeScreen {
       : cards.length ? representativeMonster(cards, this.masterIndex) : this.masterIndex.monsters.get('monster-004');
     return el('section', { className: 'champion-panel' }, [
       el('div', { className: 'champion-crown', text: '♛', attrs: { 'aria-hidden': 'true' } }),
-      el('div', { className: 'champion-art' }, representative ? renderCard({ definition: representative, label: '現チャンピオンの代表モンスター', interactive: false }) : el('div', { className: 'champion-placeholder', text: '?' })),
+      el('div', { className: 'champion-art' }, representative ? renderMonsterPortrait(representative, '現チャンピオンの代表モンスター') : el('div', { className: 'champion-placeholder', text: '?' })),
       el('div', { className: 'champion-copy' }, [
         el('p', { className: 'eyebrow', text: 'CURRENT LEGEND CHAMPION' }),
         el('h2', { text: champion?.championDisplayName ?? champion?.displayName ?? '初代王者 アルカナ' }),

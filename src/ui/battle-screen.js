@@ -1,33 +1,16 @@
 import { SeededRng } from '../core/rng.js';
+import { effectiveAtk, effectiveDef } from '../battle/state.js';
 import { el, replace } from './dom.js';
 import { renderCard, openCardDetails } from './card-renderer.js';
 import { openModal } from './modal.js';
 
 function delay(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 
-function actionInvolvesSelection(action, selection) {
-  if (!selection) return false;
-  if (selection.kind === 'hand') {
-    return action.cardInstanceId === selection.id || action.materialCardInstanceId === selection.id;
-  }
-  return action.unitId === selection.id || action.targetUnitId === selection.id;
+function cardAction(action, cardInstanceId) {
+  return action.cardInstanceId === cardInstanceId || action.materialCardInstanceId === cardInstanceId;
 }
 
-function actionTypeLabel(type) {
-  return ({
-    summon: '召喚', move: '技', training: 'Training', shugyo: '修行', breeder: 'ブリーダー',
-    'fusion-normal': '通常合体', 'fusion-special': '特殊合体', 'end-turn': 'ターン',
-  })[type] ?? type;
-}
-
-const ACTION_SHORTCUTS = Object.freeze([
-  { key: 'summon', label: '召喚', types: ['summon'] },
-  { key: 'attack', label: '攻撃 / 技', types: ['move'] },
-  { key: 'training', label: 'Training', types: ['training'] },
-  { key: 'shugyo', label: '修行', types: ['shugyo'] },
-  { key: 'breeder', label: 'ブリーダー', types: ['breeder'] },
-  { key: 'fusion', label: '合体', types: ['fusion-normal', 'fusion-special'] },
-]);
+function unique(values) { return [...new Set(values)]; }
 
 export class BattleScreen {
   constructor({ root, engine, humanPlayerId, chooseCpuAction, onComplete, speed = 'standard' }) {
@@ -38,7 +21,9 @@ export class BattleScreen {
     this.onComplete = onComplete;
     this.speed = speed;
     this.selection = null;
+    this.pendingMove = null;
     this.busy = false;
+    this.suppressCardClickUntil = 0;
     this.cpuRng = new SeededRng(`${engine.state.seed}:ui-cpu`);
     this.render();
     this.runCpuIfNeeded();
@@ -48,19 +33,34 @@ export class BattleScreen {
 
   definitionForCard(card) { return this.engine.masterIndex.cards.get(card.masterId); }
 
+  legalActions() {
+    if (this._renderLegalActions) return this._renderLegalActions;
+    return this.engine.getLegalActions(this.humanPlayerId);
+  }
+
+  isHumanTurn() {
+    return this.engine.state.status === 'active' && this.engine.state.currentPlayerId === this.humanPlayerId;
+  }
+
   render() {
     const observation = this.observation();
     const state = this.engine.getState();
     const own = observation.own;
     const opponent = observation.opponent;
-    const humanTurn = state.currentPlayerId === this.humanPlayerId && state.status === 'active';
-    if (this.selection && !this.selectionStillExists(own, opponent)) this.selection = null;
+    const humanTurn = this.isHumanTurn();
+    this._renderLegalActions = humanTurn ? this.engine.getLegalActions(this.humanPlayerId) : [];
+    if (this.selection && !own.hand.some((card) => card.instanceId === this.selection.id)) this.selection = null;
+    if (this.pendingMove && !this.pendingMoveStillLegal()) this.pendingMove = null;
 
     const screen = el('main', { className: 'battle-screen' }, [
       this.renderStatusRail(own, opponent),
       el('section', { className: 'battle-table' }, [
         this.renderOpponentHand(opponent),
-        el('div', { className: 'boards', attrs: { 'aria-label': '距離のない3枠盤面' } }, [
+        el('div', {
+          className: `boards${this.hasUntargetedFieldAction() ? ' drop-valid-field' : ''}`,
+          attrs: { 'aria-label': '3枠盤面' },
+          onclick: (event) => this.handleFieldClick(event),
+        }, [
           this.renderBoard(opponent, true),
           el('div', { className: 'board-divider', attrs: { 'aria-hidden': 'true' } }),
           this.renderBoard(own, false),
@@ -68,6 +68,7 @@ export class BattleScreen {
         el('section', { className: 'hand-panel', attrs: { 'aria-label': '自分の手札' } }, [
           el('div', { className: 'zone-heading' }, [
             el('strong', { text: `YOUR HAND  ${own.hand.length}/${8}` }),
+            el('span', { className: 'hand-instruction', text: this.interactionHint() }),
             el('span', { text: `山札 ${own.deck.length}  /  墓地 ${own.graveyard.length}` }),
           ]),
           el('div', { className: 'card-strip' }, own.hand.map((card) => this.renderHandCard(card, own, humanTurn))),
@@ -77,11 +78,23 @@ export class BattleScreen {
         this.renderTurnHud(state),
         this.renderLog(observation.log),
         el('div', { className: 'utility-bar' }, [
-          el('button', { className: 'utility-button speed-button', text: this.speed === 'fast' ? '▶▶ 高速' : '▶ 標準', onclick: () => { this.speed = this.speed === 'fast' ? 'standard' : 'fast'; this.render(); } }),
-          globalThis.__MC_DEBUG_MODE__ ? el('button', { className: 'utility-button seed-button', text: `Seed ${state.seed.slice(0, 8)}`, onclick: () => navigator.clipboard?.writeText(state.seed) }) : null,
-          globalThis.__MC_DEBUG_MODE__ ? el('button', { className: 'utility-button debug-win', text: 'TEST WIN', onclick: () => { this.engine._finish(this.humanPlayerId, 'debug-test-win'); this.render(); } }) : null,
+          el('button', {
+            className: 'utility-button speed-button',
+            text: this.speed === 'fast' ? '▶▶ 高速' : '▶ 標準',
+            onclick: () => { this.speed = this.speed === 'fast' ? 'standard' : 'fast'; this.render(); },
+          }),
+          globalThis.__MC_DEBUG_MODE__ ? el('button', {
+            className: 'utility-button seed-button',
+            text: `Seed ${state.seed.slice(0, 8)}`,
+            onclick: () => navigator.clipboard?.writeText(state.seed),
+          }) : null,
+          globalThis.__MC_DEBUG_MODE__ ? el('button', {
+            className: 'utility-button debug-win',
+            text: 'TEST WIN',
+            onclick: () => { this.engine._finish(this.humanPlayerId, 'debug-test-win'); this.render(); },
+          }) : null,
         ]),
-        this.renderActions(humanTurn),
+        this.renderTurnControls(humanTurn),
       ]),
     ]);
     screen.append(el('div', { className: 'portrait-warning' }, [
@@ -90,6 +103,7 @@ export class BattleScreen {
       el('p', { text: 'モンスターコンストラクションは横画面向けです。' }),
     ]));
     replace(this.root, screen);
+    this._renderLegalActions = null;
 
     if (state.status === 'finished' && !this.resultShown) {
       this.resultShown = true;
@@ -97,9 +111,23 @@ export class BattleScreen {
     }
   }
 
-  selectionStillExists(own, opponent) {
-    if (this.selection.kind === 'hand') return own.hand.some((card) => card.instanceId === this.selection.id);
-    return [...own.board, ...opponent.board].some((unit) => unit?.id === this.selection.id);
+  interactionHint() {
+    if (this.pendingMove) {
+      const move = this.engine.masterIndex.moves.get(this.pendingMove.moveId);
+      return `${move?.name ?? '技'}：対象をタップ`;
+    }
+    if (this.selection) {
+      const card = this.engine.player(this.humanPlayerId).hand.find((entry) => entry.instanceId === this.selection.id);
+      const definition = card ? this.definitionForCard(card) : null;
+      return `${definition?.name ?? 'カード'}を盤面へスワイプ`;
+    }
+    return this.isHumanTurn() ? 'カードを選択 → 盤面へスワイプ' : '相手の行動中';
+  }
+
+  pendingMoveStillLegal() {
+    return this.legalActions().some((action) => action.type === 'move'
+      && action.unitId === this.pendingMove.unitId
+      && action.moveId === this.pendingMove.moveId);
   }
 
   renderStatusRail(own, opponent) {
@@ -107,9 +135,25 @@ export class BattleScreen {
       const handCount = isOpponent ? player.handCount : player.hand.length;
       const deckCount = isOpponent ? player.deckCount : player.deck.length;
       const graveyardCount = player.graveyard.length;
+      const playerTarget = isOpponent && this.pendingMove && this.legalActions().some((action) => action.type === 'move'
+        && action.unitId === this.pendingMove.unitId
+        && action.moveId === this.pendingMove.moveId
+        && action.targetPlayerId === player.id);
+      const activate = playerTarget ? () => this.choosePlayerAttackTarget(player.id) : null;
       return el('section', {
-        className: `fighter-hud ${isOpponent ? 'opponent' : 'player'}`,
-        attrs: { 'aria-label': `${isOpponent ? '相手' : '自分'} ${player.displayName} LIFE ${player.life} TP ${player.tp}` },
+        className: `fighter-hud ${isOpponent ? 'opponent' : 'player'}${playerTarget ? ' attack-target' : ''}`,
+        dataset: { playerId: player.id },
+        attrs: {
+          'aria-label': `${isOpponent ? '相手' : '自分'} ${player.displayName} LIFE ${player.life} TP ${player.tp}${playerTarget ? ' 攻撃対象' : ''}`,
+          ...(playerTarget ? { role: 'button', tabindex: '0' } : {}),
+        },
+        onclick: activate,
+        onkeydown: playerTarget ? (event) => {
+          if (event.key === 'Enter' || event.key === ' ') {
+            event.preventDefault();
+            activate();
+          }
+        } : null,
       }, [
         el('div', { className: 'fighter-banner' }, [
           el('small', { text: isOpponent ? 'OPPONENT' : 'PLAYER' }),
@@ -162,100 +206,341 @@ export class BattleScreen {
   renderBoard(player, isOpponent) {
     return el('div', {
       className: `board-row ${isOpponent ? 'opponent' : 'player'}`,
-      dataset: { fieldLabel: isOpponent ? 'ENEMY FIELD' : 'PLAYER FIELD' },
+      dataset: { fieldLabel: isOpponent ? 'ENEMY FIELD' : 'PLAYER FIELD', ownerId: player.id },
     }, player.board.map((unit, slot) => {
-      if (!unit) return el('div', { className: 'board-slot empty', attrs: { 'aria-label': `空き枠${slot + 1}` } });
+      if (!unit) {
+        const valid = !isOpponent && this.actionsForEmptySlot(slot).length > 0;
+        return el('button', {
+          className: `board-slot empty${valid ? ' drop-valid' : ''}`,
+          dataset: { slot: String(slot), ownerId: player.id },
+          attrs: { type: 'button', 'aria-label': `空き枠${slot + 1}${valid ? ' 召喚可能' : ''}` },
+          onclick: (event) => {
+            event.stopPropagation();
+            this.handleEmptySlotClick(slot);
+          },
+        });
+      }
       const definition = this.engine.masterIndex.monsters.get(unit.sourceMasterId);
-      const selected = this.selection?.kind === 'unit' && this.selection.id === unit.id;
-      return el('div', { className: 'board-slot' }, renderCard({
+      const handActions = this.actionsForUnit(unit.id);
+      const attackTarget = this.pendingMove && this.legalActions().some((action) => action.type === 'move'
+        && action.unitId === this.pendingMove.unitId
+        && action.moveId === this.pendingMove.moveId
+        && action.targetUnitId === unit.id);
+      const sourceSelected = this.pendingMove?.unitId === unit.id;
+      const cardNode = renderCard({
         definition,
         unit,
-        selected,
-        label: `${isOpponent ? '相手' : '自分'}の${unit.specialForm ?? unit.name}の詳細と行動を表示`,
-        onClick: () => this.selectUnit(unit, definition, isOpponent),
-      }));
+        selected: sourceSelected,
+        label: `${isOpponent ? '相手' : '自分'}の${unit.specialForm ?? unit.name}${attackTarget ? ' 攻撃対象' : ' 詳細'}`,
+        onClick: (event) => {
+          event.stopPropagation();
+          this.handleBoardUnitClick(unit, definition, isOpponent);
+        },
+      });
+      return el('div', {
+        className: `board-slot${handActions.length ? ' drop-valid' : ''}${attackTarget ? ' attack-target' : ''}`,
+        dataset: { unitId: unit.id, slot: String(slot), ownerId: player.id },
+      }, cardNode);
     }));
   }
 
   renderHandCard(card, player, humanTurn) {
     const definition = this.definitionForCard(card);
-    const selected = this.selection?.kind === 'hand' && this.selection.id === card.instanceId;
-    const hasAction = this.engine.getLegalActions(this.humanPlayerId).some((action) => action.cardInstanceId === card.instanceId || action.materialCardInstanceId === card.instanceId);
-    return renderCard({
+    const selected = this.selection?.id === card.instanceId;
+    const hasAction = this.legalActions().some((action) => cardAction(action, card.instanceId));
+    const node = renderCard({
       definition,
       selected,
       disabled: humanTurn && !hasAction,
-      label: `手札の${definition.name}の詳細と行動を表示`,
+      dragReady: selected && humanTurn && hasAction,
+      showMonsterEffect: definition.kind !== 'monster',
+      label: `手札の${definition.name}${selected ? ' 選択中。もう一度タップで詳細、盤面へスワイプで使用' : ' 選択'}`,
+      onPointerDown: selected && humanTurn && hasAction ? (event) => this.beginHandDrag(event, card, definition) : null,
       onClick: () => {
-        if (this.busy) return;
-        if (this.selection?.kind === 'hand' && this.selection.id === card.instanceId) {
+        if (this.busy || performance.now() < this.suppressCardClickUntil) return;
+        if (this.selection?.id === card.instanceId) {
           openCardDetails({ definition, masterIndex: this.engine.masterIndex, growth: player.tournamentGrowth[card.instanceId] });
         } else {
+          this.pendingMove = null;
           this.selection = { kind: 'hand', id: card.instanceId };
           this.render();
         }
       },
     });
+    node.dataset.cardInstanceId = card.instanceId;
+    return node;
   }
 
-  selectUnit(unit, definition, isOpponent) {
-    if (this.busy) return;
-    if (this.selection?.kind === 'unit' && this.selection.id === unit.id) {
-      openCardDetails({ definition, unit, masterIndex: this.engine.masterIndex });
-      return;
-    }
-    this.selection = { kind: 'unit', id: unit.id, opponent: isOpponent };
-    this.render();
+  actionsForSelectedCard() {
+    if (!this.selection || !this.isHumanTurn()) return [];
+    return this.legalActions().filter((action) => cardAction(action, this.selection.id));
   }
 
-  renderActions(humanTurn) {
-    const all = humanTurn ? this.engine.getLegalActions(this.humanPlayerId) : [];
-    const relevant = this.selection ? all.filter((action) => actionInvolvesSelection(action, this.selection)) : [];
-    const actions = relevant.filter((action) => action.type !== 'end-turn');
-    const end = all.find((action) => action.type === 'end-turn');
-    return el('div', { className: 'action-panel' }, [
-      el('div', { className: 'zone-heading' }, [
-        el('span', { text: humanTurn ? '行動を選ぶ' : this.engine.state.status === 'active' ? 'CPU思考中…' : '試合終了' }),
-        this.selection ? el('button', { className: 'utility-button', text: '選択解除', onclick: () => { this.selection = null; this.render(); } }) : null,
-      ]),
-      el('div', { className: 'action-list' }, [
-        !humanTurn ? el('p', { className: 'action-hint', text: this.engine.state.status === 'active' ? '相手の行動を確認してください' : '結果を確認してください' }) : null,
-        ...(humanTurn && !this.selection ? this.renderActionShortcuts(all) : []),
-        humanTurn && this.selection && !actions.length ? el('p', { className: 'action-hint', text: '現在、この対象で実行できる行動はありません。' }) : null,
-        ...actions.map((action) => el('button', {
-          className: 'action-button',
-          onclick: () => this.performHumanAction(action),
-        }, [
-          el('b', { text: `${actionTypeLabel(action.type)}${action.cost != null ? ` / ${action.cost}TP` : ''}` }),
-          el('span', { className: 'action-copy', text: action.label }),
-        ])),
-        humanTurn && end ? el('button', { className: 'action-button end-turn', text: 'ターン終了', onclick: () => this.performHumanAction(end) }) : null,
-      ]),
-    ]);
+  actionsForEmptySlot(slot) {
+    return this.actionsForSelectedCard().filter((action) => action.type === 'summon' && action.slot === slot);
   }
 
-  renderActionShortcuts(allActions) {
-    return ACTION_SHORTCUTS.map((shortcut) => {
-      const action = allActions.find((candidate) => shortcut.types.includes(candidate.type));
-      return el('button', {
-        className: `action-button action-shortcut shortcut-${shortcut.key}`,
-        disabled: !action,
-        onclick: action ? () => this.selectActionSource(action) : null,
-      }, [
-        el('b', { text: shortcut.label }),
-        el('span', { className: 'action-copy', text: action ? '選べる行動を表示' : '現在は使用不可' }),
-      ]);
+  actionsForUnit(unitId) {
+    return this.actionsForSelectedCard().filter((action) => {
+      if (action.type === 'training' || action.type === 'shugyo' || action.type.startsWith('fusion-')) return action.unitId === unitId;
+      return action.type === 'breeder' && action.targetUnitId === unitId;
     });
   }
 
-  selectActionSource(action) {
+  untargetedFieldActions() {
+    return this.actionsForSelectedCard().filter((action) => action.type === 'breeder' && !action.targetUnitId);
+  }
+
+  hasUntargetedFieldAction() { return this.untargetedFieldActions().length > 0; }
+
+  handleEmptySlotClick(slot) {
     if (this.busy) return;
-    if (action.type === 'move' || action.type.startsWith('fusion-')) {
-      this.selection = { kind: 'unit', id: action.unitId, opponent: false };
-    } else {
-      this.selection = { kind: 'hand', id: action.cardInstanceId };
+    const actions = this.actionsForEmptySlot(slot);
+    if (actions.length) this.dispatchHandActions(actions);
+  }
+
+  handleFieldClick(event) {
+    if (this.busy || event.target.closest('.board-slot')) return;
+    const actions = this.untargetedFieldActions();
+    if (actions.length) this.dispatchHandActions(actions);
+  }
+
+  handleBoardUnitClick(unit, definition, isOpponent) {
+    if (this.busy) return;
+    if (this.pendingMove) {
+      const action = this.legalActions().find((candidate) => candidate.type === 'move'
+        && candidate.unitId === this.pendingMove.unitId
+        && candidate.moveId === this.pendingMove.moveId
+        && candidate.targetUnitId === unit.id);
+      if (action) {
+        this.performHumanAction(action);
+        return;
+      }
     }
+    if (this.selection) {
+      const actions = this.actionsForUnit(unit.id);
+      if (actions.length) {
+        this.dispatchHandActions(actions);
+        return;
+      }
+      const fieldActions = this.untargetedFieldActions();
+      if (fieldActions.length) {
+        this.dispatchHandActions(fieldActions);
+        return;
+      }
+    }
+    const moveActions = !isOpponent && this.isHumanTurn()
+      ? this.legalActions().filter((action) => action.type === 'move' && action.unitId === unit.id)
+      : [];
+    const selectableMoveIds = unique(moveActions.map((action) => action.moveId));
+    openCardDetails({
+      definition,
+      unit,
+      masterIndex: this.engine.masterIndex,
+      selectableMoveIds,
+      onMoveSelect: selectableMoveIds.length ? (move) => this.selectMove(unit.id, move.id) : null,
+    });
+  }
+
+  selectMove(unitId, moveId) {
+    if (this.busy || !this.isHumanTurn()) return;
+    const actions = this.legalActions().filter((action) => action.type === 'move' && action.unitId === unitId && action.moveId === moveId);
+    if (!actions.length) {
+      openModal({ title: '技を使えません', content: el('p', { text: 'TPまたは行動権が不足しています。' }) });
+      return;
+    }
+    const noTarget = actions.find((action) => !action.targetUnitId && !action.targetPlayerId);
+    if (noTarget) {
+      this.performHumanAction(noTarget);
+      return;
+    }
+    this.selection = null;
+    this.pendingMove = { unitId, moveId };
     this.render();
+  }
+
+  choosePlayerAttackTarget(playerId) {
+    if (!this.pendingMove || this.busy) return;
+    const action = this.legalActions().find((candidate) => candidate.type === 'move'
+      && candidate.unitId === this.pendingMove.unitId
+      && candidate.moveId === this.pendingMove.moveId
+      && candidate.targetPlayerId === playerId);
+    if (action) this.performHumanAction(action);
+  }
+
+  renderTurnControls(humanTurn) {
+    const end = humanTurn ? this.legalActions().find((action) => action.type === 'end-turn') : null;
+    return el('div', { className: 'turn-controls' }, [
+      el('p', { className: 'gesture-hint', text: this.interactionHint() }),
+      this.selection || this.pendingMove ? el('button', {
+        className: 'utility-button cancel-selection',
+        text: '選択解除',
+        onclick: () => { this.selection = null; this.pendingMove = null; this.render(); },
+      }) : null,
+      end ? el('button', { className: 'end-turn-button', text: 'ターン終了', onclick: () => this.performHumanAction(end) }) : el('div', {
+        className: 'cpu-thinking',
+        text: this.engine.state.status === 'active' ? 'CPU THINKING…' : 'BATTLE END',
+      }),
+    ]);
+  }
+
+  dispatchHandActions(actions) {
+    if (!actions.length || this.busy) return;
+    const shugyo = actions.find((action) => action.type === 'shugyo');
+    if (shugyo) {
+      this.openShugyoConfirm(shugyo);
+      return;
+    }
+    const fusionActions = actions.filter((action) => action.type.startsWith('fusion-'));
+    if (fusionActions.length > 1) {
+      this.openFusionChoice(fusionActions);
+      return;
+    }
+    this.performHumanAction(actions[0]);
+  }
+
+  openShugyoConfirm(action) {
+    const player = this.engine.player(this.humanPlayerId);
+    const unit = player.board.find((candidate) => candidate?.id === action.unitId);
+    const card = player.hand.find((candidate) => candidate.instanceId === action.cardInstanceId);
+    const definition = this.definitionForCard(card);
+    const moves = (action.preview?.possibleMoveIds ?? []).map((id) => this.engine.masterIndex.moves.get(id)).filter(Boolean);
+    let modal = null;
+    const content = el('div', { className: 'shugyo-confirm' }, [
+      el('p', { text: `${unit.name}が${definition.name}を行います。習得技は下記候補からランダムに決まります。` }),
+      moves.length ? el('ul', { className: 'shugyo-candidate-list' }, moves.map((move) => el('li', {}, [
+        el('strong', { text: move.name }),
+        el('span', { text: `Rank ${move.rank} / 威力 ${move.power ?? '—'} / ${move.tp}TP` }),
+        el('small', { text: move.effect || '追加効果なし' }),
+      ]))) : el('p', { className: 'action-hint', text: '新たに覚えられる技はありません。能力上昇のみ発生します。' }),
+      el('p', { className: 'shugyo-random-note', text: '各候補の確率差は小さく、Rankが低い技だけわずかに出やすくなります。' }),
+      el('div', { className: 'modal-actions' }, [
+        el('button', { className: 'text-button', text: 'キャンセル', onclick: () => modal.close() }),
+        el('button', {
+          className: 'primary-button',
+          text: '修行する',
+          onclick: () => { modal.close(); this.performHumanAction(action); },
+        }),
+      ]),
+    ]);
+    modal = openModal({ title: `${definition.name}：習得候補`, content });
+  }
+
+  openFusionChoice(actions) {
+    let modal = null;
+    const content = el('div', { className: 'fusion-choice' }, [
+      el('p', { text: '実行する合体を選んでください。' }),
+      ...actions.sort((a, b) => (a.type === 'fusion-special' ? -1 : 1)).map((action) => el('button', {
+        className: action.type === 'fusion-special' ? 'primary-button' : 'text-button',
+        onclick: () => { modal.close(); this.performHumanAction(action); },
+      }, [
+        el('strong', { text: action.type === 'fusion-special' ? '特殊合体' : '通常合体' }),
+        el('span', { text: `${action.label} / ${action.cost}TP` }),
+      ])),
+      el('button', { className: 'text-button', text: 'キャンセル', onclick: () => modal.close() }),
+    ]);
+    modal = openModal({ title: '合体方法', content });
+  }
+
+  beginHandDrag(event, card, definition) {
+    if (this.busy || !this.isHumanTurn() || this.selection?.id !== card.instanceId) return;
+    if (event.pointerType === 'mouse' && event.button !== 0) return;
+    const source = event.currentTarget;
+    const start = { x: event.clientX, y: event.clientY };
+    let dragging = false;
+    let ghost = null;
+    let hover = null;
+
+    const clearHover = () => {
+      hover?.classList.remove('drop-hover');
+      hover = null;
+    };
+    const cleanup = () => {
+      clearHover();
+      ghost?.remove();
+      source.classList.remove('dragging-source');
+      window.removeEventListener('pointermove', move);
+      window.removeEventListener('pointerup', end);
+      window.removeEventListener('pointercancel', cancel);
+    };
+    const positionGhost = (x, y) => {
+      if (!ghost) return;
+      ghost.style.left = `${x - ghost.offsetWidth / 2}px`;
+      ghost.style.top = `${y - ghost.offsetHeight * 0.62}px`;
+    };
+    const updateHover = (x, y) => {
+      clearHover();
+      const target = document.elementFromPoint(x, y);
+      hover = target?.closest('.board-slot.drop-valid') ?? target?.closest('.boards.drop-valid-field') ?? null;
+      hover?.classList.add('drop-hover');
+    };
+    const move = (moveEvent) => {
+      const distance = Math.hypot(moveEvent.clientX - start.x, moveEvent.clientY - start.y);
+      if (!dragging && distance < 8) return;
+      moveEvent.preventDefault();
+      if (!dragging) {
+        dragging = true;
+        const rect = source.getBoundingClientRect();
+        ghost = source.cloneNode(true);
+        ghost.className = `${source.className} drag-ghost`;
+        ghost.style.width = `${rect.width}px`;
+        ghost.style.height = `${rect.height}px`;
+        document.body.append(ghost);
+        source.classList.add('dragging-source');
+      }
+      positionGhost(moveEvent.clientX, moveEvent.clientY);
+      updateHover(moveEvent.clientX, moveEvent.clientY);
+    };
+    const end = (endEvent) => {
+      const wasDragging = dragging;
+      const intent = wasDragging ? this.dropIntentAt(endEvent.clientX, endEvent.clientY) : null;
+      cleanup();
+      if (!wasDragging) return;
+      endEvent.preventDefault();
+      this.suppressCardClickUntil = performance.now() + 450;
+      if (!this.resolveHandDrop(card, definition, intent)) this.showInvalidDrop(source);
+    };
+    const cancel = () => cleanup();
+
+    window.addEventListener('pointermove', move, { passive: false });
+    window.addEventListener('pointerup', end, { once: true });
+    window.addEventListener('pointercancel', cancel, { once: true });
+  }
+
+  dropIntentAt(x, y) {
+    const target = document.elementFromPoint(x, y);
+    const slot = target?.closest('.board-slot');
+    if (slot) {
+      return {
+        unitId: slot.dataset.unitId ?? null,
+        slot: slot.dataset.slot == null ? null : Number(slot.dataset.slot),
+        ownerId: slot.dataset.ownerId,
+      };
+    }
+    const field = target?.closest('.boards');
+    return field ? { field: true } : null;
+  }
+
+  resolveHandDrop(card, definition, intent) {
+    if (!intent || this.selection?.id !== card.instanceId) return false;
+    let actions = [];
+    if (intent.unitId) actions = this.actionsForUnit(intent.unitId);
+    if (!actions.length && definition.kind === 'monster' && intent.ownerId === this.humanPlayerId && intent.slot != null) {
+      actions = this.actionsForEmptySlot(intent.slot);
+    }
+    if (!actions.length && (intent.field || intent.unitId || intent.slot != null)) actions = this.untargetedFieldActions();
+    if (!actions.length) return false;
+    this.dispatchHandActions(actions);
+    return true;
+  }
+
+  showInvalidDrop(source) {
+    source.animate?.([
+      { transform: 'translateX(0)' },
+      { transform: 'translateX(-5px)' },
+      { transform: 'translateX(5px)' },
+      { transform: 'translateX(0)' },
+    ], { duration: 220, easing: 'ease-out' });
   }
 
   renderLog(log) {
@@ -265,14 +550,131 @@ export class BattleScreen {
     ]);
   }
 
+  captureStats() {
+    const units = new Map();
+    const players = new Map();
+    for (const playerId of this.engine.state.playerOrder) {
+      const player = this.engine.player(playerId);
+      players.set(playerId, { life: player.life });
+      for (const unit of player.board.filter(Boolean)) {
+        units.set(unit.id, {
+          life: unit.life,
+          maxLife: unit.maxLife,
+          atk: effectiveAtk(unit),
+          def: effectiveDef(unit),
+        });
+      }
+    }
+    return { units, players };
+  }
+
+  findUnitSlotNode(unitId) {
+    return [...this.root.querySelectorAll('.board-slot[data-unit-id]')]
+      .find((node) => node.dataset.unitId === unitId) ?? null;
+  }
+
+  findPlayerNode(playerId) {
+    return [...this.root.querySelectorAll('.fighter-hud[data-player-id]')]
+      .find((node) => node.dataset.playerId === playerId) ?? null;
+  }
+
+  async animateActionStart(action) {
+    const duration = this.speed === 'fast' ? 90 : 300;
+    if (action.type === 'move') {
+      const source = this.findUnitSlotNode(action.unitId);
+      const target = action.targetUnitId ? this.findUnitSlotNode(action.targetUnitId) : this.findPlayerNode(action.targetPlayerId);
+      if (!source?.animate) return;
+      const sourceRect = source.getBoundingClientRect();
+      const targetRect = target?.getBoundingClientRect();
+      const dx = targetRect ? Math.max(-68, Math.min(68, (targetRect.left + targetRect.width / 2 - sourceRect.left - sourceRect.width / 2) * .46)) : 0;
+      const dy = targetRect ? Math.max(-54, Math.min(54, (targetRect.top + targetRect.height / 2 - sourceRect.top - sourceRect.height / 2) * .46)) : -20;
+      const animation = source.animate([
+        { transform: 'translate(0,0)' },
+        { transform: `translate(${dx}px,${dy}px) scale(1.1)`, offset: .52 },
+        { transform: 'translate(0,0)' },
+      ], { duration, easing: 'cubic-bezier(.25,.8,.3,1)' });
+      await animation.finished.catch(() => {});
+      return;
+    }
+    if (['training', 'shugyo'].includes(action.type)) {
+      const target = this.findUnitSlotNode(action.unitId);
+      if (!target) return;
+      const burst = el('span', { className: `effect-burst ${action.type}`, text: action.type === 'training' ? '鍛' : '修' });
+      target.append(burst);
+      const animation = target.animate?.([
+        { filter: 'brightness(1)', transform: 'scale(1)' },
+        { filter: action.type === 'training' ? 'brightness(1.65) sepia(.45)' : 'brightness(1.55) hue-rotate(28deg)', transform: 'scale(1.045)' },
+        { filter: 'brightness(1)', transform: 'scale(1)' },
+      ], { duration: duration + 80, easing: 'ease-out' });
+      if (animation) await animation.finished.catch(() => {});
+      else await delay(duration);
+      burst.remove();
+    }
+  }
+
+  statChanges(before) {
+    const changes = [];
+    for (const [unitId, previous] of before.units) {
+      const current = this.engine.state.playerOrder
+        .flatMap((playerId) => this.engine.player(playerId).board)
+        .find((unit) => unit?.id === unitId);
+      const now = current ? {
+        life: current.life,
+        maxLife: current.maxLife,
+        atk: effectiveAtk(current),
+        def: effectiveDef(current),
+      } : { life: 0, maxLife: previous.maxLife, atk: previous.atk, def: previous.def };
+      const labels = [];
+      for (const [key, label] of [['life', 'LIFE'], ['atk', 'ATK'], ['def', 'DEF']]) {
+        if (now[key] > previous[key]) labels.push({ direction: 'up', text: `⬆︎ ${label}` });
+        if (now[key] < previous[key]) labels.push({ direction: 'down', text: `⬇︎ ${label}` });
+      }
+      if (labels.length) changes.push({ node: this.findUnitSlotNode(unitId), labels });
+    }
+    for (const [playerId, previous] of before.players) {
+      const now = this.engine.player(playerId).life;
+      if (now !== previous.life) changes.push({
+        node: this.findPlayerNode(playerId),
+        labels: [{ direction: now > previous.life ? 'up' : 'down', text: `${now > previous.life ? '⬆︎' : '⬇︎'} LIFE` }],
+      });
+    }
+    return changes.filter((entry) => entry.node);
+  }
+
+  async showStatDirections(before) {
+    const changes = this.statChanges(before);
+    if (!changes.length) return;
+    const indicators = changes.map(({ node, labels }) => {
+      const rect = node.getBoundingClientRect();
+      const indicator = el('div', {
+        className: `stat-change ${labels.some((entry) => entry.direction === 'down') ? 'down' : 'up'}`,
+        attrs: { style: `left:${rect.left + rect.width / 2}px;top:${rect.top + rect.height / 2}px` },
+      }, labels.map((entry) => el('span', { className: entry.direction, text: entry.text })));
+      document.body.append(indicator);
+      return indicator;
+    });
+    await delay(this.speed === 'fast' ? 65 : 230);
+    indicators.forEach((indicator) => indicator.remove());
+  }
+
+  async executeEngineAction(action) {
+    const before = this.captureStats();
+    const hadInteractionSelection = Boolean(this.selection || this.pendingMove);
+    this.selection = null;
+    this.pendingMove = null;
+    if (hadInteractionSelection) this.render();
+    await this.animateActionStart(action);
+    this.engine.applyAction(action);
+    await this.showStatDirections(before);
+    this.render();
+    await this.showLatestEvent();
+  }
+
   async performHumanAction(action) {
     if (this.busy || this.engine.state.currentPlayerId !== this.humanPlayerId) return;
     this.busy = true;
     try {
-      this.engine.applyAction(action);
-      this.selection = null;
-      await this.showLatestEvent();
-      this.render();
+      await this.executeEngineAction(action);
       await this.runCpuIfNeeded();
     } catch (error) {
       openModal({ title: '行動できません', content: el('p', { text: error.message }) });
@@ -290,15 +692,10 @@ export class BattleScreen {
       let guard = 0;
       while (this.engine.state.status === 'active' && this.engine.state.currentPlayerId !== this.humanPlayerId && guard < 80) {
         await delay(this.speed === 'fast' ? 90 : 350);
-        // The battle can end while the CPU is yielding for animation (for
-        // example via the localhost-only playtest shortcut). Re-check before
-        // asking the AI for an action so a completed battle is never mutated.
         if (this.engine.state.status !== 'active' || this.engine.state.currentPlayerId === this.humanPlayerId) break;
         const playerId = this.engine.state.currentPlayerId;
         const action = await this.chooseCpuAction(this.engine, playerId, this.cpuRng);
-        this.engine.applyAction(action);
-        await this.showLatestEvent();
-        this.render();
+        await this.executeEngineAction(action);
         guard += 1;
       }
       if (guard >= 80) throw new Error('CPUの1ターン行動数が安全上限を超えました');

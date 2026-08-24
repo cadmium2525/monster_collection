@@ -18,15 +18,40 @@ test('shugyo costs 5 TP, rolls +5..+10 twice, learns up to 9 moves and keeps 4 e
   const battle = engine({ seed: 'shugyo' });
   const unit = placeUnit(battle, 'p1', 'ドラゴン', 0);
   setHand(battle, 'p1', [card('shugyo-attack', 'shugyo-card')]);
-  const action = battle.getLegalActions().find((candidate) => candidate.type === 'shugyo' && candidate.learnMoveId);
+  const action = battle.getLegalActions().find((candidate) => candidate.type === 'shugyo');
+  const possibleMoveIds = action.preview.possibleMoveIds;
   const beforeLife = unit.maxLife;
   const beforeAtk = unit.atkBase;
   battle.applyAction(action);
+  const learnedMoveId = battle.state.log.at(-1).learnedMoveId;
   assert.ok(unit.maxLife - beforeLife >= 5 && unit.maxLife - beforeLife <= 10);
   assert.ok(unit.atkBase - beforeAtk >= 5 && unit.atkBase - beforeAtk <= 10);
-  assert.equal(unit.learnedMoveIds.includes(action.learnMoveId), true);
+  assert.equal(possibleMoveIds.includes(learnedMoveId), true);
+  assert.equal(unit.learnedMoveIds.includes(learnedMoveId), true);
   assert.ok(unit.equippedMoveIds.length <= 4);
   assert.equal(battle.player('p1').tp, 5);
+});
+
+test('shugyo learns a seeded random technique from the correct attack/defense pool', () => {
+  const learned = (seed, cardId) => {
+    const battle = engine({ seed });
+    placeUnit(battle, 'p1', 'ドラゴン', 0);
+    setHand(battle, 'p1', [card(cardId, `${cardId}-${seed}`)]);
+    const actions = battle.getLegalActions().filter((candidate) => candidate.type === 'shugyo');
+    assert.equal(actions.length, 1, 'one decision per card and target; the result is not chosen by the caller');
+    battle.applyAction(actions[0]);
+    return battle.state.log.at(-1).learnedMoveId;
+  };
+
+  assert.equal(learned('same-seed', 'shugyo-attack'), learned('same-seed', 'shugyo-attack'));
+  const attackIds = new Set(['ルインクロス', 'インフェルノ', 'しっぽアタック'].map((name) => moveByName('ドラゴン', name).id));
+  const defenseIds = new Set(['ドラゴンラッシュ', 'ドラゴンパンチ', 'ウイングアタック'].map((name) => moveByName('ドラゴン', name).id));
+  const attackResults = new Set(Array.from({ length: 24 }, (_, index) => learned(`attack-${index}`, 'shugyo-attack')));
+  const defenseResults = new Set(Array.from({ length: 24 }, (_, index) => learned(`defense-${index}`, 'shugyo-defense')));
+  assert.ok(attackResults.size > 1, 'different seeds should produce more than one attack technique');
+  assert.ok(defenseResults.size > 1, 'different seeds should produce more than one defense technique');
+  assert.equal([...attackResults].every((id) => attackIds.has(id)), true);
+  assert.equal([...defenseResults].every((id) => defenseIds.has(id)), true);
 });
 
 test('fusion is unavailable before first 6 / second 5 and costs 1 or 2 afterward', () => {

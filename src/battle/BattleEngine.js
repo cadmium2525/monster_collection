@@ -30,6 +30,7 @@ import {
   updateConsecutiveTarget,
 } from './effects.js';
 import { RULES } from './rules.js';
+import { chooseShugyoMove, learnableShugyoMoves } from './shugyo.js';
 
 function opposingId(state, playerId) {
   return state.playerOrder.find((id) => id !== playerId);
@@ -206,28 +207,16 @@ export class BattleEngine {
       }
       if (definition.kind === 'shugyo' && player.tp >= definition.tp) {
         for (const unit of livingUnits(player)) {
-          const poolType = definition.id === 'shugyo-attack' ? 'attack' : 'defense';
-          const poolNames = this.masterData.shugyoPools[unit.baseMonsterName]?.[poolType] ?? [];
-          const learnable = poolNames
-            .map((name) => this.masterIndex.movesByName.get(`${unit.baseMonsterName}:${name}`))
-            .filter((move) => move && !unit.learnedMoveIds.includes(move.id));
-          const candidates = learnable.length ? learnable : [null];
-          for (const move of candidates) {
-            const replacements = move && unit.equippedMoveIds.length >= RULES.equippedMoveSlots
-              ? [null, ...unit.equippedMoveIds]
-              : [null];
-            for (const replaceMoveId of replacements) {
-              actions.push({
-                type: 'shugyo',
-                cardInstanceId: card.instanceId,
-                unitId: unit.id,
-                learnMoveId: move?.id ?? null,
-                replaceMoveId,
-                cost: definition.tp,
-                label: `${unit.name}が${definition.name}${move ? `・${move.name}習得` : ''}`,
-              });
-            }
-          }
+          const possibleMoveIds = learnableShugyoMoves(this.masterData, this.masterIndex, unit, definition)
+            .map((move) => move.id);
+          actions.push({
+            type: 'shugyo',
+            cardInstanceId: card.instanceId,
+            unitId: unit.id,
+            cost: definition.tp,
+            label: `${unit.name}が${definition.name}`,
+            preview: { possibleMoveIds },
+          });
         }
       }
       if (definition.kind === 'breeder' && player.tp >= definition.tp) {
@@ -478,17 +467,16 @@ export class BattleEngine {
     }
 
     let learnedMove = null;
-    if (action.learnMoveId && !unit.learnedMoveIds.includes(action.learnMoveId) && unit.learnedMoveIds.length < RULES.maxLearnedMoves) {
-      learnedMove = this.masterIndex.moves.get(action.learnMoveId);
-      unit.learnedMoveIds.push(action.learnMoveId);
-      growth.learnedMoveIds.push(action.learnMoveId);
+    if (unit.learnedMoveIds.length < RULES.maxLearnedMoves) {
+      const candidates = learnableShugyoMoves(this.masterData, this.masterIndex, unit, definition);
+      learnedMove = chooseShugyoMove(this.rng, candidates);
+    }
+    if (learnedMove) {
+      unit.learnedMoveIds.push(learnedMove.id);
+      growth.learnedMoveIds.push(learnedMove.id);
       if (unit.equippedMoveIds.length < RULES.equippedMoveSlots) {
-        unit.equippedMoveIds.push(action.learnMoveId);
-        growth.equippedMoveIds.push(action.learnMoveId);
-      } else if (action.replaceMoveId && unit.equippedMoveIds.includes(action.replaceMoveId)) {
-        const replaceIndex = unit.equippedMoveIds.indexOf(action.replaceMoveId);
-        unit.equippedMoveIds[replaceIndex] = action.learnMoveId;
-        growth.equippedMoveIds = [...unit.equippedMoveIds];
+        unit.equippedMoveIds.push(learnedMove.id);
+        growth.equippedMoveIds.push(learnedMove.id);
       }
     }
 
