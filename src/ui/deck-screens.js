@@ -10,7 +10,7 @@ function deckSummaryCard(deck, masterIndex, onSelect) {
     onclick: () => onSelect(deck),
     onkeydown: (event) => { if (event.key === 'Enter' || event.key === ' ') onSelect(deck); },
   }, [
-    el('div', { className: 'deck-representative' }, representative ? renderCard({ definition: representative, label: `${deck.deckName}を開く` }) : null),
+    el('div', { className: 'deck-representative' }, representative ? renderCard({ definition: representative, label: `${deck.deckName}の代表モンスター`, interactive: false }) : null),
     el('div', { className: 'deck-summary-copy' }, [
       el('h2', { text: deck.deckName }),
       el('p', { text: representative?.name ?? 'モンスターなし' }),
@@ -53,7 +53,7 @@ export class DeckListScreen {
 }
 
 export class DeckDetailScreen {
-  constructor({ root, collection, masterIndex, deckId, onBack, onUse, onDelete }) {
+  constructor({ root, collection, masterIndex, deckId, onBack, onUse, onDelete, onChanged }) {
     this.root = root;
     this.collection = collection;
     this.masterIndex = masterIndex;
@@ -61,11 +61,16 @@ export class DeckDetailScreen {
     this.onBack = onBack;
     this.onUse = onUse;
     this.onDelete = onDelete;
+    this.onChanged = onChanged;
     this.render();
   }
 
   rename(input) {
-    try { this.collection.rename(this.deckId, input.value); this.error = ''; }
+    try {
+      const deck = this.collection.rename(this.deckId, input.value);
+      this.onChanged?.(deck);
+      this.error = '';
+    }
     catch (error) { this.error = error.message; }
     this.render();
   }

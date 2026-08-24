@@ -37,7 +37,7 @@ function cardMeta(definition, unit) {
   };
 }
 
-export function renderCard({ definition, unit = null, selected = false, disabled = false, onClick, label }) {
+export function renderCard({ definition, unit = null, selected = false, disabled = false, onClick, label, interactive = true }) {
   const meta = cardMeta(definition, unit);
   const statuses = unit ? Object.values(unit.statuses ?? {}).filter((value) => value === true || (typeof value === 'number' && value > 0)) : [];
   const name = unit?.specialForm ?? definition.name;
@@ -47,11 +47,14 @@ export function renderCard({ definition, unit = null, selected = false, disabled
     selected ? 'selected' : '',
     disabled ? 'disabled' : '',
     unit && (unit.actionPoints <= 0 || unit.summonedThisTurn || unit.stunnedThisTurn) ? 'exhausted' : '',
+    interactive ? '' : 'static',
   ].filter(Boolean).join(' ');
-  const node = el('button', {
+  const node = el(interactive ? 'button' : 'div', {
     className: classes,
-    attrs: { type: 'button', 'aria-label': label ?? `${name}の詳細と行動を表示` },
-    onclick: onClick,
+    attrs: interactive
+      ? { type: 'button', 'aria-label': label ?? `${name}の詳細と行動を表示` }
+      : { role: 'img', 'aria-label': label ?? name },
+    onclick: interactive ? onClick : null,
   }, [
     el('div', { className: 'card-top' }, [
       el('span', { className: 'card-name', text: name }),

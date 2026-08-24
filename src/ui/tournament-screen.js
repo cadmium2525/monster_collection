@@ -13,10 +13,10 @@ function matchView(bracket, match, currentMatchId) {
     match.status === 'resolved' ? 'resolved' : '',
   ].filter(Boolean).join(' ');
   return el('article', { className: classes }, match.entrants.map((id) => el('div', {
-    className: `bracket-entrant ${match.winnerId === id ? 'winner' : ''} ${id === 'player' ? 'is-player' : ''}`,
+    className: `bracket-entrant ${match.winnerId && match.winnerId === id ? 'winner' : ''} ${id === 'player' ? 'is-player' : ''}`,
   }, [
     el('span', { text: entrantName(bracket, id) }),
-    match.winnerId === id ? el('b', { text: 'WIN' }) : null,
+    match.winnerId && match.winnerId === id ? el('b', { text: 'WIN' }) : null,
   ])));
 }
 

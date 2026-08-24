@@ -59,6 +59,7 @@ export class BattleScreen {
           el('div', { className: 'utility-bar' }, [
             el('button', { className: 'utility-button', text: this.speed === 'fast' ? '演出: 高速' : '演出: 標準', onclick: () => { this.speed = this.speed === 'fast' ? 'standard' : 'fast'; this.render(); } }),
             el('button', { className: 'utility-button', text: `Seed ${state.seed.slice(0, 8)}`, onclick: () => navigator.clipboard?.writeText(state.seed) }),
+            globalThis.__MC_DEBUG_MODE__ ? el('button', { className: 'utility-button debug-win', text: 'TEST WIN', onclick: () => { this.engine._finish(this.humanPlayerId, 'debug-test-win'); this.render(); } }) : null,
           ]),
         ]),
       ]),
@@ -212,6 +213,10 @@ export class BattleScreen {
       let guard = 0;
       while (this.engine.state.status === 'active' && this.engine.state.currentPlayerId !== this.humanPlayerId && guard < 80) {
         await delay(this.speed === 'fast' ? 90 : 350);
+        // The battle can end while the CPU is yielding for animation (for
+        // example via the localhost-only playtest shortcut). Re-check before
+        // asking the AI for an action so a completed battle is never mutated.
+        if (this.engine.state.status !== 'active' || this.engine.state.currentPlayerId === this.humanPlayerId) break;
         const playerId = this.engine.state.currentPlayerId;
         const action = await this.chooseCpuAction(this.engine, playerId, this.cpuRng);
         this.engine.applyAction(action);
