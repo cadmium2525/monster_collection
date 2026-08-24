@@ -64,7 +64,7 @@ Pages workflowは `.github/workflows/pages.yml`。Firebase設定は `FIREBASE_SE
    35生成×4ランクでは狙いレシピが1/2/3/4へ増える一方、Bronzeは多様な16モンスターから偶発レシピが多く成立します。狙いと実成立を別統計にしてあるため、実戦でBronzeが特殊合体過多なら低ランク候補poolの種数制約を検討してください。
 
 7. **本番Firebaseプロジェクトの接続**
-   Repository、Firestore schema、Rulesは実装済みですが、`src/config/firebase-config.js` は資格情報未提供のため `null` です。Firebase ConsoleのWeb設定、匿名認証、GitHub PagesのAuthorized domain、Rules deployを行うまでは本番もLocalStorageモードです。
+   Repository、Firestore schema、Rulesを実装し、Firebaseプロジェクト`monster-collections`のWeb設定を`src/config/firebase-config.js`へ組み込み済みです。Firestore Rules/Indexesは2026-08-25に`(default)`データベースへデプロイ済みです。匿名認証とGitHub PagesのAuthorized domainがFirebase Consoleで有効なら本番はFirebaseモードになり、接続障害時だけ安全にLocalStorageへフォールバックします。
 
 ## 保守時の主な場所
 

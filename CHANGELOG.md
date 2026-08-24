@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.5.1 — 2026-08-25
+
+### Changed
+
+- Firebaseプロジェクト`monster-collections`のWebアプリ設定を本番クライアントへ接続。
+- GitHub Pages/PWAのキャッシュバージョンを1.5.1へ更新し、Firebase接続設定を既存インストールにも確実に配信。
+
+### Security
+
+- Firestoreへのアクセスは匿名Authenticationとリポジトリ管理の`firestore.rules`を前提とし、Firebase障害時は既存のLocalStorageデータを保持。
+
+### Verified
+
+- `monster-collections`の`(default)`データベースへFirestore Rules/Indexesをデプロイし、Rulesのコンパイルとrelease成功を確認。
+
 ## 1.5.0 — 2026-08-25
 
 ### Added

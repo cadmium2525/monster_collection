@@ -1,5 +1,7 @@
 # Firebaseセットアップ
 
+> 現在の本番環境はFirebaseプロジェクト`monster-collections`へ接続済みです。Webアプリ設定は`src/config/firebase-config.js`へ組み込み済みで、Firestore Security RulesとIndexesは2026-08-25に`(default)`データベースへデプロイ済みです。
+
 Firebaseが設定されていない場合、ゲームはローカル専用モードで動作します。セーブデータはブラウザーのストレージに保持され、Firebaseの初期化や書き込みに失敗しても削除されません。
 
 本実装で使用するデータベースは、Firebase Realtime Databaseではなく**Cloud Firestore**です。Firestoreでもリアルタイムリスナー（`onSnapshot`）を利用して現チャンピオンを購読できます。また、ドキュメント形式のデータモデルとトランザクションは、保存された40枚デッキやバージョン付き王座更新の管理に適しています。
@@ -15,7 +17,7 @@ Firebaseが設定されていない場合、ゲームはローカル専用モー
 
 ## 2. Webアプリの設定を追加する
 
-`src/config/firebase-config.js`を編集し、`null`をFirebase Consoleに表示されるWebアプリ設定へ置き換えます。
+本番設定は`src/config/firebase-config.js`へ組み込み済みです。将来別のFirebaseプロジェクトへ切り替える場合は、Firebase Consoleに表示されるWebアプリ設定でこのオブジェクトを置き換えます。
 
 ```js
 export const firebaseConfig = {
