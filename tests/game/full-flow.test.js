@@ -20,12 +20,26 @@ function setup(champion = null) {
   return { session, decks, deck, saves, repository };
 }
 
-function fakeFinishedBattle(winnerId = 'player') {
+function fakeFinishedBattle(winnerId = 'player', growth = {}) {
   return {
     state: { status: 'finished', winnerId },
-    getGrowthSnapshot: () => ({}),
+    getGrowthSnapshot: () => structuredClone(growth),
   };
 }
+
+test('Training growth carries to the next match but never enters the saved 40-card record', async () => {
+  const { session, decks, deck, saves } = setup();
+  await session.startTournament(deck.deckId, 'bronze');
+  const monsterCard = deck.cards.find((card) => masterIndex.cards.get(card.masterId)?.kind === 'monster');
+  const growth = { [monsterCard.instanceId]: { life: 5, atk: 10, def: 0, learnedMoveIds: [], equippedMoveIds: [] } };
+  const outcome = await session.completeBattle(fakeFinishedBattle('player', growth));
+  await session.completeReward(outcome.reward.skip());
+  assert.deepEqual(session.tournament.state.tournamentGrowth, growth);
+  const nextBattle = session.createCurrentBattle();
+  assert.deepEqual(nextBattle.player('player').tournamentGrowth, growth);
+  assert.equal('tournamentGrowth' in decks.get(deck.deckId), false);
+  assert.equal(saves.some((saved) => 'tournamentGrowth' in saved), false);
+});
 
 test('home-equivalent deck selection -> four wins -> rewards -> next rank qualification', async () => {
   const { session, decks, deck, saves } = setup();

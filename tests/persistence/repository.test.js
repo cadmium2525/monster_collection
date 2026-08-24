@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import { FirebaseGameRepository, LocalGameRepository, MemoryStorage, ResilientGameRepository } from '../../src/persistence/index.js';
 import { legalDeck } from '../helpers.js';
 
@@ -102,6 +103,9 @@ function fakeFirebaseSdk() {
     getFirestore: () => ({}),
     doc: (...parts) => ({ path: pathOf(...parts) }),
     collection: (...parts) => ({ path: pathOf(...parts) }),
+    orderBy: (field, direction) => ({ kind: 'orderBy', field, direction }),
+    limit: (count) => ({ kind: 'limit', count }),
+    query: (reference, ...constraints) => ({ ...reference, constraints }),
     serverTimestamp: () => ({ __serverTimestamp: true }),
     getDoc: async (reference) => snapshot(reference.path),
     setDoc: async (reference, data, options = {}) => {
@@ -110,10 +114,14 @@ function fakeFirebaseSdk() {
       notify(reference.path);
     },
     deleteDoc: async (reference) => { docs.delete(reference.path); notify(reference.path); },
-    getDocs: async (reference) => ({
-      docs: [...docs.entries()].filter(([path]) => path.startsWith(`${reference.path}/`) && path.split('/').length === reference.path.split('/').length + 1)
-        .map(([path]) => snapshot(path)),
-    }),
+    getDocs: async (reference) => {
+      let entries = [...docs.entries()].filter(([path]) => path.startsWith(`${reference.path}/`) && path.split('/').length === reference.path.split('/').length + 1);
+      const order = reference.constraints?.find((constraint) => constraint.kind === 'orderBy');
+      if (order) entries.sort(([, a], [, b]) => String(b[order.field] ?? '').localeCompare(String(a[order.field] ?? '')) * (order.direction === 'desc' ? 1 : -1));
+      const cap = reference.constraints?.find((constraint) => constraint.kind === 'limit');
+      if (cap) entries = entries.slice(0, cap.count);
+      return { docs: entries.map(([path]) => snapshot(path)) };
+    },
     onSnapshot: (reference, callback) => {
       if (!listeners.has(reference.path)) listeners.set(reference.path, new Set());
       listeners.get(reference.path).add(callback);
@@ -151,4 +159,40 @@ test('Firebase repository uses a transaction and rejects stale championVersion',
   assert.equal(fake.transactionCount, 1);
   await assert.rejects(() => repository.claimChampionship(championPayload(0)), { code: 'champion/version-conflict' });
   assert.equal((await repository.getChampion()).championVersion, 1, 'stale write must not overwrite champion');
+});
+
+test('Firebase publishes Legend-qualified decks for other players and removes the snapshot with its source deck', async () => {
+  const fake = fakeFirebaseSdk();
+  const repository = new FirebaseGameRepository({ config: { projectId: 'test' }, sdkLoader: async () => fake.sdk });
+  await repository.initialize();
+  const legendDeck = { ...savedDeck('legend-ready'), qualification: 'legend', highestReached: 'gold' };
+  await repository.saveDeck(legendDeck);
+
+  const ownPath = 'legendDecks/firebase-user--legend-ready';
+  assert.equal(fake.docs.get(ownPath).cards.length, 40);
+  assert.equal(fake.docs.get(ownPath).ownerDisplayName, '名無しブリーダー');
+  assert.equal(fake.docs.get(ownPath).qualification, 'legend');
+
+  fake.docs.set('legendDecks/other-user--rival-deck', {
+    publicDeckId: 'other-user--rival-deck', ownerUserId: 'other-user', ownerDisplayName: '遠征ブリーダー',
+    sourceDeckId: 'rival-deck', deckName: '遠征40', cards: legalDeck('rival'), totalPlayTp: 120,
+    qualification: 'legend', highestReached: 'legend', representativeMonsterId: 'monster-003', schemaVersion: 1,
+    publishedAt: '2026-08-24T02:00:00.000Z', updatedAt: '2026-08-24T03:00:00.000Z',
+  });
+  const publicDecks = await repository.listLegendDecks();
+  assert.deepEqual(publicDecks.map((deck) => deck.ownerDisplayName), ['遠征ブリーダー']);
+  assert.equal(publicDecks[0].cards.length, 40);
+
+  await repository.deleteDeck(legendDeck.deckId);
+  assert.equal(fake.docs.has(ownPath), false);
+});
+
+test('Firestore rules expose Legend snapshots read-only to authenticated opponents and cross-check the private source deck', () => {
+  const rules = fs.readFileSync(new URL('../../firestore.rules', import.meta.url), 'utf8');
+  assert.match(rules, /match \/legendDecks\/\{publicDeckId\}/);
+  assert.match(rules, /allow read: if signedIn\(\)/);
+  assert.match(rules, /validLegendSource\(request\.resource\.data\)/);
+  assert.match(rules, /source\.qualification == 'legend'/);
+  assert.match(rules, /source\.cards == d\.cards/);
+  assert.match(rules, /allow delete: if signedIn\(\) && resource\.data\.ownerUserId == request\.auth\.uid/);
 });

@@ -1,6 +1,8 @@
+import { assertLegalDeck } from '../battle/deck.js';
 import { SeededRng } from '../core/rng.js';
 import { createBaselineDeck } from '../data/default-decks.js';
 import { createMasterIndex } from '../data/master-loader.js';
+import { analyzeDeck, scoreGeneratedDeck } from './deck-analyzer.js';
 import { generateCpuDeck } from './deck-generator.js';
 import { generateCpuNames } from './cpu-names.js';
 
@@ -23,7 +25,7 @@ function fallbackChampion(masterData) {
 }
 
 export class TournamentRun {
-  constructor({ masterData, rank, playerDeck, seed = 'tournament', champion = null }) {
+  constructor({ masterData, rank, playerDeck, seed = 'tournament', champion = null, legendDecks = [] }) {
     this.masterData = masterData;
     this.masterIndex = createMasterIndex(masterData);
     this.rng = new SeededRng(seed);
@@ -41,11 +43,45 @@ export class TournamentRun {
       championVersionAtStart: champion?.championVersion ?? 0,
       result: null,
     };
-    this._createEntrants(champion ?? fallbackChampion(masterData));
+    this._createEntrants(champion ?? fallbackChampion(masterData), legendDecks);
     this._buildInitialRound();
   }
 
-  _createEntrants(champion) {
+  _legendChallengers(records, champion) {
+    const championUserId = champion?.championUserId ?? null;
+    const championDeckId = champion?.championDeckId ?? champion?.sourceDeckId ?? null;
+    const seen = new Set();
+    const candidates = [];
+    for (const record of records ?? []) {
+      try {
+        if (!record || record.qualification !== 'legend') continue;
+        if (record.ownerUserId && record.ownerUserId === championUserId) continue;
+        if (record.sourceDeckId && record.sourceDeckId === championDeckId && record.ownerUserId === championUserId) continue;
+        const stableId = String(record.publicDeckId ?? `${record.ownerUserId ?? 'unknown'}--${record.sourceDeckId ?? candidates.length}`);
+        if (seen.has(stableId)) continue;
+        const cards = assertLegalDeck(record.cards, this.masterIndex, { deckId: `legend-${stableId}` });
+        const analysis = analyzeDeck(cards, this.masterIndex, { theme: '混合' });
+        seen.add(stableId);
+        candidates.push({
+          stableId,
+          ownerUserId: record.ownerUserId ?? null,
+          sourceDeckId: record.sourceDeckId ?? null,
+          displayName: String(record.ownerDisplayName ?? '名もなき挑戦者').trim().slice(0, 24) || '名もなき挑戦者',
+          deckName: String(record.deckName ?? '挑戦者の40枚').trim().slice(0, 30) || '挑戦者の40枚',
+          cards,
+          representativeMonsterId: record.representativeMonsterId ?? null,
+          qualityScore: scoreGeneratedDeck(analysis, 'legend'),
+          analysis,
+        });
+      } catch {
+        // Public documents are untrusted input. Invalid or stale master data is ignored.
+      }
+    }
+    candidates.sort((a, b) => a.stableId.localeCompare(b.stableId));
+    return this.rng.fork('legend:public-decks').shuffle(candidates).slice(0, 14);
+  }
+
+  _createEntrants(champion, legendDecks) {
     const names = generateCpuNames(15, this.rng.fork('names'));
     const player = {
       id: 'player',
@@ -56,7 +92,18 @@ export class TournamentRun {
       qualityScore: Number.POSITIVE_INFINITY,
     };
     this.state.entrants[player.id] = player;
-    const cpuCount = this.state.rank === 'legend' ? 14 : 15;
+    const challengers = this.state.rank === 'legend' ? this._legendChallengers(legendDecks, champion) : [];
+    challengers.forEach((challenger, index) => {
+      const id = `challenger-${String(index + 1).padStart(2, '0')}`;
+      this.state.entrants[id] = {
+        ...challenger,
+        id,
+        type: 'challenger',
+        theme: '他プレイヤー',
+        generatorStats: challenger.analysis,
+      };
+    });
+    const cpuCount = this.state.rank === 'legend' ? 14 - challengers.length : 15;
     for (let index = 0; index < cpuCount; index += 1) {
       const deck = generateCpuDeck({
         masterIndex: this.masterIndex,

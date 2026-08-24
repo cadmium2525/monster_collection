@@ -12,7 +12,17 @@ function normalizedTimestamp(value) {
 
 function normalizeRecord(data) {
   if (!data) return data;
-  return { ...clone(data), createdAt: normalizedTimestamp(data.createdAt), updatedAt: normalizedTimestamp(data.updatedAt), crownedAt: normalizedTimestamp(data.crownedAt) };
+  return {
+    ...clone(data),
+    createdAt: normalizedTimestamp(data.createdAt),
+    updatedAt: normalizedTimestamp(data.updatedAt),
+    publishedAt: normalizedTimestamp(data.publishedAt),
+    crownedAt: normalizedTimestamp(data.crownedAt),
+  };
+}
+
+function publicDeckId(userId, deckId) {
+  return `${userId}--${encodeURIComponent(String(deckId))}`;
 }
 
 export class FirebaseGameRepository {
@@ -38,14 +48,16 @@ export class FirebaseGameRepository {
         displayName: '名無しブリーダー', isAnonymous: this.user.isAnonymous, createdAt: this.sdk.serverTimestamp(), updatedAt: this.sdk.serverTimestamp(),
       });
     }
-    const profile = await this.getProfile();
-    return { id: this.user.uid, ...profile, mode: 'firebase' };
+    this.profile = await this.getProfile();
+    return { id: this.user.uid, ...this.profile, mode: 'firebase' };
   }
 
   _requireUser() { if (!this.user) throw new Error('Firebase repository is not initialized'); }
   _profileRef() { this._requireUser(); return this.sdk.doc(this.db, 'users', this.user.uid); }
   _decksRef() { this._requireUser(); return this.sdk.collection(this.db, 'users', this.user.uid, 'savedDecks'); }
   _deckRef(deckId) { this._requireUser(); return this.sdk.doc(this.db, 'users', this.user.uid, 'savedDecks', deckId); }
+  _legendDecksRef() { this._requireUser(); return this.sdk.collection(this.db, 'legendDecks'); }
+  _legendDeckRef(deckId) { this._requireUser(); return this.sdk.doc(this.db, 'legendDecks', publicDeckId(this.user.uid, deckId)); }
   _championRef() { return this.sdk.doc(this.db, 'gameState', 'champion'); }
 
   async getProfile() {
@@ -57,7 +69,8 @@ export class FirebaseGameRepository {
     const value = String(displayName ?? '').trim();
     if (!value || [...value].length > 24) throw new Error('表示名は1〜24文字です');
     await this.sdk.setDoc(this._profileRef(), { displayName: value, updatedAt: this.sdk.serverTimestamp() }, { merge: true });
-    return { ...(await this.getProfile()), id: this.user.uid };
+    this.profile = await this.getProfile();
+    return { ...this.profile, id: this.user.uid };
   }
 
   async listDecks() {
@@ -71,10 +84,51 @@ export class FirebaseGameRepository {
       ownerUserId: this.user.uid,
       updatedAt: this.sdk.serverTimestamp(),
     }, { merge: true });
+    if (deck.qualification === 'legend') await this._publishLegendDeck(deck);
     return clone(deck);
   }
 
-  async deleteDeck(deckId) { await this.sdk.deleteDoc(this._deckRef(deckId)); }
+  async _publishLegendDeck(deck) {
+    const reference = this._legendDeckRef(deck.deckId);
+    const existing = await this.sdk.getDoc(reference);
+    await this.sdk.setDoc(reference, {
+      publicDeckId: publicDeckId(this.user.uid, deck.deckId),
+      ownerUserId: this.user.uid,
+      ownerDisplayName: this.profile?.displayName ?? '名無しブリーダー',
+      sourceDeckId: deck.deckId,
+      deckName: deck.deckName,
+      cards: clone(deck.cards),
+      totalPlayTp: deck.totalPlayTp,
+      qualification: 'legend',
+      highestReached: deck.highestReached,
+      representativeMonsterId: deck.representativeMonsterId ?? null,
+      schemaVersion: 1,
+      publishedAt: existing.exists() ? existing.data().publishedAt : this.sdk.serverTimestamp(),
+      updatedAt: this.sdk.serverTimestamp(),
+    });
+  }
+
+  async listLegendDecks(maxResults = 60) {
+    const requested = Math.max(1, Math.min(100, Math.trunc(Number(maxResults) || 60)));
+    const source = this.sdk.query(
+      this._legendDecksRef(),
+      this.sdk.orderBy('updatedAt', 'desc'),
+      this.sdk.limit(requested + 5),
+    );
+    const snapshots = await this.sdk.getDocs(source);
+    return snapshots.docs
+      .map((snapshot) => normalizeRecord({ ...snapshot.data(), publicDeckId: snapshot.id }))
+      .filter((record) => record.ownerUserId !== this.user.uid && record.qualification === 'legend')
+      .sort((a, b) => String(b.updatedAt ?? '').localeCompare(String(a.updatedAt ?? '')))
+      .slice(0, requested);
+  }
+
+  async deleteDeck(deckId) {
+    const publicReference = this._legendDeckRef(deckId);
+    const publicSnapshot = await this.sdk.getDoc(publicReference);
+    await this.sdk.deleteDoc(this._deckRef(deckId));
+    if (publicSnapshot.exists()) await this.sdk.deleteDoc(publicReference);
+  }
 
   async getChampion() {
     const snapshot = await this.sdk.getDoc(this._championRef());

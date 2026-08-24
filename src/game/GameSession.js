@@ -1,5 +1,6 @@
 import { BattleEngine } from '../battle/BattleEngine.js';
 import { representativeMonster } from '../battle/deck.js';
+import { RULES } from '../battle/rules.js';
 import { CardStealSession } from '../reward/CardStealSession.js';
 import { TournamentRun } from '../tournament/TournamentRun.js';
 
@@ -20,11 +21,15 @@ export class GameSession {
   async startTournament(deckId, rank) {
     const deck = this.deckCollection.recordTournamentEntry(deckId, rank);
     await this.repository.saveDeck(deck);
+    const legendDecks = rank === 'legend' && this.repository.listLegendDecks
+      ? await this.repository.listLegendDecks(60)
+      : [];
     this.tournament = new TournamentRun({
       masterData: this.masterData,
       rank,
       seed: `${this.seed}:${deckId}:${rank}`,
       champion: this.champion,
+      legendDecks,
       playerDeck: { ...deck, ownerDisplayName: this.user.displayName },
     });
     return this.tournament;
@@ -52,7 +57,7 @@ export class GameSession {
   async completeBattle(engine = this.activeBattle) {
     if (!engine || engine.state.status !== 'finished') throw new Error('終了済みの試合がありません');
     const opponent = this.tournament.getCurrentOpponent();
-    this.tournament.updateGrowth(engine.getGrowthSnapshot('player'));
+    this.tournament.updateGrowth(RULES.tournamentGrowthLifetime === 'tournament' ? engine.getGrowthSnapshot('player') : {});
     const won = engine.state.winnerId === 'player';
     const draw = engine.state.winnerId == null;
     const tournamentResult = this.tournament.recordPlayerResult({ won, draw });

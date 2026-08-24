@@ -6,6 +6,12 @@ function entrantName(bracket, entrantId) {
   return entrantId ? bracket.entrants[entrantId]?.displayName ?? '未定' : '未定';
 }
 
+function opponentDeckDescription(opponent) {
+  if (opponent.type === 'champion') return '現チャンピオン40枚';
+  if (opponent.type === 'challenger') return '他プレイヤーが育てた保存40枚';
+  return `${opponent.theme}テーマ`;
+}
+
 function matchView(bracket, match, currentMatchId) {
   const classes = [
     'bracket-match',
@@ -55,7 +61,7 @@ export class TournamentScreen {
         el('div', {}, [
           el('span', { className: 'eyebrow', text: `${ROUND_LABELS[this.tournament.state.roundIndex]} / ${this.tournament.getCurrentAiLevel().toUpperCase()} AI` }),
           el('h2', { text: `VS ${opponent.displayName}` }),
-          el('p', { text: `${opponent.deckName}・${opponent.type === 'champion' ? '現チャンピオン40枚' : `${opponent.theme}テーマ`}` }),
+          el('p', { text: `${opponent.deckName}・${opponentDeckDescription(opponent)}` }),
         ]),
         el('button', { className: 'primary-button', text: '対戦へ', onclick: () => this.onStartMatch?.(opponent) }),
       ] : [

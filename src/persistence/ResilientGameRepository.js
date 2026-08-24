@@ -66,6 +66,12 @@ export class ResilientGameRepository {
     catch (error) { this.lastError = error; throw new RepositoryUnavailableError('クラウド側でデッキを削除できませんでした', error); }
   }
 
+  async listLegendDecks(maxResults = 60) {
+    if (!this.activeCloud?.listLegendDecks) return [];
+    try { return await this.activeCloud.listLegendDecks(maxResults); }
+    catch (error) { this.lastError = error; return []; }
+  }
+
   async getChampion() {
     if (!this.activeCloud) return this.local.getChampion();
     try { return await this.activeCloud.getChampion(); }

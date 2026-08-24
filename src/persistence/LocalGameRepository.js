@@ -62,6 +62,8 @@ export class LocalGameRepository {
     this.storage.setItem(this._decksKey(), JSON.stringify(next));
   }
 
+  async listLegendDecks() { return []; }
+
   async getChampion() { return clone(parse(this.storage.getItem(CHAMPION_KEY), null)); }
 
   async cacheChampion(champion) {

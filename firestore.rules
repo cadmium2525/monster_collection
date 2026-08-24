@@ -46,6 +46,49 @@ service cloud.firestore {
         && c.championVersion is int;
     }
 
+    function validLegendDeck(publicDeckId) {
+      let d = request.resource.data;
+      return d.keys().hasOnly([
+          'publicDeckId', 'ownerUserId', 'ownerDisplayName', 'sourceDeckId',
+          'deckName', 'cards', 'totalPlayTp', 'qualification', 'highestReached',
+          'representativeMonsterId', 'schemaVersion', 'publishedAt', 'updatedAt'
+        ])
+        && d.publicDeckId == publicDeckId
+        && d.ownerUserId == request.auth.uid
+        && d.ownerDisplayName is string
+        && d.ownerDisplayName.size() > 0
+        && d.ownerDisplayName.size() <= 24
+        && d.sourceDeckId is string
+        && d.deckName is string
+        && d.deckName.size() > 0
+        && d.deckName.size() <= 30
+        && d.cards is list
+        && d.cards.size() == 40
+        && d.totalPlayTp is number
+        && d.qualification == 'legend'
+        && d.highestReached in ['bronze', 'silver', 'gold', 'legend']
+        && (d.representativeMonsterId == null || d.representativeMonsterId is string)
+        && d.schemaVersion == 1
+        && d.publishedAt is timestamp
+        && d.updatedAt is timestamp;
+    }
+
+    function validLegendSource(d) {
+      let ownerId = request.auth.uid;
+      let sourceDeckId = d.sourceDeckId;
+      let source = get(/databases/$(database)/documents/users/$(ownerId)/savedDecks/$(sourceDeckId)).data;
+      let profile = get(/databases/$(database)/documents/users/$(ownerId)).data;
+      return source.ownerUserId == ownerId
+        && source.deckId == sourceDeckId
+        && source.qualification == 'legend'
+        && source.deckName == d.deckName
+        && source.cards == d.cards
+        && source.totalPlayTp == d.totalPlayTp
+        && source.highestReached == d.highestReached
+        && source.representativeMonsterId == d.representativeMonsterId
+        && profile.displayName == d.ownerDisplayName;
+    }
+
     match /users/{userId} {
       allow read, create, update: if owns(userId);
       allow delete: if false;
@@ -82,6 +125,24 @@ service cloud.firestore {
           )
         );
       allow delete: if false;
+    }
+
+    match /legendDecks/{publicDeckId} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && validLegendDeck(publicDeckId)
+        && validLegendSource(request.resource.data)
+        && request.resource.data.publishedAt == request.time
+        && request.resource.data.updatedAt == request.time;
+      allow update: if signedIn()
+        && validLegendDeck(publicDeckId)
+        && validLegendSource(request.resource.data)
+        && resource.data.ownerUserId == request.auth.uid
+        && request.resource.data.ownerUserId == resource.data.ownerUserId
+        && request.resource.data.sourceDeckId == resource.data.sourceDeckId
+        && request.resource.data.publishedAt == resource.data.publishedAt
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if signedIn() && resource.data.ownerUserId == request.auth.uid;
     }
   }
 }

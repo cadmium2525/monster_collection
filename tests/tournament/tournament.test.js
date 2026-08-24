@@ -48,3 +48,34 @@ test('Legend rounds 1-3 use Legend opponents and final is the captured champion 
   assert.equal(result.status, 'champion');
   assert.equal(result.defeatedChampionVersion, 42);
 });
+
+test('Legend bracket includes valid public player decks, fills remaining slots with CPUs, and reserves the final for champion', () => {
+  const champion = {
+    championUserId: 'king-user', championDeckId: 'king-deck', displayName: '現王者', deckName: '王者40',
+    cards: createBaselineDeck(masterData, 'king-public'), championVersion: 9,
+  };
+  const legendDecks = [
+    {
+      publicDeckId: 'rival-a--deck-a', ownerUserId: 'rival-a', ownerDisplayName: '挑戦者A', sourceDeckId: 'deck-a',
+      deckName: 'Aの40枚', cards: createBaselineDeck(masterData, 'rival-a'), qualification: 'legend',
+    },
+    {
+      publicDeckId: 'rival-b--deck-b', ownerUserId: 'rival-b', ownerDisplayName: '挑戦者B', sourceDeckId: 'deck-b',
+      deckName: 'Bの40枚', cards: createBaselineDeck(masterData, 'rival-b'), qualification: 'legend',
+    },
+    {
+      publicDeckId: 'bad--deck', ownerUserId: 'bad', ownerDisplayName: '不正データ', sourceDeckId: 'bad',
+      deckName: '壊れた40枚', cards: [{ instanceId: 'bad-1', masterId: 'unknown' }], qualification: 'legend',
+    },
+  ];
+  const run = new TournamentRun({ masterData, rank: 'legend', playerDeck: playerDeck(), seed: 'public-legend', champion, legendDecks });
+  const entrants = Object.values(run.state.entrants);
+  assert.equal(entrants.length, 16);
+  assert.equal(entrants.filter((entrant) => entrant.type === 'challenger').length, 2);
+  assert.equal(entrants.filter((entrant) => entrant.type === 'cpu').length, 12);
+  assert.equal(entrants.filter((entrant) => entrant.type === 'champion').length, 1);
+  assert.deepEqual(entrants.filter((entrant) => entrant.type === 'challenger').map((entrant) => entrant.displayName).sort(), ['挑戦者A', '挑戦者B']);
+
+  for (let round = 0; round < 3; round += 1) run.recordPlayerResult({ won: true });
+  assert.equal(run.getCurrentOpponent().type, 'champion');
+});
