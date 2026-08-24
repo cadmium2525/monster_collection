@@ -1,14 +1,9 @@
 import { loadMasterData, createMasterIndex } from './data/master-loader.js';
 import { BattleEngine } from './battle/BattleEngine.js';
-import { defaultSimulationPolicy } from './battle/simulation.js';
+import { createBaselineDeck } from './data/default-decks.js';
+import { createAiPolicy } from './ai/index.js';
 import { el, replace } from './ui/dom.js';
 import { BattleScreen } from './ui/battle-screen.js';
-
-function demoDeck(master, deckId) {
-  const masterIds = master.monsters.flatMap((monster) => [monster.id, monster.id]);
-  masterIds.push(...master.growthCards.slice(0, 4).map((card) => card.id));
-  return masterIds.map((masterId, index) => ({ instanceId: `${deckId}-card-${index + 1}`, masterId }));
-}
 
 async function boot() {
   const root = document.querySelector('#app');
@@ -20,15 +15,15 @@ async function boot() {
       masterData,
       seed,
       players: [
-        { id: 'player', displayName: 'あなた', deckId: 'demo-player', cards: demoDeck(masterData, 'demo-player') },
-        { id: 'cpu', displayName: '訓練CPU', deckId: 'demo-cpu', cards: demoDeck(masterData, 'demo-cpu') },
+        { id: 'player', displayName: 'あなた', deckId: 'demo-player', cards: createBaselineDeck(masterData, 'demo-player') },
+        { id: 'cpu', displayName: '訓練CPU', deckId: 'demo-cpu', cards: createBaselineDeck(masterData, 'demo-cpu') },
       ],
     });
     new BattleScreen({
       root,
       engine,
       humanPlayerId: 'player',
-      chooseCpuAction: (battle, playerId, rng) => defaultSimulationPolicy(battle, playerId, rng),
+      chooseCpuAction: createAiPolicy('silver', { timeBudgetMs: 18 }),
       onComplete: () => location.reload(),
     });
     window.__MC_DEBUG__ = { engine, masterData, masterIndex };
