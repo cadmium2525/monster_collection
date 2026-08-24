@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { cardArtPlacement, circledTp, resolvedTrait } from '../../src/ui/card-renderer.js';
+import { cardArtPlacement, cardDisplayStats, circledTp, resolvedTrait } from '../../src/ui/card-renderer.js';
 import { shugyoMoveWeight } from '../../src/battle/shugyo.js';
 import { monsterByName } from '../helpers.js';
 
@@ -31,7 +31,19 @@ test('card art placement selects generated support and special-fusion atlases de
   const special = cardArtPlacement(monster, { specialFusionId: 'fusion-036', specialForm: 'クレバス' });
   assert.equal(special.className, 'monster-art special-fusion-art');
   assert.match(special.style, /--art-x:100%;--art-y:100%/);
+  const blueDrill = cardArtPlacement(monster, { specialFusionId: 'fusion-014', specialForm: 'ブルードリル' });
+  assert.equal(blueDrill.className, 'monster-art special-fusion-art blue-drill-art');
+  assert.equal(blueDrill.style, null);
   const support = cardArtPlacement({ id: 'breeder-020', kind: 'breeder' });
   assert.equal(support.className, 'support-card-art');
   assert.match(support.style, /--art-x:100%;--art-y:100%/);
+});
+
+test('hand monster stats include tournament growth carried from earlier matches', () => {
+  const monster = monsterByName('ドラゴン');
+  assert.deepEqual(cardDisplayStats(monster, null, { life: 8, atk: 5, def: 10 }), {
+    life: monster.base.life + 8,
+    atk: monster.base.atk + 5,
+    def: monster.base.def + 10,
+  });
 });

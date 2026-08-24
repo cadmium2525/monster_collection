@@ -1,0 +1,50 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>特殊合体アート36体 QA</title>
+    <link rel="stylesheet" href="../styles.css">
+    <style>
+      body { overflow: auto; padding: 24px; background: #070d16; color: #f5e8c4; }
+      main { width: min(1400px,100%); margin: auto; }
+      h1 { margin: 0 0 8px; }
+      p { color: #aeb9c7; }
+      #grid { display: grid; grid-template-columns: repeat(auto-fill,minmax(150px,1fr)); gap: 16px; }
+      figure { margin: 0; padding: 8px; border: 1px solid #765b2e; border-radius: 10px; background: #111a27; }
+      figure .card-art { width: 100%; height: auto; aspect-ratio: 1.45 / 1; margin: 0; }
+      figcaption { padding-top: 7px; font-size: 12px; text-align: center; }
+      figure[data-fusion-id="fusion-014"] { outline: 2px solid #68ddff; }
+    </style>
+  </head>
+  <body>
+    <main>
+      <h1>特殊合体アート36体・実カード比率確認</h1>
+      <p>各枠はゲーム内のカード画像領域と同じ横長比率。水色枠が差し替え済みブルードリルです。</p>
+      <section id="grid" aria-label="特殊合体36体"></section>
+    </main>
+    <script type="module">
+      import { loadMasterData, createMasterIndex } from '../src/data/master-loader.js';
+      import { cardArtPlacement } from '../src/ui/card-renderer.js';
+
+      const data = await loadMasterData();
+      const index = createMasterIndex(data);
+      const grid = document.querySelector('#grid');
+      data.fusions.forEach((fusion, fusionIndex) => {
+        const definition = index.monstersByName.get(fusion.main);
+        const placement = cardArtPlacement(definition, { specialFusionId: fusion.id, specialForm: fusion.name });
+        const figure = document.createElement('figure');
+        figure.dataset.fusionId = fusion.id;
+        const art = document.createElement('div');
+        art.className = `card-art ${placement.className}`;
+        if (placement.style) art.setAttribute('style', placement.style);
+        art.setAttribute('role', 'img');
+        art.setAttribute('aria-label', `${fusion.name}のアート`);
+        const caption = document.createElement('figcaption');
+        caption.textContent = `${String(fusionIndex + 1).padStart(2, '0')} ${fusion.name}`;
+        figure.append(art, caption);
+        grid.append(figure);
+      });
+    </script>
+  </body>
+</html>

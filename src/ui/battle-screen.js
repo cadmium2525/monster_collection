@@ -236,6 +236,8 @@ export class BattleScreen {
       }
       const definition = this.engine.masterIndex.monsters.get(unit.sourceMasterId);
       const handActions = this.actionsForUnit(unit.id);
+      const fusionActions = handActions.filter((action) => action.type.startsWith('fusion-'));
+      const fusionPreview = (fusionActions.find((action) => action.type === 'fusion-special') ?? fusionActions[0])?.preview;
       const attackTarget = this.pendingMove && this.legalActions().some((action) => action.type === 'move'
         && action.unitId === this.pendingMove.unitId
         && action.moveId === this.pendingMove.moveId
@@ -254,7 +256,10 @@ export class BattleScreen {
       return el('div', {
         className: `board-slot${handActions.length ? ' drop-valid' : ''}${attackTarget ? ' attack-target' : ''}`,
         dataset: { unitId: unit.id, slot: String(slot), ownerId: player.id },
-      }, cardNode);
+      }, [
+        cardNode,
+        fusionPreview ? el('span', { className: 'fusion-drop-preview', text: `合体 SP +${fusionPreview.deltaSp}` }) : null,
+      ]);
     }));
   }
 
@@ -264,6 +269,7 @@ export class BattleScreen {
     const hasAction = this.legalActions().some((action) => cardAction(action, card.instanceId));
     const node = renderCard({
       definition,
+      growth: player.tournamentGrowth[card.instanceId],
       selected,
       disabled: humanTurn && !hasAction,
       dragReady: selected && humanTurn && hasAction,
@@ -475,7 +481,7 @@ export class BattleScreen {
         onclick: () => { modal.close(); this.performHumanAction(action); },
       }, [
         el('strong', { text: action.type === 'fusion-special' ? '特殊合体' : '通常合体' }),
-        el('span', { text: `${action.label} / ${action.cost}TP` }),
+        el('span', { text: `${action.label} / ${action.cost}TP / SP ${action.preview.mainSp}→${action.preview.newSp}` }),
       ])),
       el('button', { className: 'text-button', text: 'キャンセル', onclick: () => modal.close() }),
     ]);

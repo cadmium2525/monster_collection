@@ -157,6 +157,28 @@ export function currentSp(unit) {
   return unit.maxLife + unit.atkBase + unit.defBase;
 }
 
+export function projectFusionStats(main, materialSp) {
+  const mainSp = currentSp(main);
+  const normalizedMaterialSp = Math.max(1, Math.round(Number(materialSp) || 0));
+  const formulaSp = Math.max(3, Math.round(((mainSp + normalizedMaterialSp) / 2) * RULES.fusionMultiplier));
+  const minimumGain = Math.max(1, Math.ceil(normalizedMaterialSp * RULES.fusionMinimumMaterialRate));
+  const newSp = Math.max(formulaSp, mainSp + minimumGain);
+  const lifeWeight = main.maxLife / mainSp;
+  const atkWeight = main.atkBase / mainSp;
+  const maxLife = Math.min(newSp - 2, Math.max(1, Math.round(newSp * lifeWeight)));
+  const atk = Math.min(newSp - maxLife - 1, Math.max(1, Math.round(newSp * atkWeight)));
+  const def = newSp - maxLife - atk;
+  return {
+    mainSp,
+    materialSp: normalizedMaterialSp,
+    formulaSp,
+    minimumGain,
+    newSp,
+    deltaSp: newSp - mainSp,
+    stats: { life: maxLife, atk, def },
+  };
+}
+
 export function lifeRatio(unit) {
   return unit.maxLife > 0 ? unit.life / unit.maxLife : 0;
 }

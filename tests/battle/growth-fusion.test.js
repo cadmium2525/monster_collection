@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { currentSp } from '../../src/battle/state.js';
 import { card, engine, monsterByName, moveByName, placeUnit, setHand } from '../helpers.js';
 
 test('Training costs 2 TP, grants +5, and records tournament growth', () => {
@@ -113,6 +114,24 @@ test('fusion is unavailable before first 6 / second 5 and costs 1 or 2 afterward
   assert.equal(battle.player('p1').tp, 8);
 });
 
+test('fusion never weakens a trained main monster and exposes the guaranteed gain', () => {
+  const battle = engine({ seed: 'fusion-floor' });
+  const main = placeUnit(battle, 'p1', 'ジョーカー', 0);
+  main.maxLife += 20;
+  main.life += 20;
+  main.atkBase += 20;
+  const material = monsterByName('モッチー');
+  setHand(battle, 'p1', [card(material.id, 'weak-material')]);
+  battle.player('p1').turnNumber = 6;
+  const beforeSp = currentSp(main);
+  const action = battle.getLegalActions().find((candidate) => candidate.type === 'fusion-special');
+  assert.ok(action.preview.deltaSp > 0);
+  assert.equal(action.preview.mainSp, beforeSp);
+  battle.applyAction(action);
+  assert.equal(currentSp(main), action.preview.newSp);
+  assert.ok(currentSp(main) > beforeSp, 'fusion must always consume a monster without weakening the board');
+});
+
 test('all 36 special recipes are present and set their canonical form/trait', () => {
   for (const fusion of engine().masterData.fusions) {
     const battle = engine({ seed: fusion.id });
@@ -126,6 +145,8 @@ test('all 36 special recipes are present and set their canonical form/trait', ()
     assert.equal(main.specialForm, fusion.name);
     assert.equal(main.specialFusionId, fusion.id);
     assert.equal(main.specialTrait, fusion.trait);
+    assert.ok(currentSp(main) > action.preview.mainSp, `${fusion.name} must gain SP`);
+    assert.equal(currentSp(main), action.preview.newSp, `${fusion.name} preview must equal applied SP`);
   }
 });
 

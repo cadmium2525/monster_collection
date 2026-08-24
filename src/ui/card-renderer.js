@@ -60,8 +60,8 @@ export function cardArtPlacement(definition, unit = null) {
     : SPECIAL_FUSION_NAMES.indexOf(unit?.specialForm);
   if (fusionIndex >= 0 && fusionIndex < SPECIAL_FUSION_NAMES.length) {
     return {
-      className: 'monster-art special-fusion-art',
-      style: atlasPosition(fusionIndex, 6, 6),
+      className: `monster-art special-fusion-art${fusionIndex === 13 ? ' blue-drill-art' : ''}`,
+      style: fusionIndex === 13 ? null : atlasPosition(fusionIndex, 6, 6),
     };
   }
 
@@ -80,15 +80,22 @@ export function resolvedTrait(definition, unit) {
   };
 }
 
-function cardMeta(definition, unit) {
+export function cardDisplayStats(definition, unit = null, growth = null) {
+  if (definition.kind !== 'monster') return null;
+  if (unit) return { life: Math.max(0, unit.life), atk: effectiveAtk(unit), def: effectiveDef(unit) };
+  return {
+    life: definition.base.life + Math.max(0, Number(growth?.life) || 0),
+    atk: definition.base.atk + Math.max(0, Number(growth?.atk) || 0),
+    def: definition.base.def + Math.max(0, Number(growth?.def) || 0),
+  };
+}
+
+function cardMeta(definition, unit, growth) {
   if (definition.kind === 'monster') {
     const trait = resolvedTrait(definition, unit);
-    const stats = unit
-      ? { life: Math.max(0, unit.life), atk: effectiveAtk(unit), def: effectiveDef(unit) }
-      : { life: definition.base.life, atk: definition.base.atk, def: definition.base.def };
     return {
       cost: definition.summonTp,
-      stats,
+      stats: cardDisplayStats(definition, unit, growth),
       effect: trait.effect,
       faction: unit?.faction ?? definition.faction,
     };
@@ -105,6 +112,7 @@ function cardMeta(definition, unit) {
 export function renderCard({
   definition,
   unit = null,
+  growth = null,
   selected = false,
   disabled = false,
   onClick,
@@ -114,8 +122,11 @@ export function renderCard({
   showMonsterEffect = true,
   dragReady = false,
 }) {
-  const meta = cardMeta(definition, unit);
+  const meta = cardMeta(definition, unit, growth);
   const art = cardArtPlacement(definition, unit);
+  const growthBonus = definition.kind === 'monster' && !unit
+    ? ['life', 'atk', 'def'].reduce((sum, key) => sum + Math.max(0, Number(growth?.[key]) || 0), 0)
+    : 0;
   const statuses = unit ? Object.values(unit.statuses ?? {}).filter((value) => value === true || (typeof value === 'number' && value > 0)) : [];
   const name = unit?.specialForm ?? definition.name;
   const classes = [
@@ -152,7 +163,9 @@ export function renderCard({
       className: `card-art ${art.className}`.trim(),
       attrs: art.style ? { style: art.style } : null,
     }, [
-      definition.kind === 'monster' ? null : el('span', { className: 'card-kind', text: meta.kind }),
+      definition.kind === 'monster'
+        ? (growthBonus ? el('span', { className: 'card-growth-badge', text: `大会 +${growthBonus}` }) : null)
+        : el('span', { className: 'card-kind', text: meta.kind }),
     ]),
     meta.stats ? el('div', { className: 'card-stats' }, [
       el('span', { text: `L ${meta.stats.life}` }),

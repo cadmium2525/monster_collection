@@ -405,7 +405,15 @@ body:has(.battle-screen) {
     url("./assets/images/special-fusion-atlas-v1.jpg");
   background-size: 100% 100%, 600% 600%;
 }
+.card-art.monster-art.special-fusion-art.blue-drill-art {
+  background-image:
+    linear-gradient(180deg, transparent 52%, rgba(2,7,13,.86) 100%),
+    url("./assets/images/blue-drill-v2.jpg");
+  background-size: 100% 100%, cover;
+  background-position: center, center;
+}
 .card-kind { position: absolute; inset: auto 2px 2px; max-width: calc(100% - 4px); overflow: hidden; color: rgba(255,255,255,.8); font-size: 7px; text-align: right; white-space: nowrap; text-overflow: ellipsis; text-shadow: 0 1px 3px #000; }
+.card-growth-badge { position: absolute; z-index: 2; left: 3px; bottom: 3px; padding: 2px 4px; border: 1px solid rgba(135,244,194,.65); border-radius: 8px; color: #baffda; background: rgba(4,31,25,.9); font-size: 6px; font-weight: 900; box-shadow: 0 2px 7px rgba(0,0,0,.45); }
 .card-stats { display: grid; grid-template-columns: repeat(3,1fr); gap: 2px; font-size: 7px; font-weight: 800; text-align: center; font-variant-numeric: tabular-nums; }
 .card-stats span { overflow: hidden; padding: 2px 0; border-radius: 3px; background: rgba(0,0,0,.5); white-space: nowrap; }
 .card-stats span:nth-child(1) { color: #ffb1ad; background: rgba(88,16,27,.72); }
@@ -420,6 +428,7 @@ body:has(.battle-screen) {
 .board-slot .card-effect { display: none; }
 .board-slot .card-art { height: calc(100% - 40px); min-height: 32px; }
 .board-slot .card-stats { margin-top: 2px; }
+.fusion-drop-preview { position: absolute; z-index: 16; right: 3px; bottom: 3px; padding: 2px 5px; border: 1px solid #f0ce7b; border-radius: 9px; color: #fff1b6; background: rgba(49,29,4,.94); font-size: 6px; font-weight: 900; pointer-events: none; box-shadow: 0 2px 8px rgba(0,0,0,.5); }
 .effect-burst { position: absolute; z-index: 12; inset: 12%; display: grid; place-items: center; border: 2px solid currentColor; border-radius: 50%; color: #ffe39a; background: radial-gradient(circle,rgba(255,226,141,.42),transparent 65%); text-shadow: 0 0 8px #fff; font: 800 clamp(20px,4vw,42px)/1 Georgia,serif; pointer-events: none; animation: cast-burst .66s ease-out both; }
 .effect-burst.shugyo { color: #e5b9ff; background: radial-gradient(circle,rgba(189,104,231,.46),transparent 65%); }
 @keyframes cast-burst { from { opacity: 0; transform: scale(.3) rotate(-20deg); } 55% { opacity: 1; } to { opacity: 0; transform: scale(1.28) rotate(8deg); } }
@@ -742,6 +751,23 @@ button:disabled { opacity: .38; cursor: not-allowed; }
 .home-footer { min-width: 0; display: flex; justify-content: space-between; gap: 12px; padding: 5px 9px; border: 1px solid var(--line); border-radius: 8px; color: var(--muted); background: var(--panel); font-size: 8px; }
 .how-to-play { line-height: 1.55; font-size: 13px; }
 .how-to-play li { margin: 5px 0; }
+.tutorial-start { width: 100%; margin-top: 10px; }
+.tutorial-modal { width: min(680px,92vw); }
+.tutorial-player { display: grid; gap: 9px; padding-top: 10px; }
+.tutorial-progress { display: grid; grid-template-columns: repeat(7,1fr); gap: 4px; }
+.tutorial-progress i { height: 4px; border-radius: 5px; background: rgba(255,255,255,.12); }
+.tutorial-progress i.active { background: var(--gold); box-shadow: 0 0 7px rgba(232,186,98,.42); }
+.tutorial-copy { min-height: 82px; padding: 10px 12px; border: 1px solid rgba(232,186,98,.2); border-radius: 10px; background: rgba(255,255,255,.035); }
+.tutorial-copy h3 { margin: 2px 0 5px; color: #fff0bf; font-size: 19px; }
+.tutorial-copy > p:last-child { margin: 0; color: #dce5e9; font-size: 12px; line-height: 1.5; }
+.tutorial-visual { display: grid; grid-template-columns: repeat(3,1fr); gap: 7px; }
+.tutorial-visual > div { position: relative; display: grid; place-items: center; gap: 4px; min-height: 64px; padding: 7px; border: 1px solid var(--line); border-radius: 9px; background: linear-gradient(180deg,#142437,#08111c); }
+.tutorial-visual > div + div::before { content: "›"; position: absolute; left: -8px; z-index: 2; color: var(--gold); font-size: 20px; }
+.tutorial-visual strong { display: grid; place-items: center; min-width: 32px; height: 32px; padding: 0 5px; border: 1px solid rgba(105,224,220,.5); border-radius: 50%; color: #bffffb; font-size: 15px; }
+.tutorial-visual span { color: #d9e2e6; font-size: 9px; font-weight: 800; }
+.tutorial-tip { min-height: 34px; margin: 0; padding: 7px 9px; border-left: 3px solid var(--gold); color: #e2cfaa; background: rgba(232,186,98,.07); font-size: 10px; line-height: 1.45; }
+.tutorial-actions { display: flex; justify-content: space-between; gap: 8px; }
+.tutorial-actions button { min-width: 120px; }
 .name-editor { display: flex; align-items: end; gap: 8px; padding-top: 12px; }
 .name-editor label { flex: 1; color: var(--muted); font-size: 11px; }
 .name-editor label span { display: block; margin-bottom: 4px; }

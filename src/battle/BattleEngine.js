@@ -6,7 +6,6 @@ import {
   clone,
   createPlayerState,
   createUnit,
-  currentSp,
   effectiveAtk,
   effectiveDef,
   findUnit,
@@ -14,6 +13,7 @@ import {
   lifeRatio,
   livingUnits,
   normalizeGrowth,
+  projectFusionStats,
 } from './state.js';
 import {
   applyAtkBuff,
@@ -306,13 +306,19 @@ export class BattleEngine {
         .filter(({ definition }) => definition.kind === 'monster');
       for (const main of livingUnits(player).filter((unit) => unit.fusionStage < RULES.maxFusionStage)) {
         for (const { card, definition } of materials) {
+          const materialGrowth = normalizeGrowth(player.tournamentGrowth[card.instanceId], definition, this.masterIndex);
+          const materialSp = definition.base.life + materialGrowth.life
+            + definition.base.atk + materialGrowth.atk
+            + definition.base.def + materialGrowth.def;
+          const preview = projectFusionStats(main, materialSp);
           if (player.tp >= RULES.normalFusionTp) {
             actions.push({
               type: 'fusion-normal',
               unitId: main.id,
               materialCardInstanceId: card.instanceId,
               cost: RULES.normalFusionTp,
-              label: `${main.name} + ${definition.name}（通常合体）`,
+              preview,
+              label: `${main.name} + ${definition.name}（通常合体・SP+${preview.deltaSp}）`,
             });
           }
           const special = this.masterIndex.fusions.get(`${main.baseMonsterName}:${definition.name}`);
@@ -323,7 +329,8 @@ export class BattleEngine {
               materialCardInstanceId: card.instanceId,
               fusionId: special.id,
               cost: RULES.specialFusionTp,
-              label: `${special.name}へ特殊合体`,
+              preview,
+              label: `${special.name}へ特殊合体（SP+${preview.deltaSp}）`,
             });
           }
         }
@@ -572,14 +579,12 @@ export class BattleEngine {
     const materialSp = materialDef.base.life + materialGrowth.life
       + materialDef.base.atk + materialGrowth.atk
       + materialDef.base.def + materialGrowth.def;
-    const mainSp = currentSp(main);
-    const newSp = Math.max(3, Math.round(((mainSp + materialSp) / 2) * RULES.fusionMultiplier));
+    const projection = projectFusionStats(main, materialSp);
+    const { mainSp, newSp } = projection;
     const currentLifeRatio = lifeRatio(main);
-    const lifeWeight = main.maxLife / mainSp;
-    const atkWeight = main.atkBase / mainSp;
-    const newMaxLife = Math.max(1, Math.round(newSp * lifeWeight));
-    const newAtk = Math.max(1, Math.round(newSp * atkWeight));
-    const newDef = Math.max(1, newSp - newMaxLife - newAtk);
+    const newMaxLife = projection.stats.life;
+    const newAtk = projection.stats.atk;
+    const newDef = projection.stats.def;
     main.maxLife = newMaxLife;
     main.life = Math.max(1, Math.round(newMaxLife * currentLifeRatio));
     main.atkBase = newAtk;
@@ -631,7 +636,9 @@ export class BattleEngine {
       materialCardInstanceId: materialCard.instanceId,
       materialMasterId: materialDef.id,
       fusionId: fusion?.id ?? null,
+      previousSp: mainSp,
       newSp,
+      deltaSp: projection.deltaSp,
       stats: { life: main.maxLife, atk: main.atkBase, def: main.defBase },
       actionPoints: main.actionPoints,
     });
