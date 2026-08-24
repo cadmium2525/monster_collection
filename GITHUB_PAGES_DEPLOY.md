@@ -1,10 +1,12 @@
 # GitHub Pages公開手順
 
-このプロジェクトはルート直下を直接公開せず、`npm run build` が作る `dist/` だけをPagesへ送ります。すべての実行時URLは相対指定なので、`https://USER.github.io/REPOSITORY/` のようなサブパスでも動作します。
+対象リポジトリは [cadmium2525/monster_collection](https://github.com/cadmium2525/monster_collection)、公開URLは `https://cadmium2525.github.io/monster_collection/` です。
+
+このプロジェクトはルート直下を直接公開せず、`npm run build` が作る `dist/` だけをPagesへ送ります。すべての実行時URLは相対指定なので、`/monster_collection/` サブパスで動作します。
 
 ## 初回設定
 
-1. GitHubへリポジトリを作成し、このコードを `main` または `master` へpushします。
+1. `https://github.com/cadmium2525/monster_collection` の `main` へpushします。
 2. GitHubの **Settings → Pages → Build and deployment → Source** で **GitHub Actions** を選択します。
 3. Firebaseを使う場合は、先に [FIREBASE_SETUP.md](./FIREBASE_SETUP.md) に従って `src/config/firebase-config.js` を設定し、Firestore Rulesをデプロイします。
 4. Firebase AuthenticationのAuthorized domainsへ `USER.github.io` と、使用する独自ドメインがあればそのホスト名を追加します。
@@ -28,7 +30,7 @@ npm run preview
 サブパスまで検証する場合は次を実行し、表示されたURLを開きます。
 
 ```sh
-node scripts/serve.mjs --root dist --base /REPOSITORY/ --port 4175
+node scripts/serve.mjs --root dist --base /monster_collection/ --port 4175
 ```
 
 ## 公開前チェック

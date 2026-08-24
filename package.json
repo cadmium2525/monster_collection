@@ -4,6 +4,11 @@
   "private": true,
   "type": "module",
   "description": "モンスターコンストラクション Sim8.7 playable static web game",
+  "homepage": "https://cadmium2525.github.io/monster_collection/",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/cadmium2525/monster_collection.git"
+  },
   "scripts": {
     "dev": "node scripts/serve.mjs",
     "build": "node scripts/build-pages.mjs",

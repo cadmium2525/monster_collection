@@ -1,5 +1,9 @@
 # モンスターコンストラクション
 
+Repository: [cadmium2525/monster_collection](https://github.com/cadmium2525/monster_collection)
+
+GitHub Pages: `https://cadmium2525.github.io/monster_collection/`
+
 Sim8.7完全展開版を正本にした、スマートフォン横画面向けの静的Webカードゲームです。トーナメント4試合、勝利後のカード奪取、40枚の永続更新、上位大会解禁、レジェンド決勝の現チャンピオン戦まで一連に遊べます。
 
 2026-08-24の仕様差分として、距離・得意距離・移動をゲーム判定から完全に廃止しています。盤面は距離を持たない3枠で、モンスター内包の実戦4技は任意の合法対象へ使います。マスターの `legacyDistance` は原典追跡専用で、UI・AI・ダメージ計算には使いません。
