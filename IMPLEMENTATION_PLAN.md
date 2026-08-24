@@ -48,6 +48,7 @@
 - モンスター詳細、習得技/実戦4技、攻撃技選択
 - 召喚、攻撃、Training、修行、ブリーダー、合体、ターン終了
 - 標準/高速テンポ、safe-area、iPhone横画面対応
+- 遊び方内の7ステップチュートリアル、大会内成長の手札現在値表示
 
 ## Phase 4: CPU AI（完了）
 
@@ -78,9 +79,10 @@
 ## Phase 7: Firebase・王座（完了）
 
 - Local / Firebase / Resilient Repository
-- users、savedDecks、champion/current
+- users、savedDecks、legendDecks、champion/current
 - 現王者のリアルタイム購読
 - championVersion付きFirestore transaction
+- Legend資格40枚の公開スナップショットと他プレイヤー大会枠
 - Firebase Security Rules、設定例、障害時ローカル保護
 
 ## Phase 8: 一連プレイ統合（完了）
@@ -99,7 +101,7 @@
 
 ## 完了時点
 
-- 実装完了日: 2026-08-24
+- 実装完了日: 2026-08-24（1.5.0追補: 2026-08-25）
 - 自動テスト、AI固定seed検証、実エンジン大会走行、844×390横画面のブラウザ操作を実施。
 - Firebase資格情報なしでもLocalStorageで全ゲームループを実行可能。オンライン王座には利用者側Firebaseプロジェクト設定が必要。
 - 未確定仕様、バランス観測、静的クライアントの不正耐性限界は `IMPLEMENTATION_QUESTIONS.md` と `HANDOFF.md` に分離した。

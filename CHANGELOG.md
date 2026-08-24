@@ -1,5 +1,34 @@
 # Changelog
 
+## 1.5.0 — 2026-08-25
+
+### Added
+
+- ホームの「遊び方」から開始できる7ステップの横画面チュートリアル。勝利条件、スワイプ召喚、技攻撃、Training/修行、合体、TP、カード奪取を順に説明。
+- Cloud Firestoreの `legendDecks` 公開スナップショット。Legend資格を得た保存40枚を所有者だけが更新し、他プレイヤーのレジェンド杯通常枠へ最大14デッキまで投入。
+- 公開40枚を所有者の非公開保存デッキ・プロフィールと照合するFirestore Security Rulesと、破損/旧マスター文書を大会投入前に除外する合法性検証。
+- 特殊合体36体を実ゲームの横長カード比率で一括確認する `tools/fusion-art-qa.html`。
+
+### Changed
+
+- 合体SPは従来の平均×1.20式を維持しつつ、最低でも「メイン現在SP＋素材現在SPの10%（切上げ）」になる保証を追加。育成済みメインの弱体化と手札モンスター滞留を防止。
+- 手札モンスターへ同一大会で持ち越したTraining/修行の現在LIFE/ATK/DEFを表示し、`大会 +N` バッジを追加。成長寿命は大会終了までのまま維持。
+- Legend杯は他プレイヤーの合法な公開デッキを優先して16人表へ入れ、不足枠だけを従来の制約付きLegend CPUで補完。決勝は引き続き現チャンピオン固定。
+- PWAキャッシュと静的アセット版を1.5.0へ更新。
+
+### Fixed
+
+- ブルードリルの角・口先・頭部がアトラスセル境界で切れる問題を、専用の安全余白付きイラストへ差し替えて修正。
+- 「遊び方」下の `距離廃止版ルール` と旧距離廃止注記を通常UIから削除。
+
+### Verified
+
+- 67件の自動テストとGitHub Pagesビルドを確認。
+- 844×390で7ステップすべてが680×341px内、内部スクロールなし、横縦overflowなしで表示され、大会選択まで遷移することを実ブラウザーで確認。
+- 特殊合体36体を166×114pxの実カード画像比率で確認。ブルードリルは専用画像、他35体は正しいアトラスセルを使用し、欠落画像と追加の致命的な部位切れがないことを確認。
+- Gold同士6戦の小標本で合体発生試合83.3%、特殊合体発生試合83.3%、40T判定0%、平均9.83ラウンドを確認。長期バランスの確定値ではない。
+- Firestore Repository mockでLegend公開、他ユーザー読込、自分の除外、削除連動、16人枠への混在、決勝Champion固定を確認。
+
 ## 1.4.1 — 2026-08-24
 
 ### Fixed
@@ -279,4 +308,21 @@ Row 5 — breeder tactics 16–20:
 25. commander uniting multiple giant monsters under a combined red-and-blue power aura.
 
 Art direction: mature fantasy, energetic and dramatic, no gore. Make this a cohesive atlas usable as card illustrations.
+```
+
+### `blue-drill-v2.jpg`
+
+ブルードリルだけに確認された重要部位の切れを直すため、組み込みImageGenで専用画像を生成し、JPEGへ変換した。ゲーム内の名称・TP・能力・効果は引き続きHTML描画で、画像には含めていない。
+
+```text
+Use case: stylized-concept
+Asset type: square monster card illustration for a dark high-fantasy mobile collectible card game
+Primary request: create the special fusion monster ブルードリル (Blue Drill), a giant armored burrowing worm fused with a blue lightning wolf
+Scene/backdrop: dark subterranean rock cavern with blue electrical arcs and dust
+Subject: one powerful blue horned burrowing predator; segmented worm-like armored body, wolf-like ferocity, a prominent drill-shaped horn, icy blue metal scales, electric mane accents
+Style/medium: premium painterly Japanese dark-fantasy card art, realistic painted textures, strong silhouette, cinematic rim lighting, saturated cyan-blue accents, high contrast; visually cohesive with a mature fantasy monster atlas
+Composition/framing: square portrait; center the entire head, horn, snout, neck and readable upper-body coil; keep every important feature inside a generous 15 percent safe margin on all sides; the horn and snout must be fully visible and must not touch or cross the image edges
+Lighting/mood: cold blue lightning against deep charcoal rock, imposing and energetic
+Constraints: exactly one monster; full-bleed background; no text, letters, numbers, symbols, logos, UI, card frame, border, caption, watermark; no important anatomy cropped; no existing copyrighted character likeness
+Avoid: cut-off head, cut-off horn, cut-off snout, anatomy touching edges, multiple creatures, collage, chibi proportions, photorealistic animal photo
 ```

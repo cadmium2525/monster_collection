@@ -1,11 +1,13 @@
 # HANDOFF
 
 基準: Sim8.7完全展開版 + 2026-08-24距離廃止差分  
-リリース: 1.4.1（ログ最新追従・先行タップ保持版）
+リリース: 1.5.0（合体停滞対策・チュートリアル・公開Legendデッキ版）
 
 ## 現在の状態
 
 ホームから保存40枚を選び、16人大会の4試合、各勝利後のカード奪取、敗退/優勝保存、次大会解禁、レジェンド決勝、王座transaction、ホームの王者リアルタイム表示まで接続済みです。Firebase未設定でもLocalStorageで同じゲームループを遊べます。
+
+「遊び方」には横画面用の7ステップチュートリアルを追加済みです。旧い距離廃止注記は通常UIから除去しています。
 
 距離システムはコード上も無効です。`RULES.distanceSystemEnabled` は `false`、合法行動にmovementはなく、盤面は汎用3枠です。`legacyDistance` は正本由来の追跡情報であり判定へ使わないでください。
 
@@ -15,7 +17,11 @@
 
 修行の合法手はカード/対象ごとに1つです。習得候補を `preview.possibleMoveIds` として表示しますが、確定技は `BattleEngine._shugyo()` がseed付き乱数で決めます。Rank重みはRank 1と5でも約10%差です。5個目以降を覚えると `state.pendingMoveChoice` が立ち、`resolve-shugyo-move` の「4技のどれかと入替」または「習得のみ」以外は合法になりません。人間は必須モーダル、CPUは同じ合法手と技評価で解決します。
 
-特殊合体は `specialFusionId` で36セルの専用アトラスへ切り替わります。Training・修行・ブリーダーも25セルの専用アトラスを使い、カード文字・数値・効果は従来どおり動的HTMLです。
+特殊合体は `specialFusionId` で36セルの専用アトラスへ切り替わります。ブルードリルだけは切れを直した `blue-drill-v2.jpg` を使用します。Training・修行・ブリーダーも25セルの専用アトラスを使い、カード文字・数値・効果は従来どおり動的HTMLです。
+
+合体は平均×1.20式に「メイン現在SP＋素材現在SPの10%（切上げ）」の最低保証を加え、必ずSPが増えます。合法手の `preview` と盤面のドロップ表示に増加量を出します。Training/修行は大会4試合を通じて保持し、大会終了時に消去します。手札カードにも現在の持越し値を表示します。
+
+FirebaseはRealtime DatabaseではなくCloud Firestoreです。Legend資格を得た保存デッキは `legendDecks` に所有者管理の公開スナップショットを作り、他ユーザーのLegend通常枠へ最大14件を読み込みます。不足枠は生成CPU、決勝は現チャンピオン固定です。公開文書はSecurity Rulesで非公開元デッキと照合し、クライアントでも合法40枚を再検証します。
 
 ## 最初に実行する確認
 
@@ -57,6 +63,9 @@ Pages workflowは `.github/workflows/pages.yml`。Firebase設定は `FIREBASE_SE
 6. **偶発特殊合体の多さ**  
    35生成×4ランクでは狙いレシピが1/2/3/4へ増える一方、Bronzeは多様な16モンスターから偶発レシピが多く成立します。狙いと実成立を別統計にしてあるため、実戦でBronzeが特殊合体過多なら低ランク候補poolの種数制約を検討してください。
 
+7. **本番Firebaseプロジェクトの接続**
+   Repository、Firestore schema、Rulesは実装済みですが、`src/config/firebase-config.js` は資格情報未提供のため `null` です。Firebase ConsoleのWeb設定、匿名認証、GitHub PagesのAuthorized domain、Rules deployを行うまでは本番もLocalStorageモードです。
+
 ## 保守時の主な場所
 
 | 変更対象 | 主ファイル |
@@ -68,7 +77,7 @@ Pages workflowは `.github/workflows/pages.yml`。Firebase設定は `FIREBASE_SE
 | 大会進行 | `src/tournament/TournamentRun.js`, `src/game/GameSession.js` |
 | バトル/大会UI | `src/ui/battle-screen.js`, `src/ui/card-renderer.js`, `styles.css` |
 | 奪取 | `src/reward/CardStealSession.js`, `src/ui/reward-screen.js` |
-| 永続化/王座 | `src/persistence/`, `firestore.rules` |
+| 永続化/公開Legend/王座 | `src/persistence/`, `src/tournament/TournamentRun.js`, `firestore.rules` |
 | Pages | `scripts/build-pages.mjs`, `.github/workflows/pages.yml` |
 
 ## リリース前チェックリスト
