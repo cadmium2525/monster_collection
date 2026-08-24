@@ -189,7 +189,7 @@ export class BattleEngine {
             cardInstanceId: card.instanceId,
             slot,
             cost: definition.summonTp,
-            label: `${definition.name}を召喚`,
+            label: `${definition.name}を召喚（枠${slot + 1}）`,
           });
         }
       }
