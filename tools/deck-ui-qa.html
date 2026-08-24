@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+    <title>保存デッキ UI QA</title>
+    <link rel="stylesheet" href="../styles.css?v=1.6.0">
+  </head>
+  <body>
+    <div id="app" class="app-shell"></div>
+    <div id="modal-root"></div>
+    <script type="module">
+      import { createBaselineDeck } from '../src/data/default-decks.js';
+      import { createMasterIndex, loadMasterData } from '../src/data/master-loader.js';
+      import { DeckCollection } from '../src/decks/DeckCollection.js';
+      import { DeckDetailScreen } from '../src/ui/deck-screens.js';
+
+      const data = await loadMasterData();
+      const masterIndex = createMasterIndex(data);
+      const collection = new DeckCollection({ masterIndex });
+      const deck = collection.create({ deckName: 'はじまりの40枚', cards: createBaselineDeck(data, 'deck-ui-qa') });
+      new DeckDetailScreen({
+        root: document.querySelector('#app'),
+        collection,
+        masterIndex,
+        deckId: deck.deckId,
+        onBack: () => {},
+        onChanged: () => {},
+        onDelete: () => {},
+      });
+    </script>
+  </body>
+</html>

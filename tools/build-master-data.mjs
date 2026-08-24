@@ -88,11 +88,11 @@ const fusions = fusionRows.map((row, index) => ({
 }));
 
 const growthCards = [
-  { id: 'training-life', kind: 'training', name: 'LIFEトレーニング', tp: 2, stat: 'life', amount: 5 },
-  { id: 'training-atk', kind: 'training', name: 'ATKトレーニング', tp: 2, stat: 'atk', amount: 5 },
-  { id: 'training-def', kind: 'training', name: 'DEFトレーニング', tp: 2, stat: 'def', amount: 5 },
-  { id: 'shugyo-attack', kind: 'shugyo', name: '攻撃修行', tp: 5, stat: 'atk', amountRange: [5, 10] },
-  { id: 'shugyo-defense', kind: 'shugyo', name: '防御修行', tp: 5, stat: 'def', amountRange: [5, 10] },
+  { id: 'training-life', kind: 'training', name: 'LIFEトレーニング', tp: 2, stat: 'life', amount: 5, effect: '対象モンスター1体のLIFE+5（大会中継続）' },
+  { id: 'training-atk', kind: 'training', name: 'ATKトレーニング', tp: 2, stat: 'atk', amount: 5, effect: '対象モンスター1体のATK+5（大会中継続）' },
+  { id: 'training-def', kind: 'training', name: 'DEFトレーニング', tp: 2, stat: 'def', amount: 5, effect: '対象モンスター1体のDEF+5（大会中継続）' },
+  { id: 'shugyo-attack', kind: 'shugyo', name: '攻撃修行', tp: 5, stat: 'atk', amountRange: [5, 10], effect: '対象のLIFEとATKが各+5～10。攻撃修行の技をランダムに1つ習得（大会中継続）' },
+  { id: 'shugyo-defense', kind: 'shugyo', name: '防御修行', tp: 5, stat: 'def', amountRange: [5, 10], effect: '対象のLIFEとDEFが各+5～10。防御修行の技をランダムに1つ習得（大会中継続）' },
 ];
 
 const shugyoPools = {

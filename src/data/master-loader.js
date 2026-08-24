@@ -15,6 +15,10 @@ export function validateMasterData(master) {
     }
   }
 
+  for (const card of master?.growthCards ?? []) {
+    if (typeof card.effect !== 'string' || !card.effect.trim()) errors.push(`${card.name}の説明文がありません`);
+  }
+
   const ids = [
     ...(master?.monsters ?? []),
     ...(master?.moves ?? []),

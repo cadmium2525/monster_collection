@@ -7,6 +7,7 @@ import { createGameRepository } from './persistence/index.js';
 import { registerServiceWorker } from './pwa/register-service-worker.js';
 import { TournamentSeedSource } from './core/tournament-seed.js';
 import { BattleScreen } from './ui/battle-screen.js';
+import { CardCatalogScreen } from './ui/catalog-screen.js';
 import { DeckDetailScreen, DeckListScreen } from './ui/deck-screens.js';
 import { el, replace } from './ui/dom.js';
 import { HomeScreen } from './ui/home-screen.js';
@@ -53,6 +54,9 @@ class MonsterConstructionApp {
       const starter = this.decks.create({ deckName: 'はじまりの40枚', cards: createBaselineDeck(this.masterData, `starter-${this.seed}`) });
       await this.repository.saveDeck(starter);
     }
+    this.catalog = await this.repository.recordCardCatalog({
+      ownedCardMasterIds: this.decks.list().flatMap((deck) => deck.cards.map((card) => card.masterId)),
+    });
     this.champion = await this.repository.getChampion();
     this.unsubscribeChampion = this.repository.subscribeChampion((champion) => {
       this.champion = champion;
@@ -124,6 +128,7 @@ class MonsterConstructionApp {
       masterIndex: this.masterIndex,
       onBack: () => this.showHome(),
       onSelect: (deck) => this.showDeckDetail(deck.deckId),
+      onCatalog: () => this.showCardCatalog(),
       onCreate: async () => {
         try {
           const number = this.decks.list().length + 1;
@@ -138,6 +143,23 @@ class MonsterConstructionApp {
     });
   }
 
+  async showCardCatalog() {
+    this.showLoading('カードの所有・発見履歴を読み込んでいます…');
+    try {
+      this.catalog = await this.repository.getCardCatalog();
+      this.currentScreen = 'card-catalog';
+      new CardCatalogScreen({
+        root: this.root,
+        catalog: this.catalog,
+        masterIndex: this.masterIndex,
+        onBack: () => this.showDeckList(),
+      });
+    } catch (error) {
+      this.showError(error, 'カード一覧を読み込めません');
+      this.showDeckList();
+    }
+  }
+
   showDeckDetail(deckId) {
     this.currentScreen = 'deck-detail';
     new DeckDetailScreen({
@@ -146,7 +168,7 @@ class MonsterConstructionApp {
       masterIndex: this.masterIndex,
       deckId,
       onBack: () => this.showDeckList(),
-      onChanged: (deck) => this.repository.saveDeck(deck).catch((error) => this.showError(error, 'デッキ名を同期できません')),
+      onChanged: (deck) => this.repository.saveDeck(deck).catch((error) => this.showError(error, 'デッキを同期できません')),
       onDelete: (deck) => this.confirmDeleteDeck(deck),
     });
   }

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { cardArtPlacement, cardDisplayStats, circledTp, resolvedTrait } from '../../src/ui/card-renderer.js';
 import { shugyoMoveWeight } from '../../src/battle/shugyo.js';
-import { monsterByName } from '../helpers.js';
+import { masterData, monsterByName } from '../helpers.js';
 
 test('special-fusion cards display the replacement trait instead of the base trait', () => {
   const definition = monsterByName('ピクシー');
@@ -46,4 +46,11 @@ test('hand monster stats include tournament growth carried from earlier matches'
     atk: monster.base.atk + 5,
     def: monster.base.def + 10,
   });
+});
+
+test('every Training and shugyo card has visible explanatory copy', () => {
+  for (const definition of masterData.growthCards) {
+    assert.equal(typeof definition.effect, 'string');
+    assert.ok(definition.effect.length >= 10, `${definition.name} needs explanatory copy`);
+  }
 });

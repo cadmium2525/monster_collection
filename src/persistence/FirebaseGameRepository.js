@@ -1,5 +1,6 @@
 import { ChampionConflictError } from './errors.js';
 import { loadFirebaseSdk } from './firebase-sdk.js';
+import { mergeCardCatalogs, normalizeCardCatalog } from './card-catalog.js';
 
 function clone(value) { return value == null ? value : structuredClone(value); }
 
@@ -18,6 +19,7 @@ function normalizeRecord(data) {
     updatedAt: normalizedTimestamp(data.updatedAt),
     publishedAt: normalizedTimestamp(data.publishedAt),
     crownedAt: normalizedTimestamp(data.crownedAt),
+    catalogUpdatedAt: normalizedTimestamp(data.catalogUpdatedAt),
   };
 }
 
@@ -45,7 +47,9 @@ export class FirebaseGameRepository {
     const existing = await this.sdk.getDoc(profileRef);
     if (!existing.exists()) {
       await this.sdk.setDoc(profileRef, {
-        displayName: '名無しブリーダー', isAnonymous: this.user.isAnonymous, createdAt: this.sdk.serverTimestamp(), updatedAt: this.sdk.serverTimestamp(),
+        displayName: '名無しブリーダー', isAnonymous: this.user.isAnonymous,
+        ownedCardMasterIds: [], discoveredFusionIds: [], catalogSchemaVersion: 1,
+        createdAt: this.sdk.serverTimestamp(), updatedAt: this.sdk.serverTimestamp(),
       });
     }
     this.profile = await this.getProfile();
@@ -78,12 +82,45 @@ export class FirebaseGameRepository {
     return snapshots.docs.map((snapshot) => normalizeRecord({ ...snapshot.data(), deckId: snapshot.id }));
   }
 
+  async getCardCatalog() {
+    const profile = await this.getProfile();
+    return normalizeCardCatalog({
+      ownedCardMasterIds: profile?.ownedCardMasterIds,
+      discoveredFusionIds: profile?.discoveredFusionIds,
+      updatedAt: profile?.catalogUpdatedAt,
+    });
+  }
+
+  async recordCardCatalog(update = {}) {
+    const reference = this._profileRef();
+    await this.sdk.runTransaction(this.db, async (transaction) => {
+      const snapshot = await transaction.get(reference);
+      const current = snapshot.exists() ? snapshot.data() : {};
+      const next = mergeCardCatalogs(current, update);
+      transaction.set(reference, {
+        ownedCardMasterIds: next.ownedCardMasterIds,
+        discoveredFusionIds: next.discoveredFusionIds,
+        catalogSchemaVersion: 1,
+        catalogUpdatedAt: this.sdk.serverTimestamp(),
+      }, { merge: true });
+    });
+    const catalog = await this.getCardCatalog();
+    this.profile = {
+      ...this.profile,
+      ownedCardMasterIds: catalog.ownedCardMasterIds,
+      discoveredFusionIds: catalog.discoveredFusionIds,
+      catalogUpdatedAt: catalog.updatedAt,
+    };
+    return catalog;
+  }
+
   async saveDeck(deck) {
     await this.sdk.setDoc(this._deckRef(deck.deckId), {
       ...clone(deck),
       ownerUserId: this.user.uid,
       updatedAt: this.sdk.serverTimestamp(),
     }, { merge: true });
+    await this.recordCardCatalog({ ownedCardMasterIds: deck.cards.map((card) => card.masterId) });
     if (deck.qualification === 'legend') await this._publishLegendDeck(deck);
     return clone(deck);
   }

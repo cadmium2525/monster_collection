@@ -51,6 +51,8 @@ legendDecks/{uid--deckId}
 gameState/champion
 ```
 
+`users/{uid}`にはプロフィール名に加えて、カード図鑑用の`ownedCardMasterIds`、`discoveredFusionIds`、`catalogSchemaVersion`、`catalogUpdatedAt`を保存します。これらは追加専用の履歴としてRepositoryのtransactionで集合統合し、カードをデッキから放出した後も削除しません。
+
 保存デッキのドキュメントには、40枚分のカードインスタンスIDとマスターIDの組、デッキ名、総プレイTP、デッキ単位の大会出場資格、最高到達大会、代表モンスター、各種日時を保存します。
 
 保存デッキが`qualification: "legend"`を獲得すると、Repositoryは個人情報を除いた40枚スナップショットを`legendDecks`へ公開します。認証済みプレイヤーはこのスナップショットを読み込めますが、作成・更新・削除できるのは所有者だけです。Security Rulesでは、公開スナップショットを所有者の非公開`users/{uid}/savedDecks/{deckId}`ドキュメントおよびプロフィールと照合します。

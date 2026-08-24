@@ -45,3 +45,30 @@ test('replacing cards recalculates total TP and does not store tournament growth
   assert.equal('tournamentGrowth' in updated, false);
   assert.equal(decks.rename(deck.deckId, '交換後').deckName, '交換後');
 });
+
+test('deck leader can be selected from its monsters and survives card updates while present', () => {
+  const decks = collection();
+  const originalCards = legalDeck('leader-a');
+  const deck = decks.create({ deckName: 'リーダーテスト', cards: originalCards });
+  const monsterIds = [...new Set(originalCards.map((card) => card.masterId)
+    .filter((id) => masterIndex.cards.get(id)?.kind === 'monster'))];
+  const selectedId = monsterIds.at(-1);
+  assert.equal(decks.setRepresentativeMonster(deck.deckId, selectedId).representativeMonsterId, selectedId);
+  assert.equal(decks.replaceCards(deck.deckId, legalDeck('leader-b')).representativeMonsterId, selectedId);
+  assert.throws(() => decks.setRepresentativeMonster(deck.deckId, 'training-life'), /このデッキ/);
+  assert.throws(() => decks.setRepresentativeMonster(deck.deckId, 'missing-monster'), /このデッキ/);
+});
+
+test('deck leader falls back safely when that monster leaves the 40 cards', () => {
+  const decks = collection();
+  const originalCards = legalDeck('leader-remove');
+  const deck = decks.create({ deckName: '交代テスト', cards: originalCards });
+  const selectedId = 'monster-018';
+  decks.setRepresentativeMonster(deck.deckId, selectedId);
+  const replacement = legalDeck('leader-replaced').map((card) => card.masterId === selectedId
+    ? { ...card, masterId: 'training-def' }
+    : card);
+  const updated = decks.replaceCards(deck.deckId, replacement);
+  assert.notEqual(updated.representativeMonsterId, selectedId);
+  assert.equal(masterIndex.cards.get(updated.representativeMonsterId).kind, 'monster');
+});

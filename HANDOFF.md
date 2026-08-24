@@ -1,11 +1,15 @@
 # HANDOFF
 
 基準: Sim8.7完全展開版 + 2026-08-24距離廃止差分  
-リリース: 1.5.0（合体停滞対策・チュートリアル・公開Legendデッキ版）
+リリース: 1.6.0（デッキリーダー変更・カード発見履歴版）
 
 ## 現在の状態
 
 ホームから保存40枚を選び、16人大会の4試合、各勝利後のカード奪取、敗退/優勝保存、次大会解禁、レジェンド決勝、王座transaction、ホームの王者リアルタイム表示まで接続済みです。Firebase未設定でもLocalStorageで同じゲームループを遊べます。
+
+保存デッキ詳細では、その40枚に入っている任意のモンスターをリーダーへ変更できます。選んだ`representativeMonsterId`は保存デッキ一覧・大会・公開Legendスナップショット・王座表示まで共通で使い、リーダーをカード交換で放出した場合だけデッキ内のモンスターへ自動補正します。
+
+保存デッキ一覧の「カード一覧」は、一度でも保存デッキへ入った基本カードIDと、プレイヤーがバトルで一度でも成功させた特殊合体IDを表示します。履歴は`users/{uid}`とLocalStorageの両方へ追加専用で集合統合し、カードの放出やデッキ削除では消しません。既存ユーザーは起動時に現在の全保存デッキから自動移行します。
 
 「遊び方」には横画面用の7ステップチュートリアルを追加済みです。旧い距離廃止注記は通常UIから除去しています。
 
@@ -77,6 +81,7 @@ Pages workflowは `.github/workflows/pages.yml`。Firebase設定は `FIREBASE_SE
 | 大会進行 | `src/tournament/TournamentRun.js`, `src/game/GameSession.js` |
 | バトル/大会UI | `src/ui/battle-screen.js`, `src/ui/card-renderer.js`, `styles.css` |
 | 奪取 | `src/reward/CardStealSession.js`, `src/ui/reward-screen.js` |
+| デッキリーダー/カード一覧 | `src/decks/DeckCollection.js`, `src/ui/deck-screens.js`, `src/ui/catalog-screen.js` |
 | 永続化/公開Legend/王座 | `src/persistence/`, `src/tournament/TournamentRun.js`, `firestore.rules` |
 | Pages | `scripts/build-pages.mjs`, `.github/workflows/pages.yml` |
 

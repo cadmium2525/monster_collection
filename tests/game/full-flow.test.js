@@ -7,8 +7,10 @@ import { masterData, masterIndex } from '../helpers.js';
 
 function setup(champion = null) {
   const saves = [];
+  const catalogUpdates = [];
   const repository = {
     async saveDeck(deck) { saves.push(structuredClone(deck)); return deck; },
+    async recordCardCatalog(update) { catalogUpdates.push(structuredClone(update)); return update; },
     async claimChampionship(payload) { return { ...payload, championVersion: payload.expectedVersion + 1, crownedAt: '2026-08-24T00:00:00Z' }; },
   };
   let id = 0;
@@ -17,15 +19,26 @@ function setup(champion = null) {
   const session = new GameSession({
     masterData, masterIndex, deckCollection: decks, repository, user: { id: 'u1', displayName: '通しテスター' }, champion, seed: 'full-flow',
   });
-  return { session, decks, deck, saves, repository };
+  return { session, decks, deck, saves, repository, catalogUpdates };
 }
 
-function fakeFinishedBattle(winnerId = 'player', growth = {}) {
+function fakeFinishedBattle(winnerId = 'player', growth = {}, log = []) {
   return {
-    state: { status: 'finished', winnerId },
+    state: { status: 'finished', winnerId, log },
     getGrowthSnapshot: () => structuredClone(growth),
   };
 }
+
+test('a player special fusion is permanently recorded even when the match is lost', async () => {
+  const { session, deck, catalogUpdates } = setup();
+  await session.startTournament(deck.deckId, 'bronze');
+  await session.completeBattle(fakeFinishedBattle('cpu-01', {}, [
+    { type: 'fusion-special', playerId: 'player', fusionId: 'fusion-014' },
+    { type: 'fusion-special', playerId: 'cpu-01', fusionId: 'fusion-001' },
+    { type: 'fusion-special', playerId: 'player', fusionId: 'fusion-014' },
+  ]));
+  assert.deepEqual(catalogUpdates, [{ discoveredFusionIds: ['fusion-014'] }]);
+});
 
 test('Training growth carries to the next match but never enters the saved 40-card record', async () => {
   const { session, decks, deck, saves } = setup();

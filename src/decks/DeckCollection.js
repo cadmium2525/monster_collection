@@ -13,6 +13,14 @@ function validName(name) {
   return normalized;
 }
 
+function representativeId(cards, masterIndex, requestedId = null) {
+  const monsterIds = new Set(cards
+    .filter((card) => masterIndex.cards.get(card.masterId)?.kind === 'monster')
+    .map((card) => card.masterId));
+  if (requestedId && monsterIds.has(requestedId)) return requestedId;
+  return representativeMonster(cards, masterIndex)?.id ?? null;
+}
+
 export class DeckCollection {
   constructor({ masterIndex, records = [], now = () => new Date().toISOString(), idFactory = null }) {
     this.masterIndex = masterIndex;
@@ -38,7 +46,7 @@ export class DeckCollection {
       qualification,
       highestReached,
       totalPlayTp: totalPlayTp(cards, this.masterIndex),
-      representativeMonsterId: representativeMonster(cards, this.masterIndex)?.id ?? null,
+      representativeMonsterId: representativeId(cards, this.masterIndex, record.representativeMonsterId),
       createdAt: record.createdAt ?? this.now(),
       updatedAt: record.updatedAt ?? this.now(),
     };
@@ -71,6 +79,17 @@ export class DeckCollection {
     return clone(record);
   }
 
+  setRepresentativeMonster(deckId, monsterId) {
+    const record = this._find(deckId);
+    const definition = this.masterIndex.cards.get(monsterId);
+    if (definition?.kind !== 'monster' || !record.cards.some((card) => card.masterId === monsterId)) {
+      throw new Error('リーダーはこのデッキに入っているモンスターから選んでください');
+    }
+    record.representativeMonsterId = monsterId;
+    record.updatedAt = this.now();
+    return clone(record);
+  }
+
   replaceCards(deckId, cards) {
     const record = this._find(deckId);
     const normalized = normalizeDeckCards(cards, deckId);
@@ -78,7 +97,7 @@ export class DeckCollection {
     if (!validation.valid) throw new Error(`40枚を保存できません:\n${validation.errors.join('\n')}`);
     record.cards = normalized;
     record.totalPlayTp = totalPlayTp(normalized, this.masterIndex);
-    record.representativeMonsterId = representativeMonster(normalized, this.masterIndex)?.id ?? null;
+    record.representativeMonsterId = representativeId(normalized, this.masterIndex, record.representativeMonsterId);
     record.updatedAt = this.now();
     return clone(record);
   }

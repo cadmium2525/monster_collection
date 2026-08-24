@@ -133,13 +133,15 @@ function fakeFirebaseSdk() {
       const writes = [];
       const transaction = {
         get: async (reference) => snapshot(reference.path),
-        set: (reference, data) => writes.push({ kind: 'set', reference, data }),
+        set: (reference, data, options = {}) => writes.push({ kind: 'set', reference, data, options }),
         update: (reference, data) => writes.push({ kind: 'update', reference, data }),
       };
       const result = await updateFunction(transaction);
       for (const write of writes) {
         const data = resolveTimestamps(write.data);
-        docs.set(write.reference.path, write.kind === 'update' ? { ...docs.get(write.reference.path), ...data } : data);
+        docs.set(write.reference.path, write.kind === 'update' || write.options?.merge
+          ? { ...docs.get(write.reference.path), ...data }
+          : data);
         notify(write.reference.path);
       }
       return result;
@@ -154,11 +156,37 @@ test('Firebase repository uses a transaction and rejects stale championVersion',
   await repository.initialize();
   await repository.saveDeck(savedDeck());
   assert.equal((await repository.listDecks()).length, 1);
+  const transactionsBeforeCrown = fake.transactionCount;
   const crowned = await repository.claimChampionship(championPayload(0));
   assert.equal(crowned.championVersion, 1);
-  assert.equal(fake.transactionCount, 1);
+  assert.equal(fake.transactionCount, transactionsBeforeCrown + 1);
   await assert.rejects(() => repository.claimChampionship(championPayload(0)), { code: 'champion/version-conflict' });
   assert.equal((await repository.getChampion()).championVersion, 1, 'stale write must not overwrite champion');
+});
+
+test('card ownership and special-fusion discoveries are permanent union sets locally and in Firebase', async () => {
+  const storage = new MemoryStorage();
+  const local = new LocalGameRepository({ storage, idFactory: () => 'catalog-user', now: () => '2026-08-25T01:00:00.000Z' });
+  await local.initialize();
+  await local.saveDeck(savedDeck('catalog-deck'));
+  await local.recordCardCatalog({ ownedCardMasterIds: ['monster-001'], discoveredFusionIds: ['fusion-014', 'fusion-014'] });
+  await local.deleteDeck('catalog-deck');
+  const localCatalog = await local.getCardCatalog();
+  assert.ok(localCatalog.ownedCardMasterIds.includes('monster-001'));
+  assert.ok(localCatalog.ownedCardMasterIds.includes('monster-018'));
+  assert.deepEqual(localCatalog.discoveredFusionIds, ['fusion-014']);
+
+  const fake = fakeFirebaseSdk();
+  const firebase = new FirebaseGameRepository({ config: { projectId: 'test' }, sdkLoader: async () => fake.sdk });
+  await firebase.initialize();
+  await firebase.recordCardCatalog({ ownedCardMasterIds: ['monster-002', 'monster-001'], discoveredFusionIds: ['fusion-036'] });
+  await firebase.recordCardCatalog({ ownedCardMasterIds: ['monster-001'], discoveredFusionIds: ['fusion-014'] });
+  assert.deepEqual(await firebase.getCardCatalog(), {
+    schemaVersion: 1,
+    ownedCardMasterIds: ['monster-001', 'monster-002'],
+    discoveredFusionIds: ['fusion-014', 'fusion-036'],
+    updatedAt: '2026-08-24T02:03:04.000Z',
+  });
 });
 
 test('Firebase publishes Legend-qualified decks for other players and removes the snapshot with its source deck', async () => {

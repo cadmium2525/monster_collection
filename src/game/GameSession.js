@@ -57,6 +57,12 @@ export class GameSession {
   async completeBattle(engine = this.activeBattle) {
     if (!engine || engine.state.status !== 'finished') throw new Error('終了済みの試合がありません');
     const opponent = this.tournament.getCurrentOpponent();
+    const discoveredFusionIds = [...new Set((engine.state.log ?? [])
+      .filter((event) => event.type === 'fusion-special' && event.playerId === 'player' && event.fusionId)
+      .map((event) => event.fusionId))];
+    if (discoveredFusionIds.length) {
+      await this.repository.recordCardCatalog?.({ discoveredFusionIds });
+    }
     this.tournament.updateGrowth(RULES.tournamentGrowthLifetime === 'tournament' ? engine.getGrowthSnapshot('player') : {});
     const won = engine.state.winnerId === 'player';
     const draw = engine.state.winnerId == null;
@@ -92,7 +98,6 @@ export class GameSession {
 
     let crowned = null;
     if (this.tournament.state.status === 'champion') {
-      const representative = representativeMonster(saved.cards, this.masterIndex);
       try {
         crowned = await this.repository.claimChampionship({
           expectedVersion: this.tournament.state.championVersionAtStart,
@@ -100,7 +105,9 @@ export class GameSession {
           championDeckId: saved.deckId,
           championDeckName: saved.deckName,
           championDeckSnapshot: saved.cards,
-          representativeMonsterId: representative?.id ?? null,
+          representativeMonsterId: saved.representativeMonsterId
+            ?? representativeMonster(saved.cards, this.masterIndex)?.id
+            ?? null,
         });
         this.champion = crowned;
       } finally {

@@ -1,5 +1,6 @@
 import { ChampionConflictError } from './errors.js';
 import { MemoryStorage } from './memory-storage.js';
+import { mergeCardCatalogs, normalizeCardCatalog } from './card-catalog.js';
 
 const USER_KEY = 'mc:v1:user';
 const CHAMPION_KEY = 'mc:v1:champion';
@@ -32,6 +33,7 @@ export class LocalGameRepository {
 
   _requireUser() { if (!this.user) throw new Error('Repository is not initialized'); }
   _decksKey() { this._requireUser(); return `mc:v1:decks:${this.user.id}`; }
+  _catalogKey() { this._requireUser(); return `mc:v1:catalog:${this.user.id}`; }
 
   async getProfile() { this._requireUser(); return clone(this.user); }
 
@@ -46,6 +48,20 @@ export class LocalGameRepository {
 
   async listDecks() { return clone(parse(this.storage.getItem(this._decksKey()), [])); }
 
+  async getCardCatalog() {
+    return clone(normalizeCardCatalog(parse(this.storage.getItem(this._catalogKey()), {})));
+  }
+
+  async recordCardCatalog(update = {}) {
+    const current = await this.getCardCatalog();
+    const next = mergeCardCatalogs(current, update);
+    const changed = next.ownedCardMasterIds.length !== current.ownedCardMasterIds.length
+      || next.discoveredFusionIds.length !== current.discoveredFusionIds.length;
+    if (changed) next.updatedAt = this.now();
+    this.storage.setItem(this._catalogKey(), JSON.stringify(next));
+    return clone(next);
+  }
+
   async saveDeck(deck) {
     const decks = await this.listDecks();
     const index = decks.findIndex((entry) => entry.deckId === deck.deckId);
@@ -53,6 +69,7 @@ export class LocalGameRepository {
     if (index >= 0) decks[index] = clone(deck);
     else decks.push(clone(deck));
     this.storage.setItem(this._decksKey(), JSON.stringify(decks));
+    await this.recordCardCatalog({ ownedCardMasterIds: deck.cards.map((card) => card.masterId) });
     return clone(deck);
   }
 

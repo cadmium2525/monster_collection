@@ -1,0 +1,33 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+    <title>カード一覧 UI QA</title>
+    <link rel="stylesheet" href="../styles.css?v=1.6.0">
+  </head>
+  <body>
+    <div id="app" class="app-shell"></div>
+    <div id="modal-root"></div>
+    <script type="module">
+      import { createMasterIndex, loadMasterData } from '../src/data/master-loader.js';
+      import { CardCatalogScreen } from '../src/ui/catalog-screen.js';
+
+      const data = await loadMasterData();
+      const masterIndex = createMasterIndex(data);
+      new CardCatalogScreen({
+        root: document.querySelector('#app'),
+        masterIndex,
+        catalog: {
+          ownedCardMasterIds: [
+            ...data.monsters.slice(0, 10).map((card) => card.id),
+            ...data.growthCards.map((card) => card.id),
+            ...data.breeders.slice(0, 5).map((card) => card.id),
+          ],
+          discoveredFusionIds: ['fusion-001', 'fusion-014', 'fusion-036'],
+        },
+        onBack: () => {},
+      });
+    </script>
+  </body>
+</html>

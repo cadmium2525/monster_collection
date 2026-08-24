@@ -1,4 +1,5 @@
 import { RepositoryUnavailableError } from './errors.js';
+import { mergeCardCatalogs } from './card-catalog.js';
 
 export class ResilientGameRepository {
   constructor({ local, cloud = null }) {
@@ -47,6 +48,38 @@ export class ResilientGameRepository {
     } catch (error) {
       this.lastError = error;
       return localDecks;
+    }
+  }
+
+  async getCardCatalog() {
+    const localCatalog = await this.local.getCardCatalog();
+    if (!this.activeCloud) return localCatalog;
+    try {
+      const cloudCatalog = await this.activeCloud.getCardCatalog();
+      const merged = mergeCardCatalogs(localCatalog, cloudCatalog);
+      await this.local.recordCardCatalog(merged);
+      if (JSON.stringify(merged.ownedCardMasterIds) !== JSON.stringify(cloudCatalog.ownedCardMasterIds)
+        || JSON.stringify(merged.discoveredFusionIds) !== JSON.stringify(cloudCatalog.discoveredFusionIds)) {
+        return await this.activeCloud.recordCardCatalog(merged);
+      }
+      return merged;
+    } catch (error) {
+      this.lastError = error;
+      return localCatalog;
+    }
+  }
+
+  async recordCardCatalog(update = {}) {
+    const localCatalog = await this.local.recordCardCatalog(update);
+    if (!this.activeCloud) return localCatalog;
+    try {
+      const cloudCatalog = await this.activeCloud.recordCardCatalog(update);
+      const merged = mergeCardCatalogs(localCatalog, cloudCatalog);
+      await this.local.recordCardCatalog(merged);
+      return merged;
+    } catch (error) {
+      this.lastError = error;
+      return localCatalog;
     }
   }
 
