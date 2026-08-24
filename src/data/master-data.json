@@ -1,0 +1,3164 @@
+{
+  "meta": {
+    "savepoint": "Sim8.7_完全展開版",
+    "cardMaster": "Ver5_Sim7.19",
+    "moveMaster": "Ver1_162技",
+    "generatedAt": "2026-08-24",
+    "distanceSystem": "removed-by-user-amendment-2026-08-24",
+    "legacyDistanceFieldsAreNonGameplay": true
+  },
+  "monsters": [
+    {
+      "id": "monster-001",
+      "kind": "monster",
+      "faction": "無機",
+      "name": "モノリス",
+      "summonTp": 3,
+      "base": {
+        "life": 15,
+        "atk": 5,
+        "def": 30
+      },
+      "role": "タンク",
+      "trait": {
+        "name": "鉄壁の守護",
+        "effect": "最もLIFEが低い味方への攻撃を代わりに受ける。"
+      },
+      "moveIds": [
+        "move-109",
+        "move-110",
+        "move-111",
+        "move-112",
+        "move-113",
+        "move-114",
+        "move-115",
+        "move-116",
+        "move-117"
+      ],
+      "legacyPreferredDistance": "近接"
+    },
+    {
+      "id": "monster-002",
+      "kind": "monster",
+      "faction": "無機",
+      "name": "ヘンガー",
+      "summonTp": 4,
+      "base": {
+        "life": 25,
+        "atk": 20,
+        "def": 30
+      },
+      "role": "バランス",
+      "trait": {
+        "name": "機械装甲",
+        "effect": "DEF低下量を5軽減する。DEFを低く扱う効果には適用しない。"
+      },
+      "moveIds": [
+        "move-118",
+        "move-119",
+        "move-120",
+        "move-121",
+        "move-122",
+        "move-123",
+        "move-124",
+        "move-125",
+        "move-126"
+      ],
+      "legacyPreferredDistance": "遠距離"
+    },
+    {
+      "id": "monster-003",
+      "kind": "monster",
+      "faction": "無機",
+      "name": "ゴーレム",
+      "summonTp": 5,
+      "base": {
+        "life": 35,
+        "atk": 40,
+        "def": 15
+      },
+      "role": "アタッカー",
+      "trait": {
+        "name": "重量級",
+        "effect": "DEF30以上の敵を攻撃するときATK+10。"
+      },
+      "moveIds": [
+        "move-127",
+        "move-128",
+        "move-129",
+        "move-130",
+        "move-131",
+        "move-132",
+        "move-133",
+        "move-134",
+        "move-135"
+      ],
+      "legacyPreferredDistance": "近接"
+    },
+    {
+      "id": "monster-004",
+      "kind": "monster",
+      "faction": "創造",
+      "name": "ヒノトリ",
+      "summonTp": 4,
+      "base": {
+        "life": 25,
+        "atk": 40,
+        "def": 15
+      },
+      "role": "アタッカー",
+      "trait": {
+        "name": "不死鳥",
+        "effect": "撃破時、1試合1度だけLIFE10で復活する。"
+      },
+      "moveIds": [
+        "move-136",
+        "move-137",
+        "move-138",
+        "move-139",
+        "move-140",
+        "move-141",
+        "move-142",
+        "move-143",
+        "move-144"
+      ],
+      "legacyPreferredDistance": "遠距離"
+    },
+    {
+      "id": "monster-005",
+      "kind": "monster",
+      "faction": "創造",
+      "name": "メタルナー",
+      "summonTp": 3,
+      "base": {
+        "life": 20,
+        "atk": 20,
+        "def": 25
+      },
+      "role": "バランス",
+      "trait": {
+        "name": "高性能ボディ",
+        "effect": "各ターン最初に使用するRank3以下の技TP-1（最低1）。"
+      },
+      "moveIds": [
+        "move-145",
+        "move-146",
+        "move-147",
+        "move-148",
+        "move-149",
+        "move-150",
+        "move-151",
+        "move-152",
+        "move-153"
+      ],
+      "legacyPreferredDistance": "中距離"
+    },
+    {
+      "id": "monster-006",
+      "kind": "monster",
+      "faction": "創造",
+      "name": "ガリ",
+      "summonTp": 2,
+      "base": {
+        "life": 15,
+        "atk": 20,
+        "def": 15
+      },
+      "role": "バランス",
+      "trait": {
+        "name": "神の加護",
+        "effect": "自身ターン開始時にLIFE最大ならATK+5。最大+10。"
+      },
+      "moveIds": [
+        "move-154",
+        "move-155",
+        "move-156",
+        "move-157",
+        "move-158",
+        "move-159",
+        "move-160",
+        "move-161",
+        "move-162"
+      ],
+      "legacyPreferredDistance": "中距離"
+    },
+    {
+      "id": "monster-007",
+      "kind": "monster",
+      "faction": "幻霊",
+      "name": "プラント",
+      "summonTp": 3,
+      "base": {
+        "life": 35,
+        "atk": 10,
+        "def": 20
+      },
+      "role": "タンク",
+      "trait": {
+        "name": "寄生根",
+        "effect": "攻撃対象へ寄生を付与。0ダメージでも付与。対象側ターン開始時LIFE-5、プラントLIFE+5。重複不可。対象またはプラントが場を離れると解除。"
+      },
+      "moveIds": [
+        "move-001",
+        "move-002",
+        "move-003",
+        "move-004",
+        "move-005",
+        "move-006",
+        "move-007",
+        "move-008",
+        "move-009"
+      ],
+      "legacyPreferredDistance": "中距離"
+    },
+    {
+      "id": "monster-008",
+      "kind": "monster",
+      "faction": "幻霊",
+      "name": "モッチー",
+      "summonTp": 1,
+      "base": {
+        "life": 15,
+        "atk": 15,
+        "def": 5
+      },
+      "role": "バランス",
+      "trait": {
+        "name": "底力",
+        "effect": "LIFE50%以下の間ATK+20。"
+      },
+      "moveIds": [
+        "move-010",
+        "move-011",
+        "move-012",
+        "move-013",
+        "move-014",
+        "move-015",
+        "move-016",
+        "move-017",
+        "move-018"
+      ],
+      "legacyPreferredDistance": "近接"
+    },
+    {
+      "id": "monster-009",
+      "kind": "monster",
+      "faction": "幻霊",
+      "name": "ウンディーネ",
+      "summonTp": 3,
+      "base": {
+        "life": 25,
+        "atk": 25,
+        "def": 15
+      },
+      "role": "バランス",
+      "trait": {
+        "name": "水流",
+        "effect": "攻撃時、対象DEFを10低く扱う。"
+      },
+      "moveIds": [
+        "move-019",
+        "move-020",
+        "move-021",
+        "move-022",
+        "move-023",
+        "move-024",
+        "move-025",
+        "move-026",
+        "move-027"
+      ],
+      "legacyPreferredDistance": "遠距離"
+    },
+    {
+      "id": "monster-010",
+      "kind": "monster",
+      "faction": "魔族",
+      "name": "ピクシー",
+      "summonTp": 2,
+      "base": {
+        "life": 10,
+        "atk": 30,
+        "def": 10
+      },
+      "role": "アタッカー",
+      "trait": {
+        "name": "魔力増幅",
+        "effect": "ATK上昇効果を受けた場合、その上昇量へ追加+5。"
+      },
+      "moveIds": [
+        "move-028",
+        "move-029",
+        "move-030",
+        "move-031",
+        "move-032",
+        "move-033",
+        "move-034",
+        "move-035",
+        "move-036"
+      ],
+      "legacyPreferredDistance": "遠距離"
+    },
+    {
+      "id": "monster-011",
+      "kind": "monster",
+      "faction": "魔族",
+      "name": "デュラハン",
+      "summonTp": 4,
+      "base": {
+        "life": 35,
+        "atk": 15,
+        "def": 30
+      },
+      "role": "タンク",
+      "trait": {
+        "name": "騎士の意地",
+        "effect": "攻撃で1以上のダメージを受けた場合、次の自身の攻撃までATK+5。重複なし。"
+      },
+      "moveIds": [
+        "move-037",
+        "move-038",
+        "move-039",
+        "move-040",
+        "move-041",
+        "move-042",
+        "move-043",
+        "move-044",
+        "move-045"
+      ],
+      "legacyPreferredDistance": "中距離"
+    },
+    {
+      "id": "monster-012",
+      "kind": "monster",
+      "faction": "魔族",
+      "name": "ドラゴン",
+      "summonTp": 4,
+      "base": {
+        "life": 25,
+        "atk": 45,
+        "def": 10
+      },
+      "role": "アタッカー",
+      "trait": {
+        "name": "竜の威圧",
+        "effect": "ドラゴンを攻撃する技はTP+1。"
+      },
+      "moveIds": [
+        "move-046",
+        "move-047",
+        "move-048",
+        "move-049",
+        "move-050",
+        "move-051",
+        "move-052",
+        "move-053",
+        "move-054"
+      ],
+      "legacyPreferredDistance": "遠距離"
+    },
+    {
+      "id": "monster-013",
+      "kind": "monster",
+      "faction": "獣族",
+      "name": "ライガー",
+      "summonTp": 3,
+      "base": {
+        "life": 25,
+        "atk": 30,
+        "def": 15
+      },
+      "role": "バランス",
+      "trait": {
+        "name": "俊敏",
+        "effect": "各ターン最初に使用する技TP-1（最低1）。"
+      },
+      "moveIds": [
+        "move-055",
+        "move-056",
+        "move-057",
+        "move-058",
+        "move-059",
+        "move-060",
+        "move-061",
+        "move-062",
+        "move-063"
+      ],
+      "legacyPreferredDistance": "近接"
+    },
+    {
+      "id": "monster-014",
+      "kind": "monster",
+      "faction": "獣族",
+      "name": "ハム",
+      "summonTp": 2,
+      "base": {
+        "life": 15,
+        "atk": 35,
+        "def": 5
+      },
+      "role": "アタッカー",
+      "trait": {
+        "name": "闘争本能",
+        "effect": "敵撃破時ATK+5。場を離れるまで継続。現状上限+15。"
+      },
+      "moveIds": [
+        "move-064",
+        "move-065",
+        "move-066",
+        "move-067",
+        "move-068",
+        "move-069",
+        "move-070",
+        "move-071",
+        "move-072"
+      ],
+      "legacyPreferredDistance": "近接"
+    },
+    {
+      "id": "monster-015",
+      "kind": "monster",
+      "faction": "獣族",
+      "name": "ディノ",
+      "summonTp": 2,
+      "base": {
+        "life": 20,
+        "atk": 30,
+        "def": 5
+      },
+      "role": "アタッカー",
+      "trait": {
+        "name": "捕食",
+        "effect": "敵撃破時LIFE10回復（最大LIFEまで）。"
+      },
+      "moveIds": [
+        "move-073",
+        "move-074",
+        "move-075",
+        "move-076",
+        "move-077",
+        "move-078",
+        "move-079",
+        "move-080",
+        "move-081"
+      ],
+      "legacyPreferredDistance": "近接"
+    },
+    {
+      "id": "monster-016",
+      "kind": "monster",
+      "faction": "怪物",
+      "name": "ジョーカー",
+      "summonTp": 5,
+      "base": {
+        "life": 25,
+        "atk": 50,
+        "def": 15
+      },
+      "role": "アタッカー",
+      "trait": {
+        "name": "死神",
+        "effect": "対象LIFE50%以下なら技威力+20ポイント。"
+      },
+      "moveIds": [
+        "move-082",
+        "move-083",
+        "move-084",
+        "move-085",
+        "move-086",
+        "move-087",
+        "move-088",
+        "move-089",
+        "move-090"
+      ],
+      "legacyPreferredDistance": "中距離"
+    },
+    {
+      "id": "monster-017",
+      "kind": "monster",
+      "faction": "怪物",
+      "name": "ワーム",
+      "summonTp": 3,
+      "base": {
+        "life": 30,
+        "atk": 20,
+        "def": 15
+      },
+      "role": "バランス",
+      "trait": {
+        "name": "脱皮",
+        "effect": "LIFE満タンから一撃で撃破される場合、1試合1度だけLIFE1で耐える。"
+      },
+      "moveIds": [
+        "move-091",
+        "move-092",
+        "move-093",
+        "move-094",
+        "move-095",
+        "move-096",
+        "move-097",
+        "move-098",
+        "move-099"
+      ],
+      "legacyPreferredDistance": "近接"
+    },
+    {
+      "id": "monster-018",
+      "kind": "monster",
+      "faction": "怪物",
+      "name": "ゴースト",
+      "summonTp": 2,
+      "base": {
+        "life": 20,
+        "atk": 20,
+        "def": 10
+      },
+      "role": "バランス",
+      "trait": {
+        "name": "霊体",
+        "effect": "召喚時、攻撃を1度だけ完全回避する状態を得る。"
+      },
+      "moveIds": [
+        "move-100",
+        "move-101",
+        "move-102",
+        "move-103",
+        "move-104",
+        "move-105",
+        "move-106",
+        "move-107",
+        "move-108"
+      ],
+      "legacyPreferredDistance": "中距離"
+    }
+  ],
+  "moves": [
+    {
+      "id": "move-001",
+      "monsterName": "プラント",
+      "name": "根っこ",
+      "rank": 1,
+      "power": 100,
+      "tp": 1,
+      "effect": "―",
+      "initial": true,
+      "legacyDistance": "近接"
+    },
+    {
+      "id": "move-002",
+      "monsterName": "プラント",
+      "name": "根縛り",
+      "rank": 3,
+      "power": 110,
+      "tp": 3,
+      "effect": "対象ATK-5",
+      "initial": false,
+      "legacyDistance": "近接"
+    },
+    {
+      "id": "move-003",
+      "monsterName": "プラント",
+      "name": "ドレイン",
+      "rank": 4,
+      "power": 120,
+      "tp": 3,
+      "effect": "対象が寄生中なら自身LIFE5回復",
+      "initial": false,
+      "legacyDistance": "近接"
+    },
+    {
+      "id": "move-004",
+      "monsterName": "プラント",
+      "name": "つっつき",
+      "rank": 1,
+      "power": 110,
+      "tp": 2,
+      "effect": "―",
+      "initial": true,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-005",
+      "monsterName": "プラント",
+      "name": "花粉",
+      "rank": 3,
+      "power": 110,
+      "tp": 3,
+      "effect": "対象DEF-5",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-006",
+      "monsterName": "プラント",
+      "name": "フラワービーム",
+      "rank": 5,
+      "power": 130,
+      "tp": 4,
+      "effect": "対象が寄生中なら150%",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-007",
+      "monsterName": "プラント",
+      "name": "種マシンガン",
+      "rank": 1,
+      "power": 100,
+      "tp": 1,
+      "effect": "―",
+      "initial": true,
+      "legacyDistance": "遠距離"
+    },
+    {
+      "id": "move-008",
+      "monsterName": "プラント",
+      "name": "毒花粉",
+      "rank": 3,
+      "power": 100,
+      "tp": 2,
+      "effect": "対象ATK-5",
+      "initial": false,
+      "legacyDistance": "遠距離"
+    },
+    {
+      "id": "move-009",
+      "monsterName": "プラント",
+      "name": "エナジードレイン",
+      "rank": 4,
+      "power": 110,
+      "tp": 3,
+      "effect": "対象が寄生中なら対象DEF-5",
+      "initial": false,
+      "legacyDistance": "遠距離"
+    },
+    {
+      "id": "move-010",
+      "monsterName": "モッチー",
+      "name": "もんた",
+      "rank": 1,
+      "power": 110,
+      "tp": 2,
+      "effect": "―",
+      "initial": true,
+      "legacyDistance": "近接"
+    },
+    {
+      "id": "move-011",
+      "monsterName": "モッチー",
+      "name": "ガッチャー",
+      "rank": 3,
+      "power": 120,
+      "tp": 3,
+      "effect": "LIFE50%以下ならTP-1",
+      "initial": false,
+      "legacyDistance": "近接"
+    },
+    {
+      "id": "move-012",
+      "monsterName": "モッチー",
+      "name": "もっさまん",
+      "rank": 5,
+      "power": 150,
+      "tp": 4,
+      "effect": "使用後、自身DEF-5",
+      "initial": false,
+      "legacyDistance": "近接"
+    },
+    {
+      "id": "move-013",
+      "monsterName": "モッチー",
+      "name": "ぺろりん",
+      "rank": 1,
+      "power": 100,
+      "tp": 1,
+      "effect": "―",
+      "initial": true,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-014",
+      "monsterName": "モッチー",
+      "name": "もっさん",
+      "rank": 3,
+      "power": 120,
+      "tp": 3,
+      "effect": "LIFE50%以下なら130%",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-015",
+      "monsterName": "モッチー",
+      "name": "ローリンモッチ",
+      "rank": 4,
+      "power": 130,
+      "tp": 4,
+      "effect": "使用後、自身ATK+5",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-016",
+      "monsterName": "モッチー",
+      "name": "さくら吹雪",
+      "rank": 1,
+      "power": 100,
+      "tp": 1,
+      "effect": "―",
+      "initial": true,
+      "legacyDistance": "遠距離"
+    },
+    {
+      "id": "move-017",
+      "monsterName": "モッチー",
+      "name": "モッチ砲",
+      "rank": 3,
+      "power": 110,
+      "tp": 3,
+      "effect": "対象DEF-5",
+      "initial": false,
+      "legacyDistance": "遠距離"
+    },
+    {
+      "id": "move-018",
+      "monsterName": "モッチー",
+      "name": "超モッチ砲",
+      "rank": 5,
+      "power": 130,
+      "tp": 4,
+      "effect": "LIFE50%以下なら150%",
+      "initial": false,
+      "legacyDistance": "遠距離"
+    },
+    {
+      "id": "move-019",
+      "monsterName": "ウンディーネ",
+      "name": "アイスブレード",
+      "rank": 1,
+      "power": 100,
+      "tp": 1,
+      "effect": "―",
+      "initial": true,
+      "legacyDistance": "近接"
+    },
+    {
+      "id": "move-020",
+      "monsterName": "ウンディーネ",
+      "name": "アクアスピア",
+      "rank": 3,
+      "power": 120,
+      "tp": 3,
+      "effect": "―",
+      "initial": false,
+      "legacyDistance": "近接"
+    },
+    {
+      "id": "move-021",
+      "monsterName": "ウンディーネ",
+      "name": "アイスクラッシュ",
+      "rank": 4,
+      "power": 130,
+      "tp": 4,
+      "effect": "対象DEF-5",
+      "initial": false,
+      "legacyDistance": "近接"
+    },
+    {
+      "id": "move-022",
+      "monsterName": "ウンディーネ",
+      "name": "水弾",
+      "rank": 1,
+      "power": 100,
+      "tp": 1,
+      "effect": "―",
+      "initial": true,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-023",
+      "monsterName": "ウンディーネ",
+      "name": "アクアウェイブ",
+      "rank": 3,
+      "power": 120,
+      "tp": 3,
+      "effect": "この攻撃のみ追加でDEF5無視",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-024",
+      "monsterName": "ウンディーネ",
+      "name": "フリーズランス",
+      "rank": 4,
+      "power": 130,
+      "tp": 4,
+      "effect": "対象ATK-5",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-025",
+      "monsterName": "ウンディーネ",
+      "name": "アクアショット",
+      "rank": 1,
+      "power": 110,
+      "tp": 2,
+      "effect": "―",
+      "initial": true,
+      "legacyDistance": "遠距離"
+    },
+    {
+      "id": "move-026",
+      "monsterName": "ウンディーネ",
+      "name": "アイスストーム",
+      "rank": 3,
+      "power": 130,
+      "tp": 3,
+      "effect": "―",
+      "initial": false,
+      "legacyDistance": "遠距離"
+    },
+    {
+      "id": "move-027",
+      "monsterName": "ウンディーネ",
+      "name": "メイルストローム",
+      "rank": 5,
+      "power": 130,
+      "tp": 4,
+      "effect": "この攻撃のみ追加でDEF10無視",
+      "initial": false,
+      "legacyDistance": "遠距離"
+    },
+    {
+      "id": "move-028",
+      "monsterName": "ピクシー",
+      "name": "タッチ",
+      "rank": 1,
+      "power": 100,
+      "tp": 1,
+      "effect": "―",
+      "initial": true,
+      "legacyDistance": "近接"
+    },
+    {
+      "id": "move-029",
+      "monsterName": "ピクシー",
+      "name": "キック",
+      "rank": 3,
+      "power": 120,
+      "tp": 2,
+      "effect": "―",
+      "initial": false,
+      "legacyDistance": "近接"
+    },
+    {
+      "id": "move-030",
+      "monsterName": "ピクシー",
+      "name": "デスキッス",
+      "rank": 4,
+      "power": 120,
+      "tp": 3,
+      "effect": "対象ATK-5",
+      "initial": false,
+      "legacyDistance": "近接"
+    },
+    {
+      "id": "move-031",
+      "monsterName": "ピクシー",
+      "name": "サンダー",
+      "rank": 1,
+      "power": 100,
+      "tp": 1,
+      "effect": "―",
+      "initial": true,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-032",
+      "monsterName": "ピクシー",
+      "name": "レイ",
+      "rank": 3,
+      "power": 120,
+      "tp": 3,
+      "effect": "対象DEF-5",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-033",
+      "monsterName": "ピクシー",
+      "name": "ギガレイ",
+      "rank": 5,
+      "power": 140,
+      "tp": 4,
+      "effect": "対象DEF-5",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-034",
+      "monsterName": "ピクシー",
+      "name": "ファイア",
+      "rank": 1,
+      "power": 110,
+      "tp": 2,
+      "effect": "―",
+      "initial": true,
+      "legacyDistance": "遠距離"
+    },
+    {
+      "id": "move-035",
+      "monsterName": "ピクシー",
+      "name": "ライトニング",
+      "rank": 3,
+      "power": 130,
+      "tp": 3,
+      "effect": "―",
+      "initial": false,
+      "legacyDistance": "遠距離"
+    },
+    {
+      "id": "move-036",
+      "monsterName": "ピクシー",
+      "name": "ビッグバン",
+      "rank": 5,
+      "power": 150,
+      "tp": 4,
+      "effect": "使用後、自身ATK-5",
+      "initial": false,
+      "legacyDistance": "遠距離"
+    },
+    {
+      "id": "move-037",
+      "monsterName": "デュラハン",
+      "name": "斬りつけ",
+      "rank": 1,
+      "power": 100,
+      "tp": 1,
+      "effect": "―",
+      "initial": true,
+      "legacyDistance": "近接"
+    },
+    {
+      "id": "move-038",
+      "monsterName": "デュラハン",
+      "name": "連続斬り",
+      "rank": 3,
+      "power": 120,
+      "tp": 2,
+      "effect": "―",
+      "initial": false,
+      "legacyDistance": "近接"
+    },
+    {
+      "id": "move-039",
+      "monsterName": "デュラハン",
+      "name": "冥王剣",
+      "rank": 5,
+      "power": 140,
+      "tp": 4,
+      "effect": "騎士の意地発動中なら150%",
+      "initial": false,
+      "legacyDistance": "近接"
+    },
+    {
+      "id": "move-040",
+      "monsterName": "デュラハン",
+      "name": "風神剣",
+      "rank": 1,
+      "power": 110,
+      "tp": 2,
+      "effect": "―",
+      "initial": true,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-041",
+      "monsterName": "デュラハン",
+      "name": "真・風神剣",
+      "rank": 3,
+      "power": 130,
+      "tp": 3,
+      "effect": "―",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-042",
+      "monsterName": "デュラハン",
+      "name": "最終奥義",
+      "rank": 5,
+      "power": 140,
+      "tp": 4,
+      "effect": "使用後、自身DEF+5",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-043",
+      "monsterName": "デュラハン",
+      "name": "地走り",
+      "rank": 1,
+      "power": 100,
+      "tp": 1,
+      "effect": "―",
+      "initial": true,
+      "legacyDistance": "遠距離"
+    },
+    {
+      "id": "move-044",
+      "monsterName": "デュラハン",
+      "name": "真空斬",
+      "rank": 3,
+      "power": 120,
+      "tp": 3,
+      "effect": "対象ATK-5",
+      "initial": false,
+      "legacyDistance": "遠距離"
+    },
+    {
+      "id": "move-045",
+      "monsterName": "デュラハン",
+      "name": "大車輪",
+      "rank": 4,
+      "power": 130,
+      "tp": 4,
+      "effect": "自身LIFE5回復",
+      "initial": false,
+      "legacyDistance": "遠距離"
+    },
+    {
+      "id": "move-046",
+      "monsterName": "ドラゴン",
+      "name": "かみつき",
+      "rank": 1,
+      "power": 100,
+      "tp": 1,
+      "effect": "―",
+      "initial": true,
+      "legacyDistance": "近接"
+    },
+    {
+      "id": "move-047",
+      "monsterName": "ドラゴン",
+      "name": "しっぽアタック",
+      "rank": 3,
+      "power": 120,
+      "tp": 2,
+      "effect": "―",
+      "initial": false,
+      "legacyDistance": "近接"
+    },
+    {
+      "id": "move-048",
+      "monsterName": "ドラゴン",
+      "name": "ドラゴンラッシュ",
+      "rank": 5,
+      "power": 120,
+      "tp": 3,
+      "effect": "使用後、自身ATK+5",
+      "initial": false,
+      "legacyDistance": "近接"
+    },
+    {
+      "id": "move-049",
+      "monsterName": "ドラゴン",
+      "name": "ひっかき",
+      "rank": 1,
+      "power": 100,
+      "tp": 2,
+      "effect": "対象DEF-5",
+      "initial": true,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-050",
+      "monsterName": "ドラゴン",
+      "name": "ウイングアタック",
+      "rank": 3,
+      "power": 120,
+      "tp": 2,
+      "effect": "―",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-051",
+      "monsterName": "ドラゴン",
+      "name": "ドラゴンパンチ",
+      "rank": 4,
+      "power": 130,
+      "tp": 3,
+      "effect": "―",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-052",
+      "monsterName": "ドラゴン",
+      "name": "ファイアブレス",
+      "rank": 1,
+      "power": 110,
+      "tp": 2,
+      "effect": "―",
+      "initial": true,
+      "legacyDistance": "遠距離"
+    },
+    {
+      "id": "move-053",
+      "monsterName": "ドラゴン",
+      "name": "インフェルノ",
+      "rank": 3,
+      "power": 130,
+      "tp": 3,
+      "effect": "―",
+      "initial": false,
+      "legacyDistance": "遠距離"
+    },
+    {
+      "id": "move-054",
+      "monsterName": "ドラゴン",
+      "name": "ルインクロス",
+      "rank": 5,
+      "power": 150,
+      "tp": 4,
+      "effect": "―",
+      "initial": false,
+      "legacyDistance": "遠距離"
+    },
+    {
+      "id": "move-055",
+      "monsterName": "ライガー",
+      "name": "かみつき",
+      "rank": 1,
+      "power": 110,
+      "tp": 2,
+      "effect": "―",
+      "initial": true,
+      "legacyDistance": "近接"
+    },
+    {
+      "id": "move-056",
+      "monsterName": "ライガー",
+      "name": "ワンツー",
+      "rank": 3,
+      "power": 120,
+      "tp": 2,
+      "effect": "―",
+      "initial": false,
+      "legacyDistance": "近接"
+    },
+    {
+      "id": "move-057",
+      "monsterName": "ライガー",
+      "name": "雷撃",
+      "rank": 5,
+      "power": 140,
+      "tp": 4,
+      "effect": "対象DEF-5",
+      "initial": false,
+      "legacyDistance": "近接"
+    },
+    {
+      "id": "move-058",
+      "monsterName": "ライガー",
+      "name": "ひっかき",
+      "rank": 1,
+      "power": 100,
+      "tp": 1,
+      "effect": "―",
+      "initial": true,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-059",
+      "monsterName": "ライガー",
+      "name": "雷牙",
+      "rank": 3,
+      "power": 120,
+      "tp": 3,
+      "effect": "対象ATK-5",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-060",
+      "monsterName": "ライガー",
+      "name": "空中回転アタック",
+      "rank": 4,
+      "power": 130,
+      "tp": 3,
+      "effect": "―",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-061",
+      "monsterName": "ライガー",
+      "name": "体当たり",
+      "rank": 1,
+      "power": 100,
+      "tp": 1,
+      "effect": "―",
+      "initial": true,
+      "legacyDistance": "遠距離"
+    },
+    {
+      "id": "move-062",
+      "monsterName": "ライガー",
+      "name": "サンダー",
+      "rank": 3,
+      "power": 120,
+      "tp": 2,
+      "effect": "―",
+      "initial": false,
+      "legacyDistance": "遠距離"
+    },
+    {
+      "id": "move-063",
+      "monsterName": "ライガー",
+      "name": "超雷撃",
+      "rank": 5,
+      "power": 140,
+      "tp": 4,
+      "effect": "対象DEF-5",
+      "initial": false,
+      "legacyDistance": "遠距離"
+    },
+    {
+      "id": "move-064",
+      "monsterName": "ハム",
+      "name": "正拳",
+      "rank": 1,
+      "power": 110,
+      "tp": 2,
+      "effect": "―",
+      "initial": true,
+      "legacyDistance": "近接"
+    },
+    {
+      "id": "move-065",
+      "monsterName": "ハム",
+      "name": "ドラゴンパンチ",
+      "rank": 3,
+      "power": 130,
+      "tp": 3,
+      "effect": "―",
+      "initial": false,
+      "legacyDistance": "近接"
+    },
+    {
+      "id": "move-066",
+      "monsterName": "ハム",
+      "name": "超ドラゴンパンチ",
+      "rank": 5,
+      "power": 150,
+      "tp": 4,
+      "effect": "撃破時TP1回復",
+      "initial": false,
+      "legacyDistance": "近接"
+    },
+    {
+      "id": "move-067",
+      "monsterName": "ハム",
+      "name": "ワンツー",
+      "rank": 1,
+      "power": 100,
+      "tp": 1,
+      "effect": "―",
+      "initial": true,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-068",
+      "monsterName": "ハム",
+      "name": "バックナックル",
+      "rank": 3,
+      "power": 120,
+      "tp": 3,
+      "effect": "対象DEF-5",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-069",
+      "monsterName": "ハム",
+      "name": "連続パンチ",
+      "rank": 4,
+      "power": 130,
+      "tp": 3,
+      "effect": "―",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-070",
+      "monsterName": "ハム",
+      "name": "飛び蹴り",
+      "rank": 1,
+      "power": 100,
+      "tp": 1,
+      "effect": "―",
+      "initial": true,
+      "legacyDistance": "遠距離"
+    },
+    {
+      "id": "move-071",
+      "monsterName": "ハム",
+      "name": "大砲屁",
+      "rank": 3,
+      "power": 120,
+      "tp": 3,
+      "effect": "対象ATK-5",
+      "initial": false,
+      "legacyDistance": "遠距離"
+    },
+    {
+      "id": "move-072",
+      "monsterName": "ハム",
+      "name": "超飛び蹴り",
+      "rank": 5,
+      "power": 140,
+      "tp": 4,
+      "effect": "撃破時TP1回復",
+      "initial": false,
+      "legacyDistance": "遠距離"
+    },
+    {
+      "id": "move-073",
+      "monsterName": "ディノ",
+      "name": "かみつき",
+      "rank": 1,
+      "power": 110,
+      "tp": 2,
+      "effect": "―",
+      "initial": true,
+      "legacyDistance": "近接"
+    },
+    {
+      "id": "move-074",
+      "monsterName": "ディノ",
+      "name": "しっぽビンタ",
+      "rank": 3,
+      "power": 120,
+      "tp": 3,
+      "effect": "対象DEF-5",
+      "initial": false,
+      "legacyDistance": "近接"
+    },
+    {
+      "id": "move-075",
+      "monsterName": "ディノ",
+      "name": "突進",
+      "rank": 5,
+      "power": 150,
+      "tp": 4,
+      "effect": "使用後、自身DEF-5",
+      "initial": false,
+      "legacyDistance": "近接"
+    },
+    {
+      "id": "move-076",
+      "monsterName": "ディノ",
+      "name": "体当たり",
+      "rank": 1,
+      "power": 100,
+      "tp": 1,
+      "effect": "―",
+      "initial": true,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-077",
+      "monsterName": "ディノ",
+      "name": "連続かみつき",
+      "rank": 3,
+      "power": 120,
+      "tp": 2,
+      "effect": "―",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-078",
+      "monsterName": "ディノ",
+      "name": "暴れまわり",
+      "rank": 4,
+      "power": 130,
+      "tp": 3,
+      "effect": "撃破時、特性に加えLIFE5追加回復",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-079",
+      "monsterName": "ディノ",
+      "name": "砂かけ",
+      "rank": 1,
+      "power": 100,
+      "tp": 1,
+      "effect": "―",
+      "initial": true,
+      "legacyDistance": "遠距離"
+    },
+    {
+      "id": "move-080",
+      "monsterName": "ディノ",
+      "name": "火炎",
+      "rank": 3,
+      "power": 120,
+      "tp": 2,
+      "effect": "―",
+      "initial": false,
+      "legacyDistance": "遠距離"
+    },
+    {
+      "id": "move-081",
+      "monsterName": "ディノ",
+      "name": "火炎連砲",
+      "rank": 5,
+      "power": 140,
+      "tp": 4,
+      "effect": "撃破時、特性に加えLIFE5追加回復",
+      "initial": false,
+      "legacyDistance": "遠距離"
+    },
+    {
+      "id": "move-082",
+      "monsterName": "ジョーカー",
+      "name": "デスパンチ",
+      "rank": 1,
+      "power": 100,
+      "tp": 1,
+      "effect": "―",
+      "initial": true,
+      "legacyDistance": "近接"
+    },
+    {
+      "id": "move-083",
+      "monsterName": "ジョーカー",
+      "name": "デスナックル",
+      "rank": 3,
+      "power": 120,
+      "tp": 3,
+      "effect": "対象DEF-5",
+      "initial": false,
+      "legacyDistance": "近接"
+    },
+    {
+      "id": "move-084",
+      "monsterName": "ジョーカー",
+      "name": "デスファイナル",
+      "rank": 5,
+      "power": 140,
+      "tp": 4,
+      "effect": "対象LIFE50%以下ならTP-1",
+      "initial": false,
+      "legacyDistance": "近接"
+    },
+    {
+      "id": "move-085",
+      "monsterName": "ジョーカー",
+      "name": "デスカッター",
+      "rank": 1,
+      "power": 110,
+      "tp": 2,
+      "effect": "―",
+      "initial": true,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-086",
+      "monsterName": "ジョーカー",
+      "name": "デススラッシュ",
+      "rank": 3,
+      "power": 130,
+      "tp": 3,
+      "effect": "―",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-087",
+      "monsterName": "ジョーカー",
+      "name": "デスエナジー",
+      "rank": 5,
+      "power": 150,
+      "tp": 4,
+      "effect": "使用後、自身DEF-5",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-088",
+      "monsterName": "ジョーカー",
+      "name": "デスボール",
+      "rank": 1,
+      "power": 100,
+      "tp": 1,
+      "effect": "―",
+      "initial": true,
+      "legacyDistance": "遠距離"
+    },
+    {
+      "id": "move-089",
+      "monsterName": "ジョーカー",
+      "name": "デスウェーブ",
+      "rank": 3,
+      "power": 120,
+      "tp": 3,
+      "effect": "対象ATK-5",
+      "initial": false,
+      "legacyDistance": "遠距離"
+    },
+    {
+      "id": "move-090",
+      "monsterName": "ジョーカー",
+      "name": "デスゲート",
+      "rank": 4,
+      "power": 130,
+      "tp": 4,
+      "effect": "対象LIFE50%以下ならDEFを5低く扱う",
+      "initial": false,
+      "legacyDistance": "遠距離"
+    },
+    {
+      "id": "move-091",
+      "monsterName": "ワーム",
+      "name": "かみつき",
+      "rank": 1,
+      "power": 110,
+      "tp": 2,
+      "effect": "―",
+      "initial": true,
+      "legacyDistance": "近接"
+    },
+    {
+      "id": "move-092",
+      "monsterName": "ワーム",
+      "name": "牙斬り",
+      "rank": 3,
+      "power": 120,
+      "tp": 3,
+      "effect": "対象ATK-5",
+      "initial": false,
+      "legacyDistance": "近接"
+    },
+    {
+      "id": "move-093",
+      "monsterName": "ワーム",
+      "name": "毒牙",
+      "rank": 5,
+      "power": 130,
+      "tp": 4,
+      "effect": "対象ATK-5・DEF-5",
+      "initial": false,
+      "legacyDistance": "近接"
+    },
+    {
+      "id": "move-094",
+      "monsterName": "ワーム",
+      "name": "しっぽアタック",
+      "rank": 1,
+      "power": 100,
+      "tp": 1,
+      "effect": "―",
+      "initial": true,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-095",
+      "monsterName": "ワーム",
+      "name": "くし刺し",
+      "rank": 3,
+      "power": 120,
+      "tp": 2,
+      "effect": "―",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-096",
+      "monsterName": "ワーム",
+      "name": "連続突き",
+      "rank": 4,
+      "power": 130,
+      "tp": 3,
+      "effect": "対象DEF-5",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-097",
+      "monsterName": "ワーム",
+      "name": "針",
+      "rank": 1,
+      "power": 100,
+      "tp": 1,
+      "effect": "―",
+      "initial": true,
+      "legacyDistance": "遠距離"
+    },
+    {
+      "id": "move-098",
+      "monsterName": "ワーム",
+      "name": "毒液",
+      "rank": 3,
+      "power": 110,
+      "tp": 2,
+      "effect": "対象ATK-5",
+      "initial": false,
+      "legacyDistance": "遠距離"
+    },
+    {
+      "id": "move-099",
+      "monsterName": "ワーム",
+      "name": "大毒液",
+      "rank": 5,
+      "power": 120,
+      "tp": 4,
+      "effect": "対象ATK-5・DEF-5",
+      "initial": false,
+      "legacyDistance": "遠距離"
+    },
+    {
+      "id": "move-100",
+      "monsterName": "ゴースト",
+      "name": "ピコピコハンマー",
+      "rank": 1,
+      "power": 100,
+      "tp": 1,
+      "effect": "―",
+      "initial": true,
+      "legacyDistance": "近接"
+    },
+    {
+      "id": "move-101",
+      "monsterName": "ゴースト",
+      "name": "大パンチ",
+      "rank": 3,
+      "power": 120,
+      "tp": 2,
+      "effect": "―",
+      "initial": false,
+      "legacyDistance": "近接"
+    },
+    {
+      "id": "move-102",
+      "monsterName": "ゴースト",
+      "name": "コンビネーション",
+      "rank": 4,
+      "power": 120,
+      "tp": 3,
+      "effect": "対象DEF-5",
+      "initial": false,
+      "legacyDistance": "近接"
+    },
+    {
+      "id": "move-103",
+      "monsterName": "ゴースト",
+      "name": "体当たり",
+      "rank": 1,
+      "power": 110,
+      "tp": 2,
+      "effect": "―",
+      "initial": true,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-104",
+      "monsterName": "ゴースト",
+      "name": "ソウルビーム",
+      "rank": 3,
+      "power": 120,
+      "tp": 3,
+      "effect": "対象ATK-5",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-105",
+      "monsterName": "ゴースト",
+      "name": "大きなおとしもの",
+      "rank": 5,
+      "power": 140,
+      "tp": 4,
+      "effect": "対象ATK-5",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-106",
+      "monsterName": "ゴースト",
+      "name": "カード",
+      "rank": 1,
+      "power": 100,
+      "tp": 1,
+      "effect": "―",
+      "initial": true,
+      "legacyDistance": "遠距離"
+    },
+    {
+      "id": "move-107",
+      "monsterName": "ゴースト",
+      "name": "ソウルショット",
+      "rank": 3,
+      "power": 120,
+      "tp": 2,
+      "effect": "―",
+      "initial": false,
+      "legacyDistance": "遠距離"
+    },
+    {
+      "id": "move-108",
+      "monsterName": "ゴースト",
+      "name": "ナイトメア",
+      "rank": 5,
+      "power": 130,
+      "tp": 3,
+      "effect": "対象DEF-5",
+      "initial": false,
+      "legacyDistance": "遠距離"
+    },
+    {
+      "id": "move-109",
+      "monsterName": "モノリス",
+      "name": "体当たり",
+      "rank": 1,
+      "power": 110,
+      "tp": 2,
+      "effect": "―",
+      "initial": true,
+      "legacyDistance": "近接"
+    },
+    {
+      "id": "move-110",
+      "monsterName": "モノリス",
+      "name": "ひっかき",
+      "rank": 3,
+      "power": 100,
+      "tp": 2,
+      "effect": "対象DEF-5",
+      "initial": false,
+      "legacyDistance": "近接"
+    },
+    {
+      "id": "move-111",
+      "monsterName": "モノリス",
+      "name": "フォームアルファ",
+      "rank": 5,
+      "power": null,
+      "tp": 3,
+      "effect": "攻撃なし。自身DEF+10。1試合1回",
+      "initial": false,
+      "legacyDistance": "近接"
+    },
+    {
+      "id": "move-112",
+      "monsterName": "モノリス",
+      "name": "たおれこみ",
+      "rank": 1,
+      "power": 100,
+      "tp": 1,
+      "effect": "―",
+      "initial": true,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-113",
+      "monsterName": "モノリス",
+      "name": "トリオビームX",
+      "rank": 3,
+      "power": 110,
+      "tp": 3,
+      "effect": "対象ATK-5",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-114",
+      "monsterName": "モノリス",
+      "name": "怪光線",
+      "rank": 4,
+      "power": 120,
+      "tp": 3,
+      "effect": "対象DEF-5",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-115",
+      "monsterName": "モノリス",
+      "name": "おんぱ",
+      "rank": 1,
+      "power": 100,
+      "tp": 1,
+      "effect": "―",
+      "initial": true,
+      "legacyDistance": "遠距離"
+    },
+    {
+      "id": "move-116",
+      "monsterName": "モノリス",
+      "name": "トリオビームY",
+      "rank": 3,
+      "power": 110,
+      "tp": 3,
+      "effect": "対象ATK-5",
+      "initial": false,
+      "legacyDistance": "遠距離"
+    },
+    {
+      "id": "move-117",
+      "monsterName": "モノリス",
+      "name": "デルタアタック",
+      "rank": 5,
+      "power": 120,
+      "tp": 4,
+      "effect": "対象ATK-5・DEF-5",
+      "initial": false,
+      "legacyDistance": "遠距離"
+    },
+    {
+      "id": "move-118",
+      "monsterName": "ヘンガー",
+      "name": "パンチ",
+      "rank": 1,
+      "power": 100,
+      "tp": 1,
+      "effect": "―",
+      "initial": true,
+      "legacyDistance": "近接"
+    },
+    {
+      "id": "move-119",
+      "monsterName": "ヘンガー",
+      "name": "アームキャノン",
+      "rank": 3,
+      "power": 120,
+      "tp": 2,
+      "effect": "―",
+      "initial": false,
+      "legacyDistance": "近接"
+    },
+    {
+      "id": "move-120",
+      "monsterName": "ヘンガー",
+      "name": "ロケットパンチ",
+      "rank": 4,
+      "power": 130,
+      "tp": 3,
+      "effect": "使用後、自身DEF-5",
+      "initial": false,
+      "legacyDistance": "近接"
+    },
+    {
+      "id": "move-121",
+      "monsterName": "ヘンガー",
+      "name": "キック",
+      "rank": 1,
+      "power": 100,
+      "tp": 1,
+      "effect": "―",
+      "initial": true,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-122",
+      "monsterName": "ヘンガー",
+      "name": "ドリルアタック",
+      "rank": 3,
+      "power": 120,
+      "tp": 3,
+      "effect": "対象DEF-5",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-123",
+      "monsterName": "ヘンガー",
+      "name": "ダブルアタック",
+      "rank": 4,
+      "power": 130,
+      "tp": 3,
+      "effect": "―",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-124",
+      "monsterName": "ヘンガー",
+      "name": "レーザー",
+      "rank": 1,
+      "power": 110,
+      "tp": 2,
+      "effect": "―",
+      "initial": true,
+      "legacyDistance": "遠距離"
+    },
+    {
+      "id": "move-125",
+      "monsterName": "ヘンガー",
+      "name": "アイショット",
+      "rank": 3,
+      "power": 120,
+      "tp": 3,
+      "effect": "対象ATK-5",
+      "initial": false,
+      "legacyDistance": "遠距離"
+    },
+    {
+      "id": "move-126",
+      "monsterName": "ヘンガー",
+      "name": "ギガレーザー",
+      "rank": 5,
+      "power": 140,
+      "tp": 4,
+      "effect": "―",
+      "initial": false,
+      "legacyDistance": "遠距離"
+    },
+    {
+      "id": "move-127",
+      "monsterName": "ゴーレム",
+      "name": "パンチ",
+      "rank": 1,
+      "power": 110,
+      "tp": 2,
+      "effect": "―",
+      "initial": true,
+      "legacyDistance": "近接"
+    },
+    {
+      "id": "move-128",
+      "monsterName": "ゴーレム",
+      "name": "大パンチ",
+      "rank": 3,
+      "power": 130,
+      "tp": 3,
+      "effect": "―",
+      "initial": false,
+      "legacyDistance": "近接"
+    },
+    {
+      "id": "move-129",
+      "monsterName": "ゴーレム",
+      "name": "竜巻アタック",
+      "rank": 5,
+      "power": 150,
+      "tp": 4,
+      "effect": "使用後、自身DEF-5",
+      "initial": false,
+      "legacyDistance": "近接"
+    },
+    {
+      "id": "move-130",
+      "monsterName": "ゴーレム",
+      "name": "体当たり",
+      "rank": 1,
+      "power": 100,
+      "tp": 1,
+      "effect": "―",
+      "initial": true,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-131",
+      "monsterName": "ゴーレム",
+      "name": "ハンマーナックル",
+      "rank": 3,
+      "power": 120,
+      "tp": 3,
+      "effect": "対象DEF-5",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-132",
+      "monsterName": "ゴーレム",
+      "name": "地震",
+      "rank": 4,
+      "power": 130,
+      "tp": 3,
+      "effect": "―",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-133",
+      "monsterName": "ゴーレム",
+      "name": "大砲",
+      "rank": 1,
+      "power": 100,
+      "tp": 1,
+      "effect": "―",
+      "initial": true,
+      "legacyDistance": "遠距離"
+    },
+    {
+      "id": "move-134",
+      "monsterName": "ゴーレム",
+      "name": "ロケットパンチ",
+      "rank": 3,
+      "power": 120,
+      "tp": 2,
+      "effect": "―",
+      "initial": false,
+      "legacyDistance": "遠距離"
+    },
+    {
+      "id": "move-135",
+      "monsterName": "ゴーレム",
+      "name": "大地震",
+      "rank": 5,
+      "power": 140,
+      "tp": 4,
+      "effect": "対象ATK-5",
+      "initial": false,
+      "legacyDistance": "遠距離"
+    },
+    {
+      "id": "move-136",
+      "monsterName": "ヒノトリ",
+      "name": "くちばし",
+      "rank": 1,
+      "power": 100,
+      "tp": 1,
+      "effect": "―",
+      "initial": true,
+      "legacyDistance": "近接"
+    },
+    {
+      "id": "move-137",
+      "monsterName": "ヒノトリ",
+      "name": "かぎづめ",
+      "rank": 3,
+      "power": 120,
+      "tp": 2,
+      "effect": "―",
+      "initial": false,
+      "legacyDistance": "近接"
+    },
+    {
+      "id": "move-138",
+      "monsterName": "ヒノトリ",
+      "name": "フレイムタイフーン",
+      "rank": 4,
+      "power": 130,
+      "tp": 3,
+      "effect": "使用後、自身DEF-5",
+      "initial": false,
+      "legacyDistance": "近接"
+    },
+    {
+      "id": "move-139",
+      "monsterName": "ヒノトリ",
+      "name": "火炎",
+      "rank": 1,
+      "power": 100,
+      "tp": 1,
+      "effect": "―",
+      "initial": true,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-140",
+      "monsterName": "ヒノトリ",
+      "name": "フレイムライン",
+      "rank": 3,
+      "power": 120,
+      "tp": 3,
+      "effect": "対象DEF-5",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-141",
+      "monsterName": "ヒノトリ",
+      "name": "エタニティフレア",
+      "rank": 5,
+      "power": 140,
+      "tp": 4,
+      "effect": "―",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-142",
+      "monsterName": "ヒノトリ",
+      "name": "火炎弾",
+      "rank": 1,
+      "power": 110,
+      "tp": 2,
+      "effect": "―",
+      "initial": true,
+      "legacyDistance": "遠距離"
+    },
+    {
+      "id": "move-143",
+      "monsterName": "ヒノトリ",
+      "name": "ファイアビーム",
+      "rank": 3,
+      "power": 130,
+      "tp": 3,
+      "effect": "―",
+      "initial": false,
+      "legacyDistance": "遠距離"
+    },
+    {
+      "id": "move-144",
+      "monsterName": "ヒノトリ",
+      "name": "ファイアウェーブ",
+      "rank": 5,
+      "power": 150,
+      "tp": 4,
+      "effect": "使用後、自身LIFE-5",
+      "initial": false,
+      "legacyDistance": "遠距離"
+    },
+    {
+      "id": "move-145",
+      "monsterName": "メタルナー",
+      "name": "左掌",
+      "rank": 1,
+      "power": 100,
+      "tp": 1,
+      "effect": "―",
+      "initial": true,
+      "legacyDistance": "近接"
+    },
+    {
+      "id": "move-146",
+      "monsterName": "メタルナー",
+      "name": "テツざんこう",
+      "rank": 3,
+      "power": 120,
+      "tp": 2,
+      "effect": "―",
+      "initial": false,
+      "legacyDistance": "近接"
+    },
+    {
+      "id": "move-147",
+      "monsterName": "メタルナー",
+      "name": "閃光掌",
+      "rank": 4,
+      "power": 130,
+      "tp": 3,
+      "effect": "対象DEF-5",
+      "initial": false,
+      "legacyDistance": "近接"
+    },
+    {
+      "id": "move-148",
+      "monsterName": "メタルナー",
+      "name": "ちょうちゅう",
+      "rank": 1,
+      "power": 110,
+      "tp": 2,
+      "effect": "―",
+      "initial": true,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-149",
+      "monsterName": "メタルナー",
+      "name": "右たん脚",
+      "rank": 3,
+      "power": 120,
+      "tp": 3,
+      "effect": "対象ATK-5",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-150",
+      "monsterName": "メタルナー",
+      "name": "宙ポン拳",
+      "rank": 5,
+      "power": 140,
+      "tp": 4,
+      "effect": "―",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-151",
+      "monsterName": "メタルナー",
+      "name": "小変化",
+      "rank": 1,
+      "power": 100,
+      "tp": 1,
+      "effect": "―",
+      "initial": true,
+      "legacyDistance": "遠距離"
+    },
+    {
+      "id": "move-152",
+      "monsterName": "メタルナー",
+      "name": "ツイン掌打",
+      "rank": 3,
+      "power": 120,
+      "tp": 2,
+      "effect": "―",
+      "initial": false,
+      "legacyDistance": "遠距離"
+    },
+    {
+      "id": "move-153",
+      "monsterName": "メタルナー",
+      "name": "超メタビーム",
+      "rank": 4,
+      "power": 130,
+      "tp": 3,
+      "effect": "対象DEF-5",
+      "initial": false,
+      "legacyDistance": "遠距離"
+    },
+    {
+      "id": "move-154",
+      "monsterName": "ガリ",
+      "name": "ナックル",
+      "rank": 1,
+      "power": 100,
+      "tp": 1,
+      "effect": "―",
+      "initial": true,
+      "legacyDistance": "近接"
+    },
+    {
+      "id": "move-155",
+      "monsterName": "ガリ",
+      "name": "プレス",
+      "rank": 3,
+      "power": 120,
+      "tp": 2,
+      "effect": "―",
+      "initial": false,
+      "legacyDistance": "近接"
+    },
+    {
+      "id": "move-156",
+      "monsterName": "ガリ",
+      "name": "ゴッドアタック",
+      "rank": 4,
+      "power": 130,
+      "tp": 3,
+      "effect": "LIFE最大なら140%",
+      "initial": false,
+      "legacyDistance": "近接"
+    },
+    {
+      "id": "move-157",
+      "monsterName": "ガリ",
+      "name": "魔神ナックル",
+      "rank": 1,
+      "power": 110,
+      "tp": 2,
+      "effect": "―",
+      "initial": true,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-158",
+      "monsterName": "ガリ",
+      "name": "ゴッドストライク",
+      "rank": 3,
+      "power": 120,
+      "tp": 3,
+      "effect": "LIFE最大ならTP-1",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-159",
+      "monsterName": "ガリ",
+      "name": "神の怒り",
+      "rank": 5,
+      "power": 140,
+      "tp": 4,
+      "effect": "LIFE最大なら150%",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-160",
+      "monsterName": "ガリ",
+      "name": "スピンカッター",
+      "rank": 1,
+      "power": 100,
+      "tp": 1,
+      "effect": "―",
+      "initial": true,
+      "legacyDistance": "遠距離"
+    },
+    {
+      "id": "move-161",
+      "monsterName": "ガリ",
+      "name": "ホーリーサンダー",
+      "rank": 3,
+      "power": 120,
+      "tp": 3,
+      "effect": "対象DEF-5",
+      "initial": false,
+      "legacyDistance": "遠距離"
+    },
+    {
+      "id": "move-162",
+      "monsterName": "ガリ",
+      "name": "ゴッドファイナル",
+      "rank": 5,
+      "power": 140,
+      "tp": 4,
+      "effect": "使用後、自身ATK-5",
+      "initial": false,
+      "legacyDistance": "遠距離"
+    }
+  ],
+  "breeders": [
+    {
+      "id": "breeder-001",
+      "kind": "breeder",
+      "category": "汎用",
+      "faction": null,
+      "name": "ベテランブリーダー",
+      "tp": 3,
+      "effect": "次の3ターン、自分の最大TP+1"
+    },
+    {
+      "id": "breeder-002",
+      "kind": "breeder",
+      "category": "汎用",
+      "faction": null,
+      "name": "プレッシャー指示",
+      "tp": 3,
+      "effect": "相手の次ターン、最大TP-1"
+    },
+    {
+      "id": "breeder-003",
+      "kind": "breeder",
+      "category": "汎用",
+      "faction": null,
+      "name": "集中指示",
+      "tp": 2,
+      "effect": "味方1体の次の技ダメージ+20%"
+    },
+    {
+      "id": "breeder-004",
+      "kind": "breeder",
+      "category": "汎用",
+      "faction": null,
+      "name": "守備指示",
+      "tp": 2,
+      "effect": "味方1体が次に受けるダメージ50%軽減"
+    },
+    {
+      "id": "breeder-005",
+      "kind": "breeder",
+      "category": "汎用",
+      "faction": null,
+      "name": "緊急補給",
+      "tp": 3,
+      "effect": "カードを3枚ドロー（手札上限8）"
+    },
+    {
+      "id": "breeder-006",
+      "kind": "breeder",
+      "category": "汎用",
+      "faction": null,
+      "name": "総攻撃命令",
+      "tp": 3,
+      "effect": "このターン、味方モンスター全員ATK+5"
+    },
+    {
+      "id": "breeder-007",
+      "kind": "breeder",
+      "category": "汎用",
+      "faction": null,
+      "name": "再行動指示",
+      "tp": 5,
+      "effect": "味方モンスター1体の行動権を1回復"
+    },
+    {
+      "id": "breeder-008",
+      "kind": "breeder",
+      "category": "汎用",
+      "faction": null,
+      "name": "妨害指示",
+      "tp": 2,
+      "effect": "相手モンスター1体の次の技ダメージ-20%"
+    },
+    {
+      "id": "breeder-009",
+      "kind": "breeder",
+      "category": "モン類専用",
+      "faction": "無機",
+      "name": "無機①",
+      "tp": 2,
+      "effect": "対象無機DEF+5・3ターン"
+    },
+    {
+      "id": "breeder-010",
+      "kind": "breeder",
+      "category": "モン類専用",
+      "faction": "無機",
+      "name": "無機②",
+      "tp": 1,
+      "effect": "対象無機は常時DEF3無視。相手が創造なら合計DEF5無視"
+    },
+    {
+      "id": "breeder-011",
+      "kind": "breeder",
+      "category": "モン類専用",
+      "faction": "創造",
+      "name": "創造①",
+      "tp": 3,
+      "effect": "自陣の創造モンスターの技TP-1"
+    },
+    {
+      "id": "breeder-012",
+      "kind": "breeder",
+      "category": "モン類専用",
+      "faction": "創造",
+      "name": "創造②",
+      "tp": 3,
+      "effect": "次ターン、相手モンスター1体をスタン"
+    },
+    {
+      "id": "breeder-013",
+      "kind": "breeder",
+      "category": "モン類専用",
+      "faction": "幻霊",
+      "name": "幻霊①",
+      "tp": 3,
+      "effect": "幻霊1体の行動権をこのターン+1"
+    },
+    {
+      "id": "breeder-014",
+      "kind": "breeder",
+      "category": "モン類専用",
+      "faction": "幻霊",
+      "name": "幻霊②",
+      "tp": 1,
+      "effect": "対象1体が次の攻撃を完全回避"
+    },
+    {
+      "id": "breeder-015",
+      "kind": "breeder",
+      "category": "モン類専用",
+      "faction": "魔族",
+      "name": "魔族①",
+      "tp": 2,
+      "effect": "魔族1体ATK+5"
+    },
+    {
+      "id": "breeder-016",
+      "kind": "breeder",
+      "category": "モン類専用",
+      "faction": "魔族",
+      "name": "魔族②",
+      "tp": 2,
+      "effect": "場の魔族枚数×5、対象魔族ATK上昇"
+    },
+    {
+      "id": "breeder-017",
+      "kind": "breeder",
+      "category": "モン類専用",
+      "faction": "獣族",
+      "name": "獣族①",
+      "tp": 2,
+      "effect": "場の獣族枚数×2 TP回復"
+    },
+    {
+      "id": "breeder-018",
+      "kind": "breeder",
+      "category": "モン類専用",
+      "faction": "獣族",
+      "name": "獣族②",
+      "tp": 3,
+      "effect": "獣族1体LIFE15回復"
+    },
+    {
+      "id": "breeder-019",
+      "kind": "breeder",
+      "category": "モン類専用",
+      "faction": "怪物",
+      "name": "怪物①",
+      "tp": 2,
+      "effect": "相手1体を対象。無機なら次ターンスタン、それ以外なら次の技ダメージ-20%"
+    },
+    {
+      "id": "breeder-020",
+      "kind": "breeder",
+      "category": "モン類専用",
+      "faction": "怪物",
+      "name": "怪物②",
+      "tp": 4,
+      "effect": "怪物2体以上なら怪物全員ATK+5/DEF+5"
+    }
+  ],
+  "growthCards": [
+    {
+      "id": "training-life",
+      "kind": "training",
+      "name": "LIFEトレーニング",
+      "tp": 2,
+      "stat": "life",
+      "amount": 5
+    },
+    {
+      "id": "training-atk",
+      "kind": "training",
+      "name": "ATKトレーニング",
+      "tp": 2,
+      "stat": "atk",
+      "amount": 5
+    },
+    {
+      "id": "training-def",
+      "kind": "training",
+      "name": "DEFトレーニング",
+      "tp": 2,
+      "stat": "def",
+      "amount": 5
+    },
+    {
+      "id": "shugyo-attack",
+      "kind": "shugyo",
+      "name": "攻撃修行",
+      "tp": 5,
+      "stat": "atk",
+      "amountRange": [
+        5,
+        10
+      ]
+    },
+    {
+      "id": "shugyo-defense",
+      "kind": "shugyo",
+      "name": "防御修行",
+      "tp": 5,
+      "stat": "def",
+      "amountRange": [
+        5,
+        10
+      ]
+    }
+  ],
+  "fusions": [
+    {
+      "id": "fusion-001",
+      "main": "ピクシー",
+      "material": "メタルナー",
+      "name": "フューチャー",
+      "trait": "各ターン最初に受けるダメージは最大LIFEの25%を上限とする",
+      "archetype": "連撃・火力",
+      "powerIndex": 90.71898441926622,
+      "verdict": "基準帯",
+      "watch": "通常"
+    },
+    {
+      "id": "fusion-002",
+      "main": "ピクシー",
+      "material": "ワーム",
+      "name": "ナハトファルター",
+      "trait": "LIFE50%以下なら与ダメ+30%・被ダメ-20%",
+      "archetype": "窮地・攻防",
+      "powerIndex": 98.86081180984822,
+      "verdict": "基準帯",
+      "watch": "通常"
+    },
+    {
+      "id": "fusion-003",
+      "main": "デュラハン",
+      "material": "ヒノトリ",
+      "name": "ガルーダ",
+      "trait": "初めて撃破された時、LIFE30%で1度だけ復活",
+      "archetype": "復活・耐久",
+      "powerIndex": 99.93784356569678,
+      "verdict": "基準帯",
+      "watch": "通常"
+    },
+    {
+      "id": "fusion-004",
+      "main": "デュラハン",
+      "material": "ライガー",
+      "name": "グレイシア",
+      "trait": "各ターン最初の被ダメ-30%。軽減後の次技ダメ+20%",
+      "archetype": "防御・反撃",
+      "powerIndex": 108.8914450588304,
+      "verdict": "強め監視",
+      "watch": "監視"
+    },
+    {
+      "id": "fusion-005",
+      "main": "ライガー",
+      "material": "ハム",
+      "name": "ハムライガー",
+      "trait": "TP2技のダメージ+25%",
+      "archetype": "小技・速攻",
+      "powerIndex": 91.02724619551697,
+      "verdict": "基準帯",
+      "watch": "通常"
+    },
+    {
+      "id": "fusion-006",
+      "main": "ライガー",
+      "material": "プラント",
+      "name": "エコノキックス",
+      "trait": "自ターン開始時LIFE8%回復。満タンならそのターンATK+2",
+      "archetype": "再生・攻撃",
+      "powerIndex": 102.0528028999758,
+      "verdict": "基準帯",
+      "watch": "通常"
+    },
+    {
+      "id": "fusion-007",
+      "main": "ハム",
+      "material": "ピクシー",
+      "name": "ヴァージアハピ",
+      "trait": "自身が使用するすべての技ダメージ+20%",
+      "archetype": "連撃",
+      "powerIndex": 98.07097726546385,
+      "verdict": "基準帯",
+      "watch": "通常"
+    },
+    {
+      "id": "fusion-008",
+      "main": "ハム",
+      "material": "モノリス",
+      "name": "ダークハム",
+      "trait": "合体時DEF+8。技使用ごとDEF+2（上限+16）",
+      "archetype": "成長・防御",
+      "powerIndex": 91.88548882864943,
+      "verdict": "基準帯",
+      "watch": "通常"
+    },
+    {
+      "id": "fusion-009",
+      "main": "ディノ",
+      "material": "ゴーレム",
+      "name": "アンキロックス",
+      "trait": "最大LIFE20%以上の単発ダメージを30%軽減",
+      "archetype": "耐久",
+      "powerIndex": 106.99568922428415,
+      "verdict": "強め監視",
+      "watch": "監視"
+    },
+    {
+      "id": "fusion-010",
+      "main": "ディノ",
+      "material": "ガリ",
+      "name": "ガリニクス",
+      "trait": "自身より現在LIFE割合が高い敵へのダメージ+30%",
+      "archetype": "逆転・火力",
+      "powerIndex": 92.5586985543979,
+      "verdict": "基準帯",
+      "watch": "通常"
+    },
+    {
+      "id": "fusion-011",
+      "main": "ゴースト",
+      "material": "デュラハン",
+      "name": "オチムシャ",
+      "trait": "LIFE50%以下でATK+10・DEF+10（1度）",
+      "archetype": "窮地・強化",
+      "powerIndex": 95.89180297837052,
+      "verdict": "基準帯",
+      "watch": "通常"
+    },
+    {
+      "id": "fusion-012",
+      "main": "ゴースト",
+      "material": "ウンディーネ",
+      "name": "オキクサン",
+      "trait": "被ダメ時、攻撃者ATK-3（最大-15）",
+      "archetype": "呪い・弱体",
+      "powerIndex": 88.78786317957079,
+      "verdict": "弱め監視",
+      "watch": "監視"
+    },
+    {
+      "id": "fusion-013",
+      "main": "ワーム",
+      "material": "ディノ",
+      "name": "トカゲムシ",
+      "trait": "被攻撃ごとDEF+3（最大+12）",
+      "archetype": "成長・耐久",
+      "powerIndex": 87.36097330245371,
+      "verdict": "弱め監視",
+      "watch": "監視"
+    },
+    {
+      "id": "fusion-014",
+      "main": "ワーム",
+      "material": "ライガー",
+      "name": "ブルードリル",
+      "trait": "同じ敵を連続攻撃するたびダメージ+15%（最大+45%）",
+      "archetype": "追撃・火力",
+      "powerIndex": 90.17114948671012,
+      "verdict": "基準帯",
+      "watch": "通常"
+    },
+    {
+      "id": "fusion-015",
+      "main": "ジョーカー",
+      "material": "ドラゴン",
+      "name": "フレアデス",
+      "trait": "LIFE50%以下の敵へのダメージ+40%",
+      "archetype": "処刑・火力",
+      "powerIndex": 97.14827595856282,
+      "verdict": "基準帯",
+      "watch": "通常"
+    },
+    {
+      "id": "fusion-016",
+      "main": "ジョーカー",
+      "material": "モッチー",
+      "name": "サクラチル",
+      "trait": "敵撃破時LIFE25%回復",
+      "archetype": "撃破・回復",
+      "powerIndex": 106.43673731656733,
+      "verdict": "強め監視",
+      "watch": "監視"
+    },
+    {
+      "id": "fusion-017",
+      "main": "モノリス",
+      "material": "ハム",
+      "name": "ワイルドブロック",
+      "trait": "被攻撃ごとATK+4（最大+16）",
+      "archetype": "反撃準備・火力",
+      "powerIndex": 97.85319801511298,
+      "verdict": "基準帯",
+      "watch": "通常"
+    },
+    {
+      "id": "fusion-018",
+      "main": "モノリス",
+      "material": "ディノ",
+      "name": "ジュラスウォール",
+      "trait": "LIFE70%以上の間、被ダメ-30%",
+      "archetype": "高LIFE・耐久",
+      "powerIndex": 96.51931481568896,
+      "verdict": "基準帯",
+      "watch": "通常"
+    },
+    {
+      "id": "fusion-019",
+      "main": "ゴーレム",
+      "material": "ジョーカー",
+      "name": "アンゴルモア",
+      "trait": "TP4以上の技ダメージ+35%",
+      "archetype": "大技・火力",
+      "powerIndex": 89.57818461748907,
+      "verdict": "弱め監視",
+      "watch": "監視"
+    },
+    {
+      "id": "fusion-020",
+      "main": "ゴーレム",
+      "material": "ドラゴン",
+      "name": "タイラント",
+      "trait": "自身ATK>=対象DEFならダメージ+30%",
+      "archetype": "突破・火力",
+      "powerIndex": 103.31864650288952,
+      "verdict": "基準帯",
+      "watch": "通常"
+    },
+    {
+      "id": "fusion-021",
+      "main": "ヘンガー",
+      "material": "ディノ",
+      "name": "オメガレックス",
+      "trait": "TP3以上の技使用後DEF+4（最大+16）",
+      "archetype": "成長・装甲",
+      "powerIndex": 87.26376334521372,
+      "verdict": "弱め監視",
+      "watch": "監視"
+    },
+    {
+      "id": "fusion-022",
+      "main": "ヘンガー",
+      "material": "ジョーカー",
+      "name": "エンドブリンガー",
+      "trait": "敵撃破ごとATK+8",
+      "archetype": "撃破・成長",
+      "powerIndex": 94.30610105259943,
+      "verdict": "基準帯",
+      "watch": "通常"
+    },
+    {
+      "id": "fusion-023",
+      "main": "ヒノトリ",
+      "material": "ヘンガー",
+      "name": "ラプタ",
+      "trait": "各自ターン、このモンスターが最初に使用する技のダメージ+25%",
+      "archetype": "蓄積・火力",
+      "powerIndex": 97.99927399901867,
+      "verdict": "基準帯",
+      "watch": "通常"
+    },
+    {
+      "id": "fusion-024",
+      "main": "ヒノトリ",
+      "material": "ウンディーネ",
+      "name": "アオサギビ",
+      "trait": "自ターン開始時LIFE8%回復。LIFE50%以下ならそのターン与ダメ+20%",
+      "archetype": "再生・火力",
+      "powerIndex": 104.83266679903745,
+      "verdict": "基準帯",
+      "watch": "通常"
+    },
+    {
+      "id": "fusion-025",
+      "main": "ガリ",
+      "material": "ハム",
+      "name": "ガリオン",
+      "trait": "同一ターン2回目以降の技使用後、次自ターンまで被ダメ-30%",
+      "archetype": "連撃・防御",
+      "powerIndex": 89.60248877220936,
+      "verdict": "弱め監視",
+      "watch": "監視"
+    },
+    {
+      "id": "fusion-026",
+      "main": "ガリ",
+      "material": "プラント",
+      "name": "カラフルマスク",
+      "trait": "ターン終了時、最低項目に応じてLIFE10%回復/ATK+4/DEF+4",
+      "archetype": "万能・補正",
+      "powerIndex": 100.34447814271961,
+      "verdict": "基準帯",
+      "watch": "通常"
+    },
+    {
+      "id": "fusion-027",
+      "main": "メタルナー",
+      "material": "ピクシー",
+      "name": "ラブラブセイジン",
+      "trait": "各ターン最初の技TP-1（最低1）",
+      "archetype": "TP効率",
+      "powerIndex": 92.6067426414366,
+      "verdict": "基準帯",
+      "watch": "通常"
+    },
+    {
+      "id": "fusion-028",
+      "main": "メタルナー",
+      "material": "デュラハン",
+      "name": "ユーマ",
+      "trait": "技使用ごとDEF+3、被ダメで1段階減少（最大5段階）",
+      "archetype": "蓄積・防御",
+      "powerIndex": 86.77007677993933,
+      "verdict": "弱め監視",
+      "watch": "監視"
+    },
+    {
+      "id": "fusion-029",
+      "main": "ウンディーネ",
+      "material": "ジョーカー",
+      "name": "セイレーン",
+      "trait": "LIFE50%以下の敵を攻撃時、その敵ATK-5・DEF-5",
+      "archetype": "弱体・処刑",
+      "powerIndex": 87.96381986863813,
+      "verdict": "弱め監視",
+      "watch": "監視"
+    },
+    {
+      "id": "fusion-030",
+      "main": "ウンディーネ",
+      "material": "モッチー",
+      "name": "ヤオビクニ",
+      "trait": "自ターン開始時LIFE8%回復",
+      "archetype": "回復",
+      "powerIndex": 100.69731536273142,
+      "verdict": "基準帯",
+      "watch": "通常"
+    },
+    {
+      "id": "fusion-031",
+      "main": "モッチー",
+      "material": "デュラハン",
+      "name": "ヨロイモッチー",
+      "trait": "各ターン最初の被ダメ40%軽減",
+      "archetype": "防御",
+      "powerIndex": 107.19129996064947,
+      "verdict": "強め監視",
+      "watch": "監視"
+    },
+    {
+      "id": "fusion-032",
+      "main": "モッチー",
+      "material": "ヘンガー",
+      "name": "モチモチエイト",
+      "trait": "トレーニング・修行の能力上昇量+2",
+      "archetype": "育成",
+      "powerIndex": 92.31336352786803,
+      "verdict": "基準帯",
+      "watch": "通常"
+    },
+    {
+      "id": "fusion-033",
+      "main": "プラント",
+      "material": "ピクシー",
+      "name": "ベニヒメソウ",
+      "trait": "自ターン開始時LIFE8%回復。回復した場合、次の技ダメージ+20%",
+      "archetype": "回復・火力",
+      "powerIndex": 108.4375496424734,
+      "verdict": "強め監視",
+      "watch": "監視"
+    },
+    {
+      "id": "fusion-034",
+      "main": "プラント",
+      "material": "ワーム",
+      "name": "ウスバカゲソウ",
+      "trait": "ターン終了時LIFE5%回復＋被ダメごとDEF+2（最大+10）",
+      "archetype": "再生・耐久",
+      "powerIndex": 97.22775723169698,
+      "verdict": "基準帯",
+      "watch": "通常"
+    },
+    {
+      "id": "fusion-035",
+      "main": "ドラゴン",
+      "material": "モノリス",
+      "name": "ラグナロックス",
+      "trait": "最低DEFの敵へのダメージ150%",
+      "archetype": "処刑・火力",
+      "powerIndex": 100,
+      "verdict": "基準帯",
+      "watch": "通常"
+    },
+    {
+      "id": "fusion-036",
+      "main": "ドラゴン",
+      "material": "ライガー",
+      "name": "クレバス",
+      "trait": "全技TP-1、最低TP2",
+      "archetype": "TP効率・継戦",
+      "powerIndex": 90.74587530748983,
+      "verdict": "基準帯",
+      "watch": "通常"
+    }
+  ],
+  "shugyoPools": {
+    "プラント": {
+      "attack": [
+        "ドレイン",
+        "根縛り",
+        "エナジードレイン"
+      ],
+      "defense": [
+        "フラワービーム",
+        "毒花粉",
+        "花粉"
+      ]
+    },
+    "モッチー": {
+      "attack": [
+        "もっさん",
+        "ローリンモッチ",
+        "もっさまん"
+      ],
+      "defense": [
+        "超モッチ砲",
+        "モッチ砲",
+        "ガッチャー"
+      ]
+    },
+    "ウンディーネ": {
+      "attack": [
+        "メイルストローム",
+        "アクアウェイブ",
+        "フリーズランス"
+      ],
+      "defense": [
+        "アイスストーム",
+        "アクアスピア",
+        "アイスクラッシュ"
+      ]
+    },
+    "ピクシー": {
+      "attack": [
+        "ギガレイ",
+        "デスキッス",
+        "ビッグバン"
+      ],
+      "defense": [
+        "レイ",
+        "キック",
+        "ライトニング"
+      ]
+    },
+    "デュラハン": {
+      "attack": [
+        "連続斬り",
+        "冥王剣",
+        "真空斬"
+      ],
+      "defense": [
+        "真・風神剣",
+        "最終奥義",
+        "大車輪"
+      ]
+    },
+    "ドラゴン": {
+      "attack": [
+        "ルインクロス",
+        "インフェルノ",
+        "しっぽアタック"
+      ],
+      "defense": [
+        "ドラゴンラッシュ",
+        "ドラゴンパンチ",
+        "ウイングアタック"
+      ]
+    },
+    "ライガー": {
+      "attack": [
+        "雷牙",
+        "サンダー",
+        "ワンツー"
+      ],
+      "defense": [
+        "雷撃",
+        "空中回転アタック",
+        "超雷撃"
+      ]
+    },
+    "ハム": {
+      "attack": [
+        "連続パンチ",
+        "超飛び蹴り",
+        "超ドラゴンパンチ"
+      ],
+      "defense": [
+        "ドラゴンパンチ",
+        "大砲屁",
+        "バックナックル"
+      ]
+    },
+    "ディノ": {
+      "attack": [
+        "暴れまわり",
+        "火炎連砲",
+        "突進"
+      ],
+      "defense": [
+        "しっぽビンタ",
+        "連続かみつき",
+        "火炎"
+      ]
+    },
+    "ジョーカー": {
+      "attack": [
+        "デススラッシュ",
+        "デスエナジー",
+        "デスナックル"
+      ],
+      "defense": [
+        "デスファイナル",
+        "デスゲート",
+        "デスウェーブ"
+      ]
+    },
+    "ワーム": {
+      "attack": [
+        "大毒液",
+        "毒牙",
+        "毒液"
+      ],
+      "defense": [
+        "連続突き",
+        "牙斬り",
+        "くし刺し"
+      ]
+    },
+    "ゴースト": {
+      "attack": [
+        "ソウルビーム",
+        "ナイトメア",
+        "コンビネーション"
+      ],
+      "defense": [
+        "ソウルショット",
+        "大きなおとしもの",
+        "大パンチ"
+      ]
+    },
+    "モノリス": {
+      "attack": [
+        "ひっかき",
+        "フォームアルファ",
+        "デルタアタック"
+      ],
+      "defense": [
+        "怪光線",
+        "トリオビームX",
+        "トリオビームY"
+      ]
+    },
+    "ヘンガー": {
+      "attack": [
+        "アイショット",
+        "ドリルアタック",
+        "ロケットパンチ"
+      ],
+      "defense": [
+        "ギガレーザー",
+        "ダブルアタック",
+        "アームキャノン"
+      ]
+    },
+    "ゴーレム": {
+      "attack": [
+        "大地震",
+        "地震",
+        "竜巻アタック"
+      ],
+      "defense": [
+        "大パンチ",
+        "ハンマーナックル",
+        "ロケットパンチ"
+      ]
+    },
+    "ヒノトリ": {
+      "attack": [
+        "フレイムタイフーン",
+        "フレイムライン",
+        "かぎづめ"
+      ],
+      "defense": [
+        "エタニティフレア",
+        "ファイアウェーブ",
+        "ファイアビーム"
+      ]
+    },
+    "メタルナー": {
+      "attack": [
+        "超メタビーム",
+        "テツざんこう",
+        "ツイン掌打"
+      ],
+      "defense": [
+        "宙ポン拳",
+        "閃光掌",
+        "右たん脚"
+      ]
+    },
+    "ガリ": {
+      "attack": [
+        "ホーリーサンダー",
+        "ゴッドファイナル",
+        "神の怒り"
+      ],
+      "defense": [
+        "プレス",
+        "ゴッドストライク",
+        "ゴッドアタック"
+      ]
+    }
+  }
+}

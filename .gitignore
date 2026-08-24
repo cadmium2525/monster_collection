@@ -1,0 +1,9 @@
+.tmp_*/
+MC_SavePoint_Sim8.7_FULL/
+node_modules/
+coverage/
+.firebase/
+firebase-debug.log
+*.local.js
+playtest-artifacts/
+
