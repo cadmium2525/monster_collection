@@ -41,6 +41,8 @@ node scripts/serve.mjs --root dist --base /monster_collection/ --port 4175
 - Firestoreの `gameState/champion` を別ブラウザで更新するとホームへ反映される
 - レジェンド戦開始後に王座versionを変え、古いversionで上書きされない
 - Firebase障害時も直前のローカル40枚が残る
+- DevToolsのApplicationでmanifest、192/512/maskable icon、Service Worker scopeが `/monster_collection/` になっている
+- 一度起動後にOfflineへ切り替え、ホームと保存済みデッキが再読込できる
 
 ## キャッシュ
 

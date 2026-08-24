@@ -1,0 +1,21 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 512 512" role="img" aria-labelledby="title">
+  <title id="title">モンスターコンストラクション</title>
+  <defs>
+    <radialGradient id="bg" cx="50%" cy="42%" r="72%">
+      <stop offset="0" stop-color="#173149"/>
+      <stop offset="0.58" stop-color="#0a1726"/>
+      <stop offset="1" stop-color="#040a12"/>
+    </radialGradient>
+    <linearGradient id="gold" x1="0" y1="0" x2="1" y2="1">
+      <stop stop-color="#fff0b0"/>
+      <stop offset="0.46" stop-color="#e8ba62"/>
+      <stop offset="1" stop-color="#9b6124"/>
+    </linearGradient>
+  </defs>
+  <rect width="512" height="512" rx="104" fill="url(#bg)"/>
+  <path d="M102 156V112h44M366 112h44v44M410 356v44h-44M146 400h-44v-44" fill="none" stroke="#69d8cd" stroke-width="10" stroke-linecap="round" opacity=".72"/>
+  <rect x="74" y="74" width="364" height="364" rx="78" fill="none" stroke="url(#gold)" stroke-width="13"/>
+  <circle cx="256" cy="256" r="142" fill="none" stroke="#e8ba62" stroke-width="3" opacity=".28"/>
+  <text x="256" y="304" text-anchor="middle" fill="url(#gold)" font-family="Georgia,serif" font-size="154" font-weight="700" letter-spacing="-12">MC</text>
+  <path d="M174 344h164" stroke="#69d8cd" stroke-width="8" stroke-linecap="round"/>
+</svg>

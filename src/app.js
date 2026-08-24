@@ -4,6 +4,7 @@ import { createMasterIndex, loadMasterData } from './data/master-loader.js';
 import { DeckCollection } from './decks/DeckCollection.js';
 import { GameSession } from './game/GameSession.js';
 import { createGameRepository } from './persistence/index.js';
+import { registerServiceWorker } from './pwa/register-service-worker.js';
 import { BattleScreen } from './ui/battle-screen.js';
 import { DeckDetailScreen, DeckListScreen } from './ui/deck-screens.js';
 import { el, replace } from './ui/dom.js';
@@ -21,8 +22,18 @@ class MonsterConstructionApp {
     this.seed = new URLSearchParams(location.search).get('seed') ?? `web-${Date.now().toString(36)}`;
     this.currentScreen = 'boot';
     this.session = null;
+    this.installPromptEvent = null;
     const params = new URLSearchParams(location.search);
     globalThis.__MC_DEBUG_MODE__ = params.get('debug') === '1' && ['localhost', '127.0.0.1', '::1'].includes(location.hostname);
+    window.addEventListener('beforeinstallprompt', (event) => {
+      event.preventDefault();
+      this.installPromptEvent = event;
+      if (this.currentScreen === 'home') this.showHome();
+    });
+    window.addEventListener('appinstalled', () => {
+      this.installPromptEvent = null;
+      if (this.currentScreen === 'home') this.showHome();
+    });
   }
 
   async initialize() {
@@ -68,7 +79,23 @@ class MonsterConstructionApp {
       onTournament: () => this.showTournamentSetup(),
       onDecks: () => this.showDeckList(),
       onRename: () => this.renameProfile(),
+      installAvailable: Boolean(this.installPromptEvent),
+      onInstall: () => this.installApp(),
     });
+  }
+
+  async installApp() {
+    const event = this.installPromptEvent;
+    if (!event) return;
+    this.installPromptEvent = null;
+    try {
+      await event.prompt();
+      await event.userChoice;
+    } catch (error) {
+      console.warn('PWA install prompt could not be shown.', error);
+    } finally {
+      if (this.currentScreen === 'home') this.showHome();
+    }
   }
 
   renameProfile() {
@@ -257,3 +284,7 @@ async function boot() {
 }
 
 boot();
+
+const startServiceWorker = () => { void registerServiceWorker(); };
+if (document.readyState === 'complete') startServiceWorker();
+else window.addEventListener('load', startServiceWorker, { once: true });
