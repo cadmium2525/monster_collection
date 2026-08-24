@@ -90,6 +90,7 @@ export class BattleEngine {
       firstPlayerCostTie: firstResult.tied,
       halfTurn: 0,
       round: 1,
+      pendingMoveChoice: null,
       players: {},
       log: [],
     };
@@ -140,6 +141,9 @@ export class BattleEngine {
       firstPlayerId: this.state.firstPlayerId,
       halfTurn: this.state.halfTurn,
       round: this.state.round,
+      pendingMoveChoice: this.state.pendingMoveChoice?.playerId === playerId
+        ? clone(this.state.pendingMoveChoice)
+        : null,
       own,
       opponent: {
         id: opponent.id,
@@ -177,6 +181,33 @@ export class BattleEngine {
   getLegalActions(playerId = this.state.currentPlayerId) {
     if (this.state.status !== 'active' || playerId !== this.state.currentPlayerId) return [];
     const player = this.player(playerId);
+    const pendingChoice = this.state.pendingMoveChoice;
+    if (pendingChoice) {
+      if (pendingChoice.playerId !== playerId) return [];
+      const unit = findUnit(player, pendingChoice.unitId);
+      if (!unit || !unit.learnedMoveIds.includes(pendingChoice.learnedMoveId)) {
+        throw new Error('修行後の技選択対象が見つかりません');
+      }
+      const learnedMove = this.masterIndex.moves.get(pendingChoice.learnedMoveId);
+      return [
+        ...unit.equippedMoveIds.map((replaceMoveId) => ({
+          type: 'resolve-shugyo-move',
+          unitId: unit.id,
+          learnedMoveId: pendingChoice.learnedMoveId,
+          replaceMoveId,
+          cost: 0,
+          label: `${this.masterIndex.moves.get(replaceMoveId)?.name ?? '実戦技'}と${learnedMove?.name ?? '新技'}を入れ替える`,
+        })),
+        {
+          type: 'resolve-shugyo-move',
+          unitId: unit.id,
+          learnedMoveId: pendingChoice.learnedMoveId,
+          replaceMoveId: null,
+          cost: 0,
+          label: `${learnedMove?.name ?? '新技'}は習得のみ（実戦4技を維持）`,
+        },
+      ];
+    }
     const opponent = this.opponent(playerId);
     const actions = [];
     const emptySlots = player.board.flatMap((unit, slot) => (unit ? [] : [slot]));
@@ -313,6 +344,7 @@ export class BattleEngine {
       case 'summon': this._summon(selected); break;
       case 'training': this._training(selected); break;
       case 'shugyo': this._shugyo(selected); break;
+      case 'resolve-shugyo-move': this._resolveShugyoMove(selected); break;
       case 'breeder': this._breeder(selected); break;
       case 'move': this._move(selected); break;
       case 'fusion-normal': this._fusion(selected, false); break;
@@ -477,6 +509,12 @@ export class BattleEngine {
       if (unit.equippedMoveIds.length < RULES.equippedMoveSlots) {
         unit.equippedMoveIds.push(learnedMove.id);
         growth.equippedMoveIds.push(learnedMove.id);
+      } else {
+        this.state.pendingMoveChoice = {
+          playerId: player.id,
+          unitId: unit.id,
+          learnedMoveId: learnedMove.id,
+        };
       }
     }
 
@@ -491,6 +529,37 @@ export class BattleEngine {
       stat: definition.stat,
       statGain,
       learnedMoveId: learnedMove?.id ?? null,
+    });
+  }
+
+  _resolveShugyoMove(action) {
+    const player = this.player(this.state.currentPlayerId);
+    const pending = this.state.pendingMoveChoice;
+    const unit = findUnit(player, action.unitId);
+    const learnedMove = this.masterIndex.moves.get(action.learnedMoveId);
+    if (!pending || pending.playerId !== player.id || pending.unitId !== unit?.id
+      || pending.learnedMoveId !== action.learnedMoveId) {
+      throw new Error('解決待ちの修行技が一致しません');
+    }
+
+    const growth = player.tournamentGrowth[unit.sourceCardInstanceId];
+    let replacedMove = null;
+    if (action.replaceMoveId) {
+      const index = unit.equippedMoveIds.indexOf(action.replaceMoveId);
+      if (index < 0) throw new Error('入れ替える実戦技が見つかりません');
+      replacedMove = this.masterIndex.moves.get(action.replaceMoveId);
+      unit.equippedMoveIds.splice(index, 1, action.learnedMoveId);
+      growth.equippedMoveIds = [...unit.equippedMoveIds];
+    }
+    this.state.pendingMoveChoice = null;
+    this._log(action.replaceMoveId ? 'shugyo-move-equipped' : 'shugyo-move-stored', action.replaceMoveId
+      ? `${unit.name}は${replacedMove?.name ?? '実戦技'}を外し、${learnedMove?.name ?? '新技'}を実戦技に採用`
+      : `${unit.name}は${learnedMove?.name ?? '新技'}を習得技として保存（実戦4技は変更なし）`, {
+      playerId: player.id,
+      unitId: unit.id,
+      learnedMoveId: action.learnedMoveId,
+      replacedMoveId: action.replaceMoveId,
+      equippedMoveIds: [...unit.equippedMoveIds],
     });
   }
 
@@ -522,6 +591,7 @@ export class BattleEngine {
     let fusion = null;
     if (special) {
       fusion = this.masterData.fusions.find((candidate) => candidate.id === action.fusionId);
+      main.specialFusionId = fusion.id;
       main.specialForm = fusion.name;
       main.name = fusion.name;
       main.specialTrait = fusion.trait;

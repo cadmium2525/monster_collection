@@ -1,5 +1,29 @@
 # Changelog
 
+## 1.4.0 — 2026-08-24
+
+### Added
+
+- 修行で5個目以降の技を習得した直後に、現在の実戦4技のどれかと入れ替えるか、習得だけにするかを選ぶ必須フロー。
+- 5択を `BattleEngine` の正式な合法行動にし、人間・全CPU・シミュレータで同じ4枠制限を使用。
+- 特殊合体36形態をレシピ順に収録した6×6アトラスと、Training 3種・修行2種・ブリーダー20種を収録した5×5アトラス。
+- 844×390 / 667×375のUI確認と5技目入替を再現する開発用viewport harness。
+
+### Changed
+
+- モンスターカードのLIFEを現在値だけの表示へ変更し、モン類の印章アイコンを撤去。
+- 標準速度を緩和し、CPU行動間隔600ms、通常イベント850ms、重要イベント1250msへ延長。
+- 能力増減を差分付き（例 `⬆︎ ATK +5` / `⬇︎ LIFE -12`）で約1.2秒表示し、矢印提示後に数値を更新。
+- タッチ端末でカードhover/選択が位置を動かさないようにし、バトル中のbody/appをviewportへ固定。
+- 新規画像を高品質JPEGへ最適化し、2アトラス合計を約7.7MBから約1.4MBへ削減。
+
+### Verified
+
+- 58件の自動テスト、GitHub Pagesビルド、全AI完走を確認。
+- 844×390でbody/htmlが844×390、scroll 0、`position: fixed` / `overflow: hidden`であることを実測。
+- 5技目の4入替候補＋習得のみを全表示し、「かみつき」→「インフェルノ」の入替とログ反映を実操作。
+- 増減表示中に旧値から新値へ切り替わり、切替後も表示が残る順序を実ブラウザーで確認。
+
 ## 1.3.0 — 2026-08-24
 
 ### Added
@@ -118,4 +142,124 @@ Composition/framing: exact equal 6 columns and 3 rows, centered bust or three-qu
 Lighting/mood: dramatic rim light, deep navy backgrounds, faction accents in stone/teal/gold/violet/red/blue
 Constraints: exactly 18 cells and exactly one creature per cell; no empty cells; no text, letters, numbers, UI, card borders, logos, symbols, captions, watermarks, or baked-in stats; keep all important anatomy away from gutters; 3:2 full atlas aspect ratio
 Avoid: existing copyrighted character likenesses, photorealism, chibi-only proportions, messy collage, variable cell sizes
+```
+
+### `special-fusion-atlas-v1.jpg`
+
+組み込みImageGenの生成PNGを目視確認後、品質90のJPEGへ変換した。元PNGは生成物保管領域に残し、PWAには軽量版だけを収録する。
+
+```text
+Create one production-ready square raster sprite atlas for a dark high-fantasy collectible card battle game.
+
+LAYOUT IS CRITICAL:
+- Exactly 6 columns by 6 rows, 36 equal-size rectangular cells in row-major order.
+- Each cell is a separate full-bleed monster portrait illustration.
+- Perfectly aligned cell boundaries; no gutters, no padding, no frames, no separators.
+- No text, letters, numbers, symbols, logos, UI, card frames, watermarks, or labels anywhere.
+- Keep each monster centered with head and upper body clearly readable after a cell is cropped.
+- Consistent dramatic painterly style: premium Japanese dark-fantasy card art, realistic painted textures, strong silhouette, cinematic rim lighting, deep atmospheric backgrounds, saturated accent color, high contrast.
+- Every cell must be visually distinct. Avoid placing important anatomy across cell boundaries.
+- Do not make a contact sheet with captions. This must be a seamless crop-ready game asset.
+
+CELL CONTENT IN EXACT ROW-MAJOR ORDER:
+Row 1:
+1. elegant psychic fairy fused with sleek silver alien machine, cyan-magenta energy wings;
+2. nocturnal butterfly witch fused with giant armored worm, violet moonlight;
+3. undead knight fused with immortal firebird, blazing armored avian warrior;
+4. frost-armored headless knight fused with blue lightning wolf, icy electric warrior;
+5. muscular martial-arts hamster fused with lightning wolf, compact blue-white beast fighter;
+6. blue lightning wolf fused with carnivorous healing plant, botanical electric beast.
+Row 2:
+7. muscular hamster fused with radiant fairy, agile winged prizefighter;
+8. dark obsidian hamster fused with black monolith, blocky cursed martial beast;
+9. dinosaur fused with stone golem, ankylosaur-like rock fortress;
+10. dinosaur fused with golden sun-mask deity, radiant armored reptile;
+11. ghost fused with fallen samurai armor, spectral ronin;
+12. ghost fused with water spirit maiden, eerie drowned apparition.
+Row 3:
+13. giant worm fused with dinosaur, plated venomous reptilian insect;
+14. giant worm fused with lightning wolf, blue horned burrowing predator;
+15. demonic jester fused with red dragon, apocalyptic flame demon;
+16. demonic jester fused with pink rice-cake creature, beautiful sakura death spirit;
+17. black monolith fused with muscular hamster, wild stone brawler;
+18. black monolith fused with dinosaur, colossal prehistoric fortress wall.
+Row 4:
+19. stone golem fused with demonic jester, eldritch apocalypse idol;
+20. stone golem fused with red dragon, tyrant magma titan;
+21. sleek silver robot fused with dinosaur, omega cyber rex;
+22. sleek silver robot fused with demonic jester, black-red execution machine;
+23. immortal firebird fused with sleek robot, mechanical raptor phoenix;
+24. immortal firebird fused with water spirit, blue heron made of ghost flame.
+Row 5:
+25. golden sun-mask deity fused with muscular hamster, leonine celestial guardian;
+26. golden sun-mask deity fused with carnivorous plant, many-colored ritual mask bloom;
+27. silver alien machine fused with radiant fairy, charming psychic extraterrestrial;
+28. silver alien machine fused with undead knight, biomechanical armored horse-spirit;
+29. water spirit maiden fused with demonic jester, dark siren;
+30. water spirit maiden fused with pink rice-cake creature, serene immortal mermaid.
+Row 6:
+31. pink rice-cake creature fused with undead knight, adorable armored mochi warrior;
+32. pink rice-cake creature fused with sleek robot, eight-armed cyber mochi guardian;
+33. carnivorous plant fused with radiant fairy, crimson princess flower;
+34. carnivorous plant fused with giant moth/worm, pale moth-wing flower monster;
+35. red dragon fused with black monolith, rune-covered volcanic dragon fortress;
+36. red dragon fused with blue lightning wolf, glacial lightning dragon.
+
+Art direction: mature fantasy, imposing but readable, no gore, no existing franchise character likenesses. Make this a cohesive atlas usable as card illustrations.
+```
+
+### `support-card-atlas-v1.jpg`
+
+組み込みImageGenの生成PNGを目視確認後、品質90のJPEGへ変換した。カード順は `growthCards` 5件の後に `breeder-001`〜`breeder-020`。
+
+```text
+Create one production-ready square raster sprite atlas for non-monster cards in a dark high-fantasy collectible card battle game.
+
+LAYOUT IS CRITICAL:
+- Exactly 5 columns by 5 rows, 25 equal-size square cells in row-major order.
+- Each cell is a separate full-bleed vertical-card-compatible illustration (compose the important subject in the center).
+- Perfectly aligned cell boundaries; no gutters, no padding, no frames, no separators.
+- No text, letters, numbers, symbols, logos, UI, card frames, watermarks, or labels anywhere.
+- Consistent premium painterly Japanese dark-fantasy card-art style, cinematic rim lighting, readable silhouettes, rich atmospheric backgrounds.
+- These are support/action cards, not monster portraits. Show trainers, hands, equipment, magic, training scenes, or tactical commands.
+- Every cell visually distinct. No existing franchise character likenesses.
+- Do not make a contact sheet with captions. This must be a seamless crop-ready game asset.
+
+CELL CONTENT IN EXACT ROW-MAJOR ORDER:
+Row 1 — growth:
+1. life training: determined young monster trainer and creature running uphill at sunrise, vitality aura;
+2. attack training: creature smashing a massive stone training pillar with an explosive punch;
+3. defense training: creature bracing behind a heavy forged shield under a rain of impacts;
+4. attack discipline retreat: mountain dojo, martial master teaching an offensive strike, red-gold ki;
+5. defense discipline retreat: waterfall temple, armored master teaching an immovable guard, blue-silver ki.
+
+Row 2 — breeder tactics 1–5:
+6. veteran breeder calmly directing several creatures, golden command aura;
+7. intimidating tactical commander applying psychological pressure across a battlefield;
+8. focused trainer pointing at one ally, concentrated red energy around its next strike;
+9. protective trainer raising a luminous barrier around one ally;
+10. emergency supply satchel opening with card-like magical provisions flying out, no readable marks.
+
+Row 3 — breeder tactics 6–10:
+11. commander ordering a full team charge, all allies glowing with attack energy;
+12. trainer granting a tired creature renewed action with a burst of green-gold energy;
+13. saboteur issuing interference orders, shadow chains weakening an enemy attack;
+14. inorganic specialist reinforcing a stone-and-metal creature’s armor plates;
+15. precision engineer revealing weak seams in an enemy shield to ignore defense.
+
+Row 4 — breeder tactics 11–15:
+16. magical creator tuning a crystalline artificial creature to spend less energy;
+17. arcane controller freezing an enemy in a temporal stun seal;
+18. spirit medium granting a spectral creature another immediate action;
+19. phantom trainer wrapping an ally in translucent mist so the next attack passes through;
+20. demonic war coach empowering one horned ally with crimson attack flames.
+
+Row 5 — breeder tactics 16–20:
+21. demon tactician drawing power from several demonic allies into one champion;
+22. beast handler converting the pack’s momentum into glowing energy crystals;
+23. gentle beast healer restoring a wounded animal companion with warm green light;
+24. monster hunter cursing one enemy with black tendrils and a slowing hex;
+25. commander uniting multiple giant monsters under a combined red-and-blue power aura.
+
+Art direction: mature fantasy, energetic and dramatic, no gore. Make this a cohesive atlas usable as card illustrations.
 ```

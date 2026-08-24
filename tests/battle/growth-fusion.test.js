@@ -54,6 +54,46 @@ test('shugyo learns a seeded random technique from the correct attack/defense po
   assert.equal([...defenseResults].every((id) => defenseIds.has(id)), true);
 });
 
+test('a fifth learned technique pauses play until the actual four are replaced or deliberately kept', () => {
+  const prepare = (seed) => {
+    const battle = engine({ seed });
+    const unit = placeUnit(battle, 'p1', 'ドラゴン', 0);
+    const fourth = moveByName('ドラゴン', 'しっぽアタック').id;
+    unit.learnedMoveIds.push(fourth);
+    unit.equippedMoveIds.push(fourth);
+    battle.player('p1').tournamentGrowth[unit.sourceCardInstanceId].learnedMoveIds = [...unit.learnedMoveIds];
+    battle.player('p1').tournamentGrowth[unit.sourceCardInstanceId].equippedMoveIds = [...unit.equippedMoveIds];
+    setHand(battle, 'p1', [card('shugyo-attack', `fifth-${seed}`)]);
+    battle.applyAction(battle.getLegalActions().find((candidate) => candidate.type === 'shugyo'));
+    return { battle, unit };
+  };
+
+  const replaceCase = prepare('fifth-replace');
+  const pending = replaceCase.battle.state.pendingMoveChoice;
+  assert.ok(pending?.learnedMoveId, 'the newly learned fifth move must wait for a conscious loadout decision');
+  const choiceActions = replaceCase.battle.getLegalActions();
+  assert.equal(choiceActions.length, 5, 'four replacement choices plus keep-current must be offered');
+  assert.equal(choiceActions.every((action) => action.type === 'resolve-shugyo-move'), true);
+  const replacedMoveId = replaceCase.unit.equippedMoveIds[0];
+  const replace = choiceActions.find((action) => action.replaceMoveId === replacedMoveId);
+  replaceCase.battle.applyAction(replace);
+  assert.equal(replaceCase.unit.equippedMoveIds.includes(pending.learnedMoveId), true);
+  assert.equal(replaceCase.unit.equippedMoveIds.includes(replacedMoveId), false);
+  assert.deepEqual(
+    replaceCase.battle.getGrowthSnapshot('p1')[replaceCase.unit.sourceCardInstanceId].equippedMoveIds,
+    replaceCase.unit.equippedMoveIds,
+  );
+  assert.equal(replaceCase.battle.state.pendingMoveChoice, null);
+  assert.equal(replaceCase.battle.getLegalActions().some((action) => action.type === 'end-turn'), true);
+
+  const keepCase = prepare('fifth-keep');
+  const originalFour = [...keepCase.unit.equippedMoveIds];
+  const keep = keepCase.battle.getLegalActions().find((action) => action.replaceMoveId == null);
+  keepCase.battle.applyAction(keep);
+  assert.deepEqual(keepCase.unit.equippedMoveIds, originalFour);
+  assert.equal(keepCase.unit.learnedMoveIds.includes(keep.learnedMoveId), true, 'unselected new move remains learned');
+});
+
 test('fusion is unavailable before first 6 / second 5 and costs 1 or 2 afterward', () => {
   const battle = engine();
   const main = placeUnit(battle, 'p1', 'ピクシー', 0);
@@ -84,6 +124,7 @@ test('all 36 special recipes are present and set their canonical form/trait', ()
     assert.ok(action, fusion.name);
     battle.applyAction(action);
     assert.equal(main.specialForm, fusion.name);
+    assert.equal(main.specialFusionId, fusion.id);
     assert.equal(main.specialTrait, fusion.trait);
   }
 });

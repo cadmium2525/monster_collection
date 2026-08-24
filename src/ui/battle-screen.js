@@ -112,6 +112,9 @@ export class BattleScreen {
   }
 
   interactionHint() {
+    if (this.engine.state.pendingMoveChoice?.playerId === this.humanPlayerId) {
+      return '新しく覚えた技の入替を選択';
+    }
     if (this.pendingMove) {
       const move = this.engine.masterIndex.moves.get(this.pendingMove.moveId);
       return `${move?.name ?? '技'}：対象をタップ`;
@@ -370,6 +373,7 @@ export class BattleScreen {
 
   renderTurnControls(humanTurn) {
     const end = humanTurn ? this.legalActions().find((action) => action.type === 'end-turn') : null;
+    const choosingMove = this.engine.state.pendingMoveChoice?.playerId === this.humanPlayerId;
     return el('div', { className: 'turn-controls' }, [
       el('p', { className: 'gesture-hint', text: this.interactionHint() }),
       this.selection || this.pendingMove ? el('button', {
@@ -379,7 +383,7 @@ export class BattleScreen {
       }) : null,
       end ? el('button', { className: 'end-turn-button', text: 'ターン終了', onclick: () => this.performHumanAction(end) }) : el('div', {
         className: 'cpu-thinking',
-        text: this.engine.state.status === 'active' ? 'CPU THINKING…' : 'BATTLE END',
+        text: this.engine.state.status === 'active' ? (choosingMove ? '実戦4技を選択中' : 'CPU THINKING…') : 'BATTLE END',
       }),
     ]);
   }
@@ -440,6 +444,51 @@ export class BattleScreen {
       el('button', { className: 'text-button', text: 'キャンセル', onclick: () => modal.close() }),
     ]);
     modal = openModal({ title: '合体方法', content });
+  }
+
+  promptShugyoMoveChoice() {
+    const actions = this.engine.getLegalActions(this.humanPlayerId)
+      .filter((action) => action.type === 'resolve-shugyo-move');
+    if (!actions.length) return Promise.resolve(null);
+    const incoming = this.engine.masterIndex.moves.get(actions[0].learnedMoveId);
+    const unit = this.engine.player(this.humanPlayerId).board.find((candidate) => candidate?.id === actions[0].unitId);
+    const moveLine = (move) => `Rank ${move.rank} / 威力 ${move.power ?? '—'} / ${move.tp}TP${move.effect ? ` / ${move.effect}` : ''}`;
+
+    return new Promise((resolve) => {
+      let modal = null;
+      const choose = (action) => {
+        modal.close();
+        resolve(action);
+      };
+      const replaceActions = actions.filter((action) => action.replaceMoveId);
+      const keepAction = actions.find((action) => !action.replaceMoveId);
+      const content = el('div', { className: 'move-replace-choice' }, [
+        el('p', { text: `${unit?.name ?? 'モンスター'}が5個目以降の技を覚えました。実戦で使う4技を決めてください。` }),
+        el('section', { className: 'newly-learned-move' }, [
+          el('small', { text: 'NEW TECHNIQUE' }),
+          el('strong', { text: incoming?.name ?? '新しい技' }),
+          incoming ? el('span', { text: moveLine(incoming) }) : null,
+        ]),
+        el('p', { className: 'move-replace-label', text: '外す実戦技を選ぶ' }),
+        el('div', { className: 'move-replace-options' }, replaceActions.map((action) => {
+          const current = this.engine.masterIndex.moves.get(action.replaceMoveId);
+          return el('button', {
+            className: 'move-replace-button',
+            onclick: () => choose(action),
+          }, [
+            el('small', { text: 'この技を外す' }),
+            el('strong', { text: current?.name ?? '実戦技' }),
+            current ? el('span', { text: moveLine(current) }) : null,
+          ]);
+        })),
+        el('button', {
+          className: 'text-button keep-current-moves',
+          text: '新技は習得だけにして、現在の実戦4技を維持',
+          onclick: () => choose(keepAction),
+        }),
+      ]);
+      modal = openModal({ title: `${incoming?.name ?? '新技'}：実戦4技の入替`, content, dismissible: false });
+    });
   }
 
   beginHandDrag(event, card, definition) {
@@ -579,7 +628,7 @@ export class BattleScreen {
   }
 
   async animateActionStart(action) {
-    const duration = this.speed === 'fast' ? 90 : 300;
+    const duration = this.speed === 'fast' ? 110 : 480;
     if (action.type === 'move') {
       const source = this.findUnitSlotNode(action.unitId);
       const target = action.targetUnitId ? this.findUnitSlotNode(action.targetUnitId) : this.findPlayerNode(action.targetPlayerId);
@@ -605,7 +654,7 @@ export class BattleScreen {
         { filter: 'brightness(1)', transform: 'scale(1)' },
         { filter: action.type === 'training' ? 'brightness(1.65) sepia(.45)' : 'brightness(1.55) hue-rotate(28deg)', transform: 'scale(1.045)' },
         { filter: 'brightness(1)', transform: 'scale(1)' },
-      ], { duration: duration + 80, easing: 'ease-out' });
+      ], { duration: duration + (this.speed === 'fast' ? 50 : 170), easing: 'ease-out' });
       if (animation) await animation.finished.catch(() => {});
       else await delay(duration);
       burst.remove();
@@ -626,8 +675,9 @@ export class BattleScreen {
       } : { life: 0, maxLife: previous.maxLife, atk: previous.atk, def: previous.def };
       const labels = [];
       for (const [key, label] of [['life', 'LIFE'], ['atk', 'ATK'], ['def', 'DEF']]) {
-        if (now[key] > previous[key]) labels.push({ direction: 'up', text: `⬆︎ ${label}` });
-        if (now[key] < previous[key]) labels.push({ direction: 'down', text: `⬇︎ ${label}` });
+        const delta = now[key] - previous[key];
+        if (delta > 0) labels.push({ direction: 'up', text: `⬆︎ ${label} +${delta}` });
+        if (delta < 0) labels.push({ direction: 'down', text: `⬇︎ ${label} ${delta}` });
       }
       if (labels.length) changes.push({ node: this.findUnitSlotNode(unitId), labels });
     }
@@ -635,15 +685,21 @@ export class BattleScreen {
       const now = this.engine.player(playerId).life;
       if (now !== previous.life) changes.push({
         node: this.findPlayerNode(playerId),
-        labels: [{ direction: now > previous.life ? 'up' : 'down', text: `${now > previous.life ? '⬆︎' : '⬇︎'} LIFE` }],
+        labels: [{
+          direction: now > previous.life ? 'up' : 'down',
+          text: `${now > previous.life ? '⬆︎' : '⬇︎'} LIFE ${now > previous.life ? '+' : ''}${now - previous.life}`,
+        }],
       });
     }
     return changes.filter((entry) => entry.node);
   }
 
-  async showStatDirections(before) {
+  async showStatDirections(before, commitNumbers) {
     const changes = this.statChanges(before);
-    if (!changes.length) return;
+    if (!changes.length) {
+      commitNumbers();
+      return;
+    }
     const indicators = changes.map(({ node, labels }) => {
       const rect = node.getBoundingClientRect();
       const indicator = el('div', {
@@ -653,7 +709,9 @@ export class BattleScreen {
       document.body.append(indicator);
       return indicator;
     });
-    await delay(this.speed === 'fast' ? 65 : 230);
+    await delay(this.speed === 'fast' ? 45 : 320);
+    commitNumbers();
+    await delay(this.speed === 'fast' ? 95 : 900);
     indicators.forEach((indicator) => indicator.remove());
   }
 
@@ -665,8 +723,14 @@ export class BattleScreen {
     if (hadInteractionSelection) this.render();
     await this.animateActionStart(action);
     this.engine.applyAction(action);
-    await this.showStatDirections(before);
-    this.render();
+    let numbersCommitted = false;
+    const commitNumbers = () => {
+      if (numbersCommitted) return;
+      numbersCommitted = true;
+      this.render();
+    };
+    await this.showStatDirections(before, commitNumbers);
+    commitNumbers();
     await this.showLatestEvent();
   }
 
@@ -675,6 +739,11 @@ export class BattleScreen {
     this.busy = true;
     try {
       await this.executeEngineAction(action);
+      while (this.engine.state.pendingMoveChoice?.playerId === this.humanPlayerId) {
+        const choice = await this.promptShugyoMoveChoice();
+        if (!choice) throw new Error('修行後の実戦技を確定できませんでした');
+        await this.executeEngineAction(choice);
+      }
       await this.runCpuIfNeeded();
     } catch (error) {
       openModal({ title: '行動できません', content: el('p', { text: error.message }) });
@@ -691,7 +760,7 @@ export class BattleScreen {
     try {
       let guard = 0;
       while (this.engine.state.status === 'active' && this.engine.state.currentPlayerId !== this.humanPlayerId && guard < 80) {
-        await delay(this.speed === 'fast' ? 90 : 350);
+        await delay(this.speed === 'fast' ? 100 : 600);
         if (this.engine.state.status !== 'active' || this.engine.state.currentPlayerId === this.humanPlayerId) break;
         const playerId = this.engine.state.currentPlayerId;
         const action = await this.chooseCpuAction(this.engine, playerId, this.cpuRng);
@@ -713,7 +782,8 @@ export class BattleScreen {
     if (!event || this.speed === 'fast' && ['draw', 'turn-start', 'turn-end'].includes(event.type)) return;
     const banner = el('div', { className: 'event-banner', text: event.message });
     document.body.append(banner);
-    await delay(this.speed === 'fast' ? 90 : ['fusion', 'battle-end'].includes(event.type) ? 700 : 360);
+    const major = event.type.startsWith('fusion') || event.type === 'battle-end' || event.type.startsWith('shugyo-move');
+    await delay(this.speed === 'fast' ? 130 : major ? 1250 : 850);
     banner.remove();
   }
 

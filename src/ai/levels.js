@@ -25,7 +25,7 @@ function stableBest(scored) {
 function bronze(engine, playerId, rng) {
   const actions = legal(engine, playerId);
   const scored = actions.map((action) => {
-    const simple = ({ move: 70, summon: 52, 'fusion-special': 50, 'fusion-normal': 40, breeder: 28, training: 24, shugyo: 21, 'end-turn': 0 })[action.type] ?? 10;
+    const simple = ({ 'resolve-shugyo-move': 90, move: 70, summon: 52, 'fusion-special': 50, 'fusion-normal': 40, breeder: 28, training: 24, shugyo: 21, 'end-turn': 0 })[action.type] ?? 10;
     const affordableBias = -(action.cost ?? 0) * 2;
     // Beginner logic still recognizes obvious damage/knockouts, but only for
     // the core board actions and with enough noise to remain fallible.

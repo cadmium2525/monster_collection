@@ -1,6 +1,7 @@
 import { SeededRng } from '../core/rng.js';
 
 const TYPE_PRIORITY = Object.freeze({
+  'resolve-shugyo-move': 8,
   move: 7,
   'fusion-special': 6,
   'fusion-normal': 5,

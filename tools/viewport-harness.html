@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <title>Monster Construction viewport QA</title>
+    <style>
+      html, body { margin: 0; min-height: 100%; background: #111; color: #eee; font: 12px sans-serif; }
+      body { display: grid; gap: 20px; justify-content: start; padding: 12px; }
+      figure { margin: 0; }
+      figcaption { margin-bottom: 5px; }
+      iframe { display: block; border: 1px solid #555; background: #050b14; }
+    </style>
+  </head>
+  <body>
+    <figure>
+      <figcaption>844 × 390</figcaption>
+      <iframe title="844×390 QA" src="../index.html?viewport-qa=844" width="844" height="390"></iframe>
+    </figure>
+    <figure>
+      <figcaption>667 × 375</figcaption>
+      <iframe title="667×375 QA" src="../index.html?viewport-qa=667" width="667" height="375"></iframe>
+    </figure>
+    <figure>
+      <figcaption>844 × 390 — fifth move</figcaption>
+      <iframe title="844×390 fifth move QA" src="./move-choice-qa.html" width="844" height="390"></iframe>
+    </figure>
+  </body>
+</html>

@@ -96,6 +96,7 @@ export function createUnit({ unitId, card, monster, growth, masterIndex, slot })
     traitName: monster.trait.name,
     traitEffect: monster.trait.effect,
     specialForm: null,
+    specialFusionId: null,
     specialTrait: null,
     fusionStage: 0,
     absorbedCardInstanceIds: [],

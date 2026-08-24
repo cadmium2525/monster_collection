@@ -2,6 +2,7 @@ import { actionKey } from '../battle/state.js';
 import { actionEventDelta, evaluatePublicPosition, estimateCounterThreat } from './public-evaluator.js';
 
 const ACTION_PRIOR = Object.freeze({
+  'resolve-shugyo-move': 30,
   move: 38,
   'fusion-special': 22,
   'fusion-normal': 10,
@@ -12,7 +13,19 @@ const ACTION_PRIOR = Object.freeze({
   'end-turn': 0,
 });
 
+function moveValue(masterIndex, moveId) {
+  if (!moveId) return 0;
+  const move = masterIndex.moves.get(moveId);
+  if (!move) return 0;
+  return (move.power ?? 8) * .22 + (6 - (move.rank ?? 3)) * 1.2 - (move.tp ?? 0) * .45 + (move.effect ? 2 : 0);
+}
+
 export function quickActionScore(engine, playerId, action, options = {}) {
+  if (action.type === 'resolve-shugyo-move') {
+    return action.replaceMoveId
+      ? moveValue(engine.masterIndex, action.learnedMoveId) - moveValue(engine.masterIndex, action.replaceMoveId)
+      : 0;
+  }
   if (action.type === 'end-turn') {
     // All other actions are scored as a delta. Returning the absolute board
     // score here made a leading Silver AI end its turn instead of taking free
@@ -50,6 +63,11 @@ function cheapActionOrder(engine, action) {
     value += (move?.power ?? 0) * .12;
   }
   if (action.type === 'fusion-special') value += 30;
+  if (action.type === 'resolve-shugyo-move') {
+    value += action.replaceMoveId
+      ? moveValue(engine.masterIndex, action.learnedMoveId) - moveValue(engine.masterIndex, action.replaceMoveId)
+      : 0;
+  }
   return value;
 }
 

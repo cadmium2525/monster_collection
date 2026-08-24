@@ -1,0 +1,56 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+    <link rel="stylesheet" href="../styles.css?v=1.4.0">
+    <title>Move choice QA</title>
+  </head>
+  <body>
+    <div id="app" class="app-shell"></div>
+    <div id="modal-root"></div>
+    <script type="module">
+      import { BattleEngine } from '../src/battle/BattleEngine.js';
+      import { createUnit } from '../src/battle/state.js';
+      import { createBaselineDeck } from '../src/data/default-decks.js';
+      import { loadMasterData } from '../src/data/master-loader.js';
+      import { BattleScreen } from '../src/ui/battle-screen.js';
+
+      const masterData = await loadMasterData('../src/data/master-data.json');
+      const cardsA = createBaselineDeck(masterData, 'qa-a');
+      const cardsB = createBaselineDeck(masterData, 'qa-b');
+      const engine = new BattleEngine({
+        masterData,
+        players: [
+          { id: 'p1', displayName: 'QA PLAYER', cards: cardsA },
+          { id: 'p2', displayName: 'QA CPU', cards: cardsB },
+        ],
+        firstPlayerId: 'p1',
+        seed: 'fifth-move-ui-qa',
+      });
+      const player = engine.player('p1');
+      const dragon = engine.masterIndex.monstersByName.get('ドラゴン');
+      const source = { instanceId: 'qa-dragon', masterId: dragon.id };
+      const initial = dragon.moveIds.filter((id) => engine.masterIndex.moves.get(id).initial);
+      const fourth = engine.masterIndex.movesByName.get('ドラゴン:しっぽアタック').id;
+      const growth = { life: 0, atk: 0, def: 0, learnedMoveIds: [...initial, fourth], equippedMoveIds: [...initial, fourth] };
+      const unit = createUnit({ unitId: 'qa-unit', card: source, monster: dragon, growth, masterIndex: engine.masterIndex, slot: 0 });
+      unit.summonedThisTurn = false;
+      unit.actionPoints = 1;
+      player.board = [unit, null, null];
+      player.tournamentGrowth = { [source.instanceId]: structuredClone(growth) };
+      player.hand = [{ instanceId: 'qa-shugyo', masterId: 'shugyo-attack' }];
+      player.tp = 10;
+      const screen = new BattleScreen({
+        root: document.querySelector('#app'),
+        engine,
+        humanPlayerId: 'p1',
+        chooseCpuAction: () => null,
+        onComplete: () => {},
+      });
+      globalThis.qaScreen = screen;
+      const action = engine.getLegalActions('p1').find((candidate) => candidate.type === 'shugyo');
+      screen.performHumanAction(action);
+    </script>
+  </body>
+</html>

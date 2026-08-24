@@ -11,16 +11,6 @@ const FACTION_CLASS = Object.freeze({
   '怪物': 'faction-monster',
 });
 
-const FACTION_SIGIL = Object.freeze({
-  '無機': '◇', '創造': '✦', '幻霊': '☾', '魔族': '◆', '獣族': '牙', '怪物': '爪',
-});
-
-const CARD_KIND_SIGIL = Object.freeze({
-  training: '鍛',
-  shugyo: '修',
-  breeder: '契',
-});
-
 const ROLE_MARK = Object.freeze({
   'アタッカー': '⚔',
   'バランス': '◆',
@@ -29,16 +19,57 @@ const ROLE_MARK = Object.freeze({
 
 const CIRCLED_NUMBERS = Object.freeze(['⓪', '①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩']);
 
+const SPECIAL_FUSION_NAMES = Object.freeze([
+  'フューチャー', 'ナハトファルター', 'ガルーダ', 'グレイシア', 'ハムライガー', 'エコノキックス',
+  'ヴァージアハピ', 'ダークハム', 'アンキロックス', 'ガリニクス', 'オチムシャ', 'オキクサン',
+  'トカゲムシ', 'ブルードリル', 'フレアデス', 'サクラチル', 'ワイルドブロック', 'ジュラスウォール',
+  'アンゴルモア', 'タイラント', 'オメガレックス', 'エンドブリンガー', 'ラプタ', 'アオサギビ',
+  'ガリオン', 'カラフルマスク', 'ラブラブセイジン', 'ユーマ', 'セイレーン', 'ヤオビクニ',
+  'ヨロイモッチー', 'モチモチエイト', 'ベニヒメソウ', 'ウスバカゲソウ', 'ラグナロックス', 'クレバス',
+]);
+
+const SUPPORT_CARD_IDS = Object.freeze([
+  'training-life', 'training-atk', 'training-def', 'shugyo-attack', 'shugyo-defense',
+  ...Array.from({ length: 20 }, (_, index) => `breeder-${String(index + 1).padStart(3, '0')}`),
+]);
+
 export function circledTp(value) {
   const number = Math.max(0, Math.trunc(Number(value) || 0));
   return CIRCLED_NUMBERS[number] ?? `(${number})`;
 }
 
-function monsterArtStyle(definition) {
-  if (definition.kind !== 'monster') return null;
+function atlasPosition(index, columns, rows) {
+  if (!Number.isInteger(index) || index < 0 || index >= columns * rows) return null;
+  const x = columns === 1 ? 0 : (index % columns) * (100 / (columns - 1));
+  const y = rows === 1 ? 0 : Math.floor(index / columns) * (100 / (rows - 1));
+  return `--art-x:${x}%;--art-y:${y}%`;
+}
+
+export function cardArtPlacement(definition, unit = null) {
+  if (definition.kind !== 'monster') {
+    const supportIndex = SUPPORT_CARD_IDS.indexOf(definition.id);
+    return {
+      className: supportIndex >= 0 ? 'support-card-art' : '',
+      style: atlasPosition(supportIndex, 5, 5),
+    };
+  }
+
+  const fusionFromId = Number(unit?.specialFusionId?.match(/(\d+)$/)?.[1]) - 1;
+  const fusionIndex = Number.isInteger(fusionFromId) && fusionFromId >= 0
+    ? fusionFromId
+    : SPECIAL_FUSION_NAMES.indexOf(unit?.specialForm);
+  if (fusionIndex >= 0 && fusionIndex < SPECIAL_FUSION_NAMES.length) {
+    return {
+      className: 'monster-art special-fusion-art',
+      style: atlasPosition(fusionIndex, 6, 6),
+    };
+  }
+
   const index = Number(definition.id.match(/(\d+)$/)?.[1]) - 1;
-  if (!Number.isInteger(index) || index < 0 || index >= 18) return null;
-  return `--art-x:${(index % 6) * 20}%;--art-y:${Math.floor(index / 6) * 50}%`;
+  return {
+    className: 'monster-art',
+    style: atlasPosition(index, 6, 3),
+  };
 }
 
 export function resolvedTrait(definition, unit) {
@@ -53,7 +84,7 @@ function cardMeta(definition, unit) {
   if (definition.kind === 'monster') {
     const trait = resolvedTrait(definition, unit);
     const stats = unit
-      ? { life: `${Math.max(0, unit.life)}/${unit.maxLife}`, atk: effectiveAtk(unit), def: effectiveDef(unit) }
+      ? { life: Math.max(0, unit.life), atk: effectiveAtk(unit), def: effectiveDef(unit) }
       : { life: definition.base.life, atk: definition.base.atk, def: definition.base.def };
     return {
       cost: definition.summonTp,
@@ -84,6 +115,7 @@ export function renderCard({
   dragReady = false,
 }) {
   const meta = cardMeta(definition, unit);
+  const art = cardArtPlacement(definition, unit);
   const statuses = unit ? Object.values(unit.statuses ?? {}).filter((value) => value === true || (typeof value === 'number' && value > 0)) : [];
   const name = unit?.specialForm ?? definition.name;
   const classes = [
@@ -117,10 +149,9 @@ export function renderCard({
       el('span', { className: 'card-cost', text: circledTp(meta.cost), attrs: { 'aria-label': `${meta.cost}TP` } }),
     ]),
     el('div', {
-      className: `card-art${definition.kind === 'monster' ? ' monster-art' : ''}`,
-      attrs: monsterArtStyle(definition) ? { style: monsterArtStyle(definition) } : null,
+      className: `card-art ${art.className}`.trim(),
+      attrs: art.style ? { style: art.style } : null,
     }, [
-      el('span', { className: 'card-sigil', text: FACTION_SIGIL[meta.faction] ?? CARD_KIND_SIGIL[definition.kind] ?? '◆' }),
       definition.kind === 'monster' ? null : el('span', { className: 'card-kind', text: meta.kind }),
     ]),
     meta.stats ? el('div', { className: 'card-stats' }, [
@@ -135,9 +166,10 @@ export function renderCard({
 }
 
 export function renderMonsterPortrait(definition, label = definition.name) {
+  const art = cardArtPlacement(definition);
   return el('div', {
     className: `monster-portrait ${FACTION_CLASS[definition.faction] ?? ''}`,
-    attrs: { role: 'img', 'aria-label': label, style: monsterArtStyle(definition) },
+    attrs: { role: 'img', 'aria-label': label, style: art.style },
   });
 }
 
@@ -185,18 +217,17 @@ export function openCardDetails({
   const isMonster = definition.kind === 'monster';
   const name = unit?.specialForm ?? definition.name;
   const trait = isMonster ? resolvedTrait(definition, unit) : null;
+  const art = cardArtPlacement(definition, unit);
   const summary = isMonster ? el('section', { className: 'detail-summary' }, [
     el('div', {
-      className: `card-art monster-art ${FACTION_CLASS[unit?.faction ?? definition.faction] ?? ''}`,
-      attrs: { style: monsterArtStyle(definition) },
-    }, [
-      el('span', { className: 'card-sigil', text: FACTION_SIGIL[unit?.faction ?? definition.faction] }),
-    ]),
+      className: `card-art ${art.className} ${FACTION_CLASS[unit?.faction ?? definition.faction] ?? ''}`,
+      attrs: { style: art.style },
+    }),
     el('dl', {}, [
       el('dt', { text: 'モン類' }), el('dd', { text: unit?.faction ?? definition.faction }),
       el('dt', { text: '役割' }), el('dd', { text: `${ROLE_MARK[definition.role] ?? '◆'} ${definition.role}` }),
       el('dt', { text: '召喚TP' }), el('dd', { text: definition.summonTp }),
-      el('dt', { text: 'LIFE' }), el('dd', { text: unit ? `${unit.life}/${unit.maxLife}` : definition.base.life + (growth?.life ?? 0) }),
+      el('dt', { text: 'LIFE' }), el('dd', { text: unit ? Math.max(0, unit.life) : definition.base.life + (growth?.life ?? 0) }),
       el('dt', { text: 'ATK' }), el('dd', { text: unit ? effectiveAtk(unit) : definition.base.atk + (growth?.atk ?? 0) }),
       el('dt', { text: 'DEF' }), el('dd', { text: unit ? effectiveDef(unit) : definition.base.def + (growth?.def ?? 0) }),
     ]),
@@ -206,6 +237,10 @@ export function openCardDetails({
       trait.effect,
     ]),
   ]) : el('section', { className: 'detail-summary' }, [
+    el('div', {
+      className: `card-art ${art.className}`.trim(),
+      attrs: art.style ? { style: art.style } : null,
+    }),
     el('dl', {}, [
       el('dt', { text: '種類' }), el('dd', { text: definition.kind === 'breeder' ? 'ブリーダー' : definition.kind === 'shugyo' ? '修行' : 'Training' }),
       el('dt', { text: '使用TP' }), el('dd', { text: definition.tp }),

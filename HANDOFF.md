@@ -1,7 +1,7 @@
 # HANDOFF
 
 基準: Sim8.7完全展開版 + 2026-08-24距離廃止差分  
-リリース: 1.3.0（盤面直接操作・PWA版）
+リリース: 1.4.0（技入替・全カードアート・固定画面PWA版）
 
 ## 現在の状態
 
@@ -9,9 +9,11 @@
 
 距離システムはコード上も無効です。`RULES.distanceSystemEnabled` は `false`、合法行動にmovementはなく、盤面は汎用3枠です。`legacyDistance` は正本由来の追跡情報であり判定へ使わないでください。
 
-バトル画面は左ステータス・中央テーブル・右ログの3列です。1.3.0から行動一覧はなく、手札を一度タップしてから合法対象へスワイプします。盤上モンスターは詳細内の実戦技を選び、盤面上の対象をタップします。高さ430px以下ではカードを高さ基準で縮尺します。Pointer Eventsは選択済みカードだけで開始し、iOSのスクロールと競合しないよう `touch-action: none` を限定適用しています。
+バトル画面は左ステータス・中央テーブル・右ログの3列です。行動一覧はなく、手札を一度タップしてから合法対象へスワイプします。盤上モンスターは詳細内の実戦技を選び、盤面上の対象をタップします。高さ430px以下ではカードを高さ基準で縮尺します。Pointer Eventsは選択済みカードだけで開始し、バトル中のbody/appはviewportへ固定しています。タッチ端末ではhover/選択によるカード位置移動を発生させません。
 
-修行の合法手はカード/対象ごとに1つです。習得候補を `preview.possibleMoveIds` として表示しますが、確定技は `BattleEngine._shugyo()` がseed付き乱数で決めます。Rank重みはRank 1と5でも約10%差に留めています。習得済み4技を超えた技は「習得」状態となり、実戦技4枠を自動では上書きしません。
+修行の合法手はカード/対象ごとに1つです。習得候補を `preview.possibleMoveIds` として表示しますが、確定技は `BattleEngine._shugyo()` がseed付き乱数で決めます。Rank重みはRank 1と5でも約10%差です。5個目以降を覚えると `state.pendingMoveChoice` が立ち、`resolve-shugyo-move` の「4技のどれかと入替」または「習得のみ」以外は合法になりません。人間は必須モーダル、CPUは同じ合法手と技評価で解決します。
+
+特殊合体は `specialFusionId` で36セルの専用アトラスへ切り替わります。Training・修行・ブリーダーも25セルの専用アトラスを使い、カード文字・数値・効果は従来どおり動的HTMLです。
 
 ## 最初に実行する確認
 
@@ -74,5 +76,5 @@ Pages workflowは `.github/workflows/pages.yml`。Firebase設定は `FIREBASE_SE
 - 実機iPhone横画面でタップ領域、safe-area、文字サイズ確認
 - 2ブラウザ同時王座claimの競合試験
 - Firebase offline/復帰試験
-- 本番URLでマスターJSON、monster atlas、背景、全ES Modulesが200になること
+- 本番URLでマスターJSON、base/special/support atlas、背景、全ES Modulesが200になること
 - `PLAYTEST_REPORT.md` の提案を仕様変更と混同しないこと

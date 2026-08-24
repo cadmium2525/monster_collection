@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { circledTp, resolvedTrait } from '../../src/ui/card-renderer.js';
+import { cardArtPlacement, circledTp, resolvedTrait } from '../../src/ui/card-renderer.js';
 import { shugyoMoveWeight } from '../../src/battle/shugyo.js';
 import { monsterByName } from '../helpers.js';
 
@@ -23,4 +23,15 @@ test('shugyo rank weighting stays deliberately small', () => {
   const weights = [1, 2, 3, 4, 5].map((rank) => shugyoMoveWeight({ rank }));
   assert.ok(Math.max(...weights) / Math.min(...weights) < 1.12);
   assert.ok(weights[0] > weights[4]);
+});
+
+test('card art placement selects generated support and special-fusion atlases deterministically', () => {
+  const monster = monsterByName('ピクシー');
+  assert.equal(cardArtPlacement(monster).className, 'monster-art');
+  const special = cardArtPlacement(monster, { specialFusionId: 'fusion-036', specialForm: 'クレバス' });
+  assert.equal(special.className, 'monster-art special-fusion-art');
+  assert.match(special.style, /--art-x:100%;--art-y:100%/);
+  const support = cardArtPlacement({ id: 'breeder-020', kind: 'breeder' });
+  assert.equal(support.className, 'support-card-art');
+  assert.match(support.style, /--art-x:100%;--art-y:100%/);
 });
