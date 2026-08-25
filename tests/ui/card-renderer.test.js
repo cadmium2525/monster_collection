@@ -29,10 +29,20 @@ test('corner values use the supplied transparent badge artwork', () => {
   for (const badge of ['life', 'cost', 'atk', 'def']) {
     assert.match(css, new RegExp(`card-badges/${badge}\\.png`));
   }
-  assert.match(css, /\.card-life\s*\{[^}]*top: -13px;[^}]*left: -13px/s);
+  assert.match(css, /\.card-corner\s*\{[^}]*width: clamp\(25px,29%,37px\)/s);
+  assert.match(css, /\.card-life\s*\{[^}]*top: -11px;[^}]*left: -11px/s);
   assert.match(css, /\.card-cost\s*\{[^}]*width: clamp\(21px,25%,31px\)/s);
-  assert.match(css, /\.card-atk\s*\{[^}]*width: clamp\(23px,27%,34px\)/s);
-  assert.match(css, /\.card-def\s*\{[^}]*right: -13px;[^}]*bottom: -13px/s);
+  assert.doesNotMatch(css, /\.card-atk\s*\{[^}]*width:/s);
+  assert.match(css, /\.card-def\s*\{[^}]*right: -11px;[^}]*bottom: -11px/s);
+});
+
+test('card role icons are omitted and field cards hide their compact name band', () => {
+  const renderer = readFileSync(new URL('../../src/ui/card-renderer.js', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../../styles.css', import.meta.url), 'utf8');
+  assert.doesNotMatch(renderer, /ROLE_MARK/);
+  assert.doesNotMatch(renderer, /card-role/);
+  assert.match(css, /\.card-top\s*\{[^}]*top: 0;[^}]*left: 0;[^}]*right: 0;/s);
+  assert.match(css, /\.board-slot \.game-card \.card-top\s*\{\s*display: none;/s);
 });
 
 test('battle hand omits the old heading and uses the full panel for cards', () => {

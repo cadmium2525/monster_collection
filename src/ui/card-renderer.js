@@ -11,12 +11,6 @@ const FACTION_CLASS = Object.freeze({
   '怪物': 'faction-monster',
 });
 
-const ROLE_MARK = Object.freeze({
-  'アタッカー': '⚔',
-  'バランス': '◆',
-  'タンク': '⬢',
-});
-
 const SPECIAL_FUSION_NAMES = Object.freeze([
   'フューチャー', 'ナハトファルター', 'ガルーダ', 'グレイシア', 'ハムライガー', 'エコノキックス',
   'ヴァージアハピ', 'ダークハム', 'アンキロックス', 'ガリニクス', 'オチムシャ', 'オキクサン',
@@ -147,11 +141,6 @@ export function renderCard({
   }, [
     el('div', { className: 'card-top' }, [
       el('span', { className: 'card-name' }, [
-        definition.kind === 'monster' ? el('i', {
-          className: `card-role role-${definition.role === 'アタッカー' ? 'attacker' : definition.role === 'タンク' ? 'tank' : 'balance'}`,
-          text: ROLE_MARK[definition.role] ?? '◆',
-          attrs: { title: definition.role, 'aria-label': definition.role },
-        }) : null,
         el('b', { text: name }),
       ]),
     ]),
@@ -230,7 +219,7 @@ export function openCardDetails({
     }),
     el('dl', {}, [
       el('dt', { text: 'モン類' }), el('dd', { text: unit?.faction ?? definition.faction }),
-      el('dt', { text: '役割' }), el('dd', { text: `${ROLE_MARK[definition.role] ?? '◆'} ${definition.role}` }),
+      el('dt', { text: '役割' }), el('dd', { text: definition.role }),
       el('dt', { text: '召喚TP' }), el('dd', { text: definition.summonTp }),
       el('dt', { text: 'LIFE' }), el('dd', { text: unit ? Math.max(0, unit.life) : definition.base.life + (growth?.life ?? 0) }),
       el('dt', { text: 'ATK' }), el('dd', { text: unit ? effectiveAtk(unit) : definition.base.atk + (growth?.atk ?? 0) }),

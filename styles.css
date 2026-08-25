@@ -373,17 +373,19 @@ body:has(.battle-screen) {
 .card-top {
   position: absolute;
   z-index: 5;
-  top: 5px;
-  left: 10%;
-  right: 10%;
+  top: 0;
+  left: 0;
+  right: 0;
   min-height: 19px;
   display: flex;
   justify-content: center;
   gap: 3px;
   align-items: center;
   overflow: hidden;
-  padding: 2px 7px;
+  padding: 3px 18%;
   border-block: 1px solid rgba(244,212,145,.52);
+  border-top: 0;
+  border-radius: 6px 6px 0 0;
   color: #fff8df;
   background: linear-gradient(90deg,rgba(28,12,17,.76),rgba(78,32,31,.92) 15% 85%,rgba(28,12,17,.76));
   box-shadow: 0 2px 6px rgba(0,0,0,.52);
@@ -391,12 +393,8 @@ body:has(.battle-screen) {
   font-weight: 900;
   text-shadow: 0 2px 4px #000;
 }
-.card-name { min-width: 0; display: flex; align-items: center; justify-content: center; gap: 3px; overflow: hidden; white-space: nowrap; }
+.card-name { min-width: 0; display: flex; align-items: center; justify-content: center; overflow: hidden; white-space: nowrap; }
 .card-name b { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
-.card-role { flex: 0 0 auto; color: #f3cf79; font: normal 800 clamp(7px,.78vw,10px)/1 Georgia,serif; text-shadow: 0 1px 3px #000; }
-.card-role.role-attacker { color: #ff9a8f; }
-.card-role.role-tank { color: #9eddf4; }
-.card-role.role-balance { color: #edcf78; }
 .card-art {
   position: relative;
   height: 48%;
@@ -484,7 +482,7 @@ body:has(.battle-screen) {
 .card-corner {
   position: absolute;
   z-index: 7;
-  width: clamp(32px,40%,48px);
+  width: clamp(25px,29%,37px);
   aspect-ratio: 1;
   display: grid;
   place-items: center;
@@ -495,20 +493,21 @@ body:has(.battle-screen) {
 }
 .card-corner i { position: absolute; z-index: 0; inset: 0; background-repeat: no-repeat; background-position: center; background-size: contain; }
 .card-corner b { position: relative; z-index: 1; font: 900 clamp(13px,1.72vw,22px)/1 Georgia,serif; letter-spacing: -.04em; text-shadow: 0 2px 3px #000,0 0 4px rgba(0,0,0,.88); }
-.card-life { top: -13px; left: -13px; }
+.card-life { top: -11px; left: -11px; }
 .card-life i { background-image: url("./assets/ui/card-badges/life.png"); }
 .card-cost { top: -10px; right: -10px; width: clamp(21px,25%,31px); }
 .card-cost i { background-image: url("./assets/ui/card-badges/cost.png"); }
 .card-cost b { font-size: clamp(11px,1.3vw,17px); }
-.card-atk { left: -11px; bottom: -11px; width: clamp(23px,27%,34px); }
+.card-atk { left: -11px; bottom: -11px; }
 .card-atk i { background-image: url("./assets/ui/card-badges/atk.png"); }
-.card-atk b { font-size: clamp(11px,1.42vw,18px); }
-.card-def { right: -13px; bottom: -13px; }
+.card-def { right: -11px; bottom: -11px; }
 .card-def i { background-image: url("./assets/ui/card-badges/def.png"); }
+.card-life b, .card-atk b, .card-def b { font-size: clamp(11px,1.42vw,18px); }
 .status-dots { position: absolute; z-index: 8; left: 50%; bottom: 3px; translate: -50% 0; display: flex; gap: 2px; }
 .status-dots i { width: 5px; height: 5px; border-radius: 50%; background: var(--danger); box-shadow: 0 0 5px currentColor; }
 
 .board-slot .game-card { width: calc(100% - 6px); height: auto; max-height: none; aspect-ratio: .72; }
+.board-slot .game-card .card-top { display: none; }
 .fusion-drop-preview { position: absolute; z-index: 16; right: 3px; bottom: 3px; padding: 2px 5px; border: 1px solid #f0ce7b; border-radius: 9px; color: #fff1b6; background: rgba(49,29,4,.94); font-size: 6px; font-weight: 900; pointer-events: none; box-shadow: 0 2px 8px rgba(0,0,0,.5); }
 .effect-burst { position: absolute; z-index: 12; inset: 12%; display: grid; place-items: center; border: 2px solid currentColor; border-radius: 50%; color: #ffe39a; background: radial-gradient(circle,rgba(255,226,141,.42),transparent 65%); text-shadow: 0 0 8px #fff; font: 800 clamp(20px,4vw,42px)/1 Georgia,serif; pointer-events: none; animation: cast-burst .66s ease-out both; }
 .effect-burst.shugyo { color: #e5b9ff; background: radial-gradient(circle,rgba(189,104,231,.46),transparent 65%); }
@@ -1089,14 +1088,14 @@ button:disabled { opacity: .38; cursor: not-allowed; }
   .card-strip .game-card { height: 100%; }
   .game-card { padding: 0; border-width: 1px; border-radius: 5px; }
   .card-top { min-height: 18px; font-size: 8px; }
-  .card-corner { width: clamp(30px,40%,42px); }
+  .card-corner { width: clamp(22px,28%,32px); }
   .card-corner b { font-size: clamp(13px,1.72vw,18px); }
-  .card-life { top: -10px; left: -10px; }
+  .card-life { top: -9px; left: -9px; }
   .card-cost { top: -8px; right: -8px; width: clamp(19px,24%,27px); }
   .card-cost b { font-size: clamp(10px,1.24vw,14px); }
-  .card-atk { left: -9px; bottom: -9px; width: clamp(20px,26%,30px); }
-  .card-atk b { font-size: clamp(10px,1.3vw,15px); }
-  .card-def { right: -10px; bottom: -10px; }
+  .card-atk { left: -9px; bottom: -9px; }
+  .card-def { right: -9px; bottom: -9px; }
+  .card-life b, .card-atk b, .card-def b { font-size: clamp(10px,1.3vw,15px); }
   .card-art { height: 47%; margin: 2px 1px; }
   .card-stats { font-size: 6px; }
   .card-stats span { padding: 1px 0; }
