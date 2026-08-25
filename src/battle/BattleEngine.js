@@ -49,6 +49,16 @@ function roundedPercent(value, ratio) {
   return Math.max(1, Math.floor(value * ratio));
 }
 
+function oneOrTwoCombinations(items) {
+  const output = items.map((item) => [item]);
+  for (let first = 0; first < items.length; first += 1) {
+    for (let second = first + 1; second < items.length; second += 1) {
+      output.push([items[first], items[second]]);
+    }
+  }
+  return output;
+}
+
 export class BattleEngine {
   static fromCheckpoint({ masterData, checkpoint }) {
     if (!masterData || !checkpoint?.state?.players || checkpoint.schemaVersion !== 1) {
@@ -334,7 +344,18 @@ export class BattleEngine {
           const materialSp = definition.base.life + materialGrowth.life
             + definition.base.atk + materialGrowth.atk
             + definition.base.def + materialGrowth.def;
-          const preview = projectFusionStats(main, materialSp);
+          const projected = projectFusionStats(main, materialSp);
+          const preview = player.effects.nextFusionBuff ? {
+            ...projected,
+            newSp: projected.newSp + 20,
+            deltaSp: projected.deltaSp + 20,
+            stats: {
+              life: projected.stats.life + 10,
+              atk: projected.stats.atk + 5,
+              def: projected.stats.def + 5,
+            },
+            breederBonus: { life: 10, atk: 5, def: 5 },
+          } : projected;
           if (player.tp >= RULES.normalFusionTp) {
             actions.push({
               type: 'fusion-normal',
@@ -405,6 +426,10 @@ export class BattleEngine {
       + activeBonuses.reduce((sum, effect) => sum + effect.amount, 0)
       - activePenalties.reduce((sum, effect) => sum + effect.amount, 0));
     player.tp = player.maxTp;
+    if ((player.effects.tpDebt ?? 0) > 0) {
+      player.tp = Math.max(0, player.tp - player.effects.tpDebt);
+      player.effects.tpDebt = 0;
+    }
 
     for (const unit of livingUnits(player)) {
       unit.actionPoints = 1;
@@ -415,6 +440,7 @@ export class BattleEngine {
       unit.temporaryDef = 0;
       unit.statuses.temporaryTurnDamageBonus = 0;
       unit.statuses.gallionGuard = false;
+      unit.statuses.swapAtkDef = false;
       if (unit.statuses.stunOnNextTurn > 0) {
         unit.statuses.stunOnNextTurn -= 1;
         unit.actionPoints = 0;
@@ -435,6 +461,7 @@ export class BattleEngine {
   _endTurn() {
     const player = this.player(this.state.currentPlayerId);
     this._applyTurnEndEffects(player);
+    player.effects.nextFusionBuff = false;
     this._decrementTurnModifiers(player);
     this._log('turn-end', `${player.displayName}がターン終了`, { playerId: player.id });
 
@@ -604,7 +631,8 @@ export class BattleEngine {
       + materialDef.base.atk + materialGrowth.atk
       + materialDef.base.def + materialGrowth.def;
     const projection = projectFusionStats(main, materialSp);
-    const { mainSp, newSp } = projection;
+    const { mainSp } = projection;
+    let newSp = projection.newSp;
     const currentLifeRatio = lifeRatio(main);
     const newMaxLife = projection.stats.life;
     const newAtk = projection.stats.atk;
@@ -648,6 +676,15 @@ export class BattleEngine {
       }
     }
 
+    if (player.effects.nextFusionBuff) {
+      main.maxLife += 10;
+      main.life = Math.min(main.maxLife, main.life + 10);
+      main.atkBase += 5;
+      main.defBase += 5;
+      newSp += 20;
+      player.effects.nextFusionBuff = false;
+    }
+
     const cost = special ? RULES.specialFusionTp : RULES.normalFusionTp;
     player.tp -= cost;
     player.metrics.fusions += 1;
@@ -679,6 +716,8 @@ export class BattleEngine {
     player.tp -= cost;
     unit.actionPoints -= 1;
     player.metrics.attacks += 1;
+    const echoRatio = unit.statuses.echoNext ?? 0;
+    const recoilDamage = unit.statuses.recoilOnNextAttack ?? 0;
 
     if (move.power == null) {
       unit.statuses.formAlphaUsed = true;
@@ -694,18 +733,22 @@ export class BattleEngine {
       const attack = effectiveAtk(unit);
       const multiplier = outgoingDamageMultiplier(unit, null, move, opponent);
       const damage = Math.max(0, Math.floor(attack * (power / 100) * multiplier));
-      opponent.life -= damage;
-      player.metrics.damageDealt += damage;
-      player.metrics.directDamage += damage;
+      const echoDamage = echoRatio > 0 ? Math.max(0, Math.floor(damage * echoRatio)) : 0;
+      const totalDamage = damage + echoDamage;
+      opponent.life -= totalDamage;
+      player.metrics.damageDealt += totalDamage;
+      player.metrics.directDamage += totalDamage;
+      this._applyPostMoveEffects(player, opponent, unit, null, move, { damage: totalDamage, defeated: false, actual: totalDamage });
       this._consumeDamageStatuses(unit);
-      this._applyPostMoveEffects(player, opponent, unit, null, move, { damage, defeated: false, actual: damage });
       unit.movesUsedThisTurn += 1;
       this._afterMoveUse(unit, move, opponent.life <= 0);
-      this._log('direct-attack', `${unit.name}の${move.name}。${opponent.displayName}へ${damage}ダメージ`, {
+      if (recoilDamage > 0) this._selfDamage(player, unit, recoilDamage);
+      this._log('direct-attack', `${unit.name}の${move.name}。${opponent.displayName}へ${totalDamage}ダメージ${echoDamage ? `（残響${echoDamage}）` : ''}`, {
         playerId: player.id,
         unitId: unit.id,
         moveId: move.id,
-        damage,
+        damage: totalDamage,
+        echoDamage,
         cost,
       });
       this._checkPlayerLife(opponent, player.id, 'direct-attack');
@@ -719,13 +762,23 @@ export class BattleEngine {
     const multiplier = outgoingDamageMultiplier(unit, target, move, opponent);
     const rawDamage = Math.max(0, Math.floor(baseDamage * multiplier));
     const damageResult = this._damageUnit(opponent, target, rawDamage, unit);
+    let echoDamage = 0;
+    if (echoRatio > 0 && !damageResult.defeated && damageResult.actual > 0) {
+      const echoResult = this._damageUnit(opponent, target, Math.floor(damageResult.actual * echoRatio), unit);
+      echoDamage = echoResult.actual + echoResult.overflow;
+      damageResult.actual += echoResult.actual;
+      damageResult.overflow += echoResult.overflow;
+      damageResult.defeated = echoResult.defeated;
+      damageResult.incomingTriggers.push(...echoResult.incomingTriggers.map((trigger) => `残響:${trigger}`));
+    }
     player.metrics.damageDealt += damageResult.actual + damageResult.overflow;
-    this._consumeDamageStatuses(unit);
     this._applyPostMoveEffects(player, opponent, unit, target, move, damageResult);
+    this._consumeDamageStatuses(unit);
     updateConsecutiveTarget(unit, target.id);
     unit.movesUsedThisTurn += 1;
     this._afterMoveUse(unit, move, damageResult.defeated);
-    this._log('attack', `${unit.name}の${move.name}。${target.name}へ${damageResult.actual}ダメージ${damageResult.overflow ? `、超過${damageResult.overflow}` : ''}`, {
+    if (recoilDamage > 0) this._selfDamage(player, unit, recoilDamage);
+    this._log('attack', `${unit.name}の${move.name}。${target.name}へ${damageResult.actual}ダメージ${echoDamage ? `（残響${echoDamage}）` : ''}${damageResult.overflow ? `、超過${damageResult.overflow}` : ''}`, {
       playerId: player.id,
       unitId: unit.id,
       targetUnitId: target.id,
@@ -735,6 +788,7 @@ export class BattleEngine {
       attack,
       defense: effectiveDefense,
       damage: damageResult.actual,
+      echoDamage,
       overflow: damageResult.overflow,
       defeated: damageResult.defeated,
       redirected: target.id !== action.targetUnitId,
@@ -750,13 +804,28 @@ export class BattleEngine {
       if (triggerAttacked) this._onAttacked(unit, attacker, 0, false);
       return { actual: 0, overflow: 0, defeated: false, evaded: true, incomingTriggers: ['完全回避'] };
     }
-    const { damage, triggers } = applyIncomingModifiers(unit, rawDamage);
+    let adjustedRawDamage = rawDamage;
+    const flatMark = unit.statuses.incomingFlatDamage;
+    const markTriggered = triggerAttacked && adjustedRawDamage > 0 && flatMark?.remaining > 0;
+    if (markTriggered) {
+      adjustedRawDamage += flatMark.amount;
+      flatMark.remaining -= 1;
+      if (flatMark.remaining <= 0) unit.statuses.incomingFlatDamage = null;
+    }
+    const { damage, triggers } = applyIncomingModifiers(unit, adjustedRawDamage);
+    if (markTriggered) triggers.push(`呪印+${flatMark.amount}`);
     const before = unit.life;
     unit.life -= damage;
     let defeated = unit.life <= 0;
     let overflow = defeated ? Math.max(0, damage - before) : 0;
 
-    if (defeated && hasNormalTrait(unit, 'ヒノトリ') && !unit.statuses.phoenixUsed) {
+    if (defeated && unit.statuses.spareParts) {
+      unit.statuses.spareParts = false;
+      unit.life = 1;
+      defeated = false;
+      overflow = 0;
+      triggers.push('予備パーツ');
+    } else if (defeated && hasNormalTrait(unit, 'ヒノトリ') && !unit.statuses.phoenixUsed) {
       unit.statuses.phoenixUsed = true;
       unit.life = Math.min(unit.maxLife, 10);
       defeated = false;
@@ -862,6 +931,14 @@ export class BattleEngine {
 
     if (result.defeated) {
       player.metrics.knockouts += 1;
+      if ((unit.statuses.tpOnNextKill ?? 0) > 0) {
+        player.tp = Math.min(player.maxTp, player.tp + unit.statuses.tpOnNextKill);
+      }
+      if (unit.statuses.predationEvolution) {
+        unit.statuses.predationEvolution = false;
+        this._heal(unit, 10);
+        applyAtkBuff(unit, 5);
+      }
       if (hasNormalTrait(unit, 'ハム')) {
         const gain = Math.min(5, 15 - unit.statuses.hamKillBonus);
         unit.statuses.hamKillBonus += Math.max(0, gain);
@@ -907,6 +984,9 @@ export class BattleEngine {
   _consumeDamageStatuses(unit) {
     unit.statuses.nextDamageBonus = 0;
     unit.statuses.nextDamagePenalty = 0;
+    unit.statuses.echoNext = 0;
+    unit.statuses.recoilOnNextAttack = 0;
+    unit.statuses.tpOnNextKill = 0;
   }
 
   _selfDamage(owner, unit, amount) {
@@ -926,7 +1006,12 @@ export class BattleEngine {
   _removeUnit(owner, unit) {
     const slot = findUnitSlot(owner, unit.id);
     if (slot >= 0) owner.board[slot] = null;
-    owner.graveyard.push({ instanceId: unit.sourceCardInstanceId, masterId: unit.sourceMasterId });
+    const sourceCard = { instanceId: unit.sourceCardInstanceId, masterId: unit.sourceMasterId };
+    if (unit.statuses.returnToHandOnDefeat && owner.hand.length < RULES.handLimit) {
+      owner.hand.push(sourceCard);
+      unit.statuses.returnToHandOnDefeat = false;
+      this._log('breeder-return', `${unit.name}は霊界から手札へ帰還`, { playerId: owner.id, unitId: unit.id });
+    } else owner.graveyard.push(sourceCard);
     for (const playerId of this.state.playerOrder) {
       for (const other of livingUnits(this.player(playerId))) {
         if (other.statuses.parasite?.sourceUnitId === unit.id) other.statuses.parasite = null;
@@ -999,9 +1084,21 @@ export class BattleEngine {
         else unit.defMod += 4;
       }
       if (unit.specialForm === 'ウスバカゲソウ') this._heal(unit, roundedPercent(unit.maxLife, 0.05));
+      if ((unit.statuses.autoRepairRemaining ?? 0) > 0) {
+        this._heal(unit, 5);
+        unit.statuses.autoRepairRemaining -= 1;
+      }
+      const overclockPenalty = unit.statuses.overclockPendingDefPenalty ?? 0;
       unit.temporaryAtk = 0;
       unit.temporaryDef = 0;
+      if (overclockPenalty > 0) {
+        unit.temporaryDef -= overclockPenalty;
+        unit.statuses.overclockPendingDefPenalty = 0;
+      }
       unit.statuses.temporaryTurnDamageBonus = 0;
+      unit.timedAtkBuffs = (unit.timedAtkBuffs ?? [])
+        .map((buff) => ({ ...buff, remaining: buff.remaining - 1 }))
+        .filter((buff) => buff.remaining > 0);
       unit.timedDefBuffs = unit.timedDefBuffs
         .map((buff) => ({ ...buff, remaining: buff.remaining - 1 }))
         .filter((buff) => buff.remaining > 0);
@@ -1049,6 +1146,7 @@ export class BattleEngine {
     const own = livingUnits(player);
     const enemy = livingUnits(opponent);
     const targetActions = (units) => units.map((unit) => ({ ...base, targetUnitId: unit.id, label: `${definition.name} → ${unit.name}` }));
+    const factionTargets = (faction) => targetActions(own.filter((unit) => unit.faction === faction));
     switch (definition.name) {
       case 'ベテランブリーダー':
       case 'プレッシャー指示':
@@ -1085,6 +1183,73 @@ export class BattleEngine {
         return own.filter((unit) => unit.faction === '怪物').length >= 2
           ? [{ ...base, targetUnitId: null, label: definition.name }]
           : [];
+      case '戦線整理': {
+        const candidates = player.hand.filter((candidate) => candidate.instanceId !== card.instanceId);
+        return oneOrTwoCombinations(candidates).map((cards) => ({
+          ...base,
+          targetUnitId: null,
+          returnCardInstanceIds: cards.map((candidate) => candidate.instanceId),
+          label: `戦線整理：${cards.map((candidate) => cardDefinition(this.masterIndex, candidate)?.name).join('・')}`,
+        }));
+      }
+      case '素材探索': {
+        const candidates = player.deck.slice(-5).filter((candidate) => cardDefinition(this.masterIndex, candidate)?.kind === 'monster');
+        return candidates.map((candidate) => ({
+          ...base,
+          targetUnitId: null,
+          chosenCardInstanceId: candidate.instanceId,
+          label: `素材探索：${cardDefinition(this.masterIndex, candidate).name}を手札へ`,
+        }));
+      }
+      case '融合強化指示': {
+        const unlockTurn = player.isFirst ? RULES.firstFusionTurn : RULES.secondFusionTurn;
+        const hasMain = own.some((unit) => unit.fusionStage < RULES.maxFusionStage);
+        const hasMaterial = player.hand.some((candidate) => candidate.instanceId !== card.instanceId
+          && cardDefinition(this.masterIndex, candidate)?.kind === 'monster');
+        return player.turnNumber >= unlockTurn && hasMain && hasMaterial
+          ? [{ ...base, targetUnitId: null, label: definition.name }]
+          : [];
+      }
+      case '全体防御命令':
+        return own.length ? [{ ...base, targetUnitId: null, label: definition.name }] : [];
+      case 'TP前借り':
+        return player.tp < player.maxTp ? [{ ...base, targetUnitId: null, label: definition.name }] : [];
+      case '逆境の号令':
+        return player.life < opponent.life && own.length ? [{ ...base, targetUnitId: null, label: definition.name }] : [];
+      case '応急処置':
+      case '捨て身命令':
+        return targetActions(own);
+      case '無機・オーバークロック':
+      case '無機・自動修復':
+        return factionTargets('無機');
+      case '創造・再設計':
+      case '創造・予備パーツ':
+        return factionTargets('創造');
+      case '幻霊・残響詠唱':
+      case '幻霊・霊界帰還':
+        return factionTargets('幻霊');
+      case '魔族・血の契約':
+        return player.life > 10 ? [{ ...base, targetUnitId: null, label: definition.name }] : [];
+      case '魔族・呪印':
+        return targetActions(enemy);
+      case '獣族・狩猟本能':
+        return factionTargets('獣族');
+      case '獣族・群れの守り':
+        return own.filter((unit) => unit.faction === '獣族').length >= 2
+          ? [{ ...base, targetUnitId: null, label: definition.name }]
+          : [];
+      case '怪物・暴食': {
+        const materials = player.hand.filter((candidate) => candidate.instanceId !== card.instanceId
+          && cardDefinition(this.masterIndex, candidate)?.kind === 'monster');
+        return own.filter((unit) => unit.faction === '怪物').flatMap((unit) => materials.map((material) => ({
+          ...base,
+          targetUnitId: unit.id,
+          materialCardInstanceId: material.instanceId,
+          label: `怪物・暴食：${unit.name}が${cardDefinition(this.masterIndex, material).name}を捕食`,
+        })));
+      }
+      case '怪物・捕食進化':
+        return factionTargets('怪物');
       default:
         return [];
     }
@@ -1133,6 +1298,97 @@ export class BattleEngine {
           applyAtkBuff(unit, 5);
           applyDefBuff(unit, 5);
         }
+        break;
+      case '戦線整理': {
+        const returned = (action.returnCardInstanceIds ?? [])
+          .map((instanceId) => removeFrom(player.hand, (candidate) => candidate.instanceId === instanceId))
+          .filter(Boolean);
+        player.deck.unshift(...this.rng.shuffle(returned));
+        this._drawCards(player, returned.length, 'breeder');
+        break;
+      }
+      case '素材探索': {
+        const inspected = player.deck.splice(Math.max(0, player.deck.length - 5));
+        const chosen = removeFrom(inspected, (candidate) => candidate.instanceId === action.chosenCardInstanceId);
+        player.deck.unshift(...this.rng.shuffle(inspected));
+        if (chosen && player.hand.length < RULES.handLimit) player.hand.push(chosen);
+        break;
+      }
+      case '融合強化指示':
+        player.effects.nextFusionBuff = true;
+        break;
+      case '応急処置':
+        this._heal(ownTarget, 10);
+        if (ownTarget.stunnedThisTurn) {
+          ownTarget.stunnedThisTurn = false;
+          if (!ownTarget.summonedThisTurn) ownTarget.actionPoints = Math.max(1, ownTarget.actionPoints);
+        } else if (ownTarget.statuses.stunOnNextTurn > 0) ownTarget.statuses.stunOnNextTurn -= 1;
+        else ownTarget.statuses.nextDamagePenalty = 0;
+        break;
+      case '捨て身命令':
+        ownTarget.statuses.nextDamageBonus += 0.3;
+        ownTarget.statuses.recoilOnNextAttack = 10;
+        break;
+      case '全体防御命令':
+        for (const unit of livingUnits(player)) {
+          unit.statuses.nextDamageReduction = Math.min(0.9, unit.statuses.nextDamageReduction + 0.25);
+        }
+        break;
+      case 'TP前借り':
+        player.tp = Math.min(player.maxTp, player.tp + 2);
+        player.effects.tpDebt = (player.effects.tpDebt ?? 0) + 1;
+        break;
+      case '逆境の号令':
+        for (const unit of livingUnits(player)) {
+          unit.timedAtkBuffs ??= [];
+          unit.timedAtkBuffs.push({ amount: 5, remaining: 2 });
+          unit.timedDefBuffs.push({ amount: 5, remaining: 2 });
+        }
+        break;
+      case '無機・オーバークロック':
+        ownTarget.temporaryAtk += 10;
+        ownTarget.statuses.overclockPendingDefPenalty = 5;
+        break;
+      case '無機・自動修復':
+        ownTarget.statuses.autoRepairRemaining = (ownTarget.statuses.autoRepairRemaining ?? 0) + 3;
+        break;
+      case '創造・再設計':
+        ownTarget.statuses.swapAtkDef = true;
+        break;
+      case '創造・予備パーツ':
+        ownTarget.statuses.spareParts = true;
+        break;
+      case '幻霊・残響詠唱':
+        ownTarget.statuses.echoNext = 0.4;
+        break;
+      case '幻霊・霊界帰還':
+        ownTarget.statuses.returnToHandOnDefeat = true;
+        break;
+      case '魔族・血の契約':
+        player.life -= 10;
+        player.tp = Math.min(player.maxTp, player.tp + 3);
+        break;
+      case '魔族・呪印':
+        enemyTarget.statuses.incomingFlatDamage = { amount: 5, remaining: 2 };
+        break;
+      case '獣族・狩猟本能':
+        ownTarget.statuses.nextDamageBonus += 0.25;
+        ownTarget.statuses.tpOnNextKill = 1;
+        break;
+      case '獣族・群れの守り':
+        for (const unit of livingUnits(player).filter((candidate) => candidate.faction === '獣族')) {
+          unit.statuses.nextDamageReduction = Math.min(0.9, unit.statuses.nextDamageReduction + 0.25);
+        }
+        break;
+      case '怪物・暴食': {
+        const material = removeFrom(player.hand, (candidate) => candidate.instanceId === action.materialCardInstanceId);
+        const materialDef = material ? cardDefinition(this.masterIndex, material) : null;
+        if (material) player.graveyard.push(material);
+        this._heal(ownTarget, Math.min(20, (materialDef?.summonTp ?? 0) * 5));
+        break;
+      }
+      case '怪物・捕食進化':
+        ownTarget.statuses.predationEvolution = true;
         break;
       default: throw new Error(`Unsupported breeder: ${definition.name}`);
     }

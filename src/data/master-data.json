@@ -2495,6 +2495,186 @@
       "name": "怪物②",
       "tp": 4,
       "effect": "怪物2体以上なら怪物全員ATK+5/DEF+5"
+    },
+    {
+      "id": "breeder-021",
+      "kind": "breeder",
+      "category": "汎用",
+      "faction": null,
+      "name": "戦線整理",
+      "tp": 1,
+      "effect": "手札を1～2枚選んで山札の下へ戻し、同じ枚数ドロー"
+    },
+    {
+      "id": "breeder-022",
+      "kind": "breeder",
+      "category": "汎用",
+      "faction": null,
+      "name": "素材探索",
+      "tp": 2,
+      "effect": "山札の上から5枚を確認し、モンスター1枚を手札へ。残りは山札の下へ"
+    },
+    {
+      "id": "breeder-023",
+      "kind": "breeder",
+      "category": "汎用",
+      "faction": null,
+      "name": "融合強化指示",
+      "tp": 2,
+      "effect": "このターン次に完成する合体モンスターのLIFE+10、ATK+5、DEF+5"
+    },
+    {
+      "id": "breeder-024",
+      "kind": "breeder",
+      "category": "汎用",
+      "faction": null,
+      "name": "応急処置",
+      "tp": 2,
+      "effect": "味方1体のLIFEを10回復し、スタンまたは技ダメージ低下を1つ解除"
+    },
+    {
+      "id": "breeder-025",
+      "kind": "breeder",
+      "category": "汎用",
+      "faction": null,
+      "name": "捨て身命令",
+      "tp": 1,
+      "effect": "味方1体の次の技ダメージ+30%。攻撃後、そのモンスターはLIFE10を失う"
+    },
+    {
+      "id": "breeder-026",
+      "kind": "breeder",
+      "category": "汎用",
+      "faction": null,
+      "name": "全体防御命令",
+      "tp": 3,
+      "effect": "味方全員が次に受ける技ダメージをそれぞれ25%軽減"
+    },
+    {
+      "id": "breeder-027",
+      "kind": "breeder",
+      "category": "汎用",
+      "faction": null,
+      "name": "TP前借り",
+      "tp": 1,
+      "effect": "TPを2回復。次の自分ターン開始時のTP-1"
+    },
+    {
+      "id": "breeder-028",
+      "kind": "breeder",
+      "category": "汎用",
+      "faction": null,
+      "name": "逆境の号令",
+      "tp": 2,
+      "effect": "自分のプレイヤーLIFEが相手より低い場合、味方全員ATK+5・DEF+5を2ターン"
+    },
+    {
+      "id": "breeder-029",
+      "kind": "breeder",
+      "category": "モン類専用",
+      "faction": "無機",
+      "name": "無機・オーバークロック",
+      "tp": 2,
+      "effect": "無機1体のATK+10。このターン終了後、次の自分ターンまでDEF-5"
+    },
+    {
+      "id": "breeder-030",
+      "kind": "breeder",
+      "category": "モン類専用",
+      "faction": "無機",
+      "name": "無機・自動修復",
+      "tp": 3,
+      "effect": "無機1体は自分ターン終了時にLIFE5回復。3回まで発動"
+    },
+    {
+      "id": "breeder-031",
+      "kind": "breeder",
+      "category": "モン類専用",
+      "faction": "創造",
+      "name": "創造・再設計",
+      "tp": 2,
+      "effect": "創造1体のATKとDEFを次の自分ターン開始まで入れ替える"
+    },
+    {
+      "id": "breeder-032",
+      "kind": "breeder",
+      "category": "モン類専用",
+      "faction": "創造",
+      "name": "創造・予備パーツ",
+      "tp": 2,
+      "effect": "創造1体が次に撃破されるとき、一度だけLIFE1で耐える"
+    },
+    {
+      "id": "breeder-033",
+      "kind": "breeder",
+      "category": "モン類専用",
+      "faction": "幻霊",
+      "name": "幻霊・残響詠唱",
+      "tp": 3,
+      "effect": "幻霊1体の次の技が、追加効果なしで元ダメージの40%を同じ対象へ追加で与える"
+    },
+    {
+      "id": "breeder-034",
+      "kind": "breeder",
+      "category": "モン類専用",
+      "faction": "幻霊",
+      "name": "幻霊・霊界帰還",
+      "tp": 2,
+      "effect": "幻霊1体が次に撃破されたとき、墓地ではなく手札へ戻る"
+    },
+    {
+      "id": "breeder-035",
+      "kind": "breeder",
+      "category": "モン類専用",
+      "faction": "魔族",
+      "name": "魔族・血の契約",
+      "tp": 1,
+      "effect": "自分のプレイヤーLIFEを10失い、TPを3回復。LIFE10以下では使用不可"
+    },
+    {
+      "id": "breeder-036",
+      "kind": "breeder",
+      "category": "モン類専用",
+      "faction": "魔族",
+      "name": "魔族・呪印",
+      "tp": 2,
+      "effect": "敵1体が次に受ける2回の技ダメージをそれぞれ+5"
+    },
+    {
+      "id": "breeder-037",
+      "kind": "breeder",
+      "category": "モン類専用",
+      "faction": "獣族",
+      "name": "獣族・狩猟本能",
+      "tp": 2,
+      "effect": "獣族1体の次の技ダメージ+25%。その技で敵を撃破した場合、TP1回復"
+    },
+    {
+      "id": "breeder-038",
+      "kind": "breeder",
+      "category": "モン類専用",
+      "faction": "獣族",
+      "name": "獣族・群れの守り",
+      "tp": 2,
+      "effect": "場に獣族が2体以上いる場合、味方獣族全員が次に受けるダメージを25%軽減"
+    },
+    {
+      "id": "breeder-039",
+      "kind": "breeder",
+      "category": "モン類専用",
+      "faction": "怪物",
+      "name": "怪物・暴食",
+      "tp": 2,
+      "effect": "手札のモンスター1枚を捨て、怪物1体のLIFEを捨てたカードの召喚TP×5回復（最大20）"
+    },
+    {
+      "id": "breeder-040",
+      "kind": "breeder",
+      "category": "モン類専用",
+      "faction": "怪物",
+      "name": "怪物・捕食進化",
+      "tp": 3,
+      "effect": "怪物1体が次に敵を撃破したとき、LIFE10回復・ATK+5。試合中1回だけ発動"
     }
   ],
   "growthCards": [

@@ -451,7 +451,31 @@ export class BattleScreen {
       this.openFusionChoice(fusionActions);
       return;
     }
+    const breederActions = actions.filter((action) => action.type === 'breeder');
+    if (breederActions.length > 1) {
+      this.openBreederChoice(breederActions);
+      return;
+    }
     this.performHumanAction(actions[0]);
+  }
+
+  openBreederChoice(actions) {
+    const card = this.engine.player(this.humanPlayerId).hand
+      .find((candidate) => candidate.instanceId === actions[0].cardInstanceId);
+    const definition = card ? this.definitionForCard(card) : null;
+    let modal = null;
+    const content = el('div', { className: 'breeder-action-choice' }, [
+      el('p', { text: '実行する効果を選んでください。' }),
+      el('div', { className: 'breeder-action-options' }, actions.map((action) => el('button', {
+        className: 'text-button',
+        onclick: () => { modal.close(); this.performHumanAction(action); },
+      }, [
+        el('strong', { text: action.label }),
+        el('small', { text: `${action.cost}TP` }),
+      ]))),
+      el('button', { className: 'text-button', text: 'キャンセル', onclick: () => modal.close() }),
+    ]);
+    modal = openModal({ title: definition?.name ?? 'ブリーダーカード', content });
   }
 
   openShugyoConfirm(action) {

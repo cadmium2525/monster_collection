@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync } from 'node:fs';
+import { readFileSync, statSync } from 'node:fs';
 import { cardArtPlacement, cardDisplayStats, resolvedTrait } from '../../src/ui/card-renderer.js';
 import { shugyoMoveWeight } from '../../src/battle/shugyo.js';
 import { masterData, monsterByName } from '../helpers.js';
@@ -73,6 +73,21 @@ test('card art placement selects generated support and special-fusion atlases de
   const support = cardArtPlacement({ id: 'breeder-020', kind: 'breeder' });
   assert.equal(support.className, 'support-card-art');
   assert.match(support.style, /--art-x:100%;--art-y:100%/);
+  assert.deepEqual(cardArtPlacement({ id: 'breeder-040', kind: 'breeder' }), {
+    className: 'support-card-art standalone-support-art',
+    style: '--support-art:url("./assets/images/breeders/breeder-040.jpg")',
+  });
+});
+
+test('all twenty new breeder illustrations are optimized project assets', () => {
+  for (let number = 21; number <= 40; number += 1) {
+    const id = String(number).padStart(3, '0');
+    const url = new URL(`../../assets/images/breeders/breeder-${id}.jpg`, import.meta.url);
+    const bytes = readFileSync(url);
+    assert.equal(bytes[0], 0xff, `breeder-${id} starts with JPEG marker`);
+    assert.equal(bytes[1], 0xd8, `breeder-${id} starts with JPEG marker`);
+    assert.ok(statSync(url).size < 300_000, `breeder-${id} stays practical for PWA caching`);
+  }
 });
 
 test('opponent cards stay upright so their corner values remain readable', () => {

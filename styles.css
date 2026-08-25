@@ -629,6 +629,19 @@ body:has(.battle-screen) {
   box-shadow: 0 0 12px rgba(2,7,13,.42);
   pointer-events: none;
 }
+.card-art.support-card-art.standalone-support-art,
+.game-card .card-art.support-card-art.standalone-support-art {
+  background-image:
+    linear-gradient(180deg, rgba(2,7,13,.28), transparent 22% 73%, rgba(2,7,13,.72) 100%),
+    var(--support-art);
+  background-size: 100% 100%, cover;
+  background-position: center;
+}
+.game-card .card-art.support-card-art.standalone-support-art::after {
+  background-image: var(--support-art);
+  background-size: cover;
+  background-position: center;
+}
 
 .faction-inorganic { --faction: #83b6c5; }
 .faction-creation { --faction: #f29e55; }
@@ -703,6 +716,12 @@ body:has(.battle-screen) {
 .fusion-choice > p, .fusion-choice > button:last-child { grid-column: 1 / -1; }
 .fusion-choice button { display: grid; gap: 3px; text-align: left; }
 .fusion-choice button span { font-size: 10px; }
+.breeder-action-choice { display: grid; gap: 8px; }
+.breeder-action-choice > p { margin: 0; color: #dce5e9; }
+.breeder-action-options { max-height: min(48dvh,340px); display: grid; grid-template-columns: repeat(2,minmax(0,1fr)); gap: 6px; overflow: auto; padding: 2px; }
+.breeder-action-options button { min-width: 0; display: flex; justify-content: space-between; gap: 8px; text-align: left; }
+.breeder-action-options strong { min-width: 0; overflow: hidden; text-overflow: ellipsis; white-space: nowrap; }
+.breeder-action-options small { flex: 0 0 auto; color: var(--gold); }
 .legacy-note { margin: 10px 0 0; color: var(--muted); font-size: 11px; }
 
 .event-banner {

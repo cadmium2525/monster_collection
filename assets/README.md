@@ -10,6 +10,8 @@
 
 `images/support-card-atlas-v1.jpg` is an original 5-by-5 atlas. Cells 1–5 map to `growthCards` master order, followed by `breeder-001` through `breeder-020`. All card names, TP, effects, and changing game state remain HTML.
 
+`images/breeders/breeder-021.jpg` through `breeder-040.jpg` are original, individually generated square illustrations for the 2026-08-26 breeder expansion. They contain illustration only; names, TP, faction/category, and effect text remain dynamic HTML. Project copies are optimized to 768×768 JPEG quality 90 for GitHub Pages and PWA caching. The original generated PNGs remain in the Codex generated-image archive.
+
 `icons/app-icon.svg` is the source mark for the installable PWA. `scripts/generate-pwa-icons.ps1` reproducibly renders the 180, 192, 512, and maskable PNG variants used by iOS and the Web App Manifest.
 
 `ui/card-badges/{life,cost,atk,def}.png` are transparent status badges supplied by the project owner. The original green heart, cyan cost coin, blue sword, and red shield artwork is preserved; only the uniform gray JPEG background was removed and the assets were normalized to transparent 512px canvases.

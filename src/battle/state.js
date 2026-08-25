@@ -32,6 +32,8 @@ export function createPlayerState(definition, cards, rng, growth = {}) {
       nextOwnMaxTpBonuses: [],
       nextTurnMaxTpPenalties: [],
       factionMoveDiscount: {},
+      tpDebt: 0,
+      nextFusionBuff: false,
     },
     metrics: {
       cardsDrawn: 0,
@@ -108,6 +110,7 @@ export function createUnit({ unitId, card, monster, growth, masterIndex, slot })
     defMod: 0,
     temporaryAtk: 0,
     temporaryDef: 0,
+    timedAtkBuffs: [],
     timedDefBuffs: [],
     actionPoints: 0,
     summonedThisTurn: true,
@@ -137,18 +140,37 @@ export function createUnit({ unitId, card, monster, growth, masterIndex, slot })
       gallionGuard: false,
       benihimeCharged: false,
       ochimushaTriggered: false,
+      recoilOnNextAttack: 0,
+      overclockPendingDefPenalty: 0,
+      autoRepairRemaining: 0,
+      swapAtkDef: false,
+      spareParts: false,
+      echoNext: 0,
+      returnToHandOnDefeat: false,
+      incomingFlatDamage: null,
+      tpOnNextKill: 0,
+      predationEvolution: false,
     },
   };
 }
 
 export function effectiveAtk(unit) {
-  let value = unit.atkBase + unit.atkMod + unit.temporaryAtk + (unit.statuses.hamKillBonus ?? 0);
+  let value = unit.statuses.swapAtkDef
+    ? unit.defBase + unit.defMod + unit.temporaryDef + unit.timedDefBuffs.reduce((sum, buff) => sum + buff.amount, 0)
+    : unit.atkBase + unit.atkMod + unit.temporaryAtk
+      + (unit.timedAtkBuffs ?? []).reduce((sum, buff) => sum + buff.amount, 0)
+      + (unit.statuses.hamKillBonus ?? 0);
   if (!unit.specialForm && unit.baseMonsterName === 'モッチー' && unit.life * 2 <= unit.maxLife) value += 20;
   if (!unit.specialForm && unit.baseMonsterName === 'デュラハン' && unit.statuses.knightWill) value += 5;
   return Math.max(1, value);
 }
 
 export function effectiveDef(unit) {
+  if (unit.statuses.swapAtkDef) {
+    return Math.max(1, unit.atkBase + unit.atkMod + unit.temporaryAtk
+      + (unit.timedAtkBuffs ?? []).reduce((sum, buff) => sum + buff.amount, 0)
+      + (unit.statuses.hamKillBonus ?? 0));
+  }
   const timed = unit.timedDefBuffs.reduce((sum, buff) => sum + buff.amount, 0);
   return Math.max(1, unit.defBase + unit.defMod + unit.temporaryDef + timed);
 }

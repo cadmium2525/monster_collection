@@ -11,7 +11,10 @@ export const GENERATOR_CONFIG = Object.freeze({
   legend: { candidates: 24, monsters: 14, targetedRecipes: 4, recipeDensity: 2, themeTarget: 9, selectionNoise: 0 },
 });
 
-const GENERIC_BREEDERS = ['breeder-001', 'breeder-002', 'breeder-003', 'breeder-004', 'breeder-005', 'breeder-006', 'breeder-007', 'breeder-008'];
+const GENERIC_BREEDERS = [
+  'breeder-001', 'breeder-002', 'breeder-003', 'breeder-004', 'breeder-005', 'breeder-006', 'breeder-007', 'breeder-008',
+  'breeder-021', 'breeder-022', 'breeder-023', 'breeder-024', 'breeder-025', 'breeder-026', 'breeder-027', 'breeder-028',
+];
 
 function addCopy(counts, id, max = 3) {
   const current = counts.get(id) ?? 0;
@@ -94,7 +97,7 @@ function selectBreeders(masterIndex, theme, rng, rank) {
   const generic = rng.shuffle(GENERIC_BREEDERS);
   if (rank === 'bronze') return rng.shuffle([...factionBreeders, ...generic]).slice(0, 4);
   if (theme === '混合') return generic.slice(0, 4);
-  return [...factionBreeders, ...generic.slice(0, 2)];
+  return [...rng.shuffle(factionBreeders).slice(0, 2), ...generic.slice(0, 2)];
 }
 
 function growthCards(masterIndex, count, theme, rank, rng) {
