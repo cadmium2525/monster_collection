@@ -12,4 +12,6 @@
 
 `icons/app-icon.svg` is the source mark for the installable PWA. `scripts/generate-pwa-icons.ps1` reproducibly renders the 180, 192, 512, and maskable PNG variants used by iOS and the Web App Manifest.
 
+`ui/card-badges/{life,cost,atk,def}.png` are transparent status badges supplied by the project owner. The original green heart, cyan cost coin, blue sword, and red shield artwork is preserved; only the uniform gray JPEG background was removed and the assets were normalized to transparent 512px canvases.
+
 Exact built-in ImageGen prompts and JPEG optimization notes are recorded in `CHANGELOG.md`.

@@ -168,7 +168,7 @@ body:has(.battle-screen) {
   min-width: 0;
   min-height: 0;
   display: grid;
-  grid-template-rows: clamp(42px, 10.5dvh, 76px) minmax(0, 1fr) clamp(118px, 30dvh, 210px);
+  grid-template-rows: clamp(42px, 10.5dvh, 76px) minmax(0, 1fr) clamp(128px, 33dvh, 224px);
   gap: 5px;
 }
 
@@ -228,7 +228,7 @@ body:has(.battle-screen) {
   display: grid;
   grid-template-columns: repeat(3, minmax(68px, 142px));
   justify-content: center;
-  gap: clamp(10px, 1.4vw, 18px);
+  gap: clamp(16px, 2vw, 26px);
 }
 .board-row::before { content: attr(data-field-label); position: absolute; left: 1px; z-index: 0; color: rgba(220,232,230,.18); font: 700 7px/1 Georgia,serif; letter-spacing: .16em; writing-mode: vertical-rl; }
 .board-row.opponent { align-items: end; }
@@ -323,12 +323,9 @@ body:has(.battle-screen) {
   border-radius: 7px;
   background: var(--panel);
 }
-.hand-panel { display: grid; grid-template-rows: auto minmax(0, 1fr); overflow: hidden; border-color: rgba(126,184,203,.42); border-radius: 7px 7px 3px 3px; }
-.zone-heading { min-height: 25px; display: grid; grid-template-columns: auto minmax(0,1fr) auto; gap: 8px; align-items: center; padding: 4px 8px 3px; border-bottom: 1px solid rgba(255,255,255,.06); color: var(--muted); font-size: 11px; }
-.zone-heading strong { color: #9fe8f0; font: 800 10px/1 Georgia,serif; letter-spacing: .08em; }
-.hand-instruction { overflow: hidden; color: #ecd39c; font-size: 9px; text-align: center; white-space: nowrap; text-overflow: ellipsis; }
-.card-strip { min-height: 0; display: flex; align-items: end; gap: 12px; overflow-x: auto; overflow-y: hidden; padding: 9px 11px 10px; scrollbar-width: thin; scroll-snap-type: x proximity; }
-.card-strip .game-card { height: calc(100% - 8px); width: auto; max-width: 126px; scroll-snap-align: start; }
+.hand-panel { display: grid; grid-template-rows: minmax(0, 1fr); overflow: hidden; border-color: rgba(126,184,203,.42); border-radius: 7px 7px 3px 3px; }
+.card-strip { min-height: 0; display: flex; align-items: end; gap: 18px; overflow-x: auto; overflow-y: hidden; padding: 14px 17px 15px; scrollbar-width: thin; scroll-snap-type: x proximity; }
+.card-strip .game-card { height: 100%; width: auto; max-width: 145px; scroll-snap-align: start; }
 
 .action-hint { grid-column: 1 / -1; margin: 6px; color: var(--muted); font-size: 10px; line-height: 1.45; text-align: center; }
 
@@ -487,7 +484,7 @@ body:has(.battle-screen) {
 .card-corner {
   position: absolute;
   z-index: 7;
-  width: clamp(28px,36%,44px);
+  width: clamp(32px,40%,48px);
   aspect-ratio: 1;
   display: grid;
   place-items: center;
@@ -496,17 +493,18 @@ body:has(.battle-screen) {
   filter: drop-shadow(0 3px 4px rgba(0,0,0,.78));
   font-variant-numeric: tabular-nums;
 }
-.card-corner i { position: absolute; z-index: -1; inset: 0; display: grid; place-items: center; font-style: normal; }
-.card-corner b { font: 900 clamp(13px,1.72vw,22px)/1 Georgia,serif; letter-spacing: -.04em; text-shadow: 0 2px 3px #000,0 0 4px rgba(0,0,0,.7); }
-.card-life { top: -6px; left: -6px; }
-.card-life i { color: #28cf57; font: 900 clamp(34px,4.1vw,54px)/1 Arial,sans-serif; text-shadow: 0 0 2px #d5ffe0,0 0 7px #098129; }
-.card-cost { top: -4px; right: -4px; width: clamp(22px,28%,34px); }
-.card-cost i { border: 2px solid #8edfff; border-radius: 50%; background: radial-gradient(circle at 34% 26%,#70d8ff,#1763ad 58%,#162c74 100%); box-shadow: inset 0 0 6px rgba(255,255,255,.72),0 0 6px rgba(56,174,255,.65); }
-.card-cost b { font-size: clamp(12px,1.45vw,18px); }
-.card-atk { left: -6px; bottom: -6px; }
-.card-atk i { color: #74baff; font: 900 clamp(28px,3.5vw,47px)/1 Georgia,serif; rotate: -8deg; text-shadow: 0 0 2px #fff,0 0 7px #175fbd; }
-.card-def { right: -6px; bottom: -6px; }
-.card-def i { inset: 2px; clip-path: polygon(50% 0,92% 17%,85% 72%,50% 100%,15% 72%,8% 17%); border: 0; background: linear-gradient(145deg,#ff8c8c,#b32938 55%,#651423); box-shadow: inset 0 0 0 2px rgba(255,226,182,.7); }
+.card-corner i { position: absolute; z-index: 0; inset: 0; background-repeat: no-repeat; background-position: center; background-size: contain; }
+.card-corner b { position: relative; z-index: 1; font: 900 clamp(13px,1.72vw,22px)/1 Georgia,serif; letter-spacing: -.04em; text-shadow: 0 2px 3px #000,0 0 4px rgba(0,0,0,.88); }
+.card-life { top: -13px; left: -13px; }
+.card-life i { background-image: url("./assets/ui/card-badges/life.png"); }
+.card-cost { top: -10px; right: -10px; width: clamp(21px,25%,31px); }
+.card-cost i { background-image: url("./assets/ui/card-badges/cost.png"); }
+.card-cost b { font-size: clamp(11px,1.3vw,17px); }
+.card-atk { left: -11px; bottom: -11px; width: clamp(23px,27%,34px); }
+.card-atk i { background-image: url("./assets/ui/card-badges/atk.png"); }
+.card-atk b { font-size: clamp(11px,1.42vw,18px); }
+.card-def { right: -13px; bottom: -13px; }
+.card-def i { background-image: url("./assets/ui/card-badges/def.png"); }
 .status-dots { position: absolute; z-index: 8; left: 50%; bottom: 3px; translate: -50% 0; display: flex; gap: 2px; }
 .status-dots i { width: 5px; height: 5px; border-radius: 50%; background: var(--danger); box-shadow: 0 0 5px currentColor; }
 
@@ -835,13 +833,13 @@ body:has(.battle-screen) {
 .section-title h2 { margin: 0; color: var(--gold); font-size: 15px; }
 .section-title p { margin: 1px 0; color: var(--muted); font-size: 9px; }
 .step-number { flex: 0 0 auto; display: grid; place-items: center; width: 26px; height: 26px; border: 1px solid var(--teal); border-radius: 50%; color: var(--teal); font-weight: 800; }
-.reward-card-row { min-height: 0; display: flex; align-items: center; justify-content: center; gap: clamp(10px,1.1vw,14px); overflow-x: auto; }
+.reward-card-row { min-height: 0; display: flex; align-items: center; justify-content: center; gap: clamp(16px,1.7vw,22px); overflow-x: auto; padding: 12px; }
 .selectable-card { position: relative; flex: 0 0 auto; }
 .selectable-card .game-card { width: clamp(65px,8.4vw,104px); }
 .selectable-card.selected { filter: drop-shadow(0 0 7px rgba(232,186,98,.55)); }
 .card-info-button { position: absolute; z-index: 3; right: 2px; bottom: 2px; min-width: 30px; min-height: 20px; padding: 2px 4px; border: 1px solid rgba(255,255,255,.25); border-radius: 5px; color: #dce8ee; background: rgba(4,11,19,.92); font-size: 8px; cursor: pointer; }
 .selection-badge { position: absolute; z-index: 4; left: -3px; top: -4px; padding: 3px 5px; border-radius: 7px; color: #081018; background: var(--gold); font-size: 8px; font-weight: 900; }
-.release-grid { min-height: 0; overflow: auto; display: grid; grid-template-columns: repeat(8,minmax(48px,1fr)); align-content: start; gap: 10px; padding: 9px; }
+.release-grid { min-height: 0; overflow: auto; display: grid; grid-template-columns: repeat(8,minmax(48px,1fr)); align-content: start; gap: 16px; padding: 16px; }
 .release-grid .game-card { width: 100%; }
 .release-grid .card-effect { display: none; }
 .reward-footer { display: flex; justify-content: space-between; align-items: center; gap: 10px; min-height: 58px; padding: 7px 11px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
@@ -878,10 +876,10 @@ button:disabled { opacity: .38; cursor: not-allowed; }
 .deck-leader-edit span { color: var(--muted); font-size: 10px; }
 .deck-leader-edit strong { max-width: 100px; overflow: hidden; color: #fff0bd; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
 .deck-delete { margin-left: auto; }
-.deck-card-grid { min-height: 0; overflow: auto; display: grid; grid-template-columns: repeat(10,minmax(54px,1fr)); align-content: start; gap: 12px; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
+.deck-card-grid { min-height: 0; overflow: auto; display: grid; grid-template-columns: repeat(10,minmax(54px,1fr)); align-content: start; gap: clamp(16px,1.7vw,22px); padding: 18px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
 .deck-card-grid .game-card { width: 100%; }
 .leader-picker > p { margin: 8px 0 10px; color: var(--muted); font-size: 11px; }
-.leader-choice-grid { display: grid; grid-template-columns: repeat(7,minmax(70px,1fr)); gap: 12px; padding: 6px; }
+.leader-choice-grid { display: grid; grid-template-columns: repeat(7,minmax(70px,1fr)); gap: 18px; padding: 14px; }
 .leader-choice-grid .game-card { width: 100%; }
 
 .card-catalog-screen { height: calc(100dvh - max(16px,var(--safe-top)) - max(16px,var(--safe-bottom))); min-height: 350px; display: grid; grid-template-rows: auto auto minmax(0,1fr); gap: 7px; overflow: hidden; }
@@ -890,7 +888,7 @@ button:disabled { opacity: .38; cursor: not-allowed; }
 .catalog-filters { display: flex; gap: 5px; padding: 5px; border: 1px solid var(--line); border-radius: 9px; background: var(--panel); }
 .catalog-filters button { min-height: 30px; padding: 4px 10px; border: 1px solid transparent; border-radius: 16px; color: var(--muted); background: rgba(255,255,255,.035); cursor: pointer; font-size: 10px; }
 .catalog-filters button.selected { border-color: rgba(232,186,98,.65); color: #fff1be; background: rgba(114,75,25,.52); }
-.catalog-card-grid { min-height: 0; overflow: auto; display: grid; grid-template-columns: repeat(10,minmax(54px,1fr)); align-content: start; gap: 12px; padding: 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
+.catalog-card-grid { min-height: 0; overflow: auto; display: grid; grid-template-columns: repeat(10,minmax(54px,1fr)); align-content: start; gap: clamp(16px,1.7vw,22px); padding: 18px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
 .catalog-card-grid .game-card { width: 100%; }
 .fusion-catalog-card { position: relative; isolation: isolate; width: 100%; aspect-ratio: .72; overflow: hidden; padding: 0; border: 2px solid #d5a759; border-radius: 7px; color: #fbf6e9; background: linear-gradient(180deg,#332411,#0b111a 68%); box-shadow: 0 4px 10px rgba(0,0,0,.5),inset 0 0 10px rgba(232,186,98,.08); cursor: pointer; text-align: left; }
 .fusion-catalog-card .card-art { position: absolute; z-index: -1; inset: 0; width: 100%; height: auto; margin: 0; border: 0; border-radius: 5px; }
@@ -1071,7 +1069,7 @@ button:disabled { opacity: .38; cursor: not-allowed; }
   .pile-strip > span { padding: 2px 1px; }
   .pile-strip small { font-size: 8px; }
   .pile-strip strong { font-size: 11px; }
-  .battle-table { grid-template-rows: 38px minmax(0,1fr) 116px; gap: 3px; }
+  .battle-table { grid-template-rows: 38px minmax(0,1fr) 128px; gap: 3px; }
   .opponent-hand-panel { gap: 4px; padding: 2px 5px; }
   .opponent-hand-panel > strong { font-size: 10px; }
   .boards { gap: 2px; padding: 3px 5px; }
@@ -1087,17 +1085,18 @@ button:disabled { opacity: .38; cursor: not-allowed; }
   .battle-log { padding: 2px 4px; }
   .battle-log li { padding: 2px 1px; font-size: 10px; line-height: 1.3; }
   .utility-button { min-height: 29px; font-size: 10px; }
-  .zone-heading { min-height: 20px; padding: 2px 5px; font-size: 10px; }
-  .zone-heading strong { font-size: 9px; }
-  .hand-instruction { font-size: 9px; }
-  .card-strip { gap: 10px; padding: 8px 9px 9px; }
-  .card-strip .game-card { height: calc(100% - 7px); }
+  .card-strip { gap: 15px; padding: 12px 14px 13px; }
+  .card-strip .game-card { height: 100%; }
   .game-card { padding: 0; border-width: 1px; border-radius: 5px; }
   .card-top { min-height: 18px; font-size: 8px; }
-  .card-corner { width: clamp(27px,36%,38px); }
+  .card-corner { width: clamp(30px,40%,42px); }
   .card-corner b { font-size: clamp(13px,1.72vw,18px); }
-  .card-cost { top: -3px; right: -3px; width: clamp(20px,28%,28px); }
-  .card-cost b { font-size: clamp(11px,1.35vw,15px); }
+  .card-life { top: -10px; left: -10px; }
+  .card-cost { top: -8px; right: -8px; width: clamp(19px,24%,27px); }
+  .card-cost b { font-size: clamp(10px,1.24vw,14px); }
+  .card-atk { left: -9px; bottom: -9px; width: clamp(20px,26%,30px); }
+  .card-atk b { font-size: clamp(10px,1.3vw,15px); }
+  .card-def { right: -10px; bottom: -10px; }
   .card-art { height: 47%; margin: 2px 1px; }
   .card-stats { font-size: 6px; }
   .card-stats span { padding: 1px 0; }

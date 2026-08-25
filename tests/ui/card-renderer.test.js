@@ -24,6 +24,27 @@ test('battle cards use full art with four corner badges and no effect text', () 
   assert.doesNotMatch(renderer, /card-growth-badge/);
 });
 
+test('corner values use the supplied transparent badge artwork', () => {
+  const css = readFileSync(new URL('../../styles.css', import.meta.url), 'utf8');
+  for (const badge of ['life', 'cost', 'atk', 'def']) {
+    assert.match(css, new RegExp(`card-badges/${badge}\\.png`));
+  }
+  assert.match(css, /\.card-life\s*\{[^}]*top: -13px;[^}]*left: -13px/s);
+  assert.match(css, /\.card-cost\s*\{[^}]*width: clamp\(21px,25%,31px\)/s);
+  assert.match(css, /\.card-atk\s*\{[^}]*width: clamp\(23px,27%,34px\)/s);
+  assert.match(css, /\.card-def\s*\{[^}]*right: -13px;[^}]*bottom: -13px/s);
+});
+
+test('battle hand omits the old heading and uses the full panel for cards', () => {
+  const screen = readFileSync(new URL('../../src/ui/battle-screen.js', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../../styles.css', import.meta.url), 'utf8');
+  assert.doesNotMatch(screen, /YOUR HAND/);
+  assert.doesNotMatch(screen, /className: 'zone-heading'/);
+  assert.doesNotMatch(screen, /山札 \$\{own\.deck\.length\}/);
+  assert.match(css, /\.hand-panel\s*\{[^}]*grid-template-rows: minmax\(0, 1fr\)/s);
+  assert.match(css, /\.card-strip \.game-card\s*\{[^}]*height: 100%[^}]*max-width: 145px/s);
+});
+
 test('shugyo rank weighting stays deliberately small', () => {
   const weights = [1, 2, 3, 4, 5].map((rank) => shugyoMoveWeight({ rank }));
   assert.ok(Math.max(...weights) / Math.min(...weights) < 1.12);
@@ -54,7 +75,7 @@ test('card artwork keeps a head-safe portrait and correct detail ratios', () => 
   assert.match(css, /\.game-card \.card-art\.monster-art::after\s*\{[^}]*top: 18%[^}]*aspect-ratio: \.75/s);
   assert.match(css, /\.detail-summary > \.card-art\s*\{[^}]*aspect-ratio: \.75/s);
   assert.match(css, /\.detail-summary > \.card-art\.support-card-art\s*\{\s*aspect-ratio: 1/s);
-  assert.match(css, /\.card-cost\s*\{[^}]*width: clamp\(22px,28%,34px\)/s);
+  assert.match(css, /\.card-cost\s*\{[^}]*width: clamp\(21px,25%,31px\)/s);
 });
 
 test('hand monster stats include tournament growth carried from earlier matches', () => {

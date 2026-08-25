@@ -99,12 +99,12 @@ function cardMeta(definition, unit, growth) {
   };
 }
 
-function cornerBadge(kind, value, label, icon = '') {
+function cornerBadge(kind, value, label) {
   return el('span', {
     className: `card-corner card-${kind}`,
     attrs: { 'aria-label': label },
   }, [
-    el('i', { text: icon, attrs: { 'aria-hidden': 'true' } }),
+    el('i', { attrs: { 'aria-hidden': 'true' } }),
     el('b', { text: String(value) }),
   ]);
 }
@@ -161,9 +161,9 @@ export function renderCard({
     }, [
       definition.kind === 'monster' ? null : el('span', { className: 'card-kind', text: meta.kind }),
     ]),
-    meta.stats ? cornerBadge('life', meta.stats.life, `LIFE ${meta.stats.life}`, '♥') : null,
+    meta.stats ? cornerBadge('life', meta.stats.life, `LIFE ${meta.stats.life}`) : null,
     cornerBadge('cost', meta.cost, `${meta.cost}TP`),
-    meta.stats ? cornerBadge('atk', meta.stats.atk, `ATK ${meta.stats.atk}`, '⚔') : null,
+    meta.stats ? cornerBadge('atk', meta.stats.atk, `ATK ${meta.stats.atk}`) : null,
     meta.stats ? cornerBadge('def', meta.stats.def, `DEF ${meta.stats.def}`, '') : null,
     statuses.length ? el('span', { className: 'status-dots', attrs: { 'aria-label': `状態変化${statuses.length}件` } }, statuses.slice(0, 4).map(() => el('i'))) : null,
   ]);

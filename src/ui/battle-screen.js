@@ -82,11 +82,6 @@ export class BattleScreen {
           this.renderBoard(own, false),
         ]),
         el('section', { className: 'hand-panel', attrs: { 'aria-label': '自分の手札' } }, [
-          el('div', { className: 'zone-heading' }, [
-            el('strong', { text: `YOUR HAND  ${own.hand.length}/${8}` }),
-            el('span', { className: 'hand-instruction', text: this.interactionHint() }),
-            el('span', { text: `山札 ${own.deck.length}  /  墓地 ${own.graveyard.length}` }),
-          ]),
           el('div', { className: 'card-strip' }, own.hand.map((card) => this.renderHandCard(card, own, humanTurn))),
         ]),
       ]),
