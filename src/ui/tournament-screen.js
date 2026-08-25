@@ -1,4 +1,5 @@
 import { TOURNAMENT_LABELS } from '../battle/rules.js';
+import { summarizeCpuTournamentGrowth } from '../tournament/cpu-growth.js';
 import { ROUND_LABELS } from '../tournament/TournamentRun.js';
 import { el, replace } from './dom.js';
 
@@ -10,6 +11,12 @@ function opponentDeckDescription(opponent) {
   if (opponent.type === 'champion') return '現チャンピオン40枚';
   if (opponent.type === 'challenger') return '他プレイヤーが育てた保存40枚';
   return `${opponent.theme}テーマ`;
+}
+
+function opponentGrowthDescription(opponent) {
+  const growth = summarizeCpuTournamentGrowth(opponent);
+  if (!growth.wins) return null;
+  return `勝ち上がり育成 ${growth.wins}戦分・能力+${growth.statGain}${growth.learnedMoves ? `・新技${growth.learnedMoves}` : ''}`;
 }
 
 function matchView(bracket, match, currentMatchId) {
@@ -39,6 +46,7 @@ export class TournamentScreen {
     const bracket = this.tournament.getBracket();
     const currentMatch = this.tournament.getCurrentMatch();
     const opponent = this.tournament.getCurrentOpponent();
+    const growthDescription = opponent ? opponentGrowthDescription(opponent) : null;
     const rank = this.tournament.state.rank;
     const screen = el('main', { className: `tournament-screen rank-${rank}` }, [
       el('header', { className: 'screen-header' }, [
@@ -62,6 +70,7 @@ export class TournamentScreen {
           el('span', { className: 'eyebrow', text: `${ROUND_LABELS[this.tournament.state.roundIndex]} / ${this.tournament.getCurrentAiLevel().toUpperCase()} AI` }),
           el('h2', { text: `VS ${opponent.displayName}` }),
           el('p', { text: `${opponent.deckName}・${opponentDeckDescription(opponent)}` }),
+          growthDescription ? el('p', { className: 'opponent-growth-copy', text: growthDescription }) : null,
         ]),
         el('button', { className: 'primary-button', text: '対戦へ', onclick: () => this.onStartMatch?.(opponent) }),
       ] : [

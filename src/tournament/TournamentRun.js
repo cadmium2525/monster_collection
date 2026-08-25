@@ -5,6 +5,7 @@ import { createMasterIndex } from '../data/master-loader.js';
 import { analyzeDeck, scoreGeneratedDeck } from './deck-analyzer.js';
 import { generateCpuDeck } from './deck-generator.js';
 import { generateCpuNames } from './cpu-names.js';
+import { advanceCpuTournamentGrowth, cpuTournamentGrowthValue } from './cpu-growth.js';
 
 export const ROUND_LABELS = Object.freeze(['1回戦', '2回戦', '準決勝', '決勝']);
 export const NEXT_RANK = Object.freeze({ bronze: 'silver', silver: 'gold', gold: 'legend', legend: null });
@@ -101,6 +102,9 @@ export class TournamentRun {
         type: 'challenger',
         theme: '他プレイヤー',
         generatorStats: challenger.analysis,
+        tournamentGrowth: {},
+        growthHistory: [],
+        virtualMatchWins: 0,
       };
     });
     const cpuCount = this.state.rank === 'legend' ? 14 - challengers.length : 15;
@@ -121,6 +125,9 @@ export class TournamentRun {
         theme: deck.theme,
         qualityScore: deck.qualityScore,
         generatorStats: deck.analysis,
+        tournamentGrowth: {},
+        growthHistory: [],
+        virtualMatchWins: 0,
       };
     }
     if (this.state.rank === 'legend') {
@@ -130,6 +137,9 @@ export class TournamentRun {
         type: 'champion',
         cards: clone(champion.cards ?? champion.championDeckSnapshot ?? createBaselineDeck(this.masterData, 'champion-fallback')),
         qualityScore: Number.MAX_SAFE_INTEGER,
+        tournamentGrowth: {},
+        growthHistory: [],
+        virtualMatchWins: 0,
       };
     }
   }
@@ -166,8 +176,23 @@ export class TournamentRun {
     if (champion) return champion.id;
     const [a, b] = entrants;
     const scale = 18;
-    const chanceA = 1 / (1 + Math.exp((b.qualityScore - a.qualityScore) / scale));
+    const qualityA = a.qualityScore + cpuTournamentGrowthValue(a);
+    const qualityB = b.qualityScore + cpuTournamentGrowthValue(b);
+    const chanceA = 1 / (1 + Math.exp((qualityB - qualityA) / scale));
     return this.rng.next() < chanceA ? a.id : b.id;
+  }
+
+  _recordCpuWinGrowth(match, winnerId) {
+    const winner = this.state.entrants[winnerId];
+    if (!winner || winner.type === 'player') return;
+    Object.assign(winner, advanceCpuTournamentGrowth({
+      entrant: winner,
+      masterData: this.masterData,
+      masterIndex: this.masterIndex,
+      rank: this.state.rank,
+      roundIndex: match.roundIndex,
+      rng: new SeededRng(`${this.state.seed}:cpu-growth:${match.id}:${winnerId}`),
+    }));
   }
 
   _resolveCpuMatches(includePlayerMatch) {
@@ -176,6 +201,7 @@ export class TournamentRun {
       if (!includePlayerMatch && match.entrants.includes('player')) continue;
       match.winnerId = this._cpuWinner(match);
       match.status = 'resolved';
+      this._recordCpuWinGrowth(match, match.winnerId);
     }
   }
 

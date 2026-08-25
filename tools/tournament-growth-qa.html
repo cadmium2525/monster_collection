@@ -1,0 +1,35 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+    <title>CPU勝ち上がり育成 UI QA</title>
+    <link rel="stylesheet" href="../styles.css?v=1.6.1">
+  </head>
+  <body>
+    <div id="app" class="app-shell"></div>
+    <div id="modal-root"></div>
+    <script type="module">
+      import { createBaselineDeck } from '../src/data/default-decks.js';
+      import { createMasterIndex, loadMasterData } from '../src/data/master-loader.js';
+      import { TournamentRun } from '../src/tournament/TournamentRun.js';
+      import { TournamentScreen } from '../src/ui/tournament-screen.js';
+
+      const data = await loadMasterData();
+      createMasterIndex(data);
+      const tournament = new TournamentRun({
+        masterData: data,
+        rank: 'gold',
+        seed: 'tournament-growth-ui-qa',
+        playerDeck: {
+          deckId: 'qa-player',
+          deckName: 'QAの40枚',
+          ownerDisplayName: 'QAプレイヤー',
+          cards: createBaselineDeck(data, 'qa-player'),
+        },
+      });
+      for (let round = 0; round < 3; round += 1) tournament.recordPlayerResult({ won: true });
+      new TournamentScreen({ root: document.querySelector('#app'), tournament, onStartMatch: () => {}, onLeave: () => {} });
+    </script>
+  </body>
+</html>

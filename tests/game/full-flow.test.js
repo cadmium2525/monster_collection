@@ -54,6 +54,20 @@ test('Training growth carries to the next match but never enters the saved 40-ca
   assert.equal(saves.some((saved) => 'tournamentGrowth' in saved), false);
 });
 
+test('a later-round opponent enters the shared BattleEngine with its accumulated CPU growth', async () => {
+  const { session, decks, deck } = setup();
+  decks.grantTournamentWin(deck.deckId, 'bronze');
+  decks.grantTournamentWin(deck.deckId, 'silver');
+  await session.startTournament(deck.deckId, 'gold');
+  const firstOutcome = await session.completeBattle(fakeFinishedBattle('player'));
+  await session.completeReward(firstOutcome.reward.skip());
+  const opponent = session.tournament.getCurrentOpponent();
+  assert.equal(opponent.virtualMatchWins, 1);
+  assert.ok(Object.keys(opponent.tournamentGrowth).length > 0);
+  const battle = session.createCurrentBattle();
+  assert.deepEqual(battle.player(opponent.id).tournamentGrowth, opponent.tournamentGrowth);
+});
+
 test('home-equivalent deck selection -> four wins -> rewards -> next rank qualification', async () => {
   const { session, decks, deck, saves } = setup();
   await session.startTournament(deck.deckId, 'bronze');

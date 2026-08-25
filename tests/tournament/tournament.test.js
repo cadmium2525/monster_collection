@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { TournamentRun, ROUND_LABELS } from '../../src/tournament/index.js';
+import { TournamentRun, ROUND_LABELS, summarizeCpuTournamentGrowth } from '../../src/tournament/index.js';
 import { createBaselineDeck } from '../../src/data/default-decks.js';
 import { masterData } from '../helpers.js';
 
@@ -23,6 +23,41 @@ test('tournament is shown as 16 entrants and player advances through exactly fou
   assert.deepEqual(run.state.rounds.map((matches) => matches.length), [8, 4, 2, 1]);
 });
 
+test('CPU winners carry plausible seeded Training and shugyo growth into later rounds', () => {
+  const run = new TournamentRun({ masterData, rank: 'gold', playerDeck: playerDeck(), seed: 'cpu-growth-carry' });
+  assert.equal(summarizeCpuTournamentGrowth(run.getCurrentOpponent()).wins, 0, 'first-round opponent has no prior match');
+
+  for (let expectedWins = 1; expectedWins <= 3; expectedWins += 1) {
+    run.recordPlayerResult({ won: true });
+    const opponent = run.getCurrentOpponent();
+    const summary = summarizeCpuTournamentGrowth(opponent);
+    assert.equal(summary.wins, expectedWins);
+    assert.ok(summary.uses >= expectedWins, 'the advancing entrant used growth cards in its prior matches');
+    assert.ok(summary.statGain > 0);
+    assert.ok(Object.keys(opponent.tournamentGrowth).length > 0);
+    assert.ok(opponent.growthHistory.every((event) => ['training', 'shugyo'].includes(run.masterIndex.cards.get(event.cardMasterId)?.kind)));
+  }
+});
+
+test('CPU bracket growth is reproducible from the tournament seed', () => {
+  const collect = () => {
+    const run = new TournamentRun({ masterData, rank: 'legend', playerDeck: playerDeck(), seed: 'cpu-growth-repeat' });
+    const snapshots = [];
+    for (let round = 0; round < 3; round += 1) {
+      run.recordPlayerResult({ won: true });
+      const opponent = run.getCurrentOpponent();
+      snapshots.push({
+        id: opponent.id,
+        growth: opponent.tournamentGrowth,
+        history: opponent.growthHistory,
+        wins: opponent.virtualMatchWins,
+      });
+    }
+    return snapshots;
+  };
+  assert.deepEqual(collect(), collect());
+});
+
 test('loss or draw saves elimination state and does not grant qualification', () => {
   const run = new TournamentRun({ masterData, rank: 'gold', playerDeck: playerDeck(), seed: 'lose' });
   const result = run.recordPlayerResult({ won: false, draw: true });
@@ -43,6 +78,7 @@ test('Legend rounds 1-3 use Legend opponents and final is the captured champion 
   }
   assert.equal(run.getCurrentOpponent().type, 'champion');
   assert.equal(run.getCurrentOpponent().displayName, '現王者テスト');
+  assert.equal(summarizeCpuTournamentGrowth(run.getCurrentOpponent()).wins, 3);
   assert.equal(run.getCurrentAiLevel(), 'champion');
   const result = run.recordPlayerResult({ won: true });
   assert.equal(result.status, 'champion');

@@ -48,7 +48,10 @@ export class GameSession {
           id: 'player', displayName: this.user.displayName, deckId: this.tournament.state.playerDeck.deckId,
           cards: this.tournament.state.playerDeck.cards, tournamentGrowth: this.tournament.state.tournamentGrowth,
         },
-        { id: opponent.id, displayName: opponent.displayName, deckId: opponent.id, cards: opponent.cards },
+        {
+          id: opponent.id, displayName: opponent.displayName, deckId: opponent.id,
+          cards: opponent.cards, tournamentGrowth: opponent.tournamentGrowth,
+        },
       ],
     });
     return this.activeBattle;

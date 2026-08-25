@@ -1,7 +1,7 @@
 # HANDOFF
 
 基準: Sim8.7完全展開版 + 2026-08-24距離廃止差分  
-リリース: 1.6.0（デッキリーダー変更・カード発見履歴版）
+リリース: 1.6.1（CPU勝ち上がり育成版）
 
 ## 現在の状態
 
@@ -24,6 +24,8 @@
 特殊合体は `specialFusionId` で36セルの専用アトラスへ切り替わります。ブルードリルだけは切れを直した `blue-drill-v2.jpg` を使用します。Training・修行・ブリーダーも25セルの専用アトラスを使い、カード文字・数値・効果は従来どおり動的HTMLです。
 
 合体は平均×1.20式に「メイン現在SP＋素材現在SPの10%（切上げ）」の最低保証を加え、必ずSPが増えます。合法手の `preview` と盤面のドロップ表示に増加量を出します。Training/修行は大会4試合を通じて保持し、大会終了時に消去します。手札カードにも現在の持越し値を表示します。
+
+CPU同士のブラケット戦は完全なBattleEngine大量実行ではなく、`src/tournament/cpu-growth.js`のseed付き裏試合育成を使います。勝者の実デッキに含まれるTraining/修行だけを大会別TP予算内で使用し、正式な+5、修行+5～10、攻撃/防御別技抽選、実戦4技選別をentrant単位で蓄積します。2回戦の相手は1戦分、準決勝は2戦分、決勝は3戦分を持ち、`GameSession`が同じBattleEngineへ渡します。大会終了後や公開デッキへは保存しません。
 
 FirebaseはRealtime DatabaseではなくCloud Firestoreです。Legend資格を得た保存デッキは `legendDecks` に所有者管理の公開スナップショットを作り、他ユーザーのLegend通常枠へ最大14件を読み込みます。不足枠は生成CPU、決勝は現チャンピオン固定です。公開文書はSecurity Rulesで非公開元デッキと照合し、クライアントでも合法40枚を再検証します。
 
@@ -79,6 +81,7 @@ Pages workflowは `.github/workflows/pages.yml`。Firebase設定は `FIREBASE_SE
 | AI評価/探索 | `src/ai/public-evaluator.js`, `src/ai/search.js`, `src/ai/levels.js` |
 | CPU40枚 | `src/tournament/deck-generator.js`, `deck-analyzer.js` |
 | 大会進行 | `src/tournament/TournamentRun.js`, `src/game/GameSession.js` |
+| CPU勝ち上がり育成 | `src/tournament/cpu-growth.js`, `src/ui/tournament-screen.js` |
 | バトル/大会UI | `src/ui/battle-screen.js`, `src/ui/card-renderer.js`, `styles.css` |
 | 奪取 | `src/reward/CardStealSession.js`, `src/ui/reward-screen.js` |
 | デッキリーダー/カード一覧 | `src/decks/DeckCollection.js`, `src/ui/deck-screens.js`, `src/ui/catalog-screen.js` |
