@@ -21,6 +21,7 @@ test('battle cards use full art with four corner badges and no effect text', () 
   assert.match(renderer, /cornerBadge\('def'/);
   assert.doesNotMatch(renderer, /className: 'card-stats'/);
   assert.doesNotMatch(renderer, /className: 'card-effect'/);
+  assert.doesNotMatch(renderer, /card-growth-badge/);
 });
 
 test('shugyo rank weighting stays deliberately small', () => {
@@ -35,8 +36,6 @@ test('card art placement selects generated support and special-fusion atlases de
   const special = cardArtPlacement(monster, { specialFusionId: 'fusion-036', specialForm: 'クレバス' });
   assert.equal(special.className, 'monster-art special-fusion-art');
   assert.match(special.style, /--art-x:100%;--art-y:100%/);
-  assert.match(special.style, /--game-fit-y:/);
-  assert.match(special.style, /--game-cover-x:/);
   const blueDrill = cardArtPlacement(monster, { specialFusionId: 'fusion-014', specialForm: 'ブルードリル' });
   assert.equal(blueDrill.className, 'monster-art special-fusion-art blue-drill-art');
   assert.equal(blueDrill.style, null);
@@ -48,6 +47,14 @@ test('card art placement selects generated support and special-fusion atlases de
 test('opponent cards stay upright so their corner values remain readable', () => {
   const css = readFileSync(new URL('../../styles.css', import.meta.url), 'utf8');
   assert.doesNotMatch(css, /\.board-row\.opponent\s+\.game-card\s*\{[^}]*rotate\(180deg\)/s);
+});
+
+test('card artwork keeps a head-safe portrait and correct detail ratios', () => {
+  const css = readFileSync(new URL('../../styles.css', import.meta.url), 'utf8');
+  assert.match(css, /\.game-card \.card-art\.monster-art::after\s*\{[^}]*top: 18%[^}]*aspect-ratio: \.75/s);
+  assert.match(css, /\.detail-summary > \.card-art\s*\{[^}]*aspect-ratio: \.75/s);
+  assert.match(css, /\.detail-summary > \.card-art\.support-card-art\s*\{\s*aspect-ratio: 1/s);
+  assert.match(css, /\.card-cost\s*\{[^}]*width: clamp\(22px,28%,34px\)/s);
 });
 
 test('hand monster stats include tournament growth carried from earlier matches', () => {

@@ -38,27 +38,12 @@ function atlasPosition(index, columns, rows) {
   return `--art-x:${x}%;--art-y:${y}%`;
 }
 
-function squareAtlasCardPosition(index, columns) {
-  if (!Number.isInteger(index) || index < 0 || index >= columns * columns) return null;
-  const column = index % columns;
-  const row = Math.floor(index / columns);
-  const cardRatio = 1 / 0.72;
-  const verticalMargin = (cardRatio - 1) / 2;
-  const fitY = ((row - verticalMargin) / (columns - cardRatio)) * 100;
-  const coverX = ((((column + 0.5) * cardRatio) - 0.5) / ((columns * cardRatio) - 1)) * 100;
-  return [
-    atlasPosition(index, columns, columns),
-    `--game-fit-y:${fitY}%`,
-    `--game-cover-x:${coverX}%`,
-  ].join(';');
-}
-
 export function cardArtPlacement(definition, unit = null) {
   if (definition.kind !== 'monster') {
     const supportIndex = SUPPORT_CARD_IDS.indexOf(definition.id);
     return {
       className: supportIndex >= 0 ? 'support-card-art' : '',
-      style: squareAtlasCardPosition(supportIndex, 5),
+      style: atlasPosition(supportIndex, 5, 5),
     };
   }
 
@@ -69,7 +54,7 @@ export function cardArtPlacement(definition, unit = null) {
   if (fusionIndex >= 0 && fusionIndex < SPECIAL_FUSION_NAMES.length) {
     return {
       className: `monster-art special-fusion-art${fusionIndex === 13 ? ' blue-drill-art' : ''}`,
-      style: fusionIndex === 13 ? null : squareAtlasCardPosition(fusionIndex, 6),
+      style: fusionIndex === 13 ? null : atlasPosition(fusionIndex, 6, 6),
     };
   }
 
@@ -139,9 +124,6 @@ export function renderCard({
 }) {
   const meta = cardMeta(definition, unit, growth);
   const art = cardArtPlacement(definition, unit);
-  const growthBonus = definition.kind === 'monster' && !unit
-    ? ['life', 'atk', 'def'].reduce((sum, key) => sum + Math.max(0, Number(growth?.[key]) || 0), 0)
-    : 0;
   const statuses = unit ? Object.values(unit.statuses ?? {}).filter((value) => value === true || (typeof value === 'number' && value > 0)) : [];
   const name = unit?.specialForm ?? definition.name;
   const classes = [
@@ -177,9 +159,7 @@ export function renderCard({
       className: `card-art ${art.className}`.trim(),
       attrs: art.style ? { style: art.style } : null,
     }, [
-      definition.kind === 'monster'
-        ? (growthBonus ? el('span', { className: 'card-growth-badge', text: `大会 +${growthBonus}` }) : null)
-        : el('span', { className: 'card-kind', text: meta.kind }),
+      definition.kind === 'monster' ? null : el('span', { className: 'card-kind', text: meta.kind }),
     ]),
     meta.stats ? cornerBadge('life', meta.stats.life, `LIFE ${meta.stats.life}`, '♥') : null,
     cornerBadge('cost', meta.cost, `${meta.cost}TP`),
