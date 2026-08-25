@@ -2,6 +2,7 @@ import { SeededRng } from '../core/rng.js';
 import { effectiveAtk, effectiveDef } from '../battle/state.js';
 import { el, replace } from './dom.js';
 import { renderCard, openCardDetails } from './card-renderer.js';
+import { createFusionAnimationModel, playFusionAnimation } from './fusion-animation.js';
 import { openModal } from './modal.js';
 
 function delay(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
@@ -759,18 +760,26 @@ export class BattleScreen {
 
   async executeEngineAction(action) {
     const before = this.captureStats();
+    const beforeState = action.type.startsWith('fusion-') ? this.engine.getState() : null;
     const hadInteractionSelection = Boolean(this.selection || this.pendingMove);
     this.selection = null;
     this.pendingMove = null;
     if (hadInteractionSelection) this.render();
     await this.animateActionStart(action);
     this.engine.applyAction(action);
+    const fusionModel = beforeState ? createFusionAnimationModel({
+      action,
+      beforePlayer: beforeState.players[action.playerId ?? beforeState.currentPlayerId],
+      afterPlayer: this.engine.player(action.playerId ?? beforeState.currentPlayerId),
+      masterIndex: this.engine.masterIndex,
+    }) : null;
     let numbersCommitted = false;
     const commitNumbers = () => {
       if (numbersCommitted) return;
       numbersCommitted = true;
       this.render();
     };
+    if (fusionModel) await playFusionAnimation({ model: fusionModel, speed: this.speed, onReveal: commitNumbers });
     await this.showStatDirections(before, commitNumbers);
     commitNumbers();
     await this.showLatestEvent();
@@ -823,6 +832,7 @@ export class BattleScreen {
   async showLatestEvent() {
     const event = this.engine.state.log.at(-1);
     if (!event || this.speed === 'fast' && ['draw', 'turn-start', 'turn-end'].includes(event.type)) return;
+    if (event.type.startsWith('fusion-')) return;
     const banner = el('div', { className: 'event-banner', text: event.message });
     document.body.append(banner);
     const major = event.type.startsWith('fusion') || event.type === 'battle-end' || event.type.startsWith('shugyo-move');

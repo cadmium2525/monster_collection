@@ -82,6 +82,7 @@ class MonsterConstructionApp {
       repositoryStatus: this.repository.getStatus(),
       decks: this.decks.list(),
       seed: this.seed,
+      debugMode: globalThis.__MC_DEBUG_MODE__,
       onTournament: () => this.showTournamentSetup(),
       onDecks: () => this.showDeckList(),
       onRename: () => this.renameProfile(),

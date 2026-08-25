@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+    <title>Fusion Animation QA</title>
+    <link rel="stylesheet" href="../styles.css?v=1.7.0">
+    <style>
+      .fusion-qa { min-height: 100dvh; display: grid; place-content: center; justify-items: center; gap: 18px; padding: 20px; text-align: center; }
+      .fusion-qa h1 { margin: 0; color: var(--gold); }
+      .fusion-qa p { max-width: 540px; margin: 0; color: var(--muted); }
+      .fusion-qa-actions { display: flex; flex-wrap: wrap; justify-content: center; gap: 10px; }
+    </style>
+  </head>
+  <body>
+    <main class="fusion-qa">
+      <p class="eyebrow">DEVELOPMENT VISUAL CHECK</p>
+      <h1>合体演出 QA</h1>
+      <p>通常合体と特殊合体のカード収束、完成カード、文字サイズ、safe-areaを確認します。</p>
+      <div class="fusion-qa-actions">
+        <button id="normal" class="text-button">通常合体</button>
+        <button id="special" class="primary-button">特殊合体</button>
+        <button id="special-fast" class="utility-button">特殊合体・高速</button>
+      </div>
+    </main>
+    <script type="module" src="./fusion-animation-qa.js?v=1.7.0"></script>
+  </body>
+</html>

@@ -52,5 +52,6 @@ test('every Training and shugyo card has visible explanatory copy', () => {
   for (const definition of masterData.growthCards) {
     assert.equal(typeof definition.effect, 'string');
     assert.ok(definition.effect.length >= 10, `${definition.name} needs explanatory copy`);
+    assert.doesNotMatch(definition.effect, /大会中継続/, `${definition.name} should keep tournament rules out of card copy`);
   }
 });

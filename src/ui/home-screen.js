@@ -26,7 +26,7 @@ export const TUTORIAL_STEPS = Object.freeze([
   {
     title: 'Trainingと修行',
     copy: 'Training・修行カードは、強くしたい場のモンスターへスワイプします。修行では技も覚えます。',
-    tokens: [['鍛', '能力+5'], ['修', '能力と技'], ['↗', '大会中継続']],
+    tokens: [['鍛', '能力+5'], ['修', '能力と技'], ['↗', '大会内で持越し']],
     tip: '成長は同じ大会の次試合へ引き継ぎ、大会終了時に元へ戻ります。手札にも強化後の数値が表示されます。',
   },
   {
@@ -86,6 +86,7 @@ function howToPlayContent(onTutorial) {
       el('li', { text: '手札をタップして選択し、モンスターは空き枠へ、育成カードは対象モンスターへスワイプします。' }),
       el('li', { text: '盤上モンスターをタップし、詳細内の実戦技を選び、光った攻撃対象をタップします。' }),
       el('li', { text: '修行は候補一覧を確認してから実行し、覚える技はランダムです。通常/特殊合体は先攻6T・後攻5Tからです。' }),
+      el('li', { text: 'Training・修行の成長は同じ大会の次試合へ引き継ぎ、大会終了時に元へ戻ります。' }),
       el('li', { text: '相手盤面が空ならプレイヤーへ直接攻撃。LIFEを0にすれば勝利です。' }),
       el('li', { text: '敗退しても確定済みの交換カードは保存。優勝したデッキだけ次大会へ進めます。' }),
     ]),
@@ -103,8 +104,13 @@ function openHowToPlay(onTournament) {
   help = openModal({ title: '遊び方', content });
 }
 
+export function homeFooterMode({ debugMode = false, syncError = null } = {}) {
+  if (syncError) return 'warning';
+  return debugMode ? 'debug' : 'hidden';
+}
+
 export class HomeScreen {
-  constructor({ root, masterIndex, user, champion, repositoryStatus, decks, seed, onTournament, onDecks, onRename, installAvailable = false, onInstall = null }) {
+  constructor({ root, masterIndex, user, champion, repositoryStatus, decks, seed, debugMode = false, onTournament, onDecks, onRename, installAvailable = false, onInstall = null }) {
     this.root = root;
     this.masterIndex = masterIndex;
     this.user = user;
@@ -112,6 +118,7 @@ export class HomeScreen {
     this.repositoryStatus = repositoryStatus;
     this.decks = decks;
     this.seed = seed;
+    this.debugMode = debugMode;
     this.onTournament = onTournament;
     this.onDecks = onDecks;
     this.onRename = onRename;
@@ -145,7 +152,9 @@ export class HomeScreen {
       const order = ['bronze', 'silver', 'gold', 'legend'];
       return order.indexOf(deck.qualification) > order.indexOf(best) ? deck.qualification : best;
     }, 'bronze');
-    replace(this.root, el('main', { className: 'home-screen' }, [
+    const footerMode = homeFooterMode({ debugMode: this.debugMode, syncError: this.repositoryStatus.error });
+    const showFooter = footerMode !== 'hidden';
+    replace(this.root, el('main', { className: `home-screen${showFooter ? '' : ' no-technical-footer'}` }, [
       el('header', { className: 'home-header' }, [
         el('div', { className: 'game-title' }, [
           el('div', { className: 'brand-mark', text: 'MC' }),
@@ -178,12 +187,14 @@ export class HomeScreen {
           ]),
         ]),
       ]),
-      el('footer', { className: 'home-footer' }, [
-        el('span', { text: `保存: ${this.repositoryStatus.mode === 'firebase' ? 'Firebase + local backup' : 'このブラウザ'}` }),
-        this.repositoryStatus.error ? el('span', { className: 'invalid-copy', text: `同期注意: ${this.repositoryStatus.error}` }) : null,
-        el('span', { text: `Debug seed: ${this.seed}` }),
-        el('span', { text: 'Sim8.7 / PWA' }),
-      ]),
+      showFooter ? el('footer', { className: `home-footer${this.repositoryStatus.error ? ' sync-warning' : ''}` }, [
+        this.repositoryStatus.error
+          ? el('span', { className: 'invalid-copy', text: 'クラウドと同期できないため、この端末に安全に保存しています。' })
+          : null,
+        this.debugMode ? el('span', { text: `保存: ${this.repositoryStatus.mode === 'firebase' ? 'Firebase + local backup' : 'このブラウザ'}` }) : null,
+        this.debugMode ? el('span', { text: `Debug seed: ${this.seed}` }) : null,
+        this.debugMode ? el('span', { text: 'Sim8.7 / PWA' }) : null,
+      ]) : null,
     ]));
   }
 }

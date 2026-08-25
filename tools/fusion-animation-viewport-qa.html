@@ -1,0 +1,28 @@
+<!doctype html>
+<html lang="ja">
+  <head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width,initial-scale=1">
+    <title>Fusion Viewport QA</title>
+    <style>
+      * { box-sizing: border-box; }
+      body { min-height: 100vh; margin: 0; display: grid; place-content: center; gap: 8px; color: #eee; background: #171717; font-family: sans-serif; }
+      p { margin: 0; font-size: 12px; text-align: center; }
+      iframe { border: 2px solid #d6a94f; box-shadow: 0 12px 35px #000; }
+    </style>
+  </head>
+  <body>
+    <p id="label"></p>
+    <iframe id="stage" title="合体演出スマホ横画面確認"></iframe>
+    <script type="module">
+      const params = new URLSearchParams(location.search);
+      const width = Math.max(568, Number(params.get('w')) || 844);
+      const height = Math.max(320, Number(params.get('h')) || 390);
+      const stage = document.querySelector('#stage');
+      stage.width = width;
+      stage.height = height;
+      stage.src = `./fusion-animation-qa.html?autoplay=${encodeURIComponent(params.get('animation') || 'special')}`;
+      document.querySelector('#label').textContent = `${width} × ${height}`;
+    </script>
+  </body>
+</html>

@@ -2505,7 +2505,7 @@
       "tp": 2,
       "stat": "life",
       "amount": 5,
-      "effect": "対象モンスター1体のLIFE+5（大会中継続）"
+      "effect": "対象モンスター1体のLIFE+5"
     },
     {
       "id": "training-atk",
@@ -2514,7 +2514,7 @@
       "tp": 2,
       "stat": "atk",
       "amount": 5,
-      "effect": "対象モンスター1体のATK+5（大会中継続）"
+      "effect": "対象モンスター1体のATK+5"
     },
     {
       "id": "training-def",
@@ -2523,7 +2523,7 @@
       "tp": 2,
       "stat": "def",
       "amount": 5,
-      "effect": "対象モンスター1体のDEF+5（大会中継続）"
+      "effect": "対象モンスター1体のDEF+5"
     },
     {
       "id": "shugyo-attack",
@@ -2535,7 +2535,7 @@
         5,
         10
       ],
-      "effect": "対象のLIFEとATKが各+5～10。攻撃修行の技をランダムに1つ習得（大会中継続）"
+      "effect": "対象のLIFEとATKが各+5～10。攻撃修行の技をランダムに1つ習得"
     },
     {
       "id": "shugyo-defense",
@@ -2547,7 +2547,7 @@
         5,
         10
       ],
-      "effect": "対象のLIFEとDEFが各+5～10。防御修行の技をランダムに1つ習得（大会中継続）"
+      "effect": "対象のLIFEとDEFが各+5～10。防御修行の技をランダムに1つ習得"
     }
   ],
   "fusions": [
