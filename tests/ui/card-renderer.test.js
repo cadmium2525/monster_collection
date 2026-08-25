@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { cardArtPlacement, cardDisplayStats, circledTp, resolvedTrait } from '../../src/ui/card-renderer.js';
+import { readFileSync } from 'node:fs';
+import { cardArtPlacement, cardDisplayStats, resolvedTrait } from '../../src/ui/card-renderer.js';
 import { shugyoMoveWeight } from '../../src/battle/shugyo.js';
 import { masterData, monsterByName } from '../helpers.js';
 
@@ -12,11 +13,14 @@ test('special-fusion cards display the replacement trait instead of the base tra
   assert.equal(trait.effect, '各ターン最初の被ダメージに上限');
 });
 
-test('card TP is rendered as a circled number without a TP suffix', () => {
-  assert.equal(circledTp(0), '⓪');
-  assert.equal(circledTp(2), '②');
-  assert.equal(circledTp(5), '⑤');
-  assert.equal(circledTp(10), '⑩');
+test('battle cards use full art with four corner badges and no effect text', () => {
+  const renderer = readFileSync(new URL('../../src/ui/card-renderer.js', import.meta.url), 'utf8');
+  assert.match(renderer, /cornerBadge\('life'/);
+  assert.match(renderer, /cornerBadge\('cost'/);
+  assert.match(renderer, /cornerBadge\('atk'/);
+  assert.match(renderer, /cornerBadge\('def'/);
+  assert.doesNotMatch(renderer, /className: 'card-stats'/);
+  assert.doesNotMatch(renderer, /className: 'card-effect'/);
 });
 
 test('shugyo rank weighting stays deliberately small', () => {
@@ -31,12 +35,19 @@ test('card art placement selects generated support and special-fusion atlases de
   const special = cardArtPlacement(monster, { specialFusionId: 'fusion-036', specialForm: 'クレバス' });
   assert.equal(special.className, 'monster-art special-fusion-art');
   assert.match(special.style, /--art-x:100%;--art-y:100%/);
+  assert.match(special.style, /--game-fit-y:/);
+  assert.match(special.style, /--game-cover-x:/);
   const blueDrill = cardArtPlacement(monster, { specialFusionId: 'fusion-014', specialForm: 'ブルードリル' });
   assert.equal(blueDrill.className, 'monster-art special-fusion-art blue-drill-art');
   assert.equal(blueDrill.style, null);
   const support = cardArtPlacement({ id: 'breeder-020', kind: 'breeder' });
   assert.equal(support.className, 'support-card-art');
   assert.match(support.style, /--art-x:100%;--art-y:100%/);
+});
+
+test('opponent cards stay upright so their corner values remain readable', () => {
+  const css = readFileSync(new URL('../../styles.css', import.meta.url), 'utf8');
+  assert.doesNotMatch(css, /\.board-row\.opponent\s+\.game-card\s*\{[^}]*rotate\(180deg\)/s);
 });
 
 test('hand monster stats include tournament growth carried from earlier matches', () => {
@@ -48,7 +59,7 @@ test('hand monster stats include tournament growth carried from earlier matches'
   });
 });
 
-test('every Training and shugyo card has visible explanatory copy', () => {
+test('every Training and shugyo card has explanatory copy for its detail modal', () => {
   for (const definition of masterData.growthCards) {
     assert.equal(typeof definition.effect, 'string');
     assert.ok(definition.effect.length >= 10, `${definition.name} needs explanatory copy`);

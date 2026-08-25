@@ -33,7 +33,6 @@ function fusionTile(fusion, masterIndex) {
     el('div', { className: 'card-top' }, [el('b', { text: fusion.name }), el('span', { text: '合' })]),
     el('div', { className: `card-art ${art.className}`, attrs: art.style ? { style: art.style } : null }),
     el('strong', { text: `${fusion.main} ＋ ${fusion.material}` }),
-    el('small', { text: fusion.trait }),
   ]);
 }
 

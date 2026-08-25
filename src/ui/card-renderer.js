@@ -17,8 +17,6 @@ const ROLE_MARK = Object.freeze({
   'タンク': '⬢',
 });
 
-const CIRCLED_NUMBERS = Object.freeze(['⓪', '①', '②', '③', '④', '⑤', '⑥', '⑦', '⑧', '⑨', '⑩']);
-
 const SPECIAL_FUSION_NAMES = Object.freeze([
   'フューチャー', 'ナハトファルター', 'ガルーダ', 'グレイシア', 'ハムライガー', 'エコノキックス',
   'ヴァージアハピ', 'ダークハム', 'アンキロックス', 'ガリニクス', 'オチムシャ', 'オキクサン',
@@ -33,11 +31,6 @@ const SUPPORT_CARD_IDS = Object.freeze([
   ...Array.from({ length: 20 }, (_, index) => `breeder-${String(index + 1).padStart(3, '0')}`),
 ]);
 
-export function circledTp(value) {
-  const number = Math.max(0, Math.trunc(Number(value) || 0));
-  return CIRCLED_NUMBERS[number] ?? `(${number})`;
-}
-
 function atlasPosition(index, columns, rows) {
   if (!Number.isInteger(index) || index < 0 || index >= columns * rows) return null;
   const x = columns === 1 ? 0 : (index % columns) * (100 / (columns - 1));
@@ -45,12 +38,27 @@ function atlasPosition(index, columns, rows) {
   return `--art-x:${x}%;--art-y:${y}%`;
 }
 
+function squareAtlasCardPosition(index, columns) {
+  if (!Number.isInteger(index) || index < 0 || index >= columns * columns) return null;
+  const column = index % columns;
+  const row = Math.floor(index / columns);
+  const cardRatio = 1 / 0.72;
+  const verticalMargin = (cardRatio - 1) / 2;
+  const fitY = ((row - verticalMargin) / (columns - cardRatio)) * 100;
+  const coverX = ((((column + 0.5) * cardRatio) - 0.5) / ((columns * cardRatio) - 1)) * 100;
+  return [
+    atlasPosition(index, columns, columns),
+    `--game-fit-y:${fitY}%`,
+    `--game-cover-x:${coverX}%`,
+  ].join(';');
+}
+
 export function cardArtPlacement(definition, unit = null) {
   if (definition.kind !== 'monster') {
     const supportIndex = SUPPORT_CARD_IDS.indexOf(definition.id);
     return {
       className: supportIndex >= 0 ? 'support-card-art' : '',
-      style: atlasPosition(supportIndex, 5, 5),
+      style: squareAtlasCardPosition(supportIndex, 5),
     };
   }
 
@@ -61,7 +69,7 @@ export function cardArtPlacement(definition, unit = null) {
   if (fusionIndex >= 0 && fusionIndex < SPECIAL_FUSION_NAMES.length) {
     return {
       className: `monster-art special-fusion-art${fusionIndex === 13 ? ' blue-drill-art' : ''}`,
-      style: fusionIndex === 13 ? null : atlasPosition(fusionIndex, 6, 6),
+      style: fusionIndex === 13 ? null : squareAtlasCardPosition(fusionIndex, 6),
     };
   }
 
@@ -92,11 +100,9 @@ export function cardDisplayStats(definition, unit = null, growth = null) {
 
 function cardMeta(definition, unit, growth) {
   if (definition.kind === 'monster') {
-    const trait = resolvedTrait(definition, unit);
     return {
       cost: definition.summonTp,
       stats: cardDisplayStats(definition, unit, growth),
-      effect: trait.effect,
       faction: unit?.faction ?? definition.faction,
     };
   }
@@ -104,9 +110,18 @@ function cardMeta(definition, unit, growth) {
     cost: definition.tp,
     kind: definition.kind === 'breeder' ? 'ブリーダー' : definition.kind === 'shugyo' ? '修行' : 'Training',
     stats: null,
-    effect: definition.effect,
     faction: null,
   };
+}
+
+function cornerBadge(kind, value, label, icon = '') {
+  return el('span', {
+    className: `card-corner card-${kind}`,
+    attrs: { 'aria-label': label },
+  }, [
+    el('i', { text: icon, attrs: { 'aria-hidden': 'true' } }),
+    el('b', { text: String(value) }),
+  ]);
 }
 
 export function renderCard({
@@ -157,7 +172,6 @@ export function renderCard({
         }) : null,
         el('b', { text: name }),
       ]),
-      el('span', { className: 'card-cost', text: circledTp(meta.cost), attrs: { 'aria-label': `${meta.cost}TP` } }),
     ]),
     el('div', {
       className: `card-art ${art.className}`.trim(),
@@ -167,12 +181,10 @@ export function renderCard({
         ? (growthBonus ? el('span', { className: 'card-growth-badge', text: `大会 +${growthBonus}` }) : null)
         : el('span', { className: 'card-kind', text: meta.kind }),
     ]),
-    meta.stats ? el('div', { className: 'card-stats' }, [
-      el('span', { text: `L ${meta.stats.life}` }),
-      el('span', { text: `A ${meta.stats.atk}` }),
-      el('span', { text: `D ${meta.stats.def}` }),
-    ]) : null,
-    definition.kind === 'monster' && !showMonsterEffect ? null : el('div', { className: 'card-effect', text: meta.effect }),
+    meta.stats ? cornerBadge('life', meta.stats.life, `LIFE ${meta.stats.life}`, '♥') : null,
+    cornerBadge('cost', meta.cost, `${meta.cost}TP`),
+    meta.stats ? cornerBadge('atk', meta.stats.atk, `ATK ${meta.stats.atk}`, '⚔') : null,
+    meta.stats ? cornerBadge('def', meta.stats.def, `DEF ${meta.stats.def}`, '') : null,
     statuses.length ? el('span', { className: 'status-dots', attrs: { 'aria-label': `状態変化${statuses.length}件` } }, statuses.slice(0, 4).map(() => el('i'))) : null,
   ]);
   return node;
