@@ -14,21 +14,35 @@ function cardAction(action, cardInstanceId) {
 function unique(values) { return [...new Set(values)]; }
 
 export class BattleScreen {
-  constructor({ root, engine, humanPlayerId, chooseCpuAction, onComplete, speed = 'standard' }) {
+  constructor({ root, engine, humanPlayerId, chooseCpuAction, onComplete, onCheckpoint = null, cpuRngState = null, speed = 'standard' }) {
     this.root = root;
     this.engine = engine;
     this.humanPlayerId = humanPlayerId;
     this.chooseCpuAction = chooseCpuAction;
     this.onComplete = onComplete;
+    this.onCheckpoint = onCheckpoint;
     this.speed = speed;
     this.selection = null;
     this.pendingMove = null;
     this.busy = false;
     this.queuedCardSelectionId = null;
     this.suppressCardClickUntil = 0;
-    this.cpuRng = new SeededRng(`${engine.state.seed}:ui-cpu`);
+    this.cpuRng = cpuRngState?.seed
+      ? new SeededRng(cpuRngState.seed, cpuRngState.state)
+      : new SeededRng(`${engine.state.seed}:ui-cpu`);
     this.render();
-    this.runCpuIfNeeded();
+    if (engine.state.pendingMoveChoice?.playerId === humanPlayerId) {
+      setTimeout(() => { void this.resumePendingHumanChoice(); }, 0);
+    } else this.runCpuIfNeeded();
+  }
+
+  checkpointRuntime() { return { cpuRng: this.cpuRng.toJSON(), speed: this.speed }; }
+
+  emitCheckpoint() {
+    try {
+      const pending = this.onCheckpoint?.(this.checkpointRuntime());
+      pending?.catch?.((error) => console.error('Battle checkpoint failed', error));
+    } catch (error) { console.error('Battle checkpoint failed', error); }
   }
 
   observation() { return this.engine.getObservation(this.humanPlayerId); }
@@ -83,7 +97,7 @@ export class BattleScreen {
           el('button', {
             className: 'utility-button speed-button',
             text: this.speed === 'fast' ? '▶▶ 高速' : '▶ 標準',
-            onclick: () => { this.speed = this.speed === 'fast' ? 'standard' : 'fast'; this.render(); },
+            onclick: () => { this.speed = this.speed === 'fast' ? 'standard' : 'fast'; this.emitCheckpoint(); this.render(); },
           }),
           globalThis.__MC_DEBUG_MODE__ ? el('button', {
             className: 'utility-button seed-button',
@@ -99,11 +113,6 @@ export class BattleScreen {
         this.renderTurnControls(humanTurn),
       ]),
     ]);
-    screen.append(el('div', { className: 'portrait-warning' }, [
-      el('div', { className: 'brand-mark', text: '↻' }),
-      el('h2', { text: '端末を横向きにしてください' }),
-      el('p', { text: 'モンスターコンストラクションは横画面向けです。' }),
-    ]));
     replace(this.root, screen);
     this._renderLegalActions = null;
     this.pinLatestLog();
@@ -272,14 +281,14 @@ export class BattleScreen {
       definition,
       growth: player.tournamentGrowth[card.instanceId],
       selected,
-      disabled: humanTurn && !hasAction,
+      disabled: humanTurn && !hasAction && !this.busy,
       dragReady: selected && humanTurn && hasAction,
       showMonsterEffect: definition.kind !== 'monster',
       label: `手札の${definition.name}${selected ? ' 選択中。もう一度タップで詳細、盤面へスワイプで使用' : ' 選択'}`,
       onPointerDown: selected && humanTurn && hasAction ? (event) => this.beginHandDrag(event, card, definition) : null,
       onClick: (event) => {
         if (performance.now() < this.suppressCardClickUntil) return;
-        if (this.busy) {
+        if (this.busy || !this.isHumanTurn()) {
           this.queueHandCardSelection(card.instanceId, event.currentTarget);
           return;
         }
@@ -293,11 +302,15 @@ export class BattleScreen {
       },
     });
     node.dataset.cardInstanceId = card.instanceId;
+    if (this.queuedCardSelectionId === card.instanceId) node.classList.add('tap-queued');
     return node;
   }
 
   queueHandCardSelection(cardInstanceId, sourceNode) {
-    if (!this.isHumanTurn()) return false;
+    if (this.engine.state.status !== 'active') return false;
+    const stillInHand = this.engine.player(this.humanPlayerId).hand
+      .some((card) => card.instanceId === cardInstanceId);
+    if (!stillInHand) return false;
     this.queuedCardSelectionId = cardInstanceId;
     this.root.querySelectorAll('.game-card.tap-queued').forEach((node) => node.classList.remove('tap-queued'));
     sourceNode?.classList.add('tap-queued');
@@ -306,8 +319,8 @@ export class BattleScreen {
 
   applyQueuedCardSelection() {
     const cardInstanceId = this.queuedCardSelectionId;
-    this.queuedCardSelectionId = null;
     if (!cardInstanceId || !this.isHumanTurn()) return false;
+    this.queuedCardSelectionId = null;
     const stillInHand = this.engine.player(this.humanPlayerId).hand
       .some((card) => card.instanceId === cardInstanceId);
     if (!stillInHand) return false;
@@ -767,6 +780,7 @@ export class BattleScreen {
     if (hadInteractionSelection) this.render();
     await this.animateActionStart(action);
     this.engine.applyAction(action);
+    this.emitCheckpoint();
     const fusionModel = beforeState ? createFusionAnimationModel({
       action,
       beforePlayer: beforeState.players[action.playerId ?? beforeState.currentPlayerId],
@@ -790,6 +804,24 @@ export class BattleScreen {
     this.busy = true;
     try {
       await this.executeEngineAction(action);
+      while (this.engine.state.pendingMoveChoice?.playerId === this.humanPlayerId) {
+        const choice = await this.promptShugyoMoveChoice();
+        if (!choice) throw new Error('修行後の実戦技を確定できませんでした');
+        await this.executeEngineAction(choice);
+      }
+      await this.runCpuIfNeeded();
+    } catch (error) {
+      openModal({ title: '行動できません', content: el('p', { text: error.message }) });
+    } finally {
+      this.busy = false;
+      this.applyQueuedCardSelection();
+    }
+  }
+
+  async resumePendingHumanChoice() {
+    if (this.busy || this.engine.state.pendingMoveChoice?.playerId !== this.humanPlayerId) return;
+    this.busy = true;
+    try {
       while (this.engine.state.pendingMoveChoice?.playerId === this.humanPlayerId) {
         const choice = await this.promptShugyoMoveChoice();
         if (!choice) throw new Error('修行後の実戦技を確定できませんでした');

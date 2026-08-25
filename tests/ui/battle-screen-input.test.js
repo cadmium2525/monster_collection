@@ -1,5 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import fs from 'node:fs';
 import { BattleScreen } from '../../src/ui/battle-screen.js';
 
 function classList(initial = []) {
@@ -32,10 +33,12 @@ test('a hand-card tap during the final CPU animation is kept and selected once i
   const screen = Object.create(BattleScreen.prototype);
   screen.humanPlayerId = 'human';
   screen.engine = {
+    state: { status: 'active' },
     player: () => ({ hand: [{ instanceId: 'card-2' }] }),
   };
   screen.root = { querySelectorAll: () => [previousQueuedNode] };
-  screen.isHumanTurn = () => true;
+  let humanTurn = false;
+  screen.isHumanTurn = () => humanTurn;
   screen.pendingMove = { unitId: 'old-unit', moveId: 'old-move' };
   screen.selection = null;
   screen.queuedCardSelectionId = null;
@@ -45,9 +48,20 @@ test('a hand-card tap during the final CPU animation is kept and selected once i
   assert.equal(screen.queueHandCardSelection('card-2', queuedNode), true);
   assert.equal(previousQueuedNode.classList.contains('tap-queued'), false);
   assert.equal(queuedNode.classList.contains('tap-queued'), true);
+  assert.equal(screen.applyQueuedCardSelection(), false);
+  assert.equal(screen.queuedCardSelectionId, 'card-2');
+  humanTurn = true;
   assert.equal(screen.applyQueuedCardSelection(), true);
   assert.deepEqual(screen.selection, { kind: 'hand', id: 'card-2' });
   assert.equal(screen.pendingMove, null);
   assert.equal(screen.queuedCardSelectionId, null);
   assert.equal(renderCount, 1);
+});
+
+test('portrait guidance has one global owner instead of competing battle overlays', () => {
+  const battleSource = fs.readFileSync(new URL('../../src/ui/battle-screen.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(battleSource, /screen\.append\(el\('div', \{ className: 'portrait-warning'/);
+
+  const page = fs.readFileSync(new URL('../../index.html', import.meta.url), 'utf8');
+  assert.equal((page.match(/class="portrait-warning"/g) ?? []).length, 1);
 });

@@ -23,6 +23,34 @@ test('tournament is shown as 16 entrants and player advances through exactly fou
   assert.deepEqual(run.state.rounds.map((matches) => matches.length), [8, 4, 2, 1]);
 });
 
+test('other bracket results stay visually pending until the player match finishes', () => {
+  const run = new TournamentRun({ masterData, rank: 'bronze', playerDeck: playerDeck(), seed: 'delayed-bracket' });
+  const initialRound = run.getBracket().rounds[0];
+  const otherMatches = initialRound.filter((match) => !match.entrants.includes('player'));
+  assert.equal(otherMatches.length, 7);
+  assert.ok(otherMatches.every((match) => match.status === 'pending' && match.winnerId === null && match.resultHidden));
+
+  const internalOtherMatches = run.state.rounds[0].filter((match) => !match.entrants.includes('player'));
+  assert.ok(internalOtherMatches.every((match) => match.status === 'resolved' && match.winnerId));
+
+  run.recordPlayerResult({ won: true });
+  const bracket = run.getBracket();
+  assert.ok(bracket.rounds[0].every((match) => match.status === 'resolved' && !match.resultHidden));
+  assert.ok(bracket.rounds[1].filter((match) => !match.entrants.includes('player'))
+    .every((match) => match.status === 'pending' && match.resultHidden));
+});
+
+test('tournament checkpoint restores the exact seeded bracket and continuation', () => {
+  const original = new TournamentRun({ masterData, rank: 'silver', playerDeck: playerDeck(), seed: 'tournament-resume' });
+  original.recordPlayerResult({ won: true });
+  const restored = TournamentRun.fromCheckpoint({ masterData, checkpoint: original.toCheckpoint() });
+  assert.deepEqual(restored.toCheckpoint(), original.toCheckpoint());
+
+  original.recordPlayerResult({ won: true });
+  restored.recordPlayerResult({ won: true });
+  assert.deepEqual(restored.toCheckpoint(), original.toCheckpoint());
+});
+
 test('CPU winners carry plausible seeded Training and shugyo growth into later rounds', () => {
   const run = new TournamentRun({ masterData, rank: 'gold', playerDeck: playerDeck(), seed: 'cpu-growth-carry' });
   assert.equal(summarizeCpuTournamentGrowth(run.getCurrentOpponent()).wins, 0, 'first-round opponent has no prior match');

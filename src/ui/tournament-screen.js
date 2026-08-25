@@ -24,13 +24,14 @@ function matchView(bracket, match, currentMatchId) {
     'bracket-match',
     match.id === currentMatchId ? 'current' : '',
     match.status === 'resolved' ? 'resolved' : '',
+    match.resultHidden ? 'awaiting-result' : '',
   ].filter(Boolean).join(' ');
-  return el('article', { className: classes }, match.entrants.map((id) => el('div', {
+  return el('article', { className: classes }, [...match.entrants.map((id) => el('div', {
     className: `bracket-entrant ${match.winnerId && match.winnerId === id ? 'winner' : ''} ${id === 'player' ? 'is-player' : ''}`,
   }, [
     el('span', { text: entrantName(bracket, id) }),
     match.winnerId && match.winnerId === id ? el('b', { text: 'WIN' }) : null,
-  ])));
+  ])), match.resultHidden ? el('small', { className: 'bracket-pending-copy', text: '対戦中' }) : null]);
 }
 
 export class TournamentScreen {

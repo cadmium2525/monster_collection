@@ -26,6 +26,7 @@ class MonsterConstructionApp {
     this.seed = this.seedSource.sessionSeed;
     this.currentScreen = 'boot';
     this.session = null;
+    this.activeRun = null;
     this.installPromptEvent = null;
     globalThis.__MC_DEBUG_MODE__ = params.get('debug') === '1' && ['localhost', '127.0.0.1', '::1'].includes(location.hostname);
     window.addEventListener('beforeinstallprompt', (event) => {
@@ -57,7 +58,14 @@ class MonsterConstructionApp {
     this.catalog = await this.repository.recordCardCatalog({
       ownedCardMasterIds: this.decks.list().flatMap((deck) => deck.cards.map((card) => card.masterId)),
     });
+    const flushCheckpoint = () => { void this.session?.flushCheckpoint?.(); };
+    window.addEventListener('pagehide', flushCheckpoint);
+    document.addEventListener('visibilitychange', () => {
+      if (document.visibilityState === 'hidden') flushCheckpoint();
+    });
     this.champion = await this.repository.getChampion();
+    const activeRun = await this.repository.getActiveRun?.();
+    this.activeRun = ['tournament', 'battle', 'reward'].includes(activeRun?.phase) ? activeRun : null;
     this.unsubscribeChampion = this.repository.subscribeChampion((champion) => {
       this.champion = champion;
       if (this.currentScreen === 'home') this.showHome();
@@ -83,6 +91,8 @@ class MonsterConstructionApp {
       decks: this.decks.list(),
       seed: this.seed,
       debugMode: globalThis.__MC_DEBUG_MODE__,
+      activeRun: this.activeRun,
+      onResume: () => this.resumeTournament(),
       onTournament: () => this.showTournamentSetup(),
       onDecks: () => this.showDeckList(),
       onRename: () => this.renameProfile(),
@@ -211,11 +221,12 @@ class MonsterConstructionApp {
         masterIndex: this.masterIndex,
         deckCollection: this.decks,
         repository: this.repository,
-      user: this.user,
-      champion: this.champion,
-      seed: this.seedSource.next(),
-    });
+        user: this.user,
+        champion: this.champion,
+        seed: this.seedSource.next(),
+      });
       await this.session.startTournament(deck.deckId, rank);
+      this.activeRun = await this.repository.getActiveRun?.();
       this.showTournament();
     } catch (error) {
       this.showError(error, '大会を開始できません');
@@ -236,24 +247,89 @@ class MonsterConstructionApp {
   startBattle() {
     try {
       const engine = this.session.createCurrentBattle();
-      const level = this.session.tournament.getCurrentAiLevel();
-      this.currentScreen = 'battle';
-      new BattleScreen({
-        root: this.root,
-        engine,
-        humanPlayerId: 'player',
-        chooseCpuAction: createAiPolicy(level, { timeBudgetMs: AI_BUDGET[level] }),
-        onComplete: (_result, completedEngine) => this.handleBattleComplete(completedEngine),
-      });
+      this.showBattle(engine);
     } catch (error) { this.showError(error, '試合を開始できません'); }
+  }
+
+  showBattle(engine = this.session.activeBattle, runtime = {}) {
+    const level = this.session.tournament.getCurrentAiLevel();
+    this.currentScreen = 'battle';
+    new BattleScreen({
+      root: this.root,
+      engine,
+      humanPlayerId: 'player',
+      chooseCpuAction: createAiPolicy(level, { timeBudgetMs: AI_BUDGET[level] }),
+      onComplete: (_result, completedEngine) => this.handleBattleComplete(completedEngine),
+      onCheckpoint: (battleRuntime) => this.persistBattleCheckpoint(battleRuntime),
+      cpuRngState: runtime.cpuRng ?? null,
+      speed: runtime.speed ?? 'standard',
+    });
+  }
+
+  persistBattleCheckpoint(runtime) {
+    void this.session?.saveCheckpoint('battle', runtime)
+      .then((checkpoint) => { if (checkpoint?.phase === 'battle') this.activeRun = checkpoint; })
+      .catch((error) => console.error('Battle checkpoint failed', error));
+  }
+
+  async resumeTournament() {
+    this.showLoading('中断した大会を復元しています…');
+    let checkpoint = null;
+    try {
+      checkpoint = await this.repository.getActiveRun?.();
+      if (!['tournament', 'battle', 'reward'].includes(checkpoint?.phase)) throw new Error('再開できる大会データがありません');
+      const deckId = checkpoint.tournament?.state?.playerDeck?.deckId;
+      if (!deckId || !this.decks.get(deckId)) throw new Error('大会で使用していた保存デッキが見つかりません');
+      this.session = GameSession.restore({
+        masterData: this.masterData,
+        masterIndex: this.masterIndex,
+        deckCollection: this.decks,
+        repository: this.repository,
+        user: this.user,
+        champion: this.champion,
+        checkpoint,
+      });
+      this.activeRun = checkpoint;
+      if (checkpoint.phase === 'battle' && this.session.activeBattle.state.status === 'active') {
+        this.showBattle(this.session.activeBattle, checkpoint.runtime);
+      } else if (checkpoint.phase === 'battle') {
+        await this.handleBattleComplete(this.session.activeBattle);
+      }
+      else if (checkpoint.phase === 'reward' && this.session.pendingReward.state.status !== 'selecting') {
+        await this.finishReward(this.session.pendingReward.state.resultCards);
+      } else if (checkpoint.phase === 'reward') {
+        this.showReward({
+          reward: this.session.pendingReward,
+          opponent: this.session.pendingRewardOpponent,
+        });
+      }
+      else this.showTournament();
+    } catch (error) {
+      this.showError(error, '大会を再開できません');
+      if (checkpoint?.runId) {
+        const updatedAtMs = Math.max(Date.now(), Number(checkpoint.updatedAtMs || 0) + 1);
+        void this.repository.clearActiveRun?.({
+          schemaVersion: 1,
+          runId: checkpoint.runId,
+          revision: Number(checkpoint.revision || 0) + 1,
+          updatedAtMs,
+          phase: 'cleared',
+        }).catch((clearError) => console.error('Invalid checkpoint cleanup failed', clearError));
+      }
+      this.activeRun = null;
+      this.showHome();
+    }
   }
 
   async handleBattleComplete(engine) {
     this.showLoading('試合結果を大会表へ反映しています…');
     try {
       const outcome = await this.session.completeBattle(engine);
-      if (outcome.type === 'reward') this.showReward(outcome);
-      else this.showTournament();
+      if (outcome.type === 'reward') {
+        this.activeRun = await this.repository.getActiveRun?.();
+        this.showReward(outcome);
+      }
+      else { this.activeRun = null; this.showTournament(); }
     } catch (error) {
       this.showError(error, '試合結果を保存できません');
       this.showTournament();
@@ -271,13 +347,16 @@ class MonsterConstructionApp {
       onCommit: finish,
       onSkip: finish,
       onCancel: finish,
+      onStateChange: () => { void this.session.saveCheckpoint('reward').catch((error) => console.error('Reward checkpoint failed', error)); },
     });
   }
 
   async finishReward(cards) {
     this.showLoading('40枚デッキを安全に保存しています…');
     try {
-      await this.session.completeReward(cards);
+      const outcome = await this.session.completeReward(cards);
+      if (outcome.type === 'tournament-end') this.activeRun = null;
+      else this.activeRun = await this.repository.getActiveRun?.();
       this.showTournament();
     } catch (error) {
       if (error?.code === 'champion/version-conflict') {

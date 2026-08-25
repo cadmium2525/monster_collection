@@ -4,6 +4,20 @@ import { SeededRng } from '../core/rng.js';
 function clone(value) { return structuredClone(value); }
 
 export class CardStealSession {
+  static fromCheckpoint({ masterIndex, checkpoint }) {
+    if (!masterIndex || checkpoint?.schemaVersion !== 1 || checkpoint?.originalCards?.length !== 40 || !checkpoint?.state) {
+      throw new Error('Reward checkpoint is invalid');
+    }
+    const session = Object.create(CardStealSession.prototype);
+    session.masterIndex = masterIndex;
+    session.deckId = checkpoint.deckId;
+    session.originalCards = clone(checkpoint.originalCards);
+    session.captureToken = checkpoint.captureToken;
+    session.state = clone(checkpoint.state);
+    session.rng = new SeededRng(session.state.seed);
+    return session;
+  }
+
   constructor({ playerCards, defeatedCards, masterIndex, deckId, seed = 'reward' }) {
     if (playerCards.length !== 40 || defeatedCards.length !== 40) throw new Error('Card steal requires two 40-card decks');
     this.masterIndex = masterIndex;
@@ -109,4 +123,14 @@ export class CardStealSession {
   }
 
   getState() { return clone(this.state); }
+
+  toCheckpoint() {
+    return {
+      schemaVersion: 1,
+      deckId: this.deckId,
+      originalCards: clone(this.originalCards),
+      captureToken: this.captureToken,
+      state: clone(this.state),
+    };
+  }
 }

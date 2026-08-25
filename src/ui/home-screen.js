@@ -1,5 +1,6 @@
 import { TOURNAMENT_LABELS } from '../battle/rules.js';
 import { representativeMonster } from '../battle/deck.js';
+import { ROUND_LABELS } from '../tournament/TournamentRun.js';
 import { el, formatDate, replace } from './dom.js';
 import { renderMonsterPortrait } from './card-renderer.js';
 import { openModal } from './modal.js';
@@ -109,8 +110,22 @@ export function homeFooterMode({ debugMode = false, syncError = null } = {}) {
   return debugMode ? 'debug' : 'hidden';
 }
 
+export function activeRunSummary(activeRun) {
+  if (!activeRun || !['tournament', 'battle', 'reward'].includes(activeRun.phase)) return null;
+  const state = activeRun.tournament?.state;
+  if (!state || (activeRun.phase === 'reward' ? !['active', 'won', 'champion'].includes(state.status) : state.status !== 'active')) return null;
+  const phaseLabel = activeRun.phase === 'battle' ? '試合中' : activeRun.phase === 'reward' ? 'カード奪取中' : '対戦前';
+  const displayedRound = activeRun.phase === 'reward' && state.status === 'active'
+    ? Math.max(0, state.roundIndex - 1)
+    : state.roundIndex;
+  return {
+    title: activeRun.phase === 'reward' ? 'カード奪取の続きから' : '大会の続きから',
+    detail: `${TOURNAMENT_LABELS[state.rank] ?? state.rank}・${ROUND_LABELS[displayedRound] ?? `${displayedRound + 1}戦目`}・${phaseLabel}`,
+  };
+}
+
 export class HomeScreen {
-  constructor({ root, masterIndex, user, champion, repositoryStatus, decks, seed, debugMode = false, onTournament, onDecks, onRename, installAvailable = false, onInstall = null }) {
+  constructor({ root, masterIndex, user, champion, repositoryStatus, decks, seed, debugMode = false, activeRun = null, onResume = null, onTournament, onDecks, onRename, installAvailable = false, onInstall = null }) {
     this.root = root;
     this.masterIndex = masterIndex;
     this.user = user;
@@ -119,6 +134,8 @@ export class HomeScreen {
     this.decks = decks;
     this.seed = seed;
     this.debugMode = debugMode;
+    this.activeRun = activeRun;
+    this.onResume = onResume;
     this.onTournament = onTournament;
     this.onDecks = onDecks;
     this.onRename = onRename;
@@ -154,6 +171,7 @@ export class HomeScreen {
     }, 'bronze');
     const footerMode = homeFooterMode({ debugMode: this.debugMode, syncError: this.repositoryStatus.error });
     const showFooter = footerMode !== 'hidden';
+    const resume = activeRunSummary(this.activeRun);
     replace(this.root, el('main', { className: `home-screen${showFooter ? '' : ' no-technical-footer'}` }, [
       el('header', { className: 'home-header' }, [
         el('div', { className: 'game-title' }, [
@@ -172,10 +190,10 @@ export class HomeScreen {
       el('section', { className: 'home-main' }, [
         this.renderChampion(),
         el('section', { className: 'home-actions' }, [
-          el('button', { className: 'home-primary-action', onclick: this.onTournament }, [
-            el('span', { className: 'eyebrow', text: 'TOURNAMENT' }),
-            el('strong', { text: '大会へ挑戦' }),
-            el('small', { text: `${TOURNAMENT_LABELS[highest]}まで出場可能` }),
+          el('button', { className: `home-primary-action${resume ? ' resume-run' : ''}`, onclick: resume ? this.onResume : this.onTournament }, [
+            el('span', { className: 'eyebrow', text: resume ? 'CONTINUE TOURNAMENT' : 'TOURNAMENT' }),
+            el('strong', { text: resume?.title ?? '大会へ挑戦' }),
+            el('small', { text: resume?.detail ?? `${TOURNAMENT_LABELS[highest]}まで出場可能` }),
           ]),
           el('button', { className: 'home-action', onclick: this.onDecks }, [
             el('span', { text: '40' }),

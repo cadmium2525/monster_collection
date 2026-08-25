@@ -82,6 +82,31 @@ export class FirebaseGameRepository {
     return snapshots.docs.map((snapshot) => normalizeRecord({ ...snapshot.data(), deckId: snapshot.id }));
   }
 
+  async getActiveRun() {
+    const profile = await this.getProfile();
+    return clone(profile?.activeRun ?? null);
+  }
+
+  async saveActiveRun(checkpoint) {
+    if (!checkpoint?.runId || !Number.isFinite(Number(checkpoint.updatedAtMs))) throw new Error('大会の再開データが不正です');
+    const reference = this._profileRef();
+    await this.sdk.runTransaction(this.db, async (transaction) => {
+      const snapshot = await transaction.get(reference);
+      const current = snapshot.exists() ? snapshot.data().activeRun : null;
+      if (current && Number(current.updatedAtMs) > Number(checkpoint.updatedAtMs)) return;
+      transaction.set(reference, {
+        activeRun: clone(checkpoint),
+        activeRunUpdatedAt: this.sdk.serverTimestamp(),
+        updatedAt: this.sdk.serverTimestamp(),
+      }, { merge: true });
+    });
+    return this.getActiveRun();
+  }
+
+  async clearActiveRun(tombstone) {
+    return this.saveActiveRun({ ...clone(tombstone), phase: 'cleared' });
+  }
+
   async getCardCatalog() {
     const profile = await this.getProfile();
     return normalizeCardCatalog({

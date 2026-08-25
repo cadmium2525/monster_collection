@@ -1,6 +1,12 @@
 import { RepositoryUnavailableError } from './errors.js';
 import { mergeCardCatalogs } from './card-catalog.js';
 
+function newerCheckpoint(left, right) {
+  if (!left) return right;
+  if (!right) return left;
+  return Number(right.updatedAtMs) > Number(left.updatedAtMs) ? right : left;
+}
+
 export class ResilientGameRepository {
   constructor({ local, cloud = null }) {
     this.local = local;
@@ -49,6 +55,37 @@ export class ResilientGameRepository {
       this.lastError = error;
       return localDecks;
     }
+  }
+
+  async getActiveRun() {
+    const localRun = await this.local.getActiveRun();
+    if (!this.activeCloud?.getActiveRun) return localRun;
+    try {
+      const cloudRun = await this.activeCloud.getActiveRun();
+      const latest = newerCheckpoint(localRun, cloudRun);
+      if (latest === cloudRun && cloudRun) await this.local.saveActiveRun(cloudRun);
+      if (latest === localRun && localRun && Number(localRun.updatedAtMs) > Number(cloudRun?.updatedAtMs ?? 0)) {
+        await this.activeCloud.saveActiveRun(localRun);
+      }
+      return latest;
+    } catch (error) {
+      this.lastError = error;
+      return localRun;
+    }
+  }
+
+  async saveActiveRun(checkpoint) {
+    const localResult = await this.local.saveActiveRun(checkpoint);
+    if (!this.activeCloud?.saveActiveRun) return localResult;
+    try { return await this.activeCloud.saveActiveRun(localResult); }
+    catch (error) { this.lastError = error; return localResult; }
+  }
+
+  async clearActiveRun(tombstone) {
+    const localResult = await this.local.clearActiveRun(tombstone);
+    if (!this.activeCloud?.clearActiveRun) return localResult;
+    try { return await this.activeCloud.clearActiveRun(localResult); }
+    catch (error) { this.lastError = error; return localResult; }
   }
 
   async getCardCatalog() {

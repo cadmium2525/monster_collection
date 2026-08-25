@@ -26,12 +26,25 @@ function fallbackChampion(masterData) {
 }
 
 export class TournamentRun {
+  static fromCheckpoint({ masterData, checkpoint }) {
+    if (!masterData || !checkpoint?.state?.entrants || checkpoint.schemaVersion !== 1) {
+      throw new Error('Tournament checkpoint is invalid');
+    }
+    const run = Object.create(TournamentRun.prototype);
+    run.masterData = masterData;
+    run.masterIndex = createMasterIndex(masterData);
+    run.state = clone(checkpoint.state);
+    run.state.resultsRevealedThrough ??= -1;
+    run.rng = new SeededRng(checkpoint.rng?.seed ?? run.state.seed, checkpoint.rng?.state ?? null);
+    return run;
+  }
+
   constructor({ masterData, rank, playerDeck, seed = 'tournament', champion = null, legendDecks = [] }) {
     this.masterData = masterData;
     this.masterIndex = createMasterIndex(masterData);
     this.rng = new SeededRng(seed);
     this.state = {
-      version: 1,
+      version: 2,
       seed: String(seed),
       rank,
       status: 'active',
@@ -43,6 +56,7 @@ export class TournamentRun {
       wins: 0,
       championVersionAtStart: champion?.championVersion ?? 0,
       result: null,
+      resultsRevealedThrough: -1,
     };
     this._createEntrants(champion ?? fallbackChampion(masterData), legendDecks);
     this._buildInitialRound();
@@ -90,7 +104,7 @@ export class TournamentRun {
       displayName: this.state.playerDeck.ownerDisplayName ?? 'あなた',
       deckName: this.state.playerDeck.deckName,
       cards: clone(this.state.playerDeck.cards),
-      qualityScore: Number.POSITIVE_INFINITY,
+      qualityScore: Number.MAX_SAFE_INTEGER,
     };
     this.state.entrants[player.id] = player;
     const challengers = this.state.rank === 'legend' ? this._legendChallengers(legendDecks, champion) : [];
@@ -237,6 +251,7 @@ export class TournamentRun {
     match.winnerId = won ? 'player' : opponentId;
     match.status = 'resolved';
     match.playerResult = draw ? 'draw-loss' : won ? 'win' : 'loss';
+    this.state.resultsRevealedThrough = Math.max(this.state.resultsRevealedThrough ?? -1, this.state.roundIndex);
 
     if (!won) {
       this.state.status = 'eliminated';
@@ -264,8 +279,19 @@ export class TournamentRun {
   }
 
   getBracket() {
-    return clone({ entrants: this.state.entrants, rounds: this.state.rounds, roundIndex: this.state.roundIndex, status: this.state.status });
+    const revealedThrough = this.state.resultsRevealedThrough ?? -1;
+    const rounds = this.state.rounds.map((matches, roundIndex) => matches.map((match) => {
+      const hideCpuResult = roundIndex > revealedThrough
+        && match.status === 'resolved'
+        && !match.entrants.includes('player');
+      return hideCpuResult ? { ...match, status: 'pending', winnerId: null, resultHidden: true } : match;
+    }));
+    return clone({ entrants: this.state.entrants, rounds, roundIndex: this.state.roundIndex, status: this.state.status });
   }
 
   toJSON() { return clone(this.state); }
+
+  toCheckpoint() {
+    return { schemaVersion: 1, state: clone(this.state), rng: this.rng.toJSON() };
+  }
 }

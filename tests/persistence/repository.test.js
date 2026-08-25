@@ -49,6 +49,18 @@ test('local repository stores user decks and emits champion updates with version
   unsubscribe();
 });
 
+test('local repository keeps the newest tournament checkpoint and writes a completion tombstone', async () => {
+  const repository = new LocalGameRepository({ storage: new MemoryStorage(), idFactory: () => 'resume-local' });
+  await repository.initialize();
+  const current = { schemaVersion: 1, runId: 'run-1', revision: 2, updatedAtMs: 200, phase: 'battle' };
+  await repository.saveActiveRun(current);
+  await repository.saveActiveRun({ ...current, revision: 1, updatedAtMs: 100, phase: 'tournament' });
+  assert.deepEqual(await repository.getActiveRun(), current);
+
+  await repository.clearActiveRun({ ...current, revision: 3, updatedAtMs: 300 });
+  assert.equal((await repository.getActiveRun()).phase, 'cleared');
+});
+
 test('resilient repository preserves local deck when cloud write fails', async () => {
   const local = new LocalGameRepository({ storage: new MemoryStorage(), idFactory: () => 'fallback' });
   const cloud = {
@@ -162,6 +174,19 @@ test('Firebase repository uses a transaction and rejects stale championVersion',
   assert.equal(fake.transactionCount, transactionsBeforeCrown + 1);
   await assert.rejects(() => repository.claimChampionship(championPayload(0)), { code: 'champion/version-conflict' });
   assert.equal((await repository.getChampion()).championVersion, 1, 'stale write must not overwrite champion');
+});
+
+test('Firebase checkpoint transaction prevents a delayed older save from replacing resume state', async () => {
+  const fake = fakeFirebaseSdk();
+  const repository = new FirebaseGameRepository({ config: { projectId: 'test' }, sdkLoader: async () => fake.sdk });
+  await repository.initialize();
+  const current = { schemaVersion: 1, runId: 'run-cloud', revision: 4, updatedAtMs: 400, phase: 'reward' };
+  await repository.saveActiveRun(current);
+  await repository.saveActiveRun({ ...current, revision: 3, updatedAtMs: 300, phase: 'battle' });
+  assert.deepEqual(await repository.getActiveRun(), current);
+
+  await repository.clearActiveRun({ ...current, revision: 5, updatedAtMs: 500 });
+  assert.equal((await repository.getActiveRun()).phase, 'cleared');
 });
 
 test('card ownership and special-fusion discoveries are permanent union sets locally and in Firebase', async () => {

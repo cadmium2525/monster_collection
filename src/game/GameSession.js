@@ -5,6 +5,37 @@ import { CardStealSession } from '../reward/CardStealSession.js';
 import { TournamentRun } from '../tournament/TournamentRun.js';
 
 export class GameSession {
+  static restore({ masterData, masterIndex, deckCollection, repository, user, champion = null, checkpoint }) {
+    if (!checkpoint || checkpoint.schemaVersion !== 1 || !['tournament', 'battle', 'reward'].includes(checkpoint.phase)) {
+      throw new Error('再開データの形式が不正です');
+    }
+    const session = new GameSession({
+      masterData,
+      masterIndex,
+      deckCollection,
+      repository,
+      user,
+      champion,
+      seed: checkpoint.seed,
+    });
+    session.runId = checkpoint.runId;
+    session.checkpointRevision = Math.max(0, Number(checkpoint.revision) || 0);
+    session.checkpointClock = Math.max(0, Number(checkpoint.updatedAtMs) || 0);
+    session.checkpointPhase = checkpoint.phase;
+    session.checkpointRuntime = structuredClone(checkpoint.runtime ?? {});
+    session.tournament = TournamentRun.fromCheckpoint({ masterData, checkpoint: checkpoint.tournament });
+    session.activeBattle = checkpoint.activeBattle
+      ? BattleEngine.fromCheckpoint({ masterData, checkpoint: checkpoint.activeBattle })
+      : null;
+    session.pendingReward = checkpoint.pendingReward
+      ? CardStealSession.fromCheckpoint({ masterIndex, checkpoint: checkpoint.pendingReward })
+      : null;
+    session.pendingRewardOpponent = structuredClone(checkpoint.pendingRewardOpponent ?? null);
+    if (checkpoint.phase === 'battle' && !session.activeBattle) throw new Error('再開する試合データがありません');
+    if (checkpoint.phase === 'reward' && !session.pendingReward) throw new Error('再開するカード奪取データがありません');
+    return session;
+  }
+
   constructor({ masterData, masterIndex, deckCollection, repository, user, champion = null, seed = 'game-session' }) {
     this.masterData = masterData;
     this.masterIndex = masterIndex;
@@ -16,6 +47,61 @@ export class GameSession {
     this.tournament = null;
     this.activeBattle = null;
     this.pendingReward = null;
+    this.pendingRewardOpponent = null;
+    this.runId = globalThis.crypto?.randomUUID?.() ?? `${String(seed)}:${Date.now().toString(36)}`;
+    this.checkpointRevision = 0;
+    this.checkpointClock = 0;
+    this.checkpointPhase = null;
+    this.checkpointRuntime = {};
+  }
+
+  _nextCheckpointTime() {
+    this.checkpointClock = Math.max(Date.now(), this.checkpointClock + 1);
+    return this.checkpointClock;
+  }
+
+  createCheckpoint(phase, runtime = {}) {
+    if (!this.tournament) throw new Error('保存する大会がありません');
+    this.checkpointRevision += 1;
+    this.checkpointPhase = phase;
+    this.checkpointRuntime = structuredClone(runtime ?? {});
+    return {
+      schemaVersion: 1,
+      runId: this.runId,
+      revision: this.checkpointRevision,
+      updatedAtMs: this._nextCheckpointTime(),
+      seed: this.seed,
+      phase,
+      runtime: structuredClone(this.checkpointRuntime),
+      tournament: this.tournament.toCheckpoint(),
+      activeBattle: phase === 'battle' && this.activeBattle ? this.activeBattle.toCheckpoint() : null,
+      pendingReward: phase === 'reward' && this.pendingReward ? this.pendingReward.toCheckpoint() : null,
+      pendingRewardOpponent: phase === 'reward' ? structuredClone(this.pendingRewardOpponent) : null,
+    };
+  }
+
+  async saveCheckpoint(phase = this.checkpointPhase, runtime = this.checkpointRuntime) {
+    if (!phase || !this.repository.saveActiveRun) return null;
+    return this.repository.saveActiveRun(this.createCheckpoint(phase, runtime));
+  }
+
+  async clearCheckpoint() {
+    this.checkpointRevision += 1;
+    this.checkpointClock = this._nextCheckpointTime();
+    this.checkpointPhase = null;
+    if (!this.repository.clearActiveRun) return null;
+    return this.repository.clearActiveRun({
+      schemaVersion: 1,
+      runId: this.runId,
+      revision: this.checkpointRevision,
+      updatedAtMs: this.checkpointClock,
+      phase: 'cleared',
+    });
+  }
+
+  flushCheckpoint() {
+    if (!this.checkpointPhase) return null;
+    return this.saveCheckpoint(this.checkpointPhase, this.checkpointRuntime);
   }
 
   async startTournament(deckId, rank) {
@@ -32,6 +118,7 @@ export class GameSession {
       legendDecks,
       playerDeck: { ...deck, ownerDisplayName: this.user.displayName },
     });
+    await this.saveCheckpoint('tournament');
     return this.tournament;
   }
 
@@ -54,6 +141,7 @@ export class GameSession {
         },
       ],
     });
+    void this.saveCheckpoint('battle');
     return this.activeBattle;
   }
 
@@ -75,6 +163,7 @@ export class GameSession {
     if (!won) {
       const saved = this.deckCollection.get(this.tournament.state.playerDeck.deckId);
       await this.repository.saveDeck(saved);
+      await this.clearCheckpoint();
       return { type: 'tournament-end', won: false, draw, tournamentResult, savedDeck: saved };
     }
 
@@ -85,6 +174,8 @@ export class GameSession {
       deckId: this.tournament.state.playerDeck.deckId,
       seed: `${this.tournament.state.seed}:reward:${this.tournament.state.wins}`,
     });
+    this.pendingRewardOpponent = opponent;
+    await this.saveCheckpoint('reward');
     return { type: 'reward', opponent, reward: this.pendingReward, tournamentResult };
   }
 
@@ -100,10 +191,15 @@ export class GameSession {
     await this.repository.saveDeck(saved);
 
     let crowned = null;
+    let checkpointCleared = false;
     if (this.tournament.state.status === 'champion') {
       try {
-        crowned = await this.repository.claimChampionship({
-          expectedVersion: this.tournament.state.championVersionAtStart,
+        const expectedVersion = this.tournament.state.championVersionAtStart;
+        const alreadyCrowned = this.champion?.championUserId === this.user.id
+          && this.champion?.championDeckId === saved.deckId
+          && this.champion?.championVersion === expectedVersion + 1;
+        crowned = alreadyCrowned ? this.champion : await this.repository.claimChampionship({
+          expectedVersion,
           championDisplayName: this.user.displayName,
           championDeckId: saved.deckId,
           championDeckName: saved.deckName,
@@ -115,9 +211,16 @@ export class GameSession {
         this.champion = crowned;
       } finally {
         this.pendingReward = null;
+        this.pendingRewardOpponent = null;
+        await this.clearCheckpoint();
+        checkpointCleared = true;
       }
     }
     this.pendingReward = null;
+    this.pendingRewardOpponent = null;
+    if (completedTournament) {
+      if (!checkpointCleared) await this.clearCheckpoint();
+    } else await this.saveCheckpoint('tournament');
     return {
       type: completedTournament ? 'tournament-end' : 'advanced',
       tournamentStatus: this.tournament.state.status,

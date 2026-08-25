@@ -34,6 +34,7 @@ export class LocalGameRepository {
   _requireUser() { if (!this.user) throw new Error('Repository is not initialized'); }
   _decksKey() { this._requireUser(); return `mc:v1:decks:${this.user.id}`; }
   _catalogKey() { this._requireUser(); return `mc:v1:catalog:${this.user.id}`; }
+  _activeRunKey() { this._requireUser(); return `mc:v1:active-run:${this.user.id}`; }
 
   async getProfile() { this._requireUser(); return clone(this.user); }
 
@@ -47,6 +48,22 @@ export class LocalGameRepository {
   }
 
   async listDecks() { return clone(parse(this.storage.getItem(this._decksKey()), [])); }
+
+  async getActiveRun() {
+    return clone(parse(this.storage.getItem(this._activeRunKey()), null));
+  }
+
+  async saveActiveRun(checkpoint) {
+    if (!checkpoint?.runId || !Number.isFinite(Number(checkpoint.updatedAtMs))) throw new Error('大会の再開データが不正です');
+    const current = await this.getActiveRun();
+    if (current && Number(current.updatedAtMs) > Number(checkpoint.updatedAtMs)) return current;
+    this.storage.setItem(this._activeRunKey(), JSON.stringify(clone(checkpoint)));
+    return clone(checkpoint);
+  }
+
+  async clearActiveRun(tombstone) {
+    return this.saveActiveRun({ ...clone(tombstone), phase: 'cleared' });
+  }
 
   async getCardCatalog() {
     return clone(normalizeCardCatalog(parse(this.storage.getItem(this._catalogKey()), {})));

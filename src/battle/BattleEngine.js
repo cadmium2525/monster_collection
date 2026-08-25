@@ -50,6 +50,20 @@ function roundedPercent(value, ratio) {
 }
 
 export class BattleEngine {
+  static fromCheckpoint({ masterData, checkpoint }) {
+    if (!masterData || !checkpoint?.state?.players || checkpoint.schemaVersion !== 1) {
+      throw new Error('Battle checkpoint is invalid');
+    }
+    const engine = Object.create(BattleEngine.prototype);
+    engine.masterData = masterData;
+    engine.masterIndex = createMasterIndex(masterData);
+    engine.rng = new SeededRng(checkpoint.rng?.seed ?? checkpoint.state.seed, checkpoint.rng?.state ?? null);
+    engine.unitSequence = Math.max(0, Number(checkpoint.unitSequence) || 0);
+    engine.eventSequence = Math.max(0, Number(checkpoint.eventSequence) || 0);
+    engine.state = clone(checkpoint.state);
+    return engine;
+  }
+
   constructor({ masterData, players, seed = 'battle', firstPlayerId = null }) {
     if (!masterData) throw new Error('masterData is required');
     if (!Array.isArray(players) || players.length !== 2) throw new Error('BattleEngine requires exactly two players');
@@ -172,6 +186,16 @@ export class BattleEngine {
     engine.eventSequence = this.eventSequence;
     engine.state = clone(this.state);
     return engine;
+  }
+
+  toCheckpoint() {
+    return {
+      schemaVersion: 1,
+      state: clone(this.state),
+      rng: this.rng.toJSON(),
+      unitSequence: this.unitSequence,
+      eventSequence: this.eventSequence,
+    };
   }
 
   getGrowthSnapshot(playerId) {

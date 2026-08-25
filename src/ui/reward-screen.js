@@ -14,7 +14,7 @@ function cardTile({ definition, selected, mode, onToggle, onDetails }) {
 }
 
 export class RewardScreen {
-  constructor({ root, session, masterIndex, opponentName, onCommit, onSkip, onCancel }) {
+  constructor({ root, session, masterIndex, opponentName, onCommit, onSkip, onCancel, onStateChange = null }) {
     this.root = root;
     this.session = session;
     this.masterIndex = masterIndex;
@@ -22,6 +22,7 @@ export class RewardScreen {
     this.onCommit = onCommit;
     this.onSkip = onSkip;
     this.onCancel = onCancel;
+    this.onStateChange = onStateChange;
     this.error = '';
     this.render();
   }
@@ -31,12 +32,14 @@ export class RewardScreen {
   toggleOffer(offerId) {
     try { this.session.toggleOffer(offerId); this.error = ''; }
     catch (error) { this.error = error.message; }
+    this.onStateChange?.();
     this.render();
   }
 
   toggleRelease(instanceId) {
     try { this.session.toggleRelease(instanceId); this.error = ''; }
     catch (error) { this.error = error.message; }
+    this.onStateChange?.();
     this.render();
   }
 
@@ -126,6 +129,7 @@ export class RewardScreen {
         el('button', { className: 'text-button', text: '選び直す', onclick: () => modal.close() }),
         el('button', { className: 'primary-button', text: '交換を確定', onclick: () => {
           const cards = this.session.commit();
+          this.onStateChange?.();
           modal.close();
           this.onCommit?.(cards, preview);
         } }),
@@ -134,6 +138,15 @@ export class RewardScreen {
     const modal = openModal({ title: 'この交換で確定しますか？', content: modalContent, dismissible: true });
   }
 
-  skip() { this.onSkip?.(this.session.skip()); }
-  cancel() { this.onCancel?.(this.session.cancel()); }
+  skip() {
+    const cards = this.session.skip();
+    this.onStateChange?.();
+    this.onSkip?.(cards);
+  }
+
+  cancel() {
+    const cards = this.session.cancel();
+    this.onStateChange?.();
+    this.onCancel?.(cards);
+  }
 }
