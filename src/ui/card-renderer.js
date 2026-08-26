@@ -38,7 +38,7 @@ export function cardArtPlacement(definition, unit = null) {
     if (breederNumber > 20 && breederNumber <= 40) {
       return {
         className: 'support-card-art standalone-support-art',
-        style: `--support-art:url("./assets/images/breeders/${definition.id}.jpg")`,
+        style: `--support-art:url("./assets/images/breeders/${definition.id}.webp")`,
       };
     }
     const supportIndex = SUPPORT_CARD_IDS.indexOf(definition.id);

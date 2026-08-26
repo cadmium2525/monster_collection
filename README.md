@@ -27,6 +27,7 @@ Sim8.7完全展開版を正本にした、スマートフォン横画面向け�
 - `championVersion` を比較するFirestore transaction
 - GitHub Pages用ビルドとGitHub Actions
 - インストール可能なPWA、横画面standalone表示、オフライン用アプリシェル、maskableアイコン
+- ゲーム内画像を高品質WebPへ統一し、PWA配信容量を約44%削減（OS互換用インストールアイコンのみPNG維持）
 - seed付きAI・大会・デッキ生成検証CLI
 
 ## ローカル起動

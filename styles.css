@@ -29,7 +29,7 @@ body {
   color: var(--ink);
   background:
     linear-gradient(180deg, rgba(3, 8, 15, .28), rgba(3, 8, 15, .88)),
-    url("./assets/images/battle-arena.png") center / cover,
+    url("./assets/images/battle-arena.webp") center / cover,
     #050b14;
   overscroll-behavior: none;
 }
@@ -418,7 +418,7 @@ body:has(.battle-screen) {
 .card-art.monster-art {
   background-image:
     linear-gradient(180deg, rgba(2,7,13,.34), transparent 26% 69%, rgba(2,7,13,.72) 100%),
-    url("./assets/images/monster-atlas.png");
+    url("./assets/images/monster-atlas.webp");
   background-repeat: no-repeat;
   background-size: 100% 100%, 600% auto;
   background-position: center, var(--art-x) var(--art-y);
@@ -426,7 +426,7 @@ body:has(.battle-screen) {
 .card-art.monster-art.special-fusion-art {
   background-image:
     linear-gradient(180deg, rgba(2,7,13,.34), transparent 26% 69%, rgba(2,7,13,.72) 100%),
-    url("./assets/images/special-fusion-atlas-v1.jpg");
+    url("./assets/images/special-fusion-atlas-v1.webp");
   background-size: 100% 100%, 600% auto;
 }
 .game-card .card-art.monster-art {
@@ -441,7 +441,7 @@ body:has(.battle-screen) {
   width: 82%;
   aspect-ratio: .75;
   border-radius: 5px;
-  background-image: url("./assets/images/monster-atlas.png");
+  background-image: url("./assets/images/monster-atlas.webp");
   background-repeat: no-repeat;
   background-size: 600% 300%;
   background-position: var(--art-x) var(--art-y);
@@ -452,7 +452,7 @@ body:has(.battle-screen) {
 .fusion-catalog-card .card-art.monster-art.special-fusion-art {
   background-image:
     linear-gradient(180deg, rgba(2,7,13,.28), transparent 22% 73%, rgba(2,7,13,.72) 100%),
-    url("./assets/images/special-fusion-atlas-v1.jpg");
+    url("./assets/images/special-fusion-atlas-v1.webp");
   background-size: 100% 100%, 600% 600%;
   background-position: center, var(--art-x) var(--art-y);
 }
@@ -462,19 +462,19 @@ body:has(.battle-screen) {
   left: 4%;
   width: 92%;
   aspect-ratio: 1;
-  background-image: url("./assets/images/special-fusion-atlas-v1.jpg");
+  background-image: url("./assets/images/special-fusion-atlas-v1.webp");
   background-size: 600% 600%;
 }
 .card-art.monster-art.special-fusion-art.blue-drill-art {
   background-image:
     linear-gradient(180deg, rgba(2,7,13,.1), transparent 24% 72%, rgba(2,7,13,.72) 100%),
-    url("./assets/images/blue-drill-v2.jpg");
+    url("./assets/images/blue-drill-v2.webp");
   background-size: 100% 100%, cover;
   background-position: center, center;
 }
 .game-card .card-art.monster-art.special-fusion-art.blue-drill-art::after,
 .fusion-catalog-card .card-art.monster-art.special-fusion-art.blue-drill-art::after {
-  background-image: url("./assets/images/blue-drill-v2.jpg");
+  background-image: url("./assets/images/blue-drill-v2.webp");
   background-size: cover;
   background-position: center;
 }
@@ -494,14 +494,14 @@ body:has(.battle-screen) {
 .card-corner i { position: absolute; z-index: 0; inset: 0; background-repeat: no-repeat; background-position: center; background-size: contain; }
 .card-corner b { position: relative; z-index: 1; font: 900 clamp(13px,1.72vw,22px)/1 Georgia,serif; letter-spacing: -.04em; text-shadow: 0 2px 3px #000,0 0 4px rgba(0,0,0,.88); }
 .card-life { top: -11px; left: -11px; }
-.card-life i { background-image: url("./assets/ui/card-badges/life.png"); }
+.card-life i { background-image: url("./assets/ui/card-badges/life.webp"); }
 .card-cost { top: -10px; right: -10px; width: clamp(21px,25%,31px); }
-.card-cost i { background-image: url("./assets/ui/card-badges/cost.png"); }
+.card-cost i { background-image: url("./assets/ui/card-badges/cost.webp"); }
 .card-cost b { font-size: clamp(11px,1.3vw,17px); }
 .card-atk { left: -11px; bottom: -11px; }
-.card-atk i { background-image: url("./assets/ui/card-badges/atk.png"); }
+.card-atk i { background-image: url("./assets/ui/card-badges/atk.webp"); }
 .card-def { right: -11px; bottom: -11px; }
-.card-def i { background-image: url("./assets/ui/card-badges/def.png"); }
+.card-def i { background-image: url("./assets/ui/card-badges/def.webp"); }
 .card-life b, .card-atk b, .card-def b { font-size: clamp(11px,1.42vw,18px); }
 .status-dots { position: absolute; z-index: 8; left: 50%; bottom: 3px; translate: -50% 0; display: flex; gap: 2px; }
 .status-dots i { width: 5px; height: 5px; border-radius: 50%; background: var(--danger); box-shadow: 0 0 5px currentColor; }
@@ -601,7 +601,7 @@ body:has(.battle-screen) {
 .card-art.support-card-art {
   background-image:
     linear-gradient(180deg, rgba(2,7,13,.32), transparent 26% 69%, rgba(2,7,13,.7) 100%),
-    url("./assets/images/support-card-atlas-v1.jpg");
+    url("./assets/images/support-card-atlas-v1.webp");
   background-repeat: no-repeat;
   background-size: 100% 100%, 500% auto;
   background-position: center, var(--art-x) var(--art-y);
@@ -609,7 +609,7 @@ body:has(.battle-screen) {
 .game-card .card-art.support-card-art {
   background-image:
     linear-gradient(180deg, rgba(2,7,13,.26), transparent 22% 73%, rgba(2,7,13,.72) 100%),
-    url("./assets/images/support-card-atlas-v1.jpg");
+    url("./assets/images/support-card-atlas-v1.webp");
   background-size: 100% 100%, 500% 500%;
   background-position: center, var(--art-x) var(--art-y);
 }
@@ -622,7 +622,7 @@ body:has(.battle-screen) {
   width: 92%;
   aspect-ratio: 1;
   border-radius: 5px;
-  background-image: url("./assets/images/support-card-atlas-v1.jpg");
+  background-image: url("./assets/images/support-card-atlas-v1.webp");
   background-repeat: no-repeat;
   background-size: 500% 500%;
   background-position: var(--art-x) var(--art-y);
@@ -962,7 +962,7 @@ button:disabled { opacity: .38; cursor: not-allowed; }
 .home-main { min-height: 0; display: grid; grid-template-columns: minmax(420px,1.35fr) minmax(220px,.65fr); gap: 8px; }
 .champion-panel { position: relative; min-height: 0; overflow: hidden; display: grid; grid-template-columns: 76px minmax(90px,150px) minmax(0,1fr); align-items: center; gap: clamp(10px,2vw,25px); padding: clamp(12px,2vw,24px); border: 1px solid rgba(232,186,98,.43); border-radius: 16px; background: linear-gradient(112deg,rgba(48,31,14,.92),rgba(7,18,31,.9) 62%), radial-gradient(circle at 70% 40%,rgba(232,186,98,.15),transparent); box-shadow: inset 0 0 45px rgba(232,186,98,.055); }
 .champion-crown { color: var(--gold); font-size: clamp(50px,8vw,92px); text-shadow: 0 0 24px rgba(232,186,98,.38); text-align: center; }
-.champion-art .monster-portrait { width: min(100%,150px); aspect-ratio: .82; border: 2px solid color-mix(in srgb,var(--faction) 65%,#e7c77f); border-radius: 10px; background-image: linear-gradient(180deg,transparent 58%,rgba(2,7,13,.72)),url("./assets/images/monster-atlas.png"); background-repeat: no-repeat; background-size: 100% 100%,600% 300%; background-position: center,var(--art-x) var(--art-y); box-shadow: 0 10px 24px rgba(0,0,0,.48),inset 0 0 18px rgba(255,255,255,.08); }
+.champion-art .monster-portrait { width: min(100%,150px); aspect-ratio: .82; border: 2px solid color-mix(in srgb,var(--faction) 65%,#e7c77f); border-radius: 10px; background-image: linear-gradient(180deg,transparent 58%,rgba(2,7,13,.72)),url("./assets/images/monster-atlas.webp"); background-repeat: no-repeat; background-size: 100% 100%,600% 300%; background-position: center,var(--art-x) var(--art-y); box-shadow: 0 10px 24px rgba(0,0,0,.48),inset 0 0 18px rgba(255,255,255,.08); }
 .champion-placeholder { display: grid; place-items: center; height: 140px; border: 1px dashed var(--gold); border-radius: 10px; color: var(--gold); font-size: 48px; }
 .champion-copy h2 { margin: 3px 0; color: #fff0c3; font-size: clamp(19px,3vw,35px); }
 .champion-copy strong { color: var(--gold); font-size: 13px; }

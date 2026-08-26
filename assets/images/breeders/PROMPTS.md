@@ -35,4 +35,4 @@
 19. `breeder-039` 怪物・暴食 — a majestic aberrant monster devouring a glowing summoned creature crystal from its breeder's offering, wounds sealing with emerald energy, dark fantasy without gore
 20. `breeder-040` 怪物・捕食進化 — a victorious eldritch monster evolving after defeating prey, new armored growths and emerald power erupting while its breeder watches from below
 
-生成PNGを目視確認後、ゲーム配信用コピーはSystem.DrawingのHighQualityBicubicで768×768へ縮小し、JPEG品質90で保存した。元の生成PNGはCodex生成画像保管場所に残している。
+生成PNGを目視確認後、当初のゲーム配信用コピーはSystem.DrawingのHighQualityBicubicで768×768へ縮小し、JPEG品質90で保存した。v1.12.0でこの768×768配信画像をWebP quality 90・effort 6・alpha quality 100へ変換し、JPEGは配信対象から削除した。元の生成PNGはCodex生成画像保管場所に残している。

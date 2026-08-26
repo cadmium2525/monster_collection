@@ -27,7 +27,7 @@ test('battle cards use full art with four corner badges and no effect text', () 
 test('corner values use the supplied transparent badge artwork', () => {
   const css = readFileSync(new URL('../../styles.css', import.meta.url), 'utf8');
   for (const badge of ['life', 'cost', 'atk', 'def']) {
-    assert.match(css, new RegExp(`card-badges/${badge}\\.png`));
+    assert.match(css, new RegExp(`card-badges/${badge}\\.webp`));
   }
   assert.match(css, /\.card-corner\s*\{[^}]*width: clamp\(25px,29%,37px\)/s);
   assert.match(css, /\.card-life\s*\{[^}]*top: -11px;[^}]*left: -11px/s);
@@ -75,19 +75,40 @@ test('card art placement selects generated support and special-fusion atlases de
   assert.match(support.style, /--art-x:100%;--art-y:100%/);
   assert.deepEqual(cardArtPlacement({ id: 'breeder-040', kind: 'breeder' }), {
     className: 'support-card-art standalone-support-art',
-    style: '--support-art:url("./assets/images/breeders/breeder-040.jpg")',
+    style: '--support-art:url("./assets/images/breeders/breeder-040.webp")',
   });
 });
 
-test('all twenty new breeder illustrations are optimized project assets', () => {
+test('all twenty new breeder illustrations are optimized WebP project assets', () => {
   for (let number = 21; number <= 40; number += 1) {
     const id = String(number).padStart(3, '0');
-    const url = new URL(`../../assets/images/breeders/breeder-${id}.jpg`, import.meta.url);
+    const url = new URL(`../../assets/images/breeders/breeder-${id}.webp`, import.meta.url);
     const bytes = readFileSync(url);
-    assert.equal(bytes[0], 0xff, `breeder-${id} starts with JPEG marker`);
-    assert.equal(bytes[1], 0xd8, `breeder-${id} starts with JPEG marker`);
+    assert.equal(bytes.subarray(0, 4).toString('ascii'), 'RIFF', `breeder-${id} starts with RIFF marker`);
+    assert.equal(bytes.subarray(8, 12).toString('ascii'), 'WEBP', `breeder-${id} has WEBP signature`);
     assert.ok(statSync(url).size < 300_000, `breeder-${id} stays practical for PWA caching`);
   }
+});
+
+test('all runtime game artwork uses valid WebP while compatibility PWA icons remain separate', () => {
+  const assets = [
+    'assets/images/battle-arena.webp',
+    'assets/images/monster-atlas.webp',
+    'assets/images/special-fusion-atlas-v1.webp',
+    'assets/images/blue-drill-v2.webp',
+    'assets/images/support-card-atlas-v1.webp',
+    'assets/ui/card-badges/life.webp',
+    'assets/ui/card-badges/cost.webp',
+    'assets/ui/card-badges/atk.webp',
+    'assets/ui/card-badges/def.webp',
+  ];
+  for (const asset of assets) {
+    const bytes = readFileSync(new URL(`../../${asset}`, import.meta.url));
+    assert.equal(bytes.subarray(0, 4).toString('ascii'), 'RIFF', `${asset} starts with RIFF marker`);
+    assert.equal(bytes.subarray(8, 12).toString('ascii'), 'WEBP', `${asset} has WEBP signature`);
+  }
+  const css = readFileSync(new URL('../../styles.css', import.meta.url), 'utf8');
+  assert.doesNotMatch(css, /assets\/(?:images|ui\/card-badges)\/[^)"']+\.(?:png|jpe?g)/i);
 });
 
 test('opponent cards stay upright so their corner values remain readable', () => {
