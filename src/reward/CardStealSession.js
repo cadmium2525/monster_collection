@@ -1,5 +1,6 @@
 import { normalizeDeckCards, validateDeck } from '../battle/deck.js';
 import { SeededRng } from '../core/rng.js';
+import { normalStealVariant } from '../gacha/acquisition.js';
 
 function clone(value) { return structuredClone(value); }
 
@@ -31,7 +32,7 @@ export class CardStealSession {
       offered: this.rng.shuffle(normalizeDeckCards(defeatedCards, 'defeated')).slice(0, 5).map((card, index) => ({
         offerId: `offer-${index + 1}`,
         sourceInstanceId: card.instanceId,
-        masterId: card.masterId,
+        ...normalStealVariant(card),
       })),
       selectedOfferIds: [],
       selectedReleaseIds: [],
@@ -90,6 +91,9 @@ export class CardStealSession {
     finalCards.push(...acquired.map((offer, index) => ({
       instanceId: this._newInstanceId(index, used),
       masterId: offer.masterId,
+      artVariantId: 'base',
+      finish: 'normal',
+      origin: 'capture',
     })));
     const countReady = acquired.length > 0 && acquired.length === released.length;
     const validation = countReady

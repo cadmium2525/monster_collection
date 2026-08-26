@@ -43,6 +43,14 @@ export class DeckCollection {
       deckId,
       deckName: validName(record.deckName),
       cards,
+      pool: (record.pool ?? []).map((card, index) => ({
+        ...clone(card),
+        instanceId: card.instanceId ?? `${deckId}-pool-${String(index + 1).padStart(3, '0')}`,
+        masterId: card.masterId,
+        artVariantId: card.artVariantId ?? 'base',
+        finish: card.finish ?? 'normal',
+        origin: card.origin ?? 'core',
+      })).filter((card) => this.masterIndex.cards.has(card.masterId)),
       qualification,
       highestReached,
       totalPlayTp: totalPlayTp(cards, this.masterIndex),
@@ -96,6 +104,29 @@ export class DeckCollection {
     const validation = validateDeck(normalized, this.masterIndex, { deckId });
     if (!validation.valid) throw new Error(`40枚を保存できません:\n${validation.errors.join('\n')}`);
     record.cards = normalized;
+    record.totalPlayTp = totalPlayTp(normalized, this.masterIndex);
+    record.representativeMonsterId = representativeId(normalized, this.masterIndex, record.representativeMonsterId);
+    record.updatedAt = this.now();
+    return clone(record);
+  }
+
+  replaceCardsAndPool(deckId, { cards, pool }) {
+    const record = this._find(deckId);
+    const normalized = normalizeDeckCards(cards, deckId);
+    const validation = validateDeck(normalized, this.masterIndex, { deckId });
+    if (!validation.valid) throw new Error(`40枚を保存できません:\n${validation.errors.join('\n')}`);
+    const normalizedPool = (pool ?? []).map((card, index) => ({
+      ...clone(card),
+      instanceId: card.instanceId ?? `${deckId}-pool-${String(index + 1).padStart(3, '0')}`,
+      masterId: card.masterId,
+      artVariantId: card.artVariantId ?? 'base',
+      finish: card.finish ?? 'normal',
+      origin: card.origin ?? 'core',
+    })).filter((card) => this.masterIndex.cards.has(card.masterId));
+    const ids = [...normalized, ...normalizedPool].map((card) => card.instanceId);
+    if (new Set(ids).size !== ids.length) throw new Error('デッキ内のカード資産IDが重複しています');
+    record.cards = normalized;
+    record.pool = normalizedPool;
     record.totalPlayTp = totalPlayTp(normalized, this.masterIndex);
     record.representativeMonsterId = representativeId(normalized, this.masterIndex, record.representativeMonsterId);
     record.updatedAt = this.now();

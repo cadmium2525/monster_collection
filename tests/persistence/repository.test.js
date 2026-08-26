@@ -61,6 +61,31 @@ test('local repository keeps the newest tournament checkpoint and writes a compl
   assert.equal((await repository.getActiveRun()).phase, 'cleared');
 });
 
+test('local and Firebase repositories persist pack results before reveal without double spending', async () => {
+  const cards = Array.from({ length: 5 }, (_, index) => ({
+    masterId: `monster-${String(index + 19).padStart(3, '0')}`,
+    artVariantId: 'base', finish: 'normal', rarity: 'rare', origin: 'booster',
+  }));
+  const purchase = { operationId: 'repo-pack-1', faction: '無機', packId: 'pack-inorganic', cards, cost: 300, useFreeCredit: false };
+
+  const local = new LocalGameRepository({ storage: new MemoryStorage(), idFactory: () => 'pack-local' });
+  await local.initialize();
+  const localOnce = await local.commitPackPurchase(purchase);
+  const localTwice = await local.commitPackPurchase(purchase);
+  assert.equal(localTwice.diamonds, localOnce.diamonds);
+  assert.equal(localTwice.pendingPack.operationId, purchase.operationId);
+  assert.equal(localTwice.unassignedAssets.reduce((sum, stack) => sum + stack.quantity, 0), 5);
+
+  const fake = fakeFirebaseSdk();
+  const firebase = new FirebaseGameRepository({ config: { projectId: 'test' }, sdkLoader: async () => fake.sdk });
+  await firebase.initialize();
+  const cloudOnce = await firebase.commitPackPurchase(purchase);
+  const cloudTwice = await firebase.commitPackPurchase(purchase);
+  assert.equal(cloudTwice.diamonds, cloudOnce.diamonds);
+  assert.equal(cloudTwice.pendingPack.operationId, purchase.operationId);
+  assert.ok(fake.transactionCount >= 2);
+});
+
 test('resilient repository preserves local deck when cloud write fails', async () => {
   const local = new LocalGameRepository({ storage: new MemoryStorage(), idFactory: () => 'fallback' });
   const cloud = {

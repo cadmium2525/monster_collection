@@ -46,6 +46,27 @@ test('replacing cards recalculates total TP and does not store tournament growth
   assert.equal(decks.rename(deck.deckId, '交換後').deckName, '交換後');
 });
 
+test('deck builder keeps removed assets in that deck pool and preserves unique asset ids', () => {
+  const decks = collection();
+  const deck = decks.create({ deckName: '資産バインド', cards: legalDeck('asset-bind') });
+  const outgoing = deck.cards[0];
+  const incoming = {
+    instanceId: 'pack-asset-001',
+    masterId: 'monster-019',
+    artVariantId: 'showcase-inorganic-01',
+    finish: 'foil',
+    origin: 'booster',
+  };
+  const updated = decks.replaceCardsAndPool(deck.deckId, {
+    cards: [incoming, ...deck.cards.slice(1)],
+    pool: [outgoing],
+  });
+  assert.equal(updated.cards.length, 40);
+  assert.equal(updated.cards[0].artVariantId, 'showcase-inorganic-01');
+  assert.deepEqual(updated.pool.map((card) => card.instanceId), [outgoing.instanceId]);
+  assert.equal(new Set([...updated.cards, ...updated.pool].map((card) => card.instanceId)).size, 41);
+});
+
 test('deck leader can be selected from its monsters and survives card updates while present', () => {
   const decks = collection();
   const originalCards = legalDeck('leader-a');

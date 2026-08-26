@@ -2,9 +2,9 @@ import { el, replace } from './dom.js';
 import { openCardDetails, renderCard } from './card-renderer.js';
 import { openModal } from './modal.js';
 
-function cardTile({ definition, selected, mode, onToggle, onDetails }) {
+function cardTile({ definition, cardAsset = null, selected, mode, onToggle, onDetails }) {
   return el('div', { className: `selectable-card ${selected ? 'selected' : ''}` }, [
-    renderCard({ definition, selected, onClick: onToggle, label: `${definition.name}を${mode === 'gain' ? '獲得候補' : '放出候補'}として選択` }),
+    renderCard({ definition, cardAsset, selected, onClick: onToggle, label: `${definition.name}を${mode === 'gain' ? '獲得候補' : '放出候補'}として選択` }),
     el('button', {
       className: 'card-info-button', text: '詳細', attrs: { type: 'button', 'aria-label': `${definition.name}の詳細` },
       onclick: (event) => { event.stopPropagation(); onDetails(); },
@@ -71,10 +71,11 @@ export class RewardScreen {
             const definition = this.definition(offer.masterId);
             return cardTile({
               definition,
+              cardAsset: offer,
               selected: selectedOffers.has(offer.offerId),
               mode: 'gain',
               onToggle: () => this.toggleOffer(offer.offerId),
-              onDetails: () => openCardDetails({ definition, masterIndex: this.masterIndex }),
+              onDetails: () => openCardDetails({ definition, masterIndex: this.masterIndex, cardAsset: offer }),
             });
           })),
         ]),
@@ -90,10 +91,11 @@ export class RewardScreen {
             const definition = this.definition(card.masterId);
             return cardTile({
               definition,
+              cardAsset: card,
               selected: selectedReleases.has(card.instanceId),
               mode: 'release',
               onToggle: () => selectedCount && this.toggleRelease(card.instanceId),
-              onDetails: () => openCardDetails({ definition, masterIndex: this.masterIndex }),
+              onDetails: () => openCardDetails({ definition, masterIndex: this.masterIndex, cardAsset: card }),
             });
           })),
         ]),

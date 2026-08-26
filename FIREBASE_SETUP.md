@@ -53,6 +53,8 @@ gameState/champion
 
 `users/{uid}`にはプロフィール名に加えて、カード図鑑用の`ownedCardMasterIds`、`discoveredFusionIds`、`catalogSchemaVersion`、`catalogUpdatedAt`を保存します。これらは追加専用の履歴としてRepositoryのtransactionで集合統合し、カードをデッキから放出した後も削除しません。
 
+v1.14.0以降は同じ`users/{uid}`に`economy`も保存します。ここには所持ダイヤ、初回無料回数、未所属カード資産、モン類別パック回数、処理済みoperation ID、演出前に確定した未確認パックが入ります。パック購入・大会報酬はFirestore transactionで更新し、再送時の二重消費・二重受取を防ぎます。`savedDecks/{deckId}`には使用中40枚に加えて、その保存デッキだけで使える`pool`が保存されます。外観違いは`artVariantId`と`finish`で区別します。
+
 同じユーザードキュメントの`activeRun`には、進行中大会・バトル・カード奪取の再開用チェックポイントを保存します。自分だけが読み書きでき、各端末のLocalStorageにも同じデータを先に保存します。`updatedAtMs`が新しい状態だけをtransactionで採用し、大会終了時は`phase: "cleared"`のtombstoneを残すため、遅れて届いた古い保存で終了済み大会が復活しません。
 
 保存デッキのドキュメントには、40枚分のカードインスタンスIDとマスターIDの組、デッキ名、総プレイTP、デッキ単位の大会出場資格、最高到達大会、代表モンスター、各種日時を保存します。

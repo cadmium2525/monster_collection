@@ -8,13 +8,15 @@ import { registerServiceWorker } from './pwa/register-service-worker.js';
 import { TournamentSeedSource } from './core/tournament-seed.js';
 import { BattleScreen } from './ui/battle-screen.js';
 import { CardCatalogScreen } from './ui/catalog-screen.js';
-import { DeckDetailScreen, DeckListScreen, openStarterDeckPicker } from './ui/deck-screens.js';
+import { DeckBuildScreen, DeckDetailScreen, DeckListScreen, openStarterDeckPicker } from './ui/deck-screens.js';
 import { el, replace } from './ui/dom.js';
 import { HomeScreen } from './ui/home-screen.js';
 import { openModal } from './ui/modal.js';
 import { RewardScreen } from './ui/reward-screen.js';
 import { TournamentScreen } from './ui/tournament-screen.js';
 import { TournamentSetupScreen } from './ui/tournament-setup-screen.js';
+import { AssetCollectionScreen, BoosterShopScreen, PackOpeningScreen } from './ui/booster-screen.js';
+import { generateBoosterPack } from './gacha/pack-generator.js';
 
 const AI_BUDGET = Object.freeze({ bronze: 4, silver: 8, gold: 22, legend: 55, champion: 85 });
 
@@ -45,6 +47,7 @@ class MonsterConstructionApp {
     this.masterIndex = createMasterIndex(this.masterData);
     this.repository = createGameRepository();
     this.user = await this.repository.initialize();
+    this.economy = await this.repository.getEconomy();
     const records = await this.repository.listDecks();
     this.decks = new DeckCollection({
       masterIndex: this.masterIndex,
@@ -89,12 +92,14 @@ class MonsterConstructionApp {
       champion: this.champion,
       repositoryStatus: this.repository.getStatus(),
       decks: this.decks.list(),
+      economy: this.economy,
       seed: this.seed,
       debugMode: globalThis.__MC_DEBUG_MODE__,
       activeRun: this.activeRun,
       onResume: () => this.resumeTournament(),
       onTournament: () => this.showTournamentSetup(),
       onDecks: () => this.showDeckList(),
+      onBoosters: () => this.showBoosterShop(),
       onRename: () => this.renameProfile(),
       installAvailable: Boolean(this.installPromptEvent),
       onInstall: () => this.installApp(),
@@ -161,6 +166,78 @@ class MonsterConstructionApp {
     });
   }
 
+  showBoosterShop() {
+    this.currentScreen = 'boosters';
+    new BoosterShopScreen({
+      root: this.root,
+      economy: this.economy,
+      onBack: () => this.showHome(),
+      onInventory: () => this.showAssetCollection(),
+      onOpen: (pack, resume = false) => this.openBooster(pack, resume),
+    });
+  }
+
+  showAssetCollection() {
+    this.currentScreen = 'assets';
+    new AssetCollectionScreen({
+      root: this.root,
+      economy: this.economy,
+      masterIndex: this.masterIndex,
+      onBack: () => this.showBoosterShop(),
+    });
+  }
+
+  async openBooster(pack, resume = false) {
+    try {
+      let pending = this.economy.pendingPack;
+      if (!resume) {
+        if (!pack) throw new Error('開封するパックが選ばれていません');
+        const operationId = `pack-${globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`}`;
+        const generated = generateBoosterPack({
+          masterIndex: this.masterIndex,
+          faction: pack.faction,
+          seed: `${this.seedSource.next()}:${operationId}`,
+          openedCount: this.economy.packCounters?.[pack.faction] ?? 0,
+        });
+        this.showLoading('パック結果を安全に保存しています…');
+        this.economy = await this.repository.commitPackPurchase({
+          operationId,
+          faction: pack.faction,
+          packId: pack.id,
+          cards: generated.cards,
+          cost: pack.cost,
+          useFreeCredit: this.economy.freePackCredits > 0,
+        });
+        pending = this.economy.pendingPack;
+      }
+      if (!pending) throw new Error('未確認のパックはありません');
+      this.currentScreen = 'pack-opening';
+      new PackOpeningScreen({
+        root: this.root,
+        pendingPack: pending,
+        masterIndex: this.masterIndex,
+        reducedMotion: globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false,
+        onComplete: () => this.finishBoosterOpening(pending.operationId),
+      });
+    } catch (error) {
+      this.showError(error, 'パックを開封できません');
+      this.showBoosterShop();
+    }
+  }
+
+  async finishBoosterOpening(operationId) {
+    this.showLoading('獲得カードを確認しています…');
+    try {
+      const acquired = this.economy.pendingPack?.cards ?? [];
+      this.catalog = await this.repository.recordCardCatalog({ ownedCardMasterIds: acquired.map((card) => card.masterId) });
+      this.economy = await this.repository.acknowledgePack(operationId);
+      this.showAssetCollection();
+    } catch (error) {
+      this.showError(error, '開封結果を確定できません');
+      this.showBoosterShop();
+    }
+  }
+
   async showCardCatalog() {
     this.showLoading('カードの所有・発見履歴を読み込んでいます…');
     try {
@@ -188,6 +265,30 @@ class MonsterConstructionApp {
       onBack: () => this.showDeckList(),
       onChanged: (deck) => this.repository.saveDeck(deck).catch((error) => this.showError(error, 'デッキを同期できません')),
       onDelete: (deck) => this.confirmDeleteDeck(deck),
+      onBuild: (deck) => this.showDeckBuilder(deck),
+    });
+  }
+
+  showDeckBuilder(deck) {
+    this.currentScreen = 'deck-builder';
+    new DeckBuildScreen({
+      root: this.root,
+      deck,
+      economy: this.economy,
+      masterIndex: this.masterIndex,
+      onBack: () => this.showDeckDetail(deck.deckId),
+      onSave: async (draft, economy) => {
+        this.showLoading('40枚とデッキ専用プールを安全に保存しています…');
+        try {
+          const saved = this.decks.replaceCardsAndPool(deck.deckId, { cards: draft.cards, pool: draft.pool });
+          const result = await this.repository.saveDeckAndEconomy(saved, economy);
+          this.economy = result.economy;
+          this.showDeckDetail(deck.deckId);
+        } catch (error) {
+          this.showError(error, 'デッキを保存できません');
+          this.showDeckBuilder(this.decks.get(deck.deckId));
+        }
+      },
     });
   }
 
@@ -332,6 +433,7 @@ class MonsterConstructionApp {
     this.showLoading('試合結果を大会表へ反映しています…');
     try {
       const outcome = await this.session.completeBattle(engine);
+      this.economy = await this.repository.getEconomy();
       if (outcome.type === 'reward') {
         this.activeRun = await this.repository.getActiveRun?.();
         this.showReward(outcome);
@@ -362,6 +464,7 @@ class MonsterConstructionApp {
     this.showLoading('40枚デッキを安全に保存しています…');
     try {
       const outcome = await this.session.completeReward(cards);
+      this.economy = await this.repository.getEconomy();
       if (outcome.type === 'tournament-end') this.activeRun = null;
       else this.activeRun = await this.repository.getActiveRun?.();
       this.showTournament();

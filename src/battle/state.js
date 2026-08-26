@@ -90,6 +90,9 @@ export function createUnit({ unitId, card, monster, growth, masterIndex, slot })
     id: unitId,
     sourceCardInstanceId: card.instanceId,
     sourceMasterId: monster.id,
+    artVariantId: card.artVariantId ?? 'base',
+    finish: card.finish ?? 'normal',
+    origin: card.origin ?? 'core',
     slot,
     name: monster.name,
     baseMonsterName: monster.name,
@@ -97,6 +100,7 @@ export function createUnit({ unitId, card, monster, growth, masterIndex, slot })
     role: monster.role,
     traitName: monster.trait.name,
     traitEffect: monster.trait.effect,
+    traitEngine: clone(monster.trait.engine ?? {}),
     specialForm: null,
     specialFusionId: null,
     specialTrait: null,
@@ -131,6 +135,7 @@ export function createUnit({ unitId, card, monster, growth, masterIndex, slot })
       moltUsed: false,
       specialReviveUsed: false,
       firstIncomingUsed: false,
+      normalFirstIncomingUsedThisTurn: false,
       glaciaCharged: false,
       temporaryTurnDamageBonus: 0,
       hamKillBonus: 0,
@@ -162,6 +167,7 @@ export function effectiveAtk(unit) {
       + (unit.statuses.hamKillBonus ?? 0);
   if (!unit.specialForm && unit.baseMonsterName === 'モッチー' && unit.life * 2 <= unit.maxLife) value += 20;
   if (!unit.specialForm && unit.baseMonsterName === 'デュラハン' && unit.statuses.knightWill) value += 5;
+  if (!unit.specialForm && unit.life * 2 <= unit.maxLife) value += Math.max(0, Number(unit.traitEngine?.lowLifeAtkBonus) || 0);
   return Math.max(1, value);
 }
 

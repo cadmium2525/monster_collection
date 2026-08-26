@@ -2,8 +2,10 @@ let cachedMaster = null;
 
 export function validateMasterData(master) {
   const errors = [];
-  if (master?.monsters?.length !== 18) errors.push('モンスターは18体である必要があります');
-  if (master?.moves?.length !== 162) errors.push('技は162件である必要があります');
+  const expectedMonsters = Number(master?.meta?.expectedMonsterCount ?? 18);
+  const expectedMoves = Number(master?.meta?.expectedMoveCount ?? 162);
+  if (master?.monsters?.length !== expectedMonsters) errors.push(`モンスターは${expectedMonsters}体である必要があります`);
+  if (master?.moves?.length !== expectedMoves) errors.push(`技は${expectedMoves}件である必要があります`);
   if (master?.breeders?.length !== 40) errors.push('ブリーダーは40枚である必要があります');
   if (master?.fusions?.length !== 36) errors.push('特殊合体は36レシピである必要があります');
 

@@ -59,7 +59,15 @@ fs.writeFileSync(indexPath, index);
 
 let outputFiles = filesUnder(outputRoot);
 const cacheUrls = ['./', ...outputFiles
-  .filter((file) => !['sw.js', '.nojekyll'].includes(path.relative(outputRoot, file).replaceAll('\\', '/')))
+  .filter((file) => {
+    const relative = path.relative(outputRoot, file).replaceAll('\\', '/');
+    if (['sw.js', '.nojekyll'].includes(relative)) return false;
+    // Booster/showcase art is relatively large and keeps growing. The service
+    // worker still caches it on first use, but a fresh PWA install does not
+    // download every future card illustration up front.
+    return !relative.startsWith('assets/images/booster/')
+      && !relative.startsWith('assets/images/showcase/');
+  })
   .map((file) => `./${path.relative(outputRoot, file).replaceAll('\\', '/')}`)]
   .filter((url, index, list) => list.indexOf(url) === index);
 const workerPath = path.join(outputRoot, 'sw.js');

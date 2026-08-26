@@ -39,6 +39,7 @@ export function resolvedMoveTp(player, unit, target, move) {
 
   if (hasNormalTrait(unit, 'メタルナー') && firstMove && move.rank <= 3) cost -= 1;
   if (hasNormalTrait(unit, 'ライガー') && firstMove) cost -= 1;
+  if (!unit.specialForm && firstMove) cost -= Math.max(0, Number(unit.traitEngine?.firstMoveDiscount) || 0);
   cost -= player.effects.factionMoveDiscount[unit.faction] ?? 0;
 
   if (unit.specialForm === 'ラブラブセイジン' && firstMove) cost -= 1;
@@ -70,6 +71,7 @@ export function resolvedMovePower(unit, target, move) {
 export function defenseIgnore(player, unit, target, move) {
   let ignore = 0;
   if (hasNormalTrait(unit, 'ウンディーネ')) ignore += 10;
+  if (!unit.specialForm) ignore += Math.max(0, Number(unit.traitEngine?.defenseIgnore) || 0);
   if (move.effect.includes('追加でDEF5無視')) ignore += 5;
   if (move.effect.includes('追加でDEF10無視')) ignore += 10;
   if (move.name === 'デスゲート' && lifeRatio(target) <= 0.5) ignore += 5;
@@ -129,6 +131,15 @@ export function applyIncomingModifiers(unit, rawDamage) {
     damage = Math.floor(damage * Math.max(0, 1 - unit.statuses.nextDamageReduction));
     unit.statuses.nextDamageReduction = 0;
     triggers.push('次回ダメージ軽減');
+  }
+
+  const normalReduction = !unit.specialForm && !unit.statuses.normalFirstIncomingUsedThisTurn
+    ? Math.max(0, Math.min(0.9, Number(unit.traitEngine?.firstIncomingReduction) || 0))
+    : 0;
+  if (normalReduction > 0) {
+    damage = Math.floor(damage * (1 - normalReduction));
+    unit.statuses.normalFirstIncomingUsedThisTurn = true;
+    triggers.push(unit.traitName);
   }
 
   if (unit.specialForm === 'ナハトファルター' && lifeRatio(unit) <= 0.5) {

@@ -1,6 +1,12 @@
 import { ChampionConflictError } from './errors.js';
 import { loadFirebaseSdk } from './firebase-sdk.js';
 import { mergeCardCatalogs, normalizeCardCatalog } from './card-catalog.js';
+import {
+  acknowledgePendingPack,
+  applyDiamondReward,
+  applyPackPurchase,
+  normalizeEconomyState,
+} from '../gacha/economy-state.js';
 
 function clone(value) { return value == null ? value : structuredClone(value); }
 
@@ -49,6 +55,7 @@ export class FirebaseGameRepository {
       await this.sdk.setDoc(profileRef, {
         displayName: '名無しブリーダー', isAnonymous: this.user.isAnonymous,
         ownedCardMasterIds: [], discoveredFusionIds: [], catalogSchemaVersion: 1,
+        economy: normalizeEconomyState(null),
         createdAt: this.sdk.serverTimestamp(), updatedAt: this.sdk.serverTimestamp(),
       });
     }
@@ -75,6 +82,54 @@ export class FirebaseGameRepository {
     await this.sdk.setDoc(this._profileRef(), { displayName: value, updatedAt: this.sdk.serverTimestamp() }, { merge: true });
     this.profile = await this.getProfile();
     return { ...this.profile, id: this.user.uid };
+  }
+
+  async getEconomy() {
+    const profile = await this.getProfile();
+    const normalized = normalizeEconomyState(profile?.economy);
+    if (!profile?.economy) {
+      await this.sdk.setDoc(this._profileRef(), {
+        economy: normalized,
+        updatedAt: this.sdk.serverTimestamp(),
+      }, { merge: true });
+    }
+    return normalized;
+  }
+
+  async replaceEconomy(economy) {
+    const normalized = normalizeEconomyState(economy);
+    await this.sdk.setDoc(this._profileRef(), {
+      economy: normalized,
+      updatedAt: this.sdk.serverTimestamp(),
+    }, { merge: true });
+    return normalized;
+  }
+
+  async _updateEconomy(mutator) {
+    const reference = this._profileRef();
+    let result = null;
+    await this.sdk.runTransaction(this.db, async (transaction) => {
+      const snapshot = await transaction.get(reference);
+      const current = snapshot.exists() ? snapshot.data().economy : null;
+      result = mutator(current);
+      transaction.set(reference, {
+        economy: clone(result),
+        updatedAt: this.sdk.serverTimestamp(),
+      }, { merge: true });
+    });
+    return clone(result);
+  }
+
+  async commitPackPurchase(purchase) {
+    return this._updateEconomy((current) => applyPackPurchase(current, purchase));
+  }
+
+  async acknowledgePack(operationId) {
+    return this._updateEconomy((current) => acknowledgePendingPack(current, operationId));
+  }
+
+  async creditDiamonds(reward) {
+    return this._updateEconomy((current) => applyDiamondReward(current, reward));
   }
 
   async listDecks() {
@@ -148,6 +203,26 @@ export class FirebaseGameRepository {
     await this.recordCardCatalog({ ownedCardMasterIds: deck.cards.map((card) => card.masterId) });
     if (deck.qualification === 'legend') await this._publishLegendDeck(deck);
     return clone(deck);
+  }
+
+  async saveDeckAndEconomy(deck, economy) {
+    const deckReference = this._deckRef(deck.deckId);
+    const profileReference = this._profileRef();
+    const normalized = normalizeEconomyState(economy);
+    await this.sdk.runTransaction(this.db, async (transaction) => {
+      transaction.set(deckReference, {
+        ...clone(deck),
+        ownerUserId: this.user.uid,
+        updatedAt: this.sdk.serverTimestamp(),
+      }, { merge: true });
+      transaction.set(profileReference, {
+        economy: normalized,
+        updatedAt: this.sdk.serverTimestamp(),
+      }, { merge: true });
+    });
+    await this.recordCardCatalog({ ownedCardMasterIds: deck.cards.map((card) => card.masterId) });
+    if (deck.qualification === 'legend') await this._publishLegendDeck(deck);
+    return { deck: clone(deck), economy: normalized };
   }
 
   async _publishLegendDeck(deck) {

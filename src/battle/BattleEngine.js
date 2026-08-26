@@ -660,6 +660,7 @@ export class BattleEngine {
       main.specialTrait = fusion.trait;
       main.traitName = '特殊特性';
       main.traitEffect = fusion.trait;
+      main.traitEngine = {};
       // A special form replaces the base monster trait. Remove only statuses
       // which were granted by that base trait; ordinary buffs/debuffs and
       // learned-move state still belong to the tournament unit.
@@ -950,6 +951,12 @@ export class BattleEngine {
         unit.statuses.hamKillBonus += Math.max(0, gain);
       }
       if (hasNormalTrait(unit, 'ディノ')) this._heal(unit, 10);
+      if (!unit.specialForm && (Number(unit.traitEngine?.tpOnKill) || 0) > 0) {
+        player.tp = Math.min(player.maxTp, player.tp + Math.max(0, Number(unit.traitEngine.tpOnKill) || 0));
+      }
+      if (!unit.specialForm && (Number(unit.traitEngine?.healOnKill) || 0) > 0) {
+        this._heal(unit, Math.max(0, Number(unit.traitEngine.healOnKill) || 0));
+      }
       if (unit.specialForm === 'サクラチル') this._heal(unit, roundedPercent(unit.maxLife, 0.25));
       if (unit.specialForm === 'エンドブリンガー') unit.atkMod += 8;
     }
@@ -1012,7 +1019,13 @@ export class BattleEngine {
   _removeUnit(owner, unit) {
     const slot = findUnitSlot(owner, unit.id);
     if (slot >= 0) owner.board[slot] = null;
-    const sourceCard = { instanceId: unit.sourceCardInstanceId, masterId: unit.sourceMasterId };
+    const sourceCard = {
+      instanceId: unit.sourceCardInstanceId,
+      masterId: unit.sourceMasterId,
+      artVariantId: unit.artVariantId ?? 'base',
+      finish: unit.finish ?? 'normal',
+      origin: unit.origin ?? 'core',
+    };
     if (unit.statuses.returnToHandOnDefeat && owner.hand.length < RULES.handLimit) {
       owner.hand.push(sourceCard);
       unit.statuses.returnToHandOnDefeat = false;
@@ -1032,6 +1045,7 @@ export class BattleEngine {
   }
 
   _applyTurnStartEffects(player) {
+    for (const unit of livingUnits(player)) unit.statuses.normalFirstIncomingUsedThisTurn = false;
     for (const unit of [...livingUnits(player)]) {
       const parasite = unit.statuses.parasite;
       if (parasite) {

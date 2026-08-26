@@ -32,7 +32,7 @@ function atlasPosition(index, columns, rows) {
   return `--art-x:${x}%;--art-y:${y}%`;
 }
 
-export function cardArtPlacement(definition, unit = null) {
+export function cardArtPlacement(definition, unit = null, cardAsset = null) {
   if (definition.kind !== 'monster') {
     const breederNumber = definition.kind === 'breeder' ? Number(definition.id.match(/(\d+)$/)?.[1]) : 0;
     if (breederNumber > 20 && breederNumber <= 40) {
@@ -48,6 +48,14 @@ export function cardArtPlacement(definition, unit = null) {
     };
   }
 
+  const artVariantId = cardAsset?.artVariantId ?? unit?.artVariantId ?? 'base';
+  if (artVariantId !== 'base') {
+    return {
+      className: 'monster-art standalone-monster-art showcase-monster-art',
+      style: `--monster-art:url("./assets/images/showcase/${artVariantId}.webp")`,
+    };
+  }
+
   const fusionFromId = Number(unit?.specialFusionId?.match(/(\d+)$/)?.[1]) - 1;
   const fusionIndex = Number.isInteger(fusionFromId) && fusionFromId >= 0
     ? fusionFromId
@@ -60,6 +68,12 @@ export function cardArtPlacement(definition, unit = null) {
   }
 
   const index = Number(definition.id.match(/(\d+)$/)?.[1]) - 1;
+  if (index >= 18) {
+    return {
+      className: 'monster-art standalone-monster-art booster-monster-art',
+      style: `--monster-art:url("./assets/images/booster/${definition.id}.webp")`,
+    };
+  }
   return {
     className: 'monster-art',
     style: atlasPosition(index, 6, 3),
@@ -122,9 +136,10 @@ export function renderCard({
   interactive = true,
   showMonsterEffect = true,
   dragReady = false,
+  cardAsset = null,
 }) {
   const meta = cardMeta(definition, unit, growth);
-  const art = cardArtPlacement(definition, unit);
+  const art = cardArtPlacement(definition, unit, cardAsset);
   const statuses = unit ? Object.values(unit.statuses ?? {}).filter((value) => value === true || (typeof value === 'number' && value > 0)) : [];
   const name = unit?.specialForm ?? definition.name;
   const classes = [
@@ -137,6 +152,8 @@ export function renderCard({
     dragReady ? 'drag-ready' : '',
     unit && (unit.actionPoints <= 0 || unit.summonedThisTurn || unit.stunnedThisTurn) ? 'exhausted' : '',
     interactive ? '' : 'static',
+    (cardAsset?.finish ?? unit?.finish) === 'foil' ? 'finish-foil' : '',
+    (cardAsset?.artVariantId ?? unit?.artVariantId ?? 'base') !== 'base' ? 'variant-showcase' : '',
   ].filter(Boolean).join(' ');
   const node = el(interactive ? 'button' : 'div', {
     className: classes,
@@ -214,11 +231,12 @@ export function openCardDetails({
   growth = null,
   selectableMoveIds = [],
   onMoveSelect = null,
+  cardAsset = null,
 }) {
   const isMonster = definition.kind === 'monster';
   const name = unit?.specialForm ?? definition.name;
   const trait = isMonster ? resolvedTrait(definition, unit) : null;
-  const art = cardArtPlacement(definition, unit);
+  const art = cardArtPlacement(definition, unit, cardAsset);
   const summary = isMonster ? el('section', { className: 'detail-summary' }, [
     el('div', {
       className: `card-art ${art.className} ${FACTION_CLASS[unit?.faction ?? definition.faction] ?? ''}`,

@@ -4,6 +4,13 @@ import { RULES } from '../battle/rules.js';
 import { CardStealSession } from '../reward/CardStealSession.js';
 import { TournamentRun } from '../tournament/TournamentRun.js';
 
+const DIAMOND_REWARDS = Object.freeze({
+  bronze: Object.freeze({ win: 50, champion: 100 }),
+  silver: Object.freeze({ win: 60, champion: 110 }),
+  gold: Object.freeze({ win: 70, champion: 120 }),
+  legend: Object.freeze({ win: 80, champion: 180 }),
+});
+
 export class GameSession {
   static restore({ masterData, masterIndex, deckCollection, repository, user, champion = null, checkpoint }) {
     if (!checkpoint || checkpoint.schemaVersion !== 1 || !['tournament', 'battle', 'reward'].includes(checkpoint.phase)) {
@@ -167,6 +174,16 @@ export class GameSession {
       return { type: 'tournament-end', won: false, draw, tournamentResult, savedDeck: saved };
     }
 
+    const round = Math.max(1, this.tournament.state.roundIndex);
+    const rewardConfig = DIAMOND_REWARDS[this.tournament.state.rank];
+    if (rewardConfig?.win && this.repository.creditDiamonds) {
+      await this.repository.creditDiamonds({
+        operationId: `diamond:${this.runId}:match:${round}`,
+        amount: rewardConfig.win,
+        reason: `${this.tournament.state.rank}:match-win`,
+      });
+    }
+
     this.pendingReward = new CardStealSession({
       playerCards: this.tournament.state.playerDeck.cards,
       defeatedCards: opponent.cards,
@@ -189,6 +206,15 @@ export class GameSession {
     const completedTournament = ['won', 'champion'].includes(this.tournament.state.status);
     if (completedTournament) saved = this.deckCollection.grantTournamentWin(deckId, this.tournament.state.rank);
     await this.repository.saveDeck(saved);
+
+    const rewardConfig = DIAMOND_REWARDS[this.tournament.state.rank];
+    if (completedTournament && rewardConfig?.champion && this.repository.creditDiamonds) {
+      await this.repository.creditDiamonds({
+        operationId: `diamond:${this.runId}:champion`,
+        amount: rewardConfig.champion,
+        reason: `${this.tournament.state.rank}:champion`,
+      });
+    }
 
     let crowned = null;
     let checkpointCleared = false;
@@ -229,3 +255,5 @@ export class GameSession {
     };
   }
 }
+
+export { DIAMOND_REWARDS };

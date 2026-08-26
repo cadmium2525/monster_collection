@@ -43,6 +43,58 @@ export class ResilientGameRepository {
     catch (error) { this.lastError = error; return local; }
   }
 
+  async getEconomy() {
+    const localEconomy = await this.local.getEconomy();
+    if (!this.activeCloud?.getEconomy) return localEconomy;
+    try {
+      const cloudEconomy = await this.activeCloud.getEconomy();
+      await this.local.replaceEconomy(cloudEconomy);
+      return cloudEconomy;
+    } catch (error) {
+      this.lastError = error;
+      return localEconomy;
+    }
+  }
+
+  async commitPackPurchase(purchase) {
+    const localResult = await this.local.commitPackPurchase(purchase);
+    if (!this.activeCloud?.commitPackPurchase) return localResult;
+    try {
+      const cloudResult = await this.activeCloud.commitPackPurchase(purchase);
+      await this.local.replaceEconomy(cloudResult);
+      return cloudResult;
+    } catch (error) {
+      this.lastError = error;
+      return localResult;
+    }
+  }
+
+  async acknowledgePack(operationId) {
+    const localResult = await this.local.acknowledgePack(operationId);
+    if (!this.activeCloud?.acknowledgePack) return localResult;
+    try {
+      const cloudResult = await this.activeCloud.acknowledgePack(operationId);
+      await this.local.replaceEconomy(cloudResult);
+      return cloudResult;
+    } catch (error) {
+      this.lastError = error;
+      return localResult;
+    }
+  }
+
+  async creditDiamonds(reward) {
+    const localResult = await this.local.creditDiamonds(reward);
+    if (!this.activeCloud?.creditDiamonds) return localResult;
+    try {
+      const cloudResult = await this.activeCloud.creditDiamonds(reward);
+      await this.local.replaceEconomy(cloudResult);
+      return cloudResult;
+    } catch (error) {
+      this.lastError = error;
+      return localResult;
+    }
+  }
+
   async listDecks() {
     const localDecks = await this.local.listDecks();
     if (!this.activeCloud) return localDecks;
@@ -125,6 +177,19 @@ export class ResilientGameRepository {
     if (!this.activeCloud) return localResult;
     try { return await this.activeCloud.saveDeck(deck); }
     catch (error) { this.lastError = error; return localResult; }
+  }
+
+  async saveDeckAndEconomy(deck, economy) {
+    const localResult = await this.local.saveDeckAndEconomy(deck, economy);
+    if (!this.activeCloud?.saveDeckAndEconomy) return localResult;
+    try {
+      const cloudResult = await this.activeCloud.saveDeckAndEconomy(deck, economy);
+      await this.local.replaceEconomy(cloudResult.economy);
+      return cloudResult;
+    } catch (error) {
+      this.lastError = error;
+      return localResult;
+    }
   }
 
   async deleteDeck(deckId) {

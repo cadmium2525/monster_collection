@@ -1,6 +1,12 @@
 import { ChampionConflictError } from './errors.js';
 import { MemoryStorage } from './memory-storage.js';
 import { mergeCardCatalogs, normalizeCardCatalog } from './card-catalog.js';
+import {
+  acknowledgePendingPack,
+  applyDiamondReward,
+  applyPackPurchase,
+  normalizeEconomyState,
+} from '../gacha/economy-state.js';
 
 const USER_KEY = 'mc:v1:user';
 const CHAMPION_KEY = 'mc:v1:champion';
@@ -35,6 +41,7 @@ export class LocalGameRepository {
   _decksKey() { this._requireUser(); return `mc:v1:decks:${this.user.id}`; }
   _catalogKey() { this._requireUser(); return `mc:v1:catalog:${this.user.id}`; }
   _activeRunKey() { this._requireUser(); return `mc:v1:active-run:${this.user.id}`; }
+  _economyKey() { this._requireUser(); return `mc:v1:economy:${this.user.id}`; }
 
   async getProfile() { this._requireUser(); return clone(this.user); }
 
@@ -48,6 +55,34 @@ export class LocalGameRepository {
   }
 
   async listDecks() { return clone(parse(this.storage.getItem(this._decksKey()), [])); }
+
+  async getEconomy() {
+    const stored = parse(this.storage.getItem(this._economyKey()), null);
+    const economy = normalizeEconomyState(stored, this.now());
+    if (!stored) this.storage.setItem(this._economyKey(), JSON.stringify(economy));
+    return clone(economy);
+  }
+
+  async replaceEconomy(economy) {
+    const normalized = normalizeEconomyState(economy, this.now());
+    this.storage.setItem(this._economyKey(), JSON.stringify(normalized));
+    return clone(normalized);
+  }
+
+  async commitPackPurchase(purchase) {
+    const next = applyPackPurchase(await this.getEconomy(), purchase, this.now());
+    return this.replaceEconomy(next);
+  }
+
+  async acknowledgePack(operationId) {
+    const next = acknowledgePendingPack(await this.getEconomy(), operationId, this.now());
+    return this.replaceEconomy(next);
+  }
+
+  async creditDiamonds(reward) {
+    const next = applyDiamondReward(await this.getEconomy(), reward, this.now());
+    return this.replaceEconomy(next);
+  }
 
   async getActiveRun() {
     return clone(parse(this.storage.getItem(this._activeRunKey()), null));
@@ -88,6 +123,12 @@ export class LocalGameRepository {
     this.storage.setItem(this._decksKey(), JSON.stringify(decks));
     await this.recordCardCatalog({ ownedCardMasterIds: deck.cards.map((card) => card.masterId) });
     return clone(deck);
+  }
+
+  async saveDeckAndEconomy(deck, economy) {
+    await this.saveDeck(deck);
+    await this.replaceEconomy(economy);
+    return { deck: clone(deck), economy: await this.getEconomy() };
   }
 
   async deleteDeck(deckId) {

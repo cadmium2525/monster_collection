@@ -2,6 +2,8 @@ import { TOURNAMENT_LABELS } from '../battle/rules.js';
 import { el, formatDate, replace } from './dom.js';
 import { openCardDetails, renderCard } from './card-renderer.js';
 import { openModal } from './modal.js';
+import { validateDeck } from '../battle/deck.js';
+import { assetStackKey, takeUnassignedAsset } from '../gacha/economy-state.js';
 
 export function openStarterDeckPicker({ masterIndex, options, onChoose }) {
   let modal = null;
@@ -89,7 +91,7 @@ export class DeckListScreen {
 }
 
 export class DeckDetailScreen {
-  constructor({ root, collection, masterIndex, deckId, onBack, onUse, onDelete, onChanged }) {
+  constructor({ root, collection, masterIndex, deckId, onBack, onUse, onDelete, onChanged, onBuild = null }) {
     this.root = root;
     this.collection = collection;
     this.masterIndex = masterIndex;
@@ -98,6 +100,7 @@ export class DeckDetailScreen {
     this.onUse = onUse;
     this.onDelete = onDelete;
     this.onChanged = onChanged;
+    this.onBuild = onBuild;
     this.render();
   }
 
@@ -170,12 +173,119 @@ export class DeckDetailScreen {
           el('button', { className: 'text-button', text: 'リーダー変更', onclick: () => this.openLeaderPicker() }),
         ]),
         this.error ? el('span', { className: 'invalid-copy', text: this.error }) : null,
+        this.onBuild ? el('button', { className: 'primary-button deck-build-button', text: `デッキ編集${deck.pool.length ? `（予備${deck.pool.length}）` : ''}`, onclick: () => this.onBuild(deck) }) : null,
         this.onDelete ? el('button', { className: 'text-button danger-button deck-delete', text: '削除', onclick: () => this.onDelete(deck) }) : null,
       ]),
       el('section', { className: 'deck-card-grid', attrs: { 'aria-label': `${deck.deckName}の40枚` } }, deck.cards.map((card) => {
         const definition = this.masterIndex.cards.get(card.masterId);
-        return renderCard({ definition, onClick: () => openCardDetails({ definition, masterIndex: this.masterIndex }) });
+        return renderCard({ definition, cardAsset: card, onClick: () => openCardDetails({ definition, masterIndex: this.masterIndex, cardAsset: card }) });
       })),
+    ]));
+  }
+}
+
+export class DeckBuildScreen {
+  constructor({ root, deck, economy, masterIndex, onBack, onSave }) {
+    this.root = root;
+    this.masterIndex = masterIndex;
+    this.onBack = onBack;
+    this.onSave = onSave;
+    this.deck = structuredClone(deck);
+    this.economy = structuredClone(economy);
+    this.selectedActiveId = null;
+    this.error = '';
+    this.render();
+  }
+
+  selectActive(instanceId) {
+    this.selectedActiveId = this.selectedActiveId === instanceId ? null : instanceId;
+    this.error = '';
+    this.render();
+  }
+
+  swapWithPool(instanceId) {
+    const activeIndex = this.deck.cards.findIndex((card) => card.instanceId === this.selectedActiveId);
+    const poolIndex = this.deck.pool.findIndex((card) => card.instanceId === instanceId);
+    if (activeIndex < 0 || poolIndex < 0) return;
+    const outgoing = this.deck.cards[activeIndex];
+    const incoming = this.deck.pool[poolIndex];
+    const nextCards = [...this.deck.cards];
+    nextCards[activeIndex] = incoming;
+    const validation = validateDeck(nextCards, this.masterIndex, { deckId: this.deck.deckId });
+    if (!validation.valid) { this.error = validation.errors[0]; this.render(); return; }
+    this.deck.cards = nextCards;
+    this.deck.pool.splice(poolIndex, 1, outgoing);
+    this.selectedActiveId = null;
+    this.error = '';
+    this.render();
+  }
+
+  swapWithUnassigned(stack) {
+    const activeIndex = this.deck.cards.findIndex((card) => card.instanceId === this.selectedActiveId);
+    if (activeIndex < 0) return;
+    let taken;
+    try { taken = takeUnassignedAsset(this.economy, assetStackKey(stack)); }
+    catch (error) { this.error = error.message; this.render(); return; }
+    const serial = globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`;
+    const incoming = {
+      ...taken.asset,
+      instanceId: `${this.deck.deckId}-asset-${serial}`,
+      boundDeckId: this.deck.deckId,
+    };
+    delete incoming.quantity;
+    const outgoing = this.deck.cards[activeIndex];
+    const nextCards = [...this.deck.cards];
+    nextCards[activeIndex] = incoming;
+    const validation = validateDeck(nextCards, this.masterIndex, { deckId: this.deck.deckId });
+    if (!validation.valid) { this.error = validation.errors[0]; this.render(); return; }
+    this.economy = taken.state;
+    this.deck.cards = nextCards;
+    this.deck.pool.push(outgoing);
+    this.selectedActiveId = null;
+    this.error = '';
+    this.render();
+  }
+
+  renderCandidate(card, source, count = null) {
+    const definition = this.masterIndex.cards.get(card.masterId);
+    const action = source === 'pool' ? () => this.swapWithPool(card.instanceId) : () => this.swapWithUnassigned(card);
+    return el('article', { className: `builder-candidate${this.selectedActiveId ? ' ready' : ''}` }, [
+      renderCard({ definition, cardAsset: card, disabled: !this.selectedActiveId, onClick: action }),
+      count != null ? el('strong', { text: `×${count}` }) : null,
+      el('small', { text: source === 'pool' ? 'このデッキの予備' : '未所属資産' }),
+    ]);
+  }
+
+  render() {
+    replace(this.root, el('main', { className: 'deck-builder-screen' }, [
+      el('header', { className: 'screen-header deck-builder-header' }, [
+        el('div', {}, [
+          el('p', { className: 'eyebrow', text: 'DECK-BOUND CARD POOL' }),
+          el('h1', { text: `${this.deck.deckName}を編集` }),
+          el('p', { text: '40枚から1枚選び、デッキ予備または未所属カードと交換します。採用した未所属カードはこのデッキ専用になります。' }),
+        ]),
+        el('div', { className: 'builder-header-actions' }, [
+          el('button', { className: 'text-button', text: '変更を破棄', onclick: this.onBack }),
+          el('button', { className: 'primary-button', text: '40枚を保存', onclick: () => this.onSave(this.deck, this.economy) }),
+        ]),
+      ]),
+      this.error ? el('p', { className: 'invalid-copy builder-error', text: this.error }) : null,
+      el('section', { className: 'deck-builder-workspace' }, [
+        el('section', { className: 'builder-active' }, [
+          el('div', { className: 'section-title' }, [el('h2', { text: '使用中の40枚' }), el('span', { text: this.selectedActiveId ? '交換先を選択' : '外すカードを選択' })]),
+          el('div', { className: 'builder-card-grid' }, this.deck.cards.map((card) => {
+            const definition = this.masterIndex.cards.get(card.masterId);
+            return renderCard({ definition, cardAsset: card, selected: card.instanceId === this.selectedActiveId, onClick: () => this.selectActive(card.instanceId) });
+          })),
+        ]),
+        el('section', { className: 'builder-reserve' }, [
+          el('div', { className: 'section-title' }, [el('h2', { text: '入替候補' }), el('span', { text: `予備${this.deck.pool.length} / 未所属${this.economy.unassignedAssets.reduce((sum, stack) => sum + stack.quantity, 0)}` })]),
+          el('div', { className: 'builder-candidate-grid' }, [
+            ...this.deck.pool.map((card) => this.renderCandidate(card, 'pool')),
+            ...this.economy.unassignedAssets.map((stack) => this.renderCandidate(stack, 'unassigned', stack.quantity)),
+          ]),
+        ]),
+      ]),
     ]));
   }
 }

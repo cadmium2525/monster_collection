@@ -6,8 +6,8 @@ import { createBaselineDeck, createFactionStarterDeck, STARTER_DECK_OPTIONS } fr
 import { legalDeck, masterData, masterIndex } from '../helpers.js';
 
 test('master data contains all canonical records', () => {
-  assert.equal(masterData.monsters.length, 18);
-  assert.equal(masterData.moves.length, 162);
+  assert.equal(masterData.monsters.length, 24);
+  assert.equal(masterData.moves.length, 216);
   assert.equal(masterData.breeders.length, 40);
   assert.equal(masterData.fusions.length, 36);
   for (const monster of masterData.monsters) {

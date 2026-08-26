@@ -41,32 +41,32 @@ const FACTION_STARTER_IDS = Object.freeze({
   '無機': Object.freeze([
     'monster-001', 'monster-001', 'monster-001', 'monster-002', 'monster-002', 'monster-002', 'monster-003', 'monster-003', 'monster-003',
     'monster-014', 'monster-014', 'monster-015', 'monster-015', 'monster-016', 'monster-016', 'monster-012',
-    'breeder-009', 'breeder-010', 'breeder-029', 'breeder-030', ...STARTER_GROWTH_IDS,
+    'breeder-009', 'breeder-009', 'breeder-010', 'breeder-010', ...STARTER_GROWTH_IDS,
   ]),
   '創造': Object.freeze([
     'monster-004', 'monster-004', 'monster-004', 'monster-005', 'monster-005', 'monster-005', 'monster-006', 'monster-006', 'monster-006',
     'monster-002', 'monster-002', 'monster-009', 'monster-014', 'monster-007', 'monster-010', 'monster-011',
-    'breeder-011', 'breeder-012', 'breeder-031', 'breeder-032', ...STARTER_GROWTH_IDS,
+    'breeder-011', 'breeder-011', 'breeder-012', 'breeder-012', ...STARTER_GROWTH_IDS,
   ]),
   '幻霊': Object.freeze([
     'monster-007', 'monster-007', 'monster-007', 'monster-008', 'monster-008', 'monster-008', 'monster-009', 'monster-009', 'monster-009',
     'monster-016', 'monster-016', 'monster-011', 'monster-002', 'monster-010', 'monster-017', 'monster-017',
-    'breeder-013', 'breeder-014', 'breeder-033', 'breeder-034', ...STARTER_GROWTH_IDS,
+    'breeder-013', 'breeder-013', 'breeder-014', 'breeder-014', ...STARTER_GROWTH_IDS,
   ]),
   '魔族': Object.freeze([
     'monster-010', 'monster-010', 'monster-010', 'monster-011', 'monster-011', 'monster-011', 'monster-012', 'monster-012', 'monster-012',
     'monster-005', 'monster-017', 'monster-004', 'monster-004', 'monster-013', 'monster-013', 'monster-001',
-    'breeder-015', 'breeder-016', 'breeder-035', 'breeder-036', ...STARTER_GROWTH_IDS,
+    'breeder-015', 'breeder-015', 'breeder-016', 'breeder-016', ...STARTER_GROWTH_IDS,
   ]),
   '獣族': Object.freeze([
     'monster-013', 'monster-013', 'monster-013', 'monster-014', 'monster-014', 'monster-014', 'monster-015', 'monster-015', 'monster-015',
     'monster-007', 'monster-007', 'monster-010', 'monster-001', 'monster-003', 'monster-003', 'monster-006',
-    'breeder-017', 'breeder-018', 'breeder-037', 'breeder-038', ...STARTER_GROWTH_IDS,
+    'breeder-017', 'breeder-017', 'breeder-018', 'breeder-018', ...STARTER_GROWTH_IDS,
   ]),
   '怪物': Object.freeze([
     'monster-016', 'monster-016', 'monster-016', 'monster-017', 'monster-017', 'monster-017', 'monster-018', 'monster-018', 'monster-018',
     'monster-011', 'monster-009', 'monster-015', 'monster-013', 'monster-012', 'monster-012', 'monster-008',
-    'breeder-019', 'breeder-020', 'breeder-039', 'breeder-040', ...STARTER_GROWTH_IDS,
+    'breeder-019', 'breeder-019', 'breeder-020', 'breeder-020', ...STARTER_GROWTH_IDS,
   ]),
 });
 

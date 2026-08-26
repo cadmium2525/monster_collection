@@ -59,3 +59,10 @@ test('release version cache-busts the page shell and service worker together', (
   assert.match(html, new RegExp(`src/app\\.js\\?v=${version.replaceAll('.', '\\.')}`));
   assert.match(worker, new RegExp(`CACHE_VERSION = '${version.replaceAll('.', '\\.')}';`));
 });
+
+test('growing booster art is copied but excluded from install-time precache', () => {
+  const buildScript = text('scripts/build-pages.mjs');
+  assert.match(buildScript, /assets\/images\/booster\//);
+  assert.match(buildScript, /assets\/images\/showcase\//);
+  assert.match(buildScript, /startsWith/);
+});

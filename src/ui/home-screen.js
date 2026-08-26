@@ -125,19 +125,21 @@ export function activeRunSummary(activeRun) {
 }
 
 export class HomeScreen {
-  constructor({ root, masterIndex, user, champion, repositoryStatus, decks, seed, debugMode = false, activeRun = null, onResume = null, onTournament, onDecks, onRename, installAvailable = false, onInstall = null }) {
+  constructor({ root, masterIndex, user, champion, repositoryStatus, decks, economy, seed, debugMode = false, activeRun = null, onResume = null, onTournament, onDecks, onBoosters, onRename, installAvailable = false, onInstall = null }) {
     this.root = root;
     this.masterIndex = masterIndex;
     this.user = user;
     this.champion = champion;
     this.repositoryStatus = repositoryStatus;
     this.decks = decks;
+    this.economy = economy;
     this.seed = seed;
     this.debugMode = debugMode;
     this.activeRun = activeRun;
     this.onResume = onResume;
     this.onTournament = onTournament;
     this.onDecks = onDecks;
+    this.onBoosters = onBoosters;
     this.onRename = onRename;
     this.installAvailable = installAvailable;
     this.onInstall = onInstall;
@@ -198,6 +200,13 @@ export class HomeScreen {
           el('button', { className: 'home-action', onclick: this.onDecks }, [
             el('span', { text: '40' }),
             el('div', {}, [el('strong', { text: '保存デッキ' }), el('small', { text: `${this.decks.length}/5 デッキ` })]),
+          ]),
+          el('button', { className: `home-action booster-home-action${this.economy?.pendingPack ? ' has-pending' : ''}`, onclick: this.onBoosters }, [
+            el('span', { text: '◆' }),
+            el('div', {}, [
+              el('strong', { text: this.economy?.pendingPack ? '未確認パック' : 'ブースター' }),
+              el('small', { text: this.economy?.freePackCredits ? `初回無料 / ダイヤ ${this.economy.diamonds}` : `ダイヤ ${this.economy?.diamonds ?? 0}` }),
+            ]),
           ]),
           el('button', { className: 'home-action', onclick: () => openHowToPlay(this.onTournament) }, [
             el('span', { text: '?' }),

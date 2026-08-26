@@ -7,7 +7,9 @@ export const masterData = JSON.parse(fs.readFileSync(new URL('../src/data/master
 export const masterIndex = createMasterIndex(masterData);
 
 export function legalDeck(id = 'deck') {
-  const ids = masterData.monsters.flatMap((monster) => [monster.id, monster.id]);
+  // Keep the long-standing neutral 40-card fixture stable even when booster
+  // expansions add cards which normal CPU decks cannot originate.
+  const ids = masterData.monsters.slice(0, 18).flatMap((monster) => [monster.id, monster.id]);
   ids.push(...masterData.growthCards.slice(0, 4).map((card) => card.id));
   return ids.map((masterId, index) => ({ instanceId: `${id}-${index + 1}`, masterId }));
 }
@@ -66,4 +68,3 @@ export function placeUnit(battle, playerId, monsterName, slot = 0, options = {})
 export function setHand(battle, playerId, entries) {
   battle.player(playerId).hand = entries;
 }
-

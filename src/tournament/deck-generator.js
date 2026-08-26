@@ -1,6 +1,7 @@
 import { assertLegalDeck, normalizeDeckCards } from '../battle/deck.js';
 import { SeededRng } from '../core/rng.js';
 import { analyzeDeck, scoreGeneratedDeck } from './deck-analyzer.js';
+import { isNormalCpuEligible } from '../gacha/acquisition.js';
 
 export const DECK_THEMES = Object.freeze(['無機', '創造', '幻霊', '魔族', '獣族', '怪物', '混合']);
 
@@ -51,8 +52,8 @@ function fillMonsterCounts(masterIndex, theme, config, recipes, rng) {
   }
 
   const themed = theme === '混合'
-    ? rng.shuffle(masterIndex.data.monsters)
-    : rng.shuffle(masterIndex.data.monsters.filter((monster) => monster.faction === theme));
+    ? rng.shuffle(masterIndex.data.monsters.filter(isNormalCpuEligible))
+    : rng.shuffle(masterIndex.data.monsters.filter((monster) => monster.faction === theme && isNormalCpuEligible(monster)));
   let themedCopies = [...counts].reduce((sum, [id, copies]) => sum + (masterIndex.monsters.get(id).faction === theme ? copies : 0), 0);
   let cursor = 0;
   while (theme !== '混合' && themedCopies < config.themeTarget) {
@@ -62,7 +63,7 @@ function fillMonsterCounts(masterIndex, theme, config, recipes, rng) {
     if (cursor > 100) break;
   }
 
-  const all = rng.shuffle(masterIndex.data.monsters).sort((a, b) => {
+  const all = rng.shuffle(masterIndex.data.monsters.filter(isNormalCpuEligible)).sort((a, b) => {
     const themedA = theme !== '混合' && a.faction === theme ? 1 : 0;
     const themedB = theme !== '混合' && b.faction === theme ? 1 : 0;
     const efficiency = (monster) => (monster.base.life + monster.base.atk + monster.base.def) / monster.summonTp;
@@ -103,7 +104,7 @@ function selectBreeders(masterIndex, theme, rng, rank) {
 function growthCards(masterIndex, count, theme, rank, rng) {
   const ids = [];
   const byId = masterIndex.cards;
-  const monsters = masterIndex.data.monsters.filter((monster) => theme === '混合' || monster.faction === theme);
+  const monsters = masterIndex.data.monsters.filter((monster) => isNormalCpuEligible(monster) && (theme === '混合' || monster.faction === theme));
   const attackers = monsters.filter((monster) => monster.role === 'アタッカー').length;
   const tanks = monsters.filter((monster) => monster.role === 'タンク').length;
   const weights = {

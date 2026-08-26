@@ -276,6 +276,7 @@ export class BattleScreen {
     const node = renderCard({
       definition,
       growth: player.tournamentGrowth[card.instanceId],
+      cardAsset: card,
       selected,
       disabled: humanTurn && !hasAction && !this.busy,
       dragReady: selected && humanTurn && hasAction,
@@ -289,7 +290,7 @@ export class BattleScreen {
           return;
         }
         if (this.selection?.id === card.instanceId) {
-          openCardDetails({ definition, masterIndex: this.engine.masterIndex, growth: player.tournamentGrowth[card.instanceId] });
+          openCardDetails({ definition, masterIndex: this.engine.masterIndex, growth: player.tournamentGrowth[card.instanceId], cardAsset: card });
         } else {
           this.pendingMove = null;
           this.selection = { kind: 'hand', id: card.instanceId };

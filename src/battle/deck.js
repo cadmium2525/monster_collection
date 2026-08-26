@@ -3,7 +3,11 @@ import { COPY_LIMITS, RULES, TOURNAMENTS } from './rules.js';
 export function normalizeDeckCards(cards, deckId = 'deck') {
   return cards.map((entry, index) => typeof entry === 'string'
     ? { instanceId: `${deckId}-card-${String(index + 1).padStart(2, '0')}`, masterId: entry }
-    : { instanceId: entry.instanceId ?? `${deckId}-card-${String(index + 1).padStart(2, '0')}`, masterId: entry.masterId });
+    : {
+      ...structuredClone(entry),
+      instanceId: entry.instanceId ?? `${deckId}-card-${String(index + 1).padStart(2, '0')}`,
+      masterId: entry.masterId,
+    });
 }
 
 export function validateDeck(cards, masterIndex, options = {}) {

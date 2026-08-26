@@ -5,7 +5,10 @@
     "moveMaster": "Ver1_162技",
     "generatedAt": "2026-08-24",
     "distanceSystem": "removed-by-user-amendment-2026-08-24",
-    "legacyDistanceFieldsAreNonGameplay": true
+    "legacyDistanceFieldsAreNonGameplay": true,
+    "expectedMonsterCount": 24,
+    "expectedMoveCount": 216,
+    "boosterExpansion": "First Flight 2026-08-26"
   },
   "monsters": [
     {
@@ -529,6 +532,78 @@
         "move-108"
       ],
       "legacyPreferredDistance": "中距離"
+    },
+    {
+      "id": "monster-019",
+      "kind": "monster",
+      "faction": "無機",
+      "name": "クロノギア",
+      "summonTp": 4,
+      "base": { "life": 30, "atk": 20, "def": 30 },
+      "role": "タンク",
+      "trait": { "name": "時装甲", "effect": "各ターン、最初に受ける技ダメージを20%軽減する。", "engine": { "firstIncomingReduction": 0.2 } },
+      "moveIds": ["move-163", "move-164", "move-165", "move-166", "move-167", "move-168", "move-169", "move-170", "move-171"],
+      "legacyPreferredDistance": "中距離"
+    },
+    {
+      "id": "monster-020",
+      "kind": "monster",
+      "faction": "創造",
+      "name": "アルケミア",
+      "summonTp": 3,
+      "base": { "life": 20, "atk": 25, "def": 20 },
+      "role": "バランス",
+      "trait": { "name": "瞬間錬成", "effect": "各ターン最初に使用する技TP-1（最低1）。", "engine": { "firstMoveDiscount": 1 } },
+      "moveIds": ["move-172", "move-173", "move-174", "move-175", "move-176", "move-177", "move-178", "move-179", "move-180"],
+      "legacyPreferredDistance": "中距離"
+    },
+    {
+      "id": "monster-021",
+      "kind": "monster",
+      "faction": "幻霊",
+      "name": "ミストレイ",
+      "summonTp": 3,
+      "base": { "life": 20, "atk": 30, "def": 15 },
+      "role": "アタッカー",
+      "trait": { "name": "霧穿ち", "effect": "攻撃時、対象DEFを5低く扱う。", "engine": { "defenseIgnore": 5 } },
+      "moveIds": ["move-181", "move-182", "move-183", "move-184", "move-185", "move-186", "move-187", "move-188", "move-189"],
+      "legacyPreferredDistance": "遠距離"
+    },
+    {
+      "id": "monster-022",
+      "kind": "monster",
+      "faction": "魔族",
+      "name": "ノクティス",
+      "summonTp": 4,
+      "base": { "life": 25, "atk": 35, "def": 15 },
+      "role": "アタッカー",
+      "trait": { "name": "宵闇の昂揚", "effect": "LIFE50%以下の間ATK+10。", "engine": { "lowLifeAtkBonus": 10 } },
+      "moveIds": ["move-190", "move-191", "move-192", "move-193", "move-194", "move-195", "move-196", "move-197", "move-198"],
+      "legacyPreferredDistance": "遠距離"
+    },
+    {
+      "id": "monster-023",
+      "kind": "monster",
+      "faction": "獣族",
+      "name": "ヴォルファング",
+      "summonTp": 3,
+      "base": { "life": 25, "atk": 30, "def": 15 },
+      "role": "バランス",
+      "trait": { "name": "勝鬨", "effect": "敵撃破時TP1回復。", "engine": { "tpOnKill": 1 } },
+      "moveIds": ["move-199", "move-200", "move-201", "move-202", "move-203", "move-204", "move-205", "move-206", "move-207"],
+      "legacyPreferredDistance": "近接"
+    },
+    {
+      "id": "monster-024",
+      "kind": "monster",
+      "faction": "怪物",
+      "name": "グラトン",
+      "summonTp": 4,
+      "base": { "life": 35, "atk": 25, "def": 20 },
+      "role": "タンク",
+      "trait": { "name": "貪食再生", "effect": "敵撃破時LIFE5回復。", "engine": { "healOnKill": 5 } },
+      "moveIds": ["move-208", "move-209", "move-210", "move-211", "move-212", "move-213", "move-214", "move-215", "move-216"],
+      "legacyPreferredDistance": "近接"
     }
   ],
   "moves": [
@@ -2313,7 +2388,66 @@
       "effect": "使用後、自身ATK-5",
       "initial": false,
       "legacyDistance": "遠距離"
-    }
+    },
+    { "id": "move-163", "monsterName": "クロノギア", "name": "ギアブレード", "rank": 1, "power": 100, "tp": 1, "effect": "―", "initial": true, "legacyDistance": "近接" },
+    { "id": "move-164", "monsterName": "クロノギア", "name": "加速輪", "rank": 3, "power": 120, "tp": 3, "effect": "使用後、自身ATK+5", "initial": false, "legacyDistance": "近接" },
+    { "id": "move-165", "monsterName": "クロノギア", "name": "終刻砲", "rank": 5, "power": 140, "tp": 4, "effect": "使用後、自身DEF-5", "initial": false, "legacyDistance": "近接" },
+    { "id": "move-166", "monsterName": "クロノギア", "name": "クロックバッシュ", "rank": 1, "power": 100, "tp": 1, "effect": "―", "initial": true, "legacyDistance": "中距離" },
+    { "id": "move-167", "monsterName": "クロノギア", "name": "減速波", "rank": 3, "power": 110, "tp": 2, "effect": "対象ATK-5", "initial": false, "legacyDistance": "中距離" },
+    { "id": "move-168", "monsterName": "クロノギア", "name": "時壁衝", "rank": 4, "power": 120, "tp": 3, "effect": "使用後、自身DEF+5", "initial": false, "legacyDistance": "中距離" },
+    { "id": "move-169", "monsterName": "クロノギア", "name": "秒針レーザー", "rank": 1, "power": 100, "tp": 1, "effect": "―", "initial": true, "legacyDistance": "遠距離" },
+    { "id": "move-170", "monsterName": "クロノギア", "name": "歯車砲", "rank": 3, "power": 120, "tp": 3, "effect": "この攻撃のみ追加でDEF5無視", "initial": false, "legacyDistance": "遠距離" },
+    { "id": "move-171", "monsterName": "クロノギア", "name": "オーバーホール", "rank": 4, "power": 110, "tp": 3, "effect": "自身LIFE5回復", "initial": false, "legacyDistance": "遠距離" },
+
+    { "id": "move-172", "monsterName": "アルケミア", "name": "錬成掌", "rank": 1, "power": 100, "tp": 1, "effect": "―", "initial": true, "legacyDistance": "近接" },
+    { "id": "move-173", "monsterName": "アルケミア", "name": "金剛変成", "rank": 3, "power": 110, "tp": 2, "effect": "使用後、自身DEF+5", "initial": false, "legacyDistance": "近接" },
+    { "id": "move-174", "monsterName": "アルケミア", "name": "紅蓮錬成", "rank": 5, "power": 140, "tp": 4, "effect": "使用後、自身ATK-5", "initial": false, "legacyDistance": "近接" },
+    { "id": "move-175", "monsterName": "アルケミア", "name": "水銀弾", "rank": 1, "power": 100, "tp": 1, "effect": "―", "initial": true, "legacyDistance": "中距離" },
+    { "id": "move-176", "monsterName": "アルケミア", "name": "分解式", "rank": 3, "power": 110, "tp": 2, "effect": "対象DEF-5", "initial": false, "legacyDistance": "中距離" },
+    { "id": "move-177", "monsterName": "アルケミア", "name": "賢者の閃光", "rank": 4, "power": 130, "tp": 3, "effect": "この攻撃のみ追加でDEF5無視", "initial": false, "legacyDistance": "中距離" },
+    { "id": "move-178", "monsterName": "アルケミア", "name": "触媒針", "rank": 1, "power": 100, "tp": 1, "effect": "―", "initial": true, "legacyDistance": "遠距離" },
+    { "id": "move-179", "monsterName": "アルケミア", "name": "星砂散布", "rank": 3, "power": 110, "tp": 2, "effect": "対象ATK-5", "initial": false, "legacyDistance": "遠距離" },
+    { "id": "move-180", "monsterName": "アルケミア", "name": "完全変成", "rank": 5, "power": 140, "tp": 4, "effect": "使用後、自身ATK+5", "initial": false, "legacyDistance": "遠距離" },
+
+    { "id": "move-181", "monsterName": "ミストレイ", "name": "霧爪", "rank": 1, "power": 100, "tp": 1, "effect": "―", "initial": true, "legacyDistance": "近接" },
+    { "id": "move-182", "monsterName": "ミストレイ", "name": "霞返し", "rank": 3, "power": 120, "tp": 3, "effect": "使用後、自身DEF+5", "initial": false, "legacyDistance": "近接" },
+    { "id": "move-183", "monsterName": "ミストレイ", "name": "幽明断ち", "rank": 5, "power": 150, "tp": 4, "effect": "使用後、自身DEF-5", "initial": false, "legacyDistance": "近接" },
+    { "id": "move-184", "monsterName": "ミストレイ", "name": "霊雨", "rank": 1, "power": 100, "tp": 1, "effect": "―", "initial": true, "legacyDistance": "中距離" },
+    { "id": "move-185", "monsterName": "ミストレイ", "name": "視界封じ", "rank": 3, "power": 110, "tp": 2, "effect": "対象ATK-5", "initial": false, "legacyDistance": "中距離" },
+    { "id": "move-186", "monsterName": "ミストレイ", "name": "霧界穿孔", "rank": 4, "power": 130, "tp": 3, "effect": "この攻撃のみ追加でDEF10無視", "initial": false, "legacyDistance": "中距離" },
+    { "id": "move-187", "monsterName": "ミストレイ", "name": "露弾", "rank": 1, "power": 100, "tp": 1, "effect": "―", "initial": true, "legacyDistance": "遠距離" },
+    { "id": "move-188", "monsterName": "ミストレイ", "name": "白霧砲", "rank": 3, "power": 120, "tp": 3, "effect": "対象DEF-5", "initial": false, "legacyDistance": "遠距離" },
+    { "id": "move-189", "monsterName": "ミストレイ", "name": "幻界崩し", "rank": 5, "power": 140, "tp": 4, "effect": "使用後、自身ATK+5", "initial": false, "legacyDistance": "遠距離" },
+
+    { "id": "move-190", "monsterName": "ノクティス", "name": "闇爪", "rank": 1, "power": 110, "tp": 2, "effect": "―", "initial": true, "legacyDistance": "近接" },
+    { "id": "move-191", "monsterName": "ノクティス", "name": "黒月斬", "rank": 3, "power": 120, "tp": 3, "effect": "対象DEF-5", "initial": false, "legacyDistance": "近接" },
+    { "id": "move-192", "monsterName": "ノクティス", "name": "夜王断罪", "rank": 5, "power": 150, "tp": 4, "effect": "使用後、自身LIFE-5", "initial": false, "legacyDistance": "近接" },
+    { "id": "move-193", "monsterName": "ノクティス", "name": "影槍", "rank": 1, "power": 100, "tp": 1, "effect": "―", "initial": true, "legacyDistance": "中距離" },
+    { "id": "move-194", "monsterName": "ノクティス", "name": "宵闇波", "rank": 3, "power": 120, "tp": 3, "effect": "対象ATK-5", "initial": false, "legacyDistance": "中距離" },
+    { "id": "move-195", "monsterName": "ノクティス", "name": "蝕の王冠", "rank": 4, "power": 130, "tp": 3, "effect": "使用後、自身ATK+5", "initial": false, "legacyDistance": "中距離" },
+    { "id": "move-196", "monsterName": "ノクティス", "name": "黒星", "rank": 1, "power": 100, "tp": 1, "effect": "―", "initial": true, "legacyDistance": "遠距離" },
+    { "id": "move-197", "monsterName": "ノクティス", "name": "魔夜砲", "rank": 3, "power": 120, "tp": 3, "effect": "この攻撃のみ追加でDEF5無視", "initial": false, "legacyDistance": "遠距離" },
+    { "id": "move-198", "monsterName": "ノクティス", "name": "永夜終焉", "rank": 5, "power": 140, "tp": 4, "effect": "使用後、自身DEF-5", "initial": false, "legacyDistance": "遠距離" },
+
+    { "id": "move-199", "monsterName": "ヴォルファング", "name": "牙撃", "rank": 1, "power": 100, "tp": 1, "effect": "―", "initial": true, "legacyDistance": "近接" },
+    { "id": "move-200", "monsterName": "ヴォルファング", "name": "群狼爪", "rank": 3, "power": 120, "tp": 3, "effect": "撃破時TP1回復", "initial": false, "legacyDistance": "近接" },
+    { "id": "move-201", "monsterName": "ヴォルファング", "name": "月喰み", "rank": 5, "power": 140, "tp": 4, "effect": "使用後、自身ATK+5", "initial": false, "legacyDistance": "近接" },
+    { "id": "move-202", "monsterName": "ヴォルファング", "name": "疾風蹴り", "rank": 1, "power": 100, "tp": 1, "effect": "―", "initial": true, "legacyDistance": "中距離" },
+    { "id": "move-203", "monsterName": "ヴォルファング", "name": "狩場崩し", "rank": 3, "power": 120, "tp": 3, "effect": "対象DEF-5", "initial": false, "legacyDistance": "中距離" },
+    { "id": "move-204", "monsterName": "ヴォルファング", "name": "王牙連閃", "rank": 4, "power": 130, "tp": 3, "effect": "使用後、自身DEF-5", "initial": false, "legacyDistance": "中距離" },
+    { "id": "move-205", "monsterName": "ヴォルファング", "name": "遠吠え弾", "rank": 1, "power": 100, "tp": 1, "effect": "―", "initial": true, "legacyDistance": "遠距離" },
+    { "id": "move-206", "monsterName": "ヴォルファング", "name": "獣雷", "rank": 3, "power": 110, "tp": 2, "effect": "対象ATK-5", "initial": false, "legacyDistance": "遠距離" },
+    { "id": "move-207", "monsterName": "ヴォルファング", "name": "天狼星", "rank": 5, "power": 140, "tp": 4, "effect": "この攻撃のみ追加でDEF5無視", "initial": false, "legacyDistance": "遠距離" },
+
+    { "id": "move-208", "monsterName": "グラトン", "name": "かじりつき", "rank": 1, "power": 100, "tp": 1, "effect": "―", "initial": true, "legacyDistance": "近接" },
+    { "id": "move-209", "monsterName": "グラトン", "name": "丸呑み", "rank": 3, "power": 120, "tp": 3, "effect": "LIFE5追加回復", "initial": false, "legacyDistance": "近接" },
+    { "id": "move-210", "monsterName": "グラトン", "name": "飽食崩壊", "rank": 5, "power": 140, "tp": 4, "effect": "使用後、自身DEF-5", "initial": false, "legacyDistance": "近接" },
+    { "id": "move-211", "monsterName": "グラトン", "name": "胃酸弾", "rank": 1, "power": 100, "tp": 1, "effect": "―", "initial": true, "legacyDistance": "中距離" },
+    { "id": "move-212", "monsterName": "グラトン", "name": "溶解液", "rank": 3, "power": 110, "tp": 2, "effect": "対象DEF-5", "initial": false, "legacyDistance": "中距離" },
+    { "id": "move-213", "monsterName": "グラトン", "name": "暴食突進", "rank": 4, "power": 130, "tp": 3, "effect": "使用後、自身ATK+5", "initial": false, "legacyDistance": "中距離" },
+    { "id": "move-214", "monsterName": "グラトン", "name": "消化砲", "rank": 1, "power": 100, "tp": 1, "effect": "―", "initial": true, "legacyDistance": "遠距離" },
+    { "id": "move-215", "monsterName": "グラトン", "name": "飢餓波", "rank": 3, "power": 110, "tp": 2, "effect": "対象ATK-5", "initial": false, "legacyDistance": "遠距離" },
+    { "id": "move-216", "monsterName": "グラトン", "name": "万物喰らい", "rank": 5, "power": 140, "tp": 4, "effect": "自身LIFE5回復", "initial": false, "legacyDistance": "遠距離" }
   ],
   "breeders": [
     {
@@ -3344,6 +3478,30 @@
         "ゴッドストライク",
         "ゴッドアタック"
       ]
+    },
+    "クロノギア": {
+      "attack": ["加速輪", "終刻砲", "歯車砲"],
+      "defense": ["減速波", "時壁衝", "オーバーホール"]
+    },
+    "アルケミア": {
+      "attack": ["紅蓮錬成", "賢者の閃光", "完全変成"],
+      "defense": ["金剛変成", "分解式", "星砂散布"]
+    },
+    "ミストレイ": {
+      "attack": ["幽明断ち", "霧界穿孔", "幻界崩し"],
+      "defense": ["霞返し", "視界封じ", "白霧砲"]
+    },
+    "ノクティス": {
+      "attack": ["夜王断罪", "蝕の王冠", "永夜終焉"],
+      "defense": ["黒月斬", "宵闇波", "魔夜砲"]
+    },
+    "ヴォルファング": {
+      "attack": ["群狼爪", "月喰み", "王牙連閃"],
+      "defense": ["狩場崩し", "獣雷", "天狼星"]
+    },
+    "グラトン": {
+      "attack": ["丸呑み", "飽食崩壊", "暴食突進"],
+      "defense": ["溶解液", "飢餓波", "万物喰らい"]
     }
   }
 }
