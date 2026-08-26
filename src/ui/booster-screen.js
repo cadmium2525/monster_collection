@@ -79,22 +79,98 @@ export class PackOpeningScreen {
     this.reducedMotion = reducedMotion;
     this.onComplete = onComplete;
     this.revealed = new Set();
+    this.revealing = new Set();
     this.phase = 'sealed';
+    this.revealLocked = false;
+    this.cardsSettled = false;
+    this.burst = null;
+    this.burstToken = 0;
+    this.disposed = false;
     this.render();
   }
 
-  revealPack() {
+  wait(milliseconds) {
+    return new Promise((resolve) => globalThis.setTimeout(resolve, milliseconds));
+  }
+
+  async revealPack() {
+    if (this.phase !== 'sealed' || this.revealLocked) return;
+    this.revealLocked = true;
+    this.phase = 'breaking';
+    this.render();
+    await this.wait(this.reducedMotion ? 180 : 1180);
+    if (this.disposed) return;
     this.phase = 'cards';
+    this.cardsSettled = false;
+    this.revealLocked = false;
     this.render();
+    globalThis.setTimeout(() => {
+      if (this.disposed || this.phase !== 'cards' || this.cardsSettled) return;
+      this.cardsSettled = true;
+      this.render();
+    }, this.reducedMotion ? 100 : 760);
   }
 
-  reveal(index) {
+  rarityLabel(asset) {
+    if (asset.rarity === 'showcase') return 'SHOWCASE';
+    if (asset.finish === 'foil') return 'FOIL';
+    if (asset.rarity === 'rare') return 'RARE';
+    return 'COMMON';
+  }
+
+  async revealOne(index, { sequence = false } = {}) {
+    if (this.revealed.has(index) || this.revealing.has(index)) return;
+    this.burstToken += 1;
+    this.burst = null;
+    this.revealing.add(index);
+    this.render();
+    await this.wait(this.reducedMotion ? 70 : 560);
+    if (this.disposed) return;
+    this.revealing.delete(index);
     this.revealed.add(index);
+    const asset = this.pendingPack.cards[index];
+    if (asset.rarity === 'showcase' || asset.rarity === 'rare' || asset.finish === 'foil') {
+      const definition = this.masterIndex.cards.get(asset.masterId);
+      const token = ++this.burstToken;
+      this.burst = { asset, definition };
+      this.render();
+      globalThis.setTimeout(() => {
+        if (this.disposed || this.burstToken !== token) return;
+        this.burst = null;
+        this.render();
+      }, this.reducedMotion ? 180 : sequence ? 620 : 1400);
+      return;
+    }
     this.render();
   }
 
-  revealAll() {
-    this.pendingPack.cards.forEach((_, index) => this.revealed.add(index));
+  complete() {
+    this.disposed = true;
+    this.burstToken += 1;
+    this.onComplete();
+  }
+
+  async reveal(index) {
+    if (this.revealLocked) return;
+    this.cardsSettled = true;
+    this.revealLocked = true;
+    await this.revealOne(index);
+    this.revealLocked = false;
+    this.render();
+  }
+
+  async revealAll() {
+    if (this.revealLocked) return;
+    this.cardsSettled = true;
+    this.revealLocked = true;
+    for (let index = 0; index < this.pendingPack.cards.length; index += 1) {
+      if (this.revealed.has(index)) continue;
+      await this.revealOne(index, { sequence: true });
+      await this.wait(this.reducedMotion ? 20 : 120);
+    }
+    this.revealLocked = false;
+    this.burstToken += 1;
+    this.burst = null;
     this.render();
   }
 
@@ -102,24 +178,27 @@ export class PackOpeningScreen {
     const pack = BOOSTER_PACKS.find((entry) => entry.id === this.pendingPack.packId)
       ?? BOOSTER_PACKS.find((entry) => entry.faction === this.pendingPack.faction);
     const allRevealed = this.revealed.size === this.pendingPack.cards.length;
-    if (this.phase === 'sealed') {
+    if (this.phase === 'sealed' || this.phase === 'breaking') {
       replace(this.root, el('main', {
-        className: `pack-opening-screen pack-sealed${this.reducedMotion ? ' reduced-motion' : ''}`,
+        className: `pack-opening-screen pack-sealed${this.phase === 'breaking' ? ' breaking' : ''}${this.reducedMotion ? ' reduced-motion' : ''}`,
         attrs: { style: `--pack-color:${pack?.color ?? '#62d9e7'}` },
       }, [
-        el('div', { className: 'pack-particle-field', attrs: { 'aria-hidden': 'true' } }, Array.from({ length: 18 }, (_, index) => el('i', { attrs: { style: `--p:${index}` } }))),
-        el('button', { className: 'opening-pack', onclick: () => this.revealPack(), attrs: { type: 'button', 'aria-label': `${pack?.name ?? 'パック'}を開封` } }, [
+        el('div', { className: 'opening-aura', attrs: { 'aria-hidden': 'true' } }, [el('i'), el('i'), el('i')]),
+        el('div', { className: 'pack-particle-field', attrs: { 'aria-hidden': 'true' } }, Array.from({ length: 28 }, (_, index) => el('i', { attrs: { style: `--p:${index}` } }))),
+        el('button', { className: 'opening-pack', disabled: this.phase === 'breaking', onclick: () => this.revealPack(), attrs: { type: 'button', 'aria-label': `${pack?.name ?? 'パック'}を開封` } }, [
+          el('i', { className: 'pack-foil-sheen', attrs: { 'aria-hidden': 'true' } }),
           el('span', { text: 'MONSTER CONSTRUCTION' }),
           el('strong', { text: pack?.sigil ?? '封' }),
           el('b', { text: pack?.name ?? 'ブースターパック' }),
-          el('small', { text: 'TAP TO BREAK THE SEAL' }),
+          el('small', { text: this.phase === 'breaking' ? 'SEAL BREAKING' : 'TAP TO BREAK THE SEAL' }),
         ]),
+        this.phase === 'breaking' ? el('div', { className: 'pack-break-flash', attrs: { 'aria-hidden': 'true' } }, [el('i'), el('i'), el('i')]) : null,
       ]));
       return;
     }
 
     replace(this.root, el('main', {
-      className: `pack-opening-screen pack-cards${allRevealed ? ' all-revealed' : ''}`,
+      className: `pack-opening-screen pack-cards${allRevealed ? ' all-revealed' : ''}${this.cardsSettled ? ' settled' : ' entering'}`,
       attrs: { style: `--pack-color:${pack?.color ?? '#62d9e7'}` },
     }, [
       el('header', { className: 'pack-result-header' }, [
@@ -129,22 +208,35 @@ export class PackOpeningScreen {
       el('section', { className: 'pack-card-fan' }, this.pendingPack.cards.map((asset, index) => {
         const definition = this.masterIndex.cards.get(asset.masterId);
         const revealed = this.revealed.has(index);
-        return el('div', { className: `pack-card-slot rarity-${asset.rarity ?? 'common'}${revealed ? ' revealed' : ''}` }, [
+        const revealing = this.revealing.has(index);
+        const backFace = () => el('div', { className: 'pack-card-face pack-card-back-face' }, [el('i'), el('strong', { text: 'MC' }), el('small', { text: 'REVEAL' })]);
+        return el('div', {
+          className: `pack-card-slot rarity-${asset.rarity ?? 'common'}${revealed ? ' revealed' : ''}${revealing ? ' revealing' : ''}`,
+          attrs: { style: `--deal-index:${index}` },
+        }, [
           revealed ? renderCard({
             definition,
             cardAsset: asset,
             onClick: () => openCardDetails({ definition, masterIndex: this.masterIndex, cardAsset: asset }),
-          }) : el('button', {
+          }) : revealing ? el('div', { className: 'pack-card-reveal-shell', attrs: { 'aria-hidden': 'true' } }, [
+            backFace(),
+            el('div', { className: 'pack-card-face pack-card-front-face' }, renderCard({ definition, cardAsset: asset, interactive: false })),
+          ]) : el('button', {
             className: 'pack-card-back',
             attrs: { type: 'button', 'aria-label': `${index + 1}枚目をめくる` },
             onclick: () => this.reveal(index),
           }, [el('i'), el('strong', { text: 'MC' }), el('small', { text: 'TAP' })]),
-          revealed ? el('span', { className: 'pack-rarity-label', text: asset.rarity === 'showcase' ? 'SHOWCASE' : asset.finish === 'foil' ? 'FOIL' : asset.rarity === 'rare' ? 'RARE' : 'COMMON' }) : null,
+          revealed ? el('span', { className: 'pack-rarity-label', text: this.rarityLabel(asset) }) : null,
         ]);
       })),
+      this.burst ? el('div', { className: `pack-rarity-burst rarity-${this.burst.asset.rarity ?? 'rare'}${this.burst.asset.finish === 'foil' ? ' foil' : ''}`, attrs: { 'aria-live': 'polite' } }, [
+        el('div', { className: 'rarity-burst-rings', attrs: { 'aria-hidden': 'true' } }, [el('i'), el('i'), el('i')]),
+        el('strong', { text: this.rarityLabel(this.burst.asset) }),
+        el('span', { text: this.burst.definition?.name ?? 'NEW CARD' }),
+      ]) : null,
       el('footer', { className: 'pack-result-actions' }, [
-        !allRevealed ? el('button', { className: 'text-button', text: 'すべてめくる', onclick: () => this.revealAll() }) : el('span'),
-        allRevealed ? el('button', { className: 'primary-button', text: '資産へ受け取る', onclick: this.onComplete }) : el('small', { text: 'カードをタップして1枚ずつ確認' }),
+        !allRevealed ? el('button', { className: 'text-button', text: this.revealLocked ? '開封中…' : 'すべてめくる', disabled: this.revealLocked, onclick: () => this.revealAll() }) : el('span'),
+        allRevealed ? el('button', { className: 'primary-button', text: '資産へ受け取る', onclick: () => this.complete() }) : el('small', { text: 'カードをタップして1枚ずつ確認' }),
       ]),
     ]));
   }

@@ -124,6 +124,13 @@ test('card artwork keeps a head-safe portrait and correct detail ratios', () => 
   assert.match(css, /\.card-cost\s*\{[^}]*width: clamp\(21px,25%,31px\)/s);
 });
 
+test('standalone booster monster art is rendered once and asset cards share one fixed footprint', () => {
+  const css = readFileSync(new URL('../../styles.css', import.meta.url), 'utf8');
+  assert.match(css, /\.game-card \.card-art\.monster-art\.standalone-monster-art::after\s*\{[^}]*content: none;[^}]*display: none;/s);
+  assert.match(css, /\.asset-card-grid\s*\{[^}]*grid-template-columns:repeat\(auto-fill,var\(--asset-card-width\)\)/s);
+  assert.match(css, /\.asset-card-entry \.game-card\s*\{[^}]*width:100%;[^}]*aspect-ratio:\.72;/s);
+});
+
 test('hand monster stats include tournament growth carried from earlier matches', () => {
   const monster = monsterByName('ドラゴン');
   assert.deepEqual(cardDisplayStats(monster, null, { life: 8, atk: 5, def: 10 }), {
