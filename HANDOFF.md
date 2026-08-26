@@ -1,9 +1,11 @@
 # HANDOFF
 
 基準: Sim8.7完全展開版 + 2026-08-24距離廃止差分  
-リリース: 1.14.1（無料ブースター演出・カード描画修正版）
+リリース: 1.15.0（読取専用管理者ツール版）
 
 ## 現在の状態
+
+v1.15.0ではURLへ`?admin=1`を付けた場合だけ、ホーム右上から読取専用の管理者ツールを開けます。基本カード69枚、特殊合体36種、特別イラスト6種の計111件を検索・絞り込みでき、6モン類×通常／新モンスター／Foil／特別絵保証のパック演出を任意seedで再生できます。プレビューは通常の購入・受取経路から分離し、Repositoryとユーザー資産へ書き込みません。
 
 v1.14.1では未所属カード一覧のカード本体を種類にかかわらず同一寸法へ固定し、ブースター限定モンスターの全面画像と旧アトラス向け中央画像が重なる二重描画を解消しました。開封演出は封印破壊、5枚の段階配札、個別3Dフリップ、Rare／Foil／Showcase専用バーストへ刷新しています。一括開封も順次表示です。
 
@@ -106,6 +108,7 @@ Pages workflowは `.github/workflows/pages.yml`。Firebase設定は `FIREBASE_SE
 | バトル/大会UI | `src/ui/battle-screen.js`, `src/ui/card-renderer.js`, `styles.css` |
 | 奪取 | `src/reward/CardStealSession.js`, `src/ui/reward-screen.js` |
 | デッキリーダー/カード一覧 | `src/decks/DeckCollection.js`, `src/ui/deck-screens.js`, `src/ui/catalog-screen.js` |
+| 管理者カード/ガチャプレビュー | `src/ui/admin-screen.js`, `src/ui/booster-screen.js` |
 | 永続化/公開Legend/王座 | `src/persistence/`, `src/tournament/TournamentRun.js`, `firestore.rules` |
 | Pages | `scripts/build-pages.mjs`, `.github/workflows/pages.yml` |
 

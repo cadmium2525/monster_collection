@@ -72,11 +72,13 @@ export class BoosterShopScreen {
 }
 
 export class PackOpeningScreen {
-  constructor({ root, pendingPack, masterIndex, reducedMotion = false, onComplete }) {
+  constructor({ root, pendingPack, masterIndex, reducedMotion = false, previewMode = false, completionLabel = '資産へ受け取る', onComplete }) {
     this.root = root;
     this.pendingPack = pendingPack;
     this.masterIndex = masterIndex;
     this.reducedMotion = reducedMotion;
+    this.previewMode = previewMode;
+    this.completionLabel = completionLabel;
     this.onComplete = onComplete;
     this.revealed = new Set();
     this.revealing = new Set();
@@ -183,6 +185,7 @@ export class PackOpeningScreen {
         className: `pack-opening-screen pack-sealed${this.phase === 'breaking' ? ' breaking' : ''}${this.reducedMotion ? ' reduced-motion' : ''}`,
         attrs: { style: `--pack-color:${pack?.color ?? '#62d9e7'}` },
       }, [
+        this.previewMode ? el('div', { className: 'admin-preview-watermark', text: 'ADMIN PREVIEW / 資産変更なし' }) : null,
         el('div', { className: 'opening-aura', attrs: { 'aria-hidden': 'true' } }, [el('i'), el('i'), el('i')]),
         el('div', { className: 'pack-particle-field', attrs: { 'aria-hidden': 'true' } }, Array.from({ length: 28 }, (_, index) => el('i', { attrs: { style: `--p:${index}` } }))),
         el('button', { className: 'opening-pack', disabled: this.phase === 'breaking', onclick: () => this.revealPack(), attrs: { type: 'button', 'aria-label': `${pack?.name ?? 'パック'}を開封` } }, [
@@ -203,7 +206,7 @@ export class PackOpeningScreen {
     }, [
       el('header', { className: 'pack-result-header' }, [
         el('div', {}, [el('p', { className: 'eyebrow', text: 'BOOSTER RESULT' }), el('h1', { text: pack?.name ?? '開封結果' })]),
-        el('span', { text: `${this.revealed.size}/5 REVEALED` }),
+        el('span', { text: `${this.previewMode ? 'ADMIN PREVIEW / ' : ''}${this.revealed.size}/5 REVEALED` }),
       ]),
       el('section', { className: 'pack-card-fan' }, this.pendingPack.cards.map((asset, index) => {
         const definition = this.masterIndex.cards.get(asset.masterId);
@@ -236,7 +239,7 @@ export class PackOpeningScreen {
       ]) : null,
       el('footer', { className: 'pack-result-actions' }, [
         !allRevealed ? el('button', { className: 'text-button', text: this.revealLocked ? '開封中…' : 'すべてめくる', disabled: this.revealLocked, onclick: () => this.revealAll() }) : el('span'),
-        allRevealed ? el('button', { className: 'primary-button', text: '資産へ受け取る', onclick: () => this.complete() }) : el('small', { text: 'カードをタップして1枚ずつ確認' }),
+        allRevealed ? el('button', { className: 'primary-button', text: this.completionLabel, onclick: () => this.complete() }) : el('small', { text: this.previewMode ? 'プレビューです。カード資産には追加されません。' : 'カードをタップして1枚ずつ確認' }),
       ]),
     ]));
   }

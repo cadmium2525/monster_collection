@@ -16,6 +16,7 @@ import { RewardScreen } from './ui/reward-screen.js';
 import { TournamentScreen } from './ui/tournament-screen.js';
 import { TournamentSetupScreen } from './ui/tournament-setup-screen.js';
 import { AssetCollectionScreen, BoosterShopScreen, PackOpeningScreen } from './ui/booster-screen.js';
+import { AdminToolScreen } from './ui/admin-screen.js';
 import { generateBoosterPack } from './gacha/pack-generator.js';
 
 const AI_BUDGET = Object.freeze({ bronze: 4, silver: 8, gold: 22, legend: 55, champion: 85 });
@@ -31,6 +32,7 @@ class MonsterConstructionApp {
     this.activeRun = null;
     this.installPromptEvent = null;
     globalThis.__MC_DEBUG_MODE__ = params.get('debug') === '1' && ['localhost', '127.0.0.1', '::1'].includes(location.hostname);
+    globalThis.__MC_ADMIN_MODE__ = params.get('admin') === '1';
     window.addEventListener('beforeinstallprompt', (event) => {
       event.preventDefault();
       this.installPromptEvent = event;
@@ -95,11 +97,13 @@ class MonsterConstructionApp {
       economy: this.economy,
       seed: this.seed,
       debugMode: globalThis.__MC_DEBUG_MODE__,
+      adminMode: globalThis.__MC_ADMIN_MODE__,
       activeRun: this.activeRun,
       onResume: () => this.resumeTournament(),
       onTournament: () => this.showTournamentSetup(),
       onDecks: () => this.showDeckList(),
       onBoosters: () => this.showBoosterShop(),
+      onAdmin: () => this.showAdminTools(),
       onRename: () => this.renameProfile(),
       installAvailable: Boolean(this.installPromptEvent),
       onInstall: () => this.installApp(),
@@ -163,6 +167,33 @@ class MonsterConstructionApp {
           } catch (error) { this.showError(error, 'デッキを作成できません'); }
         },
       }),
+    });
+  }
+
+  showAdminTools(config = this.adminToolConfig) {
+    this.currentScreen = 'admin';
+    new AdminToolScreen({
+      root: this.root,
+      masterIndex: this.masterIndex,
+      initialConfig: config,
+      onBack: () => this.showHome(),
+      onPreview: (pendingPack, nextConfig) => {
+        this.adminToolConfig = { ...nextConfig, tab: 'gacha' };
+        this.showAdminPackPreview(pendingPack);
+      },
+    });
+  }
+
+  showAdminPackPreview(pendingPack) {
+    this.currentScreen = 'admin-pack-preview';
+    new PackOpeningScreen({
+      root: this.root,
+      pendingPack,
+      masterIndex: this.masterIndex,
+      reducedMotion: globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false,
+      previewMode: true,
+      completionLabel: '管理者ツールへ戻る',
+      onComplete: () => this.showAdminTools(),
     });
   }
 

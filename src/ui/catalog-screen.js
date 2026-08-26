@@ -4,7 +4,7 @@ import { openModal } from './modal.js';
 
 const KIND_ORDER = Object.freeze({ monster: 0, training: 1, shugyo: 2, breeder: 3 });
 
-function openFusionDetails(fusion, masterIndex) {
+export function openFusionDetails(fusion, masterIndex) {
   const main = masterIndex.monstersByName.get(fusion.main);
   const material = masterIndex.monstersByName.get(fusion.material);
   const art = cardArtPlacement(main, { specialFusionId: fusion.id, specialForm: fusion.name });
@@ -22,7 +22,7 @@ function openFusionDetails(fusion, masterIndex) {
   });
 }
 
-function fusionTile(fusion, masterIndex) {
+export function fusionTile(fusion, masterIndex) {
   const main = masterIndex.monstersByName.get(fusion.main);
   const art = cardArtPlacement(main, { specialFusionId: fusion.id, specialForm: fusion.name });
   return el('button', {
