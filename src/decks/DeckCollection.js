@@ -1,5 +1,6 @@
 import { normalizeDeckCards, representativeMonster, totalPlayTp, validateDeck } from '../battle/deck.js';
 import { TOURNAMENTS } from '../battle/rules.js';
+import { normalizeCardAppearance } from '../cards/card-appearance.js';
 
 const MAX_DECKS = 5;
 
@@ -43,7 +44,7 @@ export class DeckCollection {
       deckId,
       deckName: validName(record.deckName),
       cards,
-      pool: (record.pool ?? []).map((card, index) => ({
+      pool: (record.pool ?? []).map((card, index) => normalizeCardAppearance({
         ...clone(card),
         instanceId: card.instanceId ?? `${deckId}-pool-${String(index + 1).padStart(3, '0')}`,
         masterId: card.masterId,
@@ -115,7 +116,7 @@ export class DeckCollection {
     const normalized = normalizeDeckCards(cards, deckId);
     const validation = validateDeck(normalized, this.masterIndex, { deckId });
     if (!validation.valid) throw new Error(`40枚を保存できません:\n${validation.errors.join('\n')}`);
-    const normalizedPool = (pool ?? []).map((card, index) => ({
+    const normalizedPool = (pool ?? []).map((card, index) => normalizeCardAppearance({
       ...clone(card),
       instanceId: card.instanceId ?? `${deckId}-pool-${String(index + 1).padStart(3, '0')}`,
       masterId: card.masterId,

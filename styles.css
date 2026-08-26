@@ -420,7 +420,7 @@ body:has(.battle-screen) {
     linear-gradient(180deg, rgba(2,7,13,.34), transparent 26% 69%, rgba(2,7,13,.72) 100%),
     url("./assets/images/monster-atlas.webp");
   background-repeat: no-repeat;
-  background-size: 100% 100%, 600% auto;
+  background-size: 100% 100%, 600% 300%;
   background-position: center, var(--art-x) var(--art-y);
 }
 .card-art.monster-art.special-fusion-art {
@@ -432,22 +432,6 @@ body:has(.battle-screen) {
 .game-card .card-art.monster-art {
   background-size: 100% 100%, 600% 300%;
 }
-.game-card .card-art.monster-art::after {
-  content: "";
-  position: absolute;
-  z-index: 1;
-  top: 18%;
-  left: 9%;
-  width: 82%;
-  aspect-ratio: .75;
-  border-radius: 5px;
-  background-image: url("./assets/images/monster-atlas.webp");
-  background-repeat: no-repeat;
-  background-size: 600% 300%;
-  background-position: var(--art-x) var(--art-y);
-  box-shadow: 0 0 12px rgba(2,7,13,.42);
-  pointer-events: none;
-}
 .game-card .card-art.monster-art.special-fusion-art,
 .fusion-catalog-card .card-art.monster-art.special-fusion-art {
   background-image:
@@ -456,15 +440,6 @@ body:has(.battle-screen) {
   background-size: 100% 100%, 600% 600%;
   background-position: center, var(--art-x) var(--art-y);
 }
-.game-card .card-art.monster-art.special-fusion-art::after,
-.fusion-catalog-card .card-art.monster-art.special-fusion-art::after {
-  top: 18%;
-  left: 4%;
-  width: 92%;
-  aspect-ratio: 1;
-  background-image: url("./assets/images/special-fusion-atlas-v1.webp");
-  background-size: 600% 600%;
-}
 .card-art.monster-art.special-fusion-art.blue-drill-art {
   background-image:
     linear-gradient(180deg, rgba(2,7,13,.1), transparent 24% 72%, rgba(2,7,13,.72) 100%),
@@ -472,12 +447,9 @@ body:has(.battle-screen) {
   background-size: 100% 100%, cover;
   background-position: center, center;
 }
-.game-card .card-art.monster-art.special-fusion-art.blue-drill-art::after,
-.fusion-catalog-card .card-art.monster-art.special-fusion-art.blue-drill-art::after {
-  background-image: url("./assets/images/blue-drill-v2.webp");
-  background-size: cover;
-  background-position: center;
-}
+.game-card .card-art.monster-art::after,
+.game-card .card-art.support-card-art::after,
+.fusion-catalog-card .card-art.monster-art::after { content: none; display: none; }
 .card-kind { position: absolute; z-index: 3; inset: auto 22% 5px; overflow: hidden; padding: 2px 4px; border-radius: 8px; color: rgba(255,255,255,.9); background: rgba(4,10,17,.7); font-size: clamp(6px,.68vw,8px); font-weight: 800; text-align: center; white-space: nowrap; text-overflow: ellipsis; text-shadow: 0 1px 3px #000; }
 .card-corner {
   position: absolute;
@@ -662,33 +634,12 @@ body:has(.battle-screen) {
   background-size: 100% 100%, 500% 500%;
   background-position: center, var(--art-x) var(--art-y);
 }
-.game-card .card-art.support-card-art::after {
-  content: "";
-  position: absolute;
-  z-index: 1;
-  top: 18%;
-  left: 4%;
-  width: 92%;
-  aspect-ratio: 1;
-  border-radius: 5px;
-  background-image: url("./assets/images/support-card-atlas-v1.webp");
-  background-repeat: no-repeat;
-  background-size: 500% 500%;
-  background-position: var(--art-x) var(--art-y);
-  box-shadow: 0 0 12px rgba(2,7,13,.42);
-  pointer-events: none;
-}
 .card-art.support-card-art.standalone-support-art,
 .game-card .card-art.support-card-art.standalone-support-art {
   background-image:
     linear-gradient(180deg, rgba(2,7,13,.28), transparent 22% 73%, rgba(2,7,13,.72) 100%),
     var(--support-art);
   background-size: 100% 100%, cover;
-  background-position: center;
-}
-.game-card .card-art.support-card-art.standalone-support-art::after {
-  background-image: var(--support-art);
-  background-size: cover;
   background-position: center;
 }
 
@@ -1216,17 +1167,13 @@ button:disabled { opacity: .38; cursor: not-allowed; }
   background-size: 100% 100%,cover;
   background-position: center,center top;
 }
-.game-card .card-art.monster-art.standalone-monster-art::after {
-  content: none;
-  display: none;
-}
 .game-card.variant-showcase { border-color: #fff0a5; box-shadow: 0 0 0 1px rgba(255,238,151,.7),0 0 18px rgba(194,111,255,.48),0 8px 18px rgba(0,0,0,.7); }
 .game-card.finish-foil::before {
   content:""; position:absolute; z-index:6; inset:0; border-radius:inherit; pointer-events:none; mix-blend-mode:screen;
-  background:linear-gradient(115deg,transparent 5%,rgba(77,231,255,.18) 25%,rgba(255,244,149,.36) 42%,rgba(255,113,230,.2) 58%,transparent 78%);
-  background-size:240% 100%; animation:foil-sheen 2.8s linear infinite;
+  background:linear-gradient(115deg,transparent 32%,rgba(77,231,255,.16) 41%,rgba(255,244,149,.48) 49%,rgba(255,113,230,.2) 57%,transparent 66%);
+  background-repeat:no-repeat; background-size:260% 100%; background-position:170% 0; animation:foil-sheen 3.4s ease-in-out infinite;
 }
-@keyframes foil-sheen { to { background-position:-240% 0; } }
+@keyframes foil-sheen { 0%,14% { background-position:170% 0; } 74%,100% { background-position:-70% 0; } }
 
 .booster-shop-screen,.asset-collection-screen,.deck-builder-screen { height:calc(100dvh - max(16px,var(--safe-top)) - max(16px,var(--safe-bottom))); min-height:350px; overflow:hidden; display:grid; gap:8px; }
 .booster-shop-screen { grid-template-rows:auto auto minmax(0,1fr) auto; }

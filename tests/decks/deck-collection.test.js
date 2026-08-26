@@ -67,6 +67,17 @@ test('deck builder keeps removed assets in that deck pool and preserves unique a
   assert.equal(new Set([...updated.cards, ...updated.pool].map((card) => card.instanceId)).size, 41);
 });
 
+test('saved decks migrate legacy Foil and special art off support cards', () => {
+  const decks = collection();
+  const cards = legalDeck('legacy-support-premium');
+  const supportIndex = cards.findIndex((card) => masterIndex.cards.get(card.masterId)?.kind !== 'monster');
+  cards[supportIndex] = { ...cards[supportIndex], artVariantId: 'legacy-special', finish: 'foil', rarity: 'showcase' };
+  const deck = decks.create({ deckName: '旧プレミアム移行', cards });
+  assert.equal(deck.cards[supportIndex].artVariantId, 'base');
+  assert.equal(deck.cards[supportIndex].finish, 'normal');
+  assert.equal(deck.cards[supportIndex].rarity, 'rare');
+});
+
 test('deck leader can be selected from its monsters and survives card updates while present', () => {
   const decks = collection();
   const originalCards = legalDeck('leader-a');

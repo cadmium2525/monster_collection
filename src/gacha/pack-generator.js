@@ -1,4 +1,5 @@
 import { SeededRng } from '../core/rng.js';
+import { normalizeCardAppearance } from '../cards/card-appearance.js';
 import { acquisitionOrigin, isPackEligible } from './acquisition.js';
 import { boosterPack } from './pack-catalog.js';
 
@@ -24,13 +25,13 @@ function factionFor(definition) {
 }
 
 function asset(definition, { rarity = 'common', artVariantId = 'base', finish = 'normal' } = {}) {
-  return {
+  return normalizeCardAppearance({
     masterId: definition.id,
     artVariantId,
     finish,
     rarity,
     origin: acquisitionOrigin(definition) === 'booster' ? 'booster' : 'core',
-  };
+  });
 }
 
 function chooseDefinition(rng, definitions, weightFor = () => 1) {
@@ -70,9 +71,9 @@ export function generateBoosterPack({ masterIndex, faction, seed, openedCount = 
       finish: foilGuaranteed || rng.next() < 0.35 ? 'foil' : 'normal',
     }));
   } else {
-    const rarePool = [...monsters, ...themed, ...generic];
+    const rarePool = foilGuaranteed ? monsters : [...monsters, ...themed, ...generic];
     cards.push(asset(chooseDefinition(rng, rarePool, (definition) => definition.kind === 'monster' ? 2.2 : 1), {
-      rarity: foilGuaranteed ? 'showcase' : 'rare',
+      rarity: 'rare',
       finish: foilGuaranteed ? 'foil' : 'normal',
     }));
   }

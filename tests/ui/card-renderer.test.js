@@ -116,19 +116,31 @@ test('opponent cards stay upright so their corner values remain readable', () =>
   assert.doesNotMatch(css, /\.board-row\.opponent\s+\.game-card\s*\{[^}]*rotate\(180deg\)/s);
 });
 
-test('card artwork keeps a head-safe portrait and correct detail ratios', () => {
+test('atlas artwork renders exactly once and keeps correct detail ratios', () => {
   const css = readFileSync(new URL('../../styles.css', import.meta.url), 'utf8');
-  assert.match(css, /\.game-card \.card-art\.monster-art::after\s*\{[^}]*top: 18%[^}]*aspect-ratio: \.75/s);
+  assert.match(css, /\.game-card \.card-art\.monster-art::after,[^{]+\{\s*content: none;\s*display: none;/s);
+  assert.doesNotMatch(css, /\.game-card \.card-art\.(?:monster-art|support-card-art)::after\s*\{[^}]*(?:background-image|top: 18%)/s);
+  assert.match(css, /\.card-art\.monster-art\s*\{[^}]*background-size: 100% 100%, 600% 300%/s);
   assert.match(css, /\.detail-summary > \.card-art\s*\{[^}]*aspect-ratio: \.75/s);
   assert.match(css, /\.detail-summary > \.card-art\.support-card-art\s*\{\s*aspect-ratio: 1/s);
   assert.match(css, /\.card-cost\s*\{[^}]*width: clamp\(21px,25%,31px\)/s);
 });
 
-test('standalone booster monster art is rendered once and asset cards share one fixed footprint', () => {
+test('standalone booster monster art and asset cards share one fixed footprint', () => {
   const css = readFileSync(new URL('../../styles.css', import.meta.url), 'utf8');
-  assert.match(css, /\.game-card \.card-art\.monster-art\.standalone-monster-art::after\s*\{[^}]*content: none;[^}]*display: none;/s);
+  assert.match(css, /\.game-card \.card-art\.monster-art::after,[^{]+\{\s*content: none;\s*display: none;/s);
   assert.match(css, /\.asset-card-grid\s*\{[^}]*grid-template-columns:repeat\(auto-fill,var\(--asset-card-width\)\)/s);
   assert.match(css, /\.asset-card-entry \.game-card\s*\{[^}]*width:100%;[^}]*aspect-ratio:\.72;/s);
+});
+
+test('Foil uses one non-repeating sweep and premium classes are monster-only', () => {
+  const renderer = readFileSync(new URL('../../src/ui/card-renderer.js', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../../styles.css', import.meta.url), 'utf8');
+  assert.match(renderer, /definition\.kind === 'monster' && \(cardAsset\?\.finish/);
+  assert.match(renderer, /definition\.kind === 'monster' && \(cardAsset\?\.artVariantId/);
+  assert.match(css, /\.game-card\.finish-foil::before\s*\{[^}]*background-repeat:no-repeat/s);
+  assert.match(css, /@keyframes foil-sheen\s*\{\s*0%,14%/s);
+  assert.match(css, /@keyframes foil-sheen[^}]+\}[^}]*74%,100%/s);
 });
 
 test('hand monster stats include tournament growth carried from earlier matches', () => {

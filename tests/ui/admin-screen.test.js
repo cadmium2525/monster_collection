@@ -28,6 +28,7 @@ test('admin pack previews cover every faction and deterministic guarantee profil
     assert.equal(featured.cards.length, 5);
     assert.ok(featured.cards.some((card) => card.origin === 'booster'));
     assert.ok(foil.cards.some((card) => card.finish === 'foil'));
+    assert.ok(foil.cards.filter((card) => card.finish === 'foil').every((card) => masterIndex.cards.get(card.masterId)?.kind === 'monster'));
     assert.ok(showcase.cards.some((card) => card.rarity === 'showcase' && card.artVariantId !== 'base'));
     assert.match(showcase.operationId, /^admin-preview-/);
   }

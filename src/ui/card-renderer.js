@@ -48,7 +48,9 @@ export function cardArtPlacement(definition, unit = null, cardAsset = null) {
     };
   }
 
-  const artVariantId = cardAsset?.artVariantId ?? unit?.artVariantId ?? 'base';
+  const artVariantId = definition.kind === 'monster'
+    ? cardAsset?.artVariantId ?? unit?.artVariantId ?? 'base'
+    : 'base';
   if (artVariantId !== 'base') {
     return {
       className: 'monster-art standalone-monster-art showcase-monster-art',
@@ -152,8 +154,8 @@ export function renderCard({
     dragReady ? 'drag-ready' : '',
     unit && (unit.actionPoints <= 0 || unit.summonedThisTurn || unit.stunnedThisTurn) ? 'exhausted' : '',
     interactive ? '' : 'static',
-    (cardAsset?.finish ?? unit?.finish) === 'foil' ? 'finish-foil' : '',
-    (cardAsset?.artVariantId ?? unit?.artVariantId ?? 'base') !== 'base' ? 'variant-showcase' : '',
+    definition.kind === 'monster' && (cardAsset?.finish ?? unit?.finish) === 'foil' ? 'finish-foil' : '',
+    definition.kind === 'monster' && (cardAsset?.artVariantId ?? unit?.artVariantId ?? 'base') !== 'base' ? 'variant-showcase' : '',
   ].filter(Boolean).join(' ');
   const node = el(interactive ? 'button' : 'div', {
     className: classes,

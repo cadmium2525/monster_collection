@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { CardStealSession } from '../../src/reward/CardStealSession.js';
 import { generateBoosterPack } from '../../src/gacha/pack-generator.js';
 import { BOOSTER_MONSTER_IDS, TROPHY_BREEDER_IDS, acquisitionOrigin } from '../../src/gacha/acquisition.js';
-import { applyDiamondReward, applyPackPurchase, defaultEconomyState } from '../../src/gacha/economy-state.js';
+import { applyDiamondReward, applyPackPurchase, defaultEconomyState, normalizeEconomyState } from '../../src/gacha/economy-state.js';
 import { SeededRng } from '../../src/core/rng.js';
 import { generateCpuDeck } from '../../src/tournament/deck-generator.js';
 import { legalDeck, masterIndex } from '../helpers.js';
@@ -37,7 +37,37 @@ test('five, ten and twenty-pack guarantees are deterministic per faction', () =>
     const twentieth = generateBoosterPack({ masterIndex, faction, seed: `twentieth:${faction}`, openedCount: 19 });
     assert.ok(fifth.cards.some((card) => BOOSTER_MONSTER_IDS.includes(card.masterId)));
     assert.ok(tenth.cards.some((card) => card.finish === 'foil'));
+    assert.ok(tenth.cards.filter((card) => card.finish === 'foil').every((card) => masterIndex.cards.get(card.masterId)?.kind === 'monster'));
     assert.ok(twentieth.cards.some((card) => card.artVariantId !== 'base' && card.rarity === 'showcase'));
+    assert.ok(twentieth.cards.filter((card) => card.artVariantId !== 'base').every((card) => masterIndex.cards.get(card.masterId)?.kind === 'monster'));
+  }
+});
+
+test('legacy premium support assets are migrated to normal appearance', () => {
+  const legacy = defaultEconomyState();
+  legacy.unassignedAssets = [{
+    masterId: 'breeder-001', artVariantId: 'legacy-special', finish: 'foil', rarity: 'showcase', origin: 'core', quantity: 2,
+  }];
+  legacy.pendingPack = {
+    operationId: 'legacy-pack', faction: '無機', packId: 'pack-inorganic',
+    cards: [{ masterId: 'training-life', artVariantId: 'legacy-special', finish: 'foil', rarity: 'showcase', origin: 'core' }],
+  };
+  const migrated = normalizeEconomyState(legacy);
+  assert.deepEqual(migrated.unassignedAssets[0], {
+    masterId: 'breeder-001', artVariantId: 'base', finish: 'normal', rarity: 'rare', origin: 'core', quantity: 2, firstObtainedAt: null,
+  });
+  assert.equal(migrated.pendingPack.cards[0].artVariantId, 'base');
+  assert.equal(migrated.pendingPack.cards[0].finish, 'normal');
+  assert.equal(migrated.pendingPack.cards[0].rarity, 'rare');
+});
+
+test('every generated Foil and special illustration belongs to a monster', () => {
+  for (const faction of ['無機', '創造', '幻霊', '魔族', '獣族', '怪物']) {
+    for (let openedCount = 0; openedCount < 40; openedCount += 1) {
+      const pack = generateBoosterPack({ masterIndex, faction, openedCount, seed: `premium-rule:${faction}:${openedCount}` });
+      const premium = pack.cards.filter((card) => card.finish === 'foil' || card.artVariantId !== 'base');
+      assert.ok(premium.every((card) => masterIndex.cards.get(card.masterId)?.kind === 'monster'));
+    }
   }
 });
 

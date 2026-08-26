@@ -1,4 +1,5 @@
 import { FACTIONS } from './acquisition.js';
+import { normalizeCardAppearance } from '../cards/card-appearance.js';
 
 export const ECONOMY_SCHEMA_VERSION = 1;
 export const STARTER_DIAMONDS = 600;
@@ -17,7 +18,7 @@ export function assetStackKey(asset) {
 export function normalizeAssetStack(asset) {
   const quantity = Math.max(0, Math.trunc(Number(asset?.quantity) || 0));
   if (!cleanString(asset?.masterId) || quantity <= 0) return null;
-  return {
+  return normalizeCardAppearance({
     masterId: cleanString(asset.masterId),
     artVariantId: cleanString(asset.artVariantId, 'base'),
     finish: cleanString(asset.finish, 'normal'),
@@ -25,6 +26,14 @@ export function normalizeAssetStack(asset) {
     rarity: cleanString(asset.rarity, 'common'),
     quantity,
     firstObtainedAt: cleanString(asset.firstObtainedAt),
+  });
+}
+
+function normalizePendingPack(value) {
+  if (!value) return null;
+  return {
+    ...clone(value),
+    cards: Array.isArray(value.cards) ? value.cards.map((card) => normalizeCardAppearance(clone(card))) : [],
   };
 }
 
@@ -65,7 +74,7 @@ export function normalizeEconomyState(value, now = null) {
     diamonds: Math.max(0, Math.trunc(Number(value.diamonds) || 0)),
     freePackCredits: Math.max(0, Math.trunc(Number(value.freePackCredits) || 0)),
     unassignedAssets: mergeAssetStacks(value.unassignedAssets),
-    pendingPack: value.pendingPack ? clone(value.pendingPack) : null,
+    pendingPack: normalizePendingPack(value.pendingPack),
     packCounters: Object.fromEntries(FACTIONS.map((faction) => [
       faction,
       Math.max(0, Math.trunc(Number(value.packCounters?.[faction]) || 0)),
@@ -95,14 +104,15 @@ export function applyPackPurchase(current, purchase, now = new Date().toISOStrin
   state.diamonds -= cost;
   if (useFreeCredit) state.freePackCredits -= 1;
   state.packCounters[purchase.faction] += 1;
-  const assets = purchase.cards.map((card) => ({ ...clone(card), quantity: 1, firstObtainedAt: now }));
+  const normalizedCards = purchase.cards.map((card) => normalizeCardAppearance(clone(card)));
+  const assets = normalizedCards.map((card) => ({ ...card, quantity: 1, firstObtainedAt: now }));
   state.unassignedAssets = mergeAssetStacks([...state.unassignedAssets, ...assets]);
   state.pendingPack = {
     schemaVersion: 1,
     operationId,
     faction: purchase.faction,
     packId: purchase.packId,
-    cards: clone(purchase.cards),
+    cards: clone(normalizedCards),
     cost,
     usedFreeCredit: useFreeCredit,
     openedAt: now,
