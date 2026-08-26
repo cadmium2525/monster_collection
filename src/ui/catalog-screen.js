@@ -30,7 +30,7 @@ export function fusionTile(fusion, masterIndex) {
     attrs: { type: 'button', 'aria-label': `${fusion.name}の詳細を表示` },
     onclick: () => openFusionDetails(fusion, masterIndex),
   }, [
-    el('div', { className: 'card-top' }, [el('b', { text: fusion.name }), el('span', { text: '合' })]),
+    el('div', { className: 'card-top' }, el('b', { text: fusion.name })),
     el('div', { className: `card-art ${art.className}`, attrs: art.style ? { style: art.style } : null }),
     el('strong', { text: `${fusion.main} ＋ ${fusion.material}` }),
   ]);

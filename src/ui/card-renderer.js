@@ -64,9 +64,10 @@ export function cardArtPlacement(definition, unit = null, cardAsset = null) {
     : SPECIAL_FUSION_NAMES.indexOf(unit?.specialForm);
   if (fusionIndex >= 0 && fusionIndex < SPECIAL_FUSION_NAMES.length) {
     const fusionAssetId = `fusion-${String(fusionIndex + 1).padStart(3, '0')}`;
+    const horizontalCorrection = fusionIndex === 27 ? ';--fusion-art-x:8%' : '';
     return {
       className: 'monster-art special-fusion-art standalone-fusion-art',
-      style: `--monster-art:url("./assets/images/special-fusions/${fusionAssetId}.webp")`,
+      style: `--monster-art:url("./assets/images/special-fusions/${fusionAssetId}.webp")${horizontalCorrection}`,
     };
   }
 

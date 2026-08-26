@@ -70,6 +70,8 @@ test('card art placement keeps legacy art below the name band and uses standalon
   const blueDrill = cardArtPlacement(monster, { specialFusionId: 'fusion-014', specialForm: 'ブルードリル' });
   assert.equal(blueDrill.className, 'monster-art special-fusion-art standalone-fusion-art');
   assert.equal(blueDrill.style, '--monster-art:url("./assets/images/special-fusions/fusion-014.webp")');
+  const yuma = cardArtPlacement(monster, { specialFusionId: 'fusion-028', specialForm: 'ユーマ' });
+  assert.equal(yuma.style, '--monster-art:url("./assets/images/special-fusions/fusion-028.webp");--fusion-art-x:8%');
   const support = cardArtPlacement({ id: 'breeder-020', kind: 'breeder' });
   assert.equal(support.className, 'support-card-art legacy-name-safe-art');
   assert.match(support.style, /--art-x:100%;--art-y:100%/);
@@ -134,11 +136,20 @@ test('atlas artwork renders exactly once and keeps correct detail ratios', () =>
   assert.match(css, /\.card-art\.monster-art\s*\{[^}]*background-size: 100% 100%, 600% 300%/s);
   assert.match(css, /\.game-card > \.card-art\.legacy-name-safe-art\s*\{[^}]*top: clamp\(18px, 14%, 21px\)/s);
   assert.match(css, /\.board-slot \.game-card > \.card-art\.legacy-name-safe-art\s*\{[^}]*top: 0/s);
+  assert.match(css, /\.game-card > \.card-art\.special-fusion-art\s*\{[^}]*top: clamp\(18px, 14%, 21px\)/s);
+  assert.match(css, /\.fusion-catalog-card > \.card-art\.special-fusion-art\s*\{[^}]*top: clamp\(18px,14%,21px\)/s);
   assert.match(css, /\.card-art\.monster-art\.special-fusion-art,[^{]+\{[^}]*var\(--monster-art\)[^}]*background-size: 100% 100%, cover/s);
+  assert.match(css, /background-position: center, var\(--fusion-art-x, 50%\) top/);
   assert.doesNotMatch(css, /special-fusion-art[^}]+special-fusion-atlas-v1\.webp/s);
   assert.match(css, /\.detail-summary > \.card-art\s*\{[^}]*aspect-ratio: \.75/s);
   assert.match(css, /\.detail-summary > \.card-art\.support-card-art\s*\{\s*aspect-ratio: 1/s);
   assert.match(css, /\.card-cost\s*\{[^}]*width: clamp\(21px,25%,31px\)/s);
+});
+
+test('special fusion name bands omit the redundant fusion marker', () => {
+  const catalog = readFileSync(new URL('../../src/ui/catalog-screen.js', import.meta.url), 'utf8');
+  assert.doesNotMatch(catalog, /text: '合'/);
+  assert.match(catalog, /className: 'card-top'[^\n]+fusion\.name/);
 });
 
 test('standalone booster monster art and asset cards share one fixed footprint', () => {

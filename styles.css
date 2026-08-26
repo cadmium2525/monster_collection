@@ -423,6 +423,14 @@ body:has(.battle-screen) {
   top: 0;
   border-radius: 7px;
 }
+.game-card > .card-art.special-fusion-art {
+  top: clamp(18px, 14%, 21px);
+  border-radius: 0 0 7px 7px;
+}
+.board-slot .game-card > .card-art.special-fusion-art {
+  top: 0;
+  border-radius: 7px;
+}
 .card-art.monster-art {
   background-image:
     linear-gradient(180deg, rgba(2,7,13,.34), transparent 26% 69%, rgba(2,7,13,.72) 100%),
@@ -441,7 +449,7 @@ body:has(.battle-screen) {
     linear-gradient(180deg, rgba(2,7,13,.28), transparent 22% 73%, rgba(2,7,13,.72) 100%),
     var(--monster-art);
   background-size: 100% 100%, cover;
-  background-position: center, center top;
+  background-position: center, var(--fusion-art-x, 50%) top;
 }
 .game-card .card-art.monster-art::after,
 .game-card .card-art.support-card-art::after,
@@ -922,7 +930,7 @@ button:disabled { opacity: .38; cursor: not-allowed; }
 .catalog-card-grid .game-card { width: 100%; }
 .fusion-catalog-card { position: relative; isolation: isolate; width: 100%; aspect-ratio: .72; overflow: hidden; padding: 0; border: 2px solid #d5a759; border-radius: 7px; color: #fbf6e9; background: linear-gradient(180deg,#332411,#0b111a 68%); box-shadow: 0 4px 10px rgba(0,0,0,.5),inset 0 0 10px rgba(232,186,98,.08); cursor: pointer; text-align: left; }
 .fusion-catalog-card .card-art { position: absolute; z-index: -1; inset: 0; width: 100%; height: auto; margin: 0; border: 0; border-radius: 5px; }
-.fusion-catalog-card .card-top span { color: var(--gold); font-weight: 900; }
+.fusion-catalog-card > .card-art.special-fusion-art { top: clamp(18px,14%,21px); border-radius:0 0 5px 5px; }
 .fusion-catalog-card > strong { position: absolute; z-index: 4; right: 8%; bottom: 6px; left: 8%; overflow: hidden; padding: 3px 5px; border-radius: 8px; color: #ffe8a8; background: rgba(4,10,17,.72); font-size: 7px; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
 .fusion-catalog-detail { display: grid; grid-template-columns: minmax(170px,.72fr) minmax(260px,1.28fr); gap: 14px; margin-top: 12px; }
 .fusion-catalog-detail > .card-art { width: min(100%,260px); height: auto; aspect-ratio: 1; justify-self: center; }
