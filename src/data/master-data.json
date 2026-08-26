@@ -2393,7 +2393,7 @@
       "kind": "breeder",
       "category": "モン類専用",
       "faction": "無機",
-      "name": "無機①",
+      "name": "無機・硬化装甲",
       "tp": 2,
       "effect": "対象無機DEF+5・3ターン"
     },
@@ -2402,7 +2402,7 @@
       "kind": "breeder",
       "category": "モン類専用",
       "faction": "無機",
-      "name": "無機②",
+      "name": "無機・装甲解析",
       "tp": 1,
       "effect": "対象無機は常時DEF3無視。相手が創造なら合計DEF5無視"
     },
@@ -2411,7 +2411,7 @@
       "kind": "breeder",
       "category": "モン類専用",
       "faction": "創造",
-      "name": "創造①",
+      "name": "創造・省力設計",
       "tp": 3,
       "effect": "自陣の創造モンスターの技TP-1"
     },
@@ -2420,7 +2420,7 @@
       "kind": "breeder",
       "category": "モン類専用",
       "faction": "創造",
-      "name": "創造②",
+      "name": "創造・機能停止",
       "tp": 3,
       "effect": "次ターン、相手モンスター1体をスタン"
     },
@@ -2429,7 +2429,7 @@
       "kind": "breeder",
       "category": "モン類専用",
       "faction": "幻霊",
-      "name": "幻霊①",
+      "name": "幻霊・連続顕現",
       "tp": 3,
       "effect": "幻霊1体の行動権をこのターン+1"
     },
@@ -2438,7 +2438,7 @@
       "kind": "breeder",
       "category": "モン類専用",
       "faction": "幻霊",
-      "name": "幻霊②",
+      "name": "幻霊・幽体回避",
       "tp": 1,
       "effect": "対象1体が次の攻撃を完全回避"
     },
@@ -2447,7 +2447,7 @@
       "kind": "breeder",
       "category": "モン類専用",
       "faction": "魔族",
-      "name": "魔族①",
+      "name": "魔族・魔力注入",
       "tp": 2,
       "effect": "魔族1体ATK+5"
     },
@@ -2456,7 +2456,7 @@
       "kind": "breeder",
       "category": "モン類専用",
       "faction": "魔族",
-      "name": "魔族②",
+      "name": "魔族・群魔の共鳴",
       "tp": 2,
       "effect": "場の魔族枚数×5、対象魔族ATK上昇"
     },
@@ -2465,7 +2465,7 @@
       "kind": "breeder",
       "category": "モン類専用",
       "faction": "獣族",
-      "name": "獣族①",
+      "name": "獣族・野生の活力",
       "tp": 2,
       "effect": "場の獣族枚数×2 TP回復"
     },
@@ -2474,7 +2474,7 @@
       "kind": "breeder",
       "category": "モン類専用",
       "faction": "獣族",
-      "name": "獣族②",
+      "name": "獣族・生命の息吹",
       "tp": 3,
       "effect": "獣族1体LIFE15回復"
     },
@@ -2483,7 +2483,7 @@
       "kind": "breeder",
       "category": "モン類専用",
       "faction": "怪物",
-      "name": "怪物①",
+      "name": "怪物・威嚇咆哮",
       "tp": 2,
       "effect": "相手1体を対象。無機なら次ターンスタン、それ以外なら次の技ダメージ-20%"
     },
@@ -2492,7 +2492,7 @@
       "kind": "breeder",
       "category": "モン類専用",
       "faction": "怪物",
-      "name": "怪物②",
+      "name": "怪物・群体進化",
       "tp": 4,
       "effect": "怪物2体以上なら怪物全員ATK+5/DEF+5"
     },

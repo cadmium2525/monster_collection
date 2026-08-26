@@ -3,6 +3,39 @@ import { el, formatDate, replace } from './dom.js';
 import { openCardDetails, renderCard } from './card-renderer.js';
 import { openModal } from './modal.js';
 
+export function openStarterDeckPicker({ masterIndex, options, onChoose }) {
+  let modal = null;
+  const content = el('div', { className: 'starter-picker' }, [
+    el('p', { className: 'starter-picker-intro', text: '好きなモン類の40枚から始めます。どのデッキもブロンズカップへすぐ出場でき、作成後に名前とリーダーを変更できます。' }),
+    el('div', { className: 'starter-choice-grid' }, options.map((option) => {
+      const representative = masterIndex.monsters.get(option.representativeMonsterId);
+      const choose = () => { modal.close(); onChoose(option); };
+      return el('article', {
+        className: `starter-choice starter-${option.faction}`,
+        attrs: { role: 'button', tabindex: '0', 'aria-label': `${option.faction}スターター「${option.deckName}」を作成` },
+        onclick: choose,
+        onkeydown: (event) => {
+          if (event.key !== 'Enter' && event.key !== ' ') return;
+          event.preventDefault();
+          choose();
+        },
+      }, [
+        el('div', { className: 'starter-choice-art' }, representative
+          ? renderCard({ definition: representative, interactive: false, label: `${option.deckName}のリーダー` })
+          : null),
+        el('div', { className: 'starter-choice-copy' }, [
+          el('small', { text: `${option.faction} STARTER` }),
+          el('strong', { text: option.deckName }),
+          el('p', { text: option.description }),
+          el('span', { text: 'この40枚を選ぶ' }),
+        ]),
+      ]);
+    })),
+  ]);
+  modal = openModal({ title: 'スターターデッキを選択', content, className: 'starter-picker-modal' });
+  return modal;
+}
+
 function deckSummaryCard(deck, masterIndex, onSelect) {
   const representative = masterIndex.monsters.get(deck.representativeMonsterId);
   return el('article', {

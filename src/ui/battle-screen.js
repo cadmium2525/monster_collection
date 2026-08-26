@@ -3,6 +3,7 @@ import { effectiveAtk, effectiveDef } from '../battle/state.js';
 import { el, replace } from './dom.js';
 import { renderCard, openCardDetails } from './card-renderer.js';
 import { createFusionAnimationModel, playFusionAnimation } from './fusion-animation.js';
+import { playFusionUnlockAnimation } from './fusion-unlock-animation.js';
 import { openModal } from './modal.js';
 
 function delay(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
@@ -883,6 +884,13 @@ export class BattleScreen {
   async showLatestEvent() {
     const event = this.engine.state.log.at(-1);
     if (!event || this.speed === 'fast' && ['draw', 'turn-start', 'turn-end'].includes(event.type)) return;
+    if (event.type === 'fusion-unlocked') {
+      await playFusionUnlockAnimation({
+        playerName: this.engine.player(event.playerId).displayName,
+        speed: this.speed,
+      });
+      return;
+    }
     if (event.type.startsWith('fusion-')) return;
     const banner = el('div', { className: 'event-banner', text: event.message });
     document.body.append(banner);

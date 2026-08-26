@@ -1,5 +1,5 @@
 import { createAiPolicy } from './ai/index.js';
-import { createBaselineDeck } from './data/default-decks.js';
+import { createBaselineDeck, createFactionStarterDeck, STARTER_DECK_OPTIONS } from './data/default-decks.js';
 import { createMasterIndex, loadMasterData } from './data/master-loader.js';
 import { DeckCollection } from './decks/DeckCollection.js';
 import { GameSession } from './game/GameSession.js';
@@ -8,7 +8,7 @@ import { registerServiceWorker } from './pwa/register-service-worker.js';
 import { TournamentSeedSource } from './core/tournament-seed.js';
 import { BattleScreen } from './ui/battle-screen.js';
 import { CardCatalogScreen } from './ui/catalog-screen.js';
-import { DeckDetailScreen, DeckListScreen } from './ui/deck-screens.js';
+import { DeckDetailScreen, DeckListScreen, openStarterDeckPicker } from './ui/deck-screens.js';
 import { el, replace } from './ui/dom.js';
 import { HomeScreen } from './ui/home-screen.js';
 import { openModal } from './ui/modal.js';
@@ -140,17 +140,24 @@ class MonsterConstructionApp {
       onBack: () => this.showHome(),
       onSelect: (deck) => this.showDeckDetail(deck.deckId),
       onCatalog: () => this.showCardCatalog(),
-      onCreate: async () => {
-        try {
-          const number = this.decks.list().length + 1;
-          const deck = this.decks.create({
-            deckName: `新しい40枚 ${number}`,
-            cards: createBaselineDeck(this.masterData, `new-${this.seed}-${Date.now().toString(36)}`),
-          });
-          await this.repository.saveDeck(deck);
-          screen.render();
-        } catch (error) { this.showError(error, 'デッキを作成できません'); }
-      },
+      onCreate: () => openStarterDeckPicker({
+        masterIndex: this.masterIndex,
+        options: STARTER_DECK_OPTIONS,
+        onChoose: async (starter) => {
+          try {
+            const deckId = `new-${starter.faction}-${this.seed}-${Date.now().toString(36)}`;
+            const deck = this.decks.create({
+              deckName: starter.deckName,
+              cards: createFactionStarterDeck(this.masterData, starter.faction, deckId),
+            });
+            await this.repository.saveDeck(deck);
+            this.catalog = await this.repository.recordCardCatalog({
+              ownedCardMasterIds: deck.cards.map((card) => card.masterId),
+            });
+            screen.render();
+          } catch (error) { this.showError(error, 'デッキを作成できません'); }
+        },
+      }),
     });
   }
 

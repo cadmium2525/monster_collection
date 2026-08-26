@@ -456,6 +456,12 @@ export class BattleEngine {
       tp: player.tp,
       drawSkipped: skipDraw,
     });
+    if (!player.isFirst && player.turnNumber === RULES.secondFusionTurn) {
+      this._log('fusion-unlocked', `${player.displayName}の合体が解禁された`, {
+        playerId,
+        turnNumber: player.turnNumber,
+      });
+    }
   }
 
   _endTurn() {
@@ -1147,12 +1153,13 @@ export class BattleEngine {
     const enemy = livingUnits(opponent);
     const targetActions = (units) => units.map((unit) => ({ ...base, targetUnitId: unit.id, label: `${definition.name} → ${unit.name}` }));
     const factionTargets = (faction) => targetActions(own.filter((unit) => unit.faction === faction));
-    switch (definition.name) {
+    const breederKey = /^breeder-0(?:09|1\d|20)$/.test(definition.id) ? definition.id : definition.name;
+    switch (breederKey) {
       case 'ベテランブリーダー':
       case 'プレッシャー指示':
       case '緊急補給':
       case '総攻撃命令':
-      case '創造①':
+      case 'breeder-011':
         return [{ ...base, targetUnitId: null, label: definition.name }];
       case '集中指示':
       case '守備指示':
@@ -1161,25 +1168,25 @@ export class BattleEngine {
         return targetActions(own.filter((unit) => unit.actionPoints <= 0 && !unit.summonedThisTurn && !unit.stunnedThisTurn));
       case '妨害指示':
         return targetActions(enemy);
-      case '無機①':
-      case '無機②':
+      case 'breeder-009':
+      case 'breeder-010':
         return targetActions(own.filter((unit) => unit.faction === '無機'));
-      case '創造②':
+      case 'breeder-012':
         return targetActions(enemy);
-      case '幻霊①':
+      case 'breeder-013':
         return targetActions(own.filter((unit) => unit.faction === '幻霊' && !unit.summonedThisTurn && !unit.stunnedThisTurn));
-      case '幻霊②':
+      case 'breeder-014':
         return targetActions(own);
-      case '魔族①':
-      case '魔族②':
+      case 'breeder-015':
+      case 'breeder-016':
         return targetActions(own.filter((unit) => unit.faction === '魔族'));
-      case '獣族①':
+      case 'breeder-017':
         return own.some((unit) => unit.faction === '獣族') ? [{ ...base, targetUnitId: null, label: definition.name }] : [];
-      case '獣族②':
+      case 'breeder-018':
         return targetActions(own.filter((unit) => unit.faction === '獣族'));
-      case '怪物①':
+      case 'breeder-019':
         return targetActions(enemy);
-      case '怪物②':
+      case 'breeder-020':
         return own.filter((unit) => unit.faction === '怪物').length >= 2
           ? [{ ...base, targetUnitId: null, label: definition.name }]
           : [];
@@ -1266,7 +1273,8 @@ export class BattleEngine {
     player.graveyard.push(card);
     player.metrics.breederUses += 1;
 
-    switch (definition.name) {
+    const breederKey = /^breeder-0(?:09|1\d|20)$/.test(definition.id) ? definition.id : definition.name;
+    switch (breederKey) {
       case 'ベテランブリーダー':
         player.effects.nextOwnMaxTpBonuses.push({ amount: 1, remaining: 3, activeFromTurn: player.turnNumber + 1 });
         break;
@@ -1279,21 +1287,21 @@ export class BattleEngine {
       case '総攻撃命令': for (const unit of livingUnits(player)) unit.temporaryAtk += 5; break;
       case '再行動指示': ownTarget.actionPoints += 1; break;
       case '妨害指示': enemyTarget.statuses.nextDamagePenalty += 0.2; break;
-      case '無機①': ownTarget.timedDefBuffs.push({ amount: 5, remaining: 3 }); break;
-      case '無機②': ownTarget.statuses.vsCreationDefIgnore = { base: 3, creation: 5 }; break;
-      case '創造①': player.effects.factionMoveDiscount['創造'] = (player.effects.factionMoveDiscount['創造'] ?? 0) + 1; break;
-      case '創造②': enemyTarget.statuses.stunOnNextTurn += 1; break;
-      case '幻霊①': ownTarget.actionPoints += 1; break;
-      case '幻霊②': ownTarget.statuses.evadeNext = true; break;
-      case '魔族①': applyAtkBuff(ownTarget, 5); break;
-      case '魔族②': applyAtkBuff(ownTarget, livingUnits(player).filter((unit) => unit.faction === '魔族').length * 5); break;
-      case '獣族①': player.tp = Math.min(player.maxTp, player.tp + livingUnits(player).filter((unit) => unit.faction === '獣族').length * 2); break;
-      case '獣族②': this._heal(ownTarget, 15); break;
-      case '怪物①':
+      case 'breeder-009': ownTarget.timedDefBuffs.push({ amount: 5, remaining: 3 }); break;
+      case 'breeder-010': ownTarget.statuses.vsCreationDefIgnore = { base: 3, creation: 5 }; break;
+      case 'breeder-011': player.effects.factionMoveDiscount['創造'] = (player.effects.factionMoveDiscount['創造'] ?? 0) + 1; break;
+      case 'breeder-012': enemyTarget.statuses.stunOnNextTurn += 1; break;
+      case 'breeder-013': ownTarget.actionPoints += 1; break;
+      case 'breeder-014': ownTarget.statuses.evadeNext = true; break;
+      case 'breeder-015': applyAtkBuff(ownTarget, 5); break;
+      case 'breeder-016': applyAtkBuff(ownTarget, livingUnits(player).filter((unit) => unit.faction === '魔族').length * 5); break;
+      case 'breeder-017': player.tp = Math.min(player.maxTp, player.tp + livingUnits(player).filter((unit) => unit.faction === '獣族').length * 2); break;
+      case 'breeder-018': this._heal(ownTarget, 15); break;
+      case 'breeder-019':
         if (enemyTarget.faction === '無機') enemyTarget.statuses.stunOnNextTurn += 1;
         else enemyTarget.statuses.nextDamagePenalty += 0.2;
         break;
-      case '怪物②':
+      case 'breeder-020':
         for (const unit of livingUnits(player).filter((candidate) => candidate.faction === '怪物')) {
           applyAtkBuff(unit, 5);
           applyDefBuff(unit, 5);
