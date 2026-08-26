@@ -4,9 +4,9 @@
 
 `images/monster-atlas.webp` is an original 6-by-3 raster portrait atlas for the 18 base monsters in master-id order. CSS selects a cell at runtime; names, TP, stats, traits, effects, learned moves, and special-fusion state remain dynamic HTML and are never baked into the artwork.
 
-`images/special-fusion-atlas-v1.webp` is an original 6-by-6 atlas for `fusion-001` through `fusion-036` in master order. `specialFusionId` selects the cell at runtime; a form-name fallback keeps older in-memory units renderable.
+`images/special-fusion-atlas-v1.webp` is the original source sheet for `fusion-001` through `fusion-036` in master order. Its six row heights are not uniform (`234 / 235 / 230 / 205 / 178 / 172px`), so it is retained for provenance but is no longer sampled with CSS atlas coordinates.
 
-`images/blue-drill-v2.webp` is the dedicated full-bleed replacement for `fusion-014` (ブルードリル). Its horn, snout, head, and upper body are centered inside a generous safe margin so the subject remains intact in the game's wide card-art crop. The other 35 forms continue to use the verified atlas cells.
+`images/special-fusions/fusion-001.webp` through `fusion-036.webp` are the runtime illustrations cropped at the source sheet's measured row boundaries. `fusion-014.webp` uses the dedicated full-bleed Blue Drill replacement from `images/blue-drill-v2.webp`. Every special form therefore loads one standalone image without adjacent-cell bleed.
 
 `images/support-card-atlas-v1.webp` is an original 5-by-5 atlas. Cells 1–5 map to `growthCards` master order, followed by `breeder-001` through `breeder-020`. All card names, TP, effects, and changing game state remain HTML.
 

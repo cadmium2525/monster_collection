@@ -43,7 +43,7 @@ export function cardArtPlacement(definition, unit = null, cardAsset = null) {
     }
     const supportIndex = SUPPORT_CARD_IDS.indexOf(definition.id);
     return {
-      className: supportIndex >= 0 ? 'support-card-art' : '',
+      className: supportIndex >= 0 ? 'support-card-art legacy-name-safe-art' : '',
       style: atlasPosition(supportIndex, 5, 5),
     };
   }
@@ -63,9 +63,10 @@ export function cardArtPlacement(definition, unit = null, cardAsset = null) {
     ? fusionFromId
     : SPECIAL_FUSION_NAMES.indexOf(unit?.specialForm);
   if (fusionIndex >= 0 && fusionIndex < SPECIAL_FUSION_NAMES.length) {
+    const fusionAssetId = `fusion-${String(fusionIndex + 1).padStart(3, '0')}`;
     return {
-      className: `monster-art special-fusion-art${fusionIndex === 13 ? ' blue-drill-art' : ''}`,
-      style: fusionIndex === 13 ? null : atlasPosition(fusionIndex, 6, 6),
+      className: 'monster-art special-fusion-art standalone-fusion-art',
+      style: `--monster-art:url("./assets/images/special-fusions/${fusionAssetId}.webp")`,
     };
   }
 
@@ -77,7 +78,7 @@ export function cardArtPlacement(definition, unit = null, cardAsset = null) {
     };
   }
   return {
-    className: 'monster-art',
+    className: 'monster-art legacy-name-safe-art',
     style: atlasPosition(index, 6, 3),
   };
 }

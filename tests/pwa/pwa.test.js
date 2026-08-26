@@ -65,4 +65,6 @@ test('growing booster art is copied but excluded from install-time precache', ()
   assert.match(buildScript, /assets\/images\/booster\//);
   assert.match(buildScript, /assets\/images\/showcase\//);
   assert.match(buildScript, /startsWith/);
+  assert.match(buildScript, /special-fusion-atlas-v1\.webp/);
+  assert.match(buildScript, /blue-drill-v2\.webp/);
 });

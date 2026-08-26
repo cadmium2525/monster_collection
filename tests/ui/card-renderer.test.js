@@ -61,22 +61,33 @@ test('shugyo rank weighting stays deliberately small', () => {
   assert.ok(weights[0] > weights[4]);
 });
 
-test('card art placement selects generated support and special-fusion atlases deterministically', () => {
+test('card art placement keeps legacy art below the name band and uses standalone fusion cells', () => {
   const monster = monsterByName('ピクシー');
-  assert.equal(cardArtPlacement(monster).className, 'monster-art');
+  assert.equal(cardArtPlacement(monster).className, 'monster-art legacy-name-safe-art');
   const special = cardArtPlacement(monster, { specialFusionId: 'fusion-036', specialForm: 'クレバス' });
-  assert.equal(special.className, 'monster-art special-fusion-art');
-  assert.match(special.style, /--art-x:100%;--art-y:100%/);
+  assert.equal(special.className, 'monster-art special-fusion-art standalone-fusion-art');
+  assert.equal(special.style, '--monster-art:url("./assets/images/special-fusions/fusion-036.webp")');
   const blueDrill = cardArtPlacement(monster, { specialFusionId: 'fusion-014', specialForm: 'ブルードリル' });
-  assert.equal(blueDrill.className, 'monster-art special-fusion-art blue-drill-art');
-  assert.equal(blueDrill.style, null);
+  assert.equal(blueDrill.className, 'monster-art special-fusion-art standalone-fusion-art');
+  assert.equal(blueDrill.style, '--monster-art:url("./assets/images/special-fusions/fusion-014.webp")');
   const support = cardArtPlacement({ id: 'breeder-020', kind: 'breeder' });
-  assert.equal(support.className, 'support-card-art');
+  assert.equal(support.className, 'support-card-art legacy-name-safe-art');
   assert.match(support.style, /--art-x:100%;--art-y:100%/);
   assert.deepEqual(cardArtPlacement({ id: 'breeder-040', kind: 'breeder' }), {
     className: 'support-card-art standalone-support-art',
     style: '--support-art:url("./assets/images/breeders/breeder-040.webp")',
   });
+});
+
+test('all thirty-six special fusion cells are valid standalone WebP assets', () => {
+  for (let number = 1; number <= 36; number += 1) {
+    const id = String(number).padStart(3, '0');
+    const url = new URL(`../../assets/images/special-fusions/fusion-${id}.webp`, import.meta.url);
+    const bytes = readFileSync(url);
+    assert.equal(bytes.subarray(0, 4).toString('ascii'), 'RIFF', `fusion-${id} starts with RIFF marker`);
+    assert.equal(bytes.subarray(8, 12).toString('ascii'), 'WEBP', `fusion-${id} has WEBP signature`);
+    assert.ok(statSync(url).size < 500_000, `fusion-${id} stays practical for on-demand loading`);
+  }
 });
 
 test('all twenty new breeder illustrations are optimized WebP project assets', () => {
@@ -121,6 +132,10 @@ test('atlas artwork renders exactly once and keeps correct detail ratios', () =>
   assert.match(css, /\.game-card \.card-art\.monster-art::after,[^{]+\{\s*content: none;\s*display: none;/s);
   assert.doesNotMatch(css, /\.game-card \.card-art\.(?:monster-art|support-card-art)::after\s*\{[^}]*(?:background-image|top: 18%)/s);
   assert.match(css, /\.card-art\.monster-art\s*\{[^}]*background-size: 100% 100%, 600% 300%/s);
+  assert.match(css, /\.game-card > \.card-art\.legacy-name-safe-art\s*\{[^}]*top: clamp\(18px, 14%, 21px\)/s);
+  assert.match(css, /\.board-slot \.game-card > \.card-art\.legacy-name-safe-art\s*\{[^}]*top: 0/s);
+  assert.match(css, /\.card-art\.monster-art\.special-fusion-art,[^{]+\{[^}]*var\(--monster-art\)[^}]*background-size: 100% 100%, cover/s);
+  assert.doesNotMatch(css, /special-fusion-art[^}]+special-fusion-atlas-v1\.webp/s);
   assert.match(css, /\.detail-summary > \.card-art\s*\{[^}]*aspect-ratio: \.75/s);
   assert.match(css, /\.detail-summary > \.card-art\.support-card-art\s*\{\s*aspect-ratio: 1/s);
   assert.match(css, /\.card-cost\s*\{[^}]*width: clamp\(21px,25%,31px\)/s);

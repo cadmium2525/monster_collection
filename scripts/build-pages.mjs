@@ -66,7 +66,10 @@ const cacheUrls = ['./', ...outputFiles
     // worker still caches it on first use, but a fresh PWA install does not
     // download every future card illustration up front.
     return !relative.startsWith('assets/images/booster/')
-      && !relative.startsWith('assets/images/showcase/');
+      && !relative.startsWith('assets/images/showcase/')
+      // Runtime uses the corrected standalone fusion cells. Keep the two
+      // source atlases deployable for traceability without preloading them.
+      && !['assets/images/special-fusion-atlas-v1.webp', 'assets/images/blue-drill-v2.webp'].includes(relative);
   })
   .map((file) => `./${path.relative(outputRoot, file).replaceAll('\\', '/')}`)]
   .filter((url, index, list) => list.indexOf(url) === index);
