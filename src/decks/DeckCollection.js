@@ -23,18 +23,29 @@ function representativeId(cards, masterIndex, requestedId = null) {
 }
 
 function removeDuplicatePoolReferences(cards, pool) {
-  const usedInstanceIds = new Set(cards.map((card) => card.instanceId));
+  const activeInstanceIds = new Set(cards.map((card) => card.instanceId));
+  const poolInstanceIds = new Set();
   const kept = [];
-  let removedCount = 0;
+  let activeCollisionCount = 0;
+  let poolCollisionCount = 0;
   for (const card of pool) {
-    if (usedInstanceIds.has(card.instanceId)) {
-      removedCount += 1;
+    if (activeInstanceIds.has(card.instanceId)) {
+      activeCollisionCount += 1;
       continue;
     }
-    usedInstanceIds.add(card.instanceId);
+    if (poolInstanceIds.has(card.instanceId)) {
+      poolCollisionCount += 1;
+      continue;
+    }
+    poolInstanceIds.add(card.instanceId);
     kept.push(card);
   }
-  return { pool: kept, removedCount };
+  return {
+    pool: kept,
+    activeCollisionCount,
+    poolCollisionCount,
+    removedCount: activeCollisionCount + poolCollisionCount,
+  };
 }
 
 export class DeckCollection {
@@ -66,11 +77,14 @@ export class DeckCollection {
     })).filter((card) => this.masterIndex.cards.has(card.masterId));
     const repairedPool = removeDuplicatePoolReferences(cards, normalizedPool);
     if (repairedPool.removedCount) this.assetRepairCounts.set(deckId, repairedPool.removedCount);
+    const legacyRecoveryCredits = Math.max(0, Math.trunc(Number(record.legacyRecoveryCredits) || 0))
+      + repairedPool.activeCollisionCount;
     return {
       deckId,
       deckName: validName(record.deckName),
       cards,
       pool: repairedPool.pool,
+      legacyRecoveryCredits,
       qualification,
       highestReached,
       totalPlayTp: totalPlayTp(cards, this.masterIndex),
@@ -131,6 +145,24 @@ export class DeckCollection {
     const validation = validateDeck(normalized, this.masterIndex, { deckId });
     if (!validation.valid) throw new Error(`40枚を保存できません:\n${validation.errors.join('\n')}`);
     record.cards = normalized;
+    record.pool = removeDuplicatePoolReferences(normalized, record.pool).pool;
+    record.totalPlayTp = totalPlayTp(normalized, this.masterIndex);
+    record.representativeMonsterId = representativeId(normalized, this.masterIndex, record.representativeMonsterId);
+    record.updatedAt = this.now();
+    return clone(record);
+  }
+
+  replaceTournamentCards(deckId, cards, { releasedInstanceIds = [] } = {}) {
+    const record = this._find(deckId);
+    const normalized = normalizeDeckCards(cards, deckId);
+    const validation = validateDeck(normalized, this.masterIndex, { deckId });
+    if (!validation.valid) throw new Error(`大会終了デッキを保存できません:\n${validation.errors.join('\n')}`);
+    const released = new Set(releasedInstanceIds.map(String));
+    const activeIds = new Set(normalized.map((card) => card.instanceId));
+    const displacedAssets = record.cards.filter((card) => !activeIds.has(card.instanceId) && !released.has(card.instanceId));
+    const poolCandidates = [...record.pool, ...displacedAssets].filter((card) => !released.has(card.instanceId));
+    record.cards = normalized;
+    record.pool = removeDuplicatePoolReferences(normalized, poolCandidates).pool;
     record.totalPlayTp = totalPlayTp(normalized, this.masterIndex);
     record.representativeMonsterId = representativeId(normalized, this.masterIndex, record.representativeMonsterId);
     record.updatedAt = this.now();
@@ -150,12 +182,32 @@ export class DeckCollection {
       finish: card.finish ?? 'normal',
       origin: card.origin ?? 'core',
     })).filter((card) => this.masterIndex.cards.has(card.masterId));
-    const ids = [...normalized, ...normalizedPool].map((card) => card.instanceId);
-    if (new Set(ids).size !== ids.length) throw new Error('デッキ内のカード資産IDが重複しています');
+    const repairedPool = removeDuplicatePoolReferences(normalized, normalizedPool).pool;
     record.cards = normalized;
-    record.pool = normalizedPool;
+    record.pool = repairedPool;
     record.totalPlayTp = totalPlayTp(normalized, this.masterIndex);
     record.representativeMonsterId = representativeId(normalized, this.masterIndex, record.representativeMonsterId);
+    record.updatedAt = this.now();
+    return clone(record);
+  }
+
+  recoverLegacyAsset(deckId, masterId, instanceId) {
+    const record = this._find(deckId);
+    if (record.legacyRecoveryCredits <= 0) throw new Error('復元できるカードはありません');
+    if (!this.masterIndex.cards.has(masterId)) throw new Error('復元対象のカードが見つかりません');
+    const normalizedInstanceId = String(instanceId ?? '').trim();
+    if (!normalizedInstanceId) throw new Error('復元カードの資産IDがありません');
+    const used = new Set([...record.cards, ...record.pool].map((card) => card.instanceId));
+    if (used.has(normalizedInstanceId)) throw new Error('復元カードの資産IDが重複しています');
+    record.pool.push(normalizeCardAppearance({
+      instanceId: normalizedInstanceId,
+      masterId,
+      artVariantId: 'base',
+      finish: 'normal',
+      origin: 'legacy-recovery',
+      boundDeckId: deckId,
+    }));
+    record.legacyRecoveryCredits -= 1;
     record.updatedAt = this.now();
     return clone(record);
   }

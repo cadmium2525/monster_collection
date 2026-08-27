@@ -917,6 +917,15 @@ button:disabled { opacity: .38; cursor: not-allowed; }
 .deck-lock-copy { min-width:0; display:grid; gap:3px; }
 .deck-lock-copy strong { color:#fff0bd; font-size:12px; }
 .deck-lock-copy small { overflow:hidden; color:#c8d1d6; font-size:10px; text-overflow:ellipsis; white-space:nowrap; }
+.legacy-recovery-banner { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:8px 10px; border:1px solid rgba(79,214,206,.62); border-radius:10px; background:linear-gradient(90deg,rgba(12,77,83,.72),rgba(8,20,33,.95)); box-shadow:0 0 18px rgba(56,208,201,.12); }
+.legacy-recovery-banner div { display:grid; gap:3px; }
+.legacy-recovery-banner strong { color:#bffbf5; font-size:12px; }
+.legacy-recovery-banner small { color:#c9d9dc; font-size:10px; }
+.legacy-recovery-picker { display:grid; gap:12px; padding-top:10px; }
+.legacy-recovery-picker p { margin:0; color:var(--ink); line-height:1.65; }
+.legacy-recovery-picker label { display:grid; gap:5px; color:var(--muted); }
+.legacy-recovery-picker select { width:100%; padding:10px; border:1px solid var(--line); border-radius:8px; color:var(--ink); background:#081421; }
+.legacy-recovery-picker small { color:var(--muted); }
 .deck-leader-edit { display: flex; align-items: center; gap: 6px; padding-left: 7px; border-left: 1px solid var(--line); }
 .deck-leader-edit span { color: var(--muted); font-size: 10px; }
 .deck-leader-edit strong { max-width: 100px; overflow: hidden; color: #fff0bd; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }

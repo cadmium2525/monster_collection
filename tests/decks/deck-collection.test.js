@@ -95,6 +95,7 @@ test('legacy tournament edits remove duplicate pool references while keeping the
     deckId: 'legacy-corrupted-deck',
     removedDuplicateReferences: 2,
   }]);
+  assert.equal(repaired.legacyRecoveryCredits, 1);
   assert.doesNotThrow(() => decks.replaceCardsAndPool(repaired.deckId, repaired));
 });
 
@@ -113,6 +114,64 @@ test('duplicate asset repair is idempotent after the repaired deck is saved', ()
   assert.equal(firstLoad.assetRepairReport()[0].removedDuplicateReferences, 1);
   assert.deepEqual(secondLoad.assetRepairReport(), []);
   assert.equal(secondLoad.get('legacy-reload-deck').pool.length, 0);
+  assert.equal(secondLoad.get('legacy-reload-deck').legacyRecoveryCredits, 1);
+});
+
+test('legacy recovery credit restores the player-selected owned card to the deck pool', () => {
+  const cards = legalDeck('legacy-recovery');
+  const decks = new DeckCollection({
+    masterIndex,
+    records: [{
+      deckId: 'legacy-recovery-deck',
+      deckName: '消失カード復元',
+      cards,
+      pool: [{ ...cards[0] }],
+    }],
+  });
+  const recovered = decks.recoverLegacyAsset('legacy-recovery-deck', 'monster-019', 'legacy-recovered-chronogear');
+  assert.equal(recovered.legacyRecoveryCredits, 0);
+  assert.equal(recovered.pool.length, 1);
+  assert.deepEqual(recovered.pool[0], {
+    instanceId: 'legacy-recovered-chronogear',
+    masterId: 'monster-019',
+    artVariantId: 'base',
+    finish: 'normal',
+    origin: 'legacy-recovery',
+    boundDeckId: 'legacy-recovery-deck',
+    rarity: 'common',
+  });
+  assert.throws(() => decks.recoverLegacyAsset('legacy-recovery-deck', 'monster-019', 'another-card'), /復元できるカード/);
+});
+
+test('legacy tournament completion preserves post-entry swaps in the pool without duplicating restored cards', () => {
+  const decks = collection();
+  const deck = decks.create({ deckName: '旧大会差分', cards: legalDeck('legacy-run') });
+  const tournamentCards = structuredClone(deck.cards);
+  const outgoing = deck.cards[5];
+  const chronogear = {
+    instanceId: 'booster-chronogear-001',
+    masterId: 'monster-019',
+    artVariantId: 'base',
+    finish: 'normal',
+    origin: 'booster',
+    boundDeckId: deck.deckId,
+  };
+  const editedCards = [...deck.cards];
+  editedCards[5] = chronogear;
+  decks.replaceCardsAndPool(deck.deckId, { cards: editedCards, pool: [outgoing] });
+
+  const completed = decks.replaceTournamentCards(deck.deckId, tournamentCards);
+  assert.deepEqual(completed.cards.map((card) => card.instanceId), tournamentCards.map((card) => card.instanceId));
+  assert.deepEqual(completed.pool.map((card) => card.instanceId), [chronogear.instanceId]);
+  assert.equal(new Set([...completed.cards, ...completed.pool].map((card) => card.instanceId)).size, 41);
+  assert.doesNotThrow(() => decks.replaceCardsAndPool(completed.deckId, completed));
+});
+
+test('pool collisions are also repaired at save time instead of blocking deck editing', () => {
+  const decks = collection();
+  const deck = decks.create({ deckName: '保存時修復', cards: legalDeck('save-repair') });
+  const saved = decks.replaceCardsAndPool(deck.deckId, { cards: deck.cards, pool: [{ ...deck.cards[0] }] });
+  assert.equal(saved.pool.length, 0);
 });
 
 test('saved decks migrate legacy Foil and special art off support cards', () => {

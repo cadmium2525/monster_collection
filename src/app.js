@@ -304,10 +304,19 @@ class MonsterConstructionApp {
       masterIndex: this.masterIndex,
       deckId,
       locked,
+      catalog: this.catalog,
       onBack: () => this.showDeckList(),
       onChanged: (deck) => this.repository.saveDeck(deck).catch((error) => this.showError(error, 'デッキを同期できません')),
       onDelete: (deck) => this.confirmDeleteDeck(deck),
       onBuild: (deck) => this.showDeckBuilder(deck),
+      onRecover: async (masterId) => {
+        if (this.isDeckEditingLocked(deckId)) throw new Error('大会参加中は消失カードを復元できません');
+        const serial = globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
+        const recovered = this.decks.recoverLegacyAsset(deckId, masterId, `${deckId}-legacy-recovery-${serial}`);
+        await this.repository.saveDeck(recovered);
+        this.showDeckDetail(deckId);
+        return recovered;
+      },
     });
   }
 

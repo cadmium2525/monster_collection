@@ -54,6 +54,31 @@ test('Training growth carries to the next match but never enters the saved 40-ca
   assert.equal(saves.some((saved) => 'tournamentGrowth' in saved), false);
 });
 
+test('a pre-lock tournament restores its own 40 but moves a post-entry Chronogear swap safely into the deck pool', async () => {
+  const { session, decks, deck } = setup();
+  await session.startTournament(deck.deckId, 'bronze');
+  const outgoing = deck.cards.find((card) => card.masterId === 'monster-002');
+  const outgoingIndex = deck.cards.findIndex((card) => card.instanceId === outgoing.instanceId);
+  const chronogear = {
+    instanceId: `${deck.deckId}-legacy-chronogear`,
+    masterId: 'monster-019',
+    artVariantId: 'base',
+    finish: 'normal',
+    origin: 'booster',
+    boundDeckId: deck.deckId,
+  };
+  const edited = [...deck.cards];
+  edited[outgoingIndex] = chronogear;
+  decks.replaceCardsAndPool(deck.deckId, { cards: edited, pool: [outgoing] });
+
+  const outcome = await session.completeBattle(fakeFinishedBattle('player'));
+  await session.completeReward(outcome.reward.skip());
+  const saved = decks.get(deck.deckId);
+  assert.equal(saved.cards.some((card) => card.instanceId === outgoing.instanceId), true);
+  assert.equal(saved.pool.some((card) => card.instanceId === outgoing.instanceId), false);
+  assert.equal(saved.pool.some((card) => card.instanceId === chronogear.instanceId), true);
+});
+
 test('a later-round opponent enters the shared BattleEngine with its accumulated CPU growth', async () => {
   const { session, decks, deck } = setup();
   decks.grantTournamentWin(deck.deckId, 'bronze');

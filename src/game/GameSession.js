@@ -202,7 +202,9 @@ export class GameSession {
     }
     const deckId = this.tournament.state.playerDeck.deckId;
     this.tournament.updatePlayerDeck(resultCards);
-    let saved = this.deckCollection.replaceCards(deckId, resultCards);
+    let saved = this.deckCollection.replaceTournamentCards(deckId, resultCards, {
+      releasedInstanceIds: this.pendingReward.state.selectedReleaseIds,
+    });
     const completedTournament = ['won', 'champion'].includes(this.tournament.state.status);
     if (completedTournament) saved = this.deckCollection.grantTournamentWin(deckId, this.tournament.state.rank);
     await this.repository.saveDeck(saved);

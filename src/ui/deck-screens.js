@@ -93,7 +93,7 @@ export class DeckListScreen {
 }
 
 export class DeckDetailScreen {
-  constructor({ root, collection, masterIndex, deckId, onBack, onUse, onDelete, onChanged, onBuild = null, locked = false }) {
+  constructor({ root, collection, masterIndex, deckId, onBack, onUse, onDelete, onChanged, onBuild = null, onRecover = null, catalog = null, locked = false }) {
     this.root = root;
     this.collection = collection;
     this.masterIndex = masterIndex;
@@ -103,8 +103,52 @@ export class DeckDetailScreen {
     this.onDelete = onDelete;
     this.onChanged = onChanged;
     this.onBuild = onBuild;
+    this.onRecover = onRecover;
+    this.catalog = catalog;
     this.locked = locked;
     this.render();
+  }
+
+  openLegacyRecoveryPicker() {
+    if (this.locked || !this.onRecover) return;
+    const candidates = [...new Set(this.catalog?.ownedCardMasterIds ?? [])]
+      .map((masterId) => this.masterIndex.cards.get(masterId))
+      .filter(Boolean)
+      .sort((a, b) => a.name.localeCompare(b.name, 'ja'));
+    if (!candidates.length) {
+      this.error = '所有履歴から復元候補を確認できませんでした';
+      this.render();
+      return;
+    }
+    const select = el('select', { attrs: { 'aria-label': '消失したカード' } }, candidates.map((definition) => (
+      el('option', { value: definition.id, text: definition.name })
+    )));
+    let modal = null;
+    const recover = async () => {
+      try {
+        const button = modal.modal.querySelector('.legacy-recovery-confirm');
+        if (button) button.disabled = true;
+        await this.onRecover(select.value);
+        modal.close();
+      } catch (error) {
+        this.error = error.message;
+        modal.close();
+        this.render();
+      }
+    };
+    modal = openModal({
+      title: '消失した入替カードを復元',
+      className: 'legacy-recovery-modal',
+      content: el('div', { className: 'legacy-recovery-picker' }, [
+        el('p', { text: '旧バージョンで大会中に入れ替えたあと消失したカードを、所有履歴から1枚選んでこのデッキの予備へ戻します。' }),
+        el('label', {}, [el('span', { text: '消失したカード' }), select]),
+        el('small', { text: 'カード性能は同じまま、通常イラスト・通常加工で復元されます。' }),
+        el('div', { className: 'modal-actions' }, [
+          el('button', { className: 'text-button', text: 'キャンセル', onclick: () => modal.close() }),
+          el('button', { className: 'primary-button legacy-recovery-confirm', text: '予備へ復元', onclick: recover }),
+        ]),
+      ]),
+    });
   }
 
   rename(input) {
@@ -169,6 +213,13 @@ export class DeckDetailScreen {
           this.onUse ? el('button', { className: 'primary-button', text: 'このデッキを使う', onclick: () => this.onUse(deck) }) : null,
         ]),
       ]),
+      deck.legacyRecoveryCredits > 0 && !this.locked ? el('section', { className: 'legacy-recovery-banner' }, [
+        el('div', {}, [
+          el('strong', { text: '旧大会データから消失カードを復元できます' }),
+          el('small', { text: `復元可能 ${deck.legacyRecoveryCredits}枚。今回消えたクロノギアなどを所有履歴から選択してください。` }),
+        ]),
+        el('button', { className: 'primary-button', text: '消失カードを復元', onclick: () => this.openLegacyRecoveryPicker() }),
+      ]) : null,
       this.locked ? el('section', { className: 'deck-editor-bar tournament-locked' }, [
         el('span', { className: 'deck-lock-mark', text: 'LOCK' }),
         el('div', { className: 'deck-lock-copy' }, [
