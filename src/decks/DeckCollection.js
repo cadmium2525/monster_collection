@@ -22,12 +22,28 @@ function representativeId(cards, masterIndex, requestedId = null) {
   return representativeMonster(cards, masterIndex)?.id ?? null;
 }
 
+function removeDuplicatePoolReferences(cards, pool) {
+  const usedInstanceIds = new Set(cards.map((card) => card.instanceId));
+  const kept = [];
+  let removedCount = 0;
+  for (const card of pool) {
+    if (usedInstanceIds.has(card.instanceId)) {
+      removedCount += 1;
+      continue;
+    }
+    usedInstanceIds.add(card.instanceId);
+    kept.push(card);
+  }
+  return { pool: kept, removedCount };
+}
+
 export class DeckCollection {
   constructor({ masterIndex, records = [], now = () => new Date().toISOString(), idFactory = null }) {
     this.masterIndex = masterIndex;
     this.now = now;
     this.sequence = records.length;
     this.idFactory = idFactory ?? (() => `deck-${Date.now().toString(36)}-${++this.sequence}`);
+    this.assetRepairCounts = new Map();
     this.records = records.map((record) => this._normalizeRecord(record));
     if (this.records.length > MAX_DECKS) throw new Error(`保存デッキは最大${MAX_DECKS}個です`);
     if (new Set(this.records.map((record) => record.deckId)).size !== this.records.length) throw new Error('deckIdが重複しています');
@@ -40,18 +56,21 @@ export class DeckCollection {
     if (!validation.valid) throw new Error(`不正な保存デッキ ${deckId}:\n${validation.errors.join('\n')}`);
     const qualification = TOURNAMENTS.includes(record.qualification) ? record.qualification : 'bronze';
     const highestReached = TOURNAMENTS.includes(record.highestReached) ? record.highestReached : 'bronze';
+    const normalizedPool = (record.pool ?? []).map((card, index) => normalizeCardAppearance({
+      ...clone(card),
+      instanceId: card.instanceId ?? `${deckId}-pool-${String(index + 1).padStart(3, '0')}`,
+      masterId: card.masterId,
+      artVariantId: card.artVariantId ?? 'base',
+      finish: card.finish ?? 'normal',
+      origin: card.origin ?? 'core',
+    })).filter((card) => this.masterIndex.cards.has(card.masterId));
+    const repairedPool = removeDuplicatePoolReferences(cards, normalizedPool);
+    if (repairedPool.removedCount) this.assetRepairCounts.set(deckId, repairedPool.removedCount);
     return {
       deckId,
       deckName: validName(record.deckName),
       cards,
-      pool: (record.pool ?? []).map((card, index) => normalizeCardAppearance({
-        ...clone(card),
-        instanceId: card.instanceId ?? `${deckId}-pool-${String(index + 1).padStart(3, '0')}`,
-        masterId: card.masterId,
-        artVariantId: card.artVariantId ?? 'base',
-        finish: card.finish ?? 'normal',
-        origin: card.origin ?? 'core',
-      })).filter((card) => this.masterIndex.cards.has(card.masterId)),
+      pool: repairedPool.pool,
       qualification,
       highestReached,
       totalPlayTp: totalPlayTp(cards, this.masterIndex),
@@ -62,6 +81,13 @@ export class DeckCollection {
   }
 
   list() { return clone([...this.records].sort((a, b) => b.updatedAt.localeCompare(a.updatedAt))); }
+
+  assetRepairReport() {
+    return [...this.assetRepairCounts].map(([deckId, removedDuplicateReferences]) => ({
+      deckId,
+      removedDuplicateReferences,
+    }));
+  }
 
   get(deckId) {
     const record = this.records.find((deck) => deck.deckId === deckId);

@@ -57,6 +57,13 @@ class MonsterConstructionApp {
       records,
       idFactory: () => `deck-${globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`}`,
     });
+    const assetRepairs = this.decks.assetRepairReport();
+    if (assetRepairs.length) {
+      const results = await Promise.allSettled(assetRepairs.map(({ deckId }) => this.repository.saveDeck(this.decks.get(deckId))));
+      results.forEach((result, index) => {
+        if (result.status === 'rejected') console.warn(`Duplicate deck asset repair could not be persisted: ${assetRepairs[index].deckId}`, result.reason);
+      });
+    }
     if (!this.decks.list().length) {
       const starter = this.decks.create({ deckName: 'はじまりの40枚', cards: createBaselineDeck(this.masterData, `starter-${this.seed}`) });
       await this.repository.saveDeck(starter);

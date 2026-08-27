@@ -67,6 +67,54 @@ test('deck builder keeps removed assets in that deck pool and preserves unique a
   assert.equal(new Set([...updated.cards, ...updated.pool].map((card) => card.instanceId)).size, 41);
 });
 
+test('legacy tournament edits remove duplicate pool references while keeping the active 40 authoritative', () => {
+  const cards = legalDeck('legacy-tournament-edit');
+  const legitimateReserve = { instanceId: 'reserve-only-001', masterId: 'monster-019' };
+  const decks = new DeckCollection({
+    masterIndex,
+    records: [{
+      deckId: 'legacy-corrupted-deck',
+      deckName: '大会中に編集したデッキ',
+      cards,
+      pool: [
+        { ...cards[5] },
+        legitimateReserve,
+        { ...legitimateReserve },
+      ],
+      qualification: 'bronze',
+      highestReached: 'bronze',
+    }],
+  });
+
+  const repaired = decks.get('legacy-corrupted-deck');
+  assert.deepEqual(repaired.cards.map((card) => card.instanceId), cards.map((card) => card.instanceId));
+  assert.equal(repaired.pool.length, 1);
+  assert.equal(repaired.pool[0].instanceId, legitimateReserve.instanceId);
+  assert.equal(repaired.pool[0].masterId, legitimateReserve.masterId);
+  assert.deepEqual(decks.assetRepairReport(), [{
+    deckId: 'legacy-corrupted-deck',
+    removedDuplicateReferences: 2,
+  }]);
+  assert.doesNotThrow(() => decks.replaceCardsAndPool(repaired.deckId, repaired));
+});
+
+test('duplicate asset repair is idempotent after the repaired deck is saved', () => {
+  const cards = legalDeck('legacy-reload');
+  const firstLoad = new DeckCollection({
+    masterIndex,
+    records: [{
+      deckId: 'legacy-reload-deck',
+      deckName: '再読込テスト',
+      cards,
+      pool: [{ ...cards[0] }],
+    }],
+  });
+  const secondLoad = new DeckCollection({ masterIndex, records: firstLoad.export() });
+  assert.equal(firstLoad.assetRepairReport()[0].removedDuplicateReferences, 1);
+  assert.deepEqual(secondLoad.assetRepairReport(), []);
+  assert.equal(secondLoad.get('legacy-reload-deck').pool.length, 0);
+});
+
 test('saved decks migrate legacy Foil and special art off support cards', () => {
   const decks = collection();
   const cards = legalDeck('legacy-support-premium');
