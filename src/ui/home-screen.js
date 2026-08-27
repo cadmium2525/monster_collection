@@ -5,6 +5,7 @@ import { ROUND_LABELS } from '../tournament/TournamentRun.js';
 import { el, formatDate, replace } from './dom.js';
 import { renderMonsterPortrait } from './card-renderer.js';
 import { openModal } from './modal.js';
+import { diamondIcon } from './currency-icon.js';
 
 export const TUTORIAL_STEPS = Object.freeze([
   {
@@ -206,7 +207,7 @@ export class HomeScreen {
             el('div', {}, [el('strong', { text: '保存デッキ' }), el('small', { text: `${this.decks.length}/5 デッキ` })]),
           ]),
           el('button', { className: `home-action booster-home-action${this.economy?.pendingPack ? ' has-pending' : ''}`, onclick: this.onBoosters }, [
-            el('span', { text: '◆' }),
+            el('span', { className: 'currency-diamond-home' }, diamondIcon('home-diamond-icon')),
             el('div', {}, [
               el('strong', { text: this.economy?.pendingPack ? '未確認パック' : 'ブースター' }),
               el('small', { text: this.economy?.freePackCredits ? `初回無料 / ダイヤ ${this.economy.diamonds}` : `ダイヤ ${this.economy?.diamonds ?? 0}` }),

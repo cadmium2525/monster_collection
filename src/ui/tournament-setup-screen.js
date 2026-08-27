@@ -36,7 +36,7 @@ export class TournamentSetupScreen {
               onkeydown: (event) => { if (event.key === 'Enter' || event.key === ' ') { this.selectedDeckId = entry.deckId; this.render(); } },
             }, [
               representative ? renderCard({ definition: representative, label: `${entry.deckName}の代表モンスター`, interactive: false }) : null,
-              el('div', {}, [el('strong', { text: entry.deckName }), el('span', { text: `総TP ${entry.totalPlayTp}` }), el('small', { text: `${TOURNAMENT_LABELS[entry.qualification]}まで` })]),
+              el('div', {}, [el('strong', { text: entry.deckName }), el('span', { text: `デッキ総TP ${entry.totalPlayTp}` }), el('small', { text: `${TOURNAMENT_LABELS[entry.qualification]}まで` })]),
             ]);
           })),
         ]),

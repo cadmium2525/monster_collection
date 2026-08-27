@@ -1,9 +1,11 @@
 # HANDOFF
 
 基準: Sim8.7完全展開版 + 2026-08-24距離廃止差分  
-リリース: 1.15.7（戴冠時成長再現版）
+リリース: 1.15.8（保存デッキ導線・ダイヤUI整理版）
 
 ## 現在の状態
+
+v1.15.8では保存デッキ一覧の「カード一覧」を、永久発見履歴であることが分かる「カード図鑑」へ改称し、その右隣からブースターの実所有資産「未所属カード」へ直接移動できます。デッキ名変更は詳細画面の入力欄から一覧カード上の鉛筆アイコンへ移し、詳細画面はリーダー・40枚編集・削除へ整理しました。大会中デッキの鉛筆は無効で、アプリ層も再判定します。表示用語は「デッキ総TP」へ統一しています。ダイヤはCSS製ひし形と文字記号を廃止し、透過WebPの高品質宝石アートをホーム、残高、パック価格へ共通表示します。
 
 v1.15.7ではレジェンド決勝開始直前の40枚と大会内成長を`legendFinalSnapshot`として固定し、新チャンピオンの`championDeckSnapshot`と`championGrowthSnapshot`へtransaction保存します。次のレジェンド決勝ではカードインスタンスIDに対応するLIFE／ATK／DEF成長、習得技、実戦4技を再現し、王者側へ新たな仮想CPU育成は加えません。決勝中の追加成長と決勝後奪取は王座スナップショット外です。旧王者は成長なしで互換動作します。この説明は常設バトルUIではなくホームの「遊び方」に記載しています。
 
@@ -39,7 +41,7 @@ CPU同士のブラケット結果と勝者育成は従来どおり開始seedか�
 
 保存デッキの「新規作成」は、無機・創造・幻霊・魔族・獣族・怪物の6スターター選択を開きます。各構成は固定・決定的な合法40枚で、モン類モンスター9枚、同モン類のブリーダー4枚、特殊合体素材7枚、Training/修行20枚です。作成後の名前とリーダー変更、デッキ単位の資格管理は従来どおりです。
 
-保存デッキ一覧の「カード一覧」は、一度でも保存デッキへ入った基本カードIDと、プレイヤーがバトルで一度でも成功させた特殊合体IDを表示します。履歴は`users/{uid}`とLocalStorageの両方へ追加専用で集合統合し、カードの放出やデッキ削除では消しません。既存ユーザーは起動時に現在の全保存デッキから自動移行します。
+保存デッキ一覧の「カード図鑑」は、一度でも保存デッキへ入った基本カードIDと、プレイヤーがバトルで一度でも成功させた特殊合体IDを表示します。履歴は`users/{uid}`とLocalStorageの両方へ追加専用で集合統合し、カードの放出やデッキ削除では消しません。既存ユーザーは起動時に現在の全保存デッキから自動移行します。「未所属カード」はこの履歴ではなく、まだ保存デッキへ所属させていない実カード資産です。
 
 「遊び方」には横画面用の7ステップチュートリアルを追加済みです。旧い距離廃止注記は通常UIから除去しています。
 
@@ -121,7 +123,7 @@ Pages workflowは `.github/workflows/pages.yml`。Firebase設定は `FIREBASE_SE
 | CPU勝ち上がり育成 | `src/tournament/cpu-growth.js`, `src/ui/tournament-screen.js` |
 | バトル/大会UI | `src/ui/battle-screen.js`, `src/ui/card-renderer.js`, `styles.css` |
 | 奪取 | `src/reward/CardStealSession.js`, `src/ui/reward-screen.js` |
-| デッキリーダー/カード一覧 | `src/decks/DeckCollection.js`, `src/ui/deck-screens.js`, `src/ui/catalog-screen.js` |
+| デッキリーダー/カード図鑑 | `src/decks/DeckCollection.js`, `src/ui/deck-screens.js`, `src/ui/catalog-screen.js` |
 | 管理者カード/ガチャプレビュー | `src/ui/admin-screen.js`, `src/ui/booster-screen.js` |
 | 永続化/公開Legend/王座 | `src/persistence/`, `src/tournament/TournamentRun.js`, `firestore.rules` |
 | Pages | `scripts/build-pages.mjs`, `.github/workflows/pages.yml` |

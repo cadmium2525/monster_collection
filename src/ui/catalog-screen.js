@@ -76,14 +76,14 @@ export class CardCatalogScreen {
 
     replace(this.root, el('main', { className: 'card-catalog-screen' }, [
       el('header', { className: 'screen-header' }, [
-        el('div', {}, [el('p', { className: 'eyebrow', text: 'CARD COLLECTION' }), el('h1', { text: 'カード一覧' })]),
+        el('div', {}, [el('p', { className: 'eyebrow', text: 'CARD CATALOG' }), el('h1', { text: 'カード図鑑' })]),
         el('div', { className: 'catalog-progress' }, [
           el('span', { text: `基本カード ${owned.length}/${this.masterIndex.cards.size}` }),
           el('span', { text: `特殊合体 ${discovered.length}/${this.masterIndex.data.fusions.length}` }),
         ]),
         el('button', { className: 'text-button', text: '保存デッキへ', onclick: this.onBack }),
       ]),
-      el('nav', { className: 'catalog-filters', attrs: { 'aria-label': 'カード一覧の絞り込み' } }, filters.map(([id, label, count]) => el('button', {
+      el('nav', { className: 'catalog-filters', attrs: { 'aria-label': 'カード図鑑の絞り込み' } }, filters.map(([id, label, count]) => el('button', {
         className: id === this.filter ? 'selected' : '',
         text: `${label} ${count}`,
         onclick: () => { this.filter = id; this.render(); },

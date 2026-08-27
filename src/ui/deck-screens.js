@@ -38,31 +38,43 @@ export function openStarterDeckPicker({ masterIndex, options, onChoose }) {
   return modal;
 }
 
-function deckSummaryCard(deck, masterIndex, onSelect, locked = false) {
+function deckSummaryCard(deck, masterIndex, onSelect, onRename, locked = false) {
   const representative = masterIndex.monsters.get(deck.representativeMonsterId);
   return el('article', {
     className: `deck-summary-card${locked ? ' tournament-locked' : ''}`,
-    attrs: { role: 'button', tabindex: '0', 'aria-label': `${deck.deckName}を開く${locked ? '（大会参加中・編集不可）' : ''}` },
-    onclick: () => onSelect(deck),
-    onkeydown: (event) => { if (event.key === 'Enter' || event.key === ' ') onSelect(deck); },
   }, [
-    el('div', { className: 'deck-representative' }, representative ? renderCard({ definition: representative, label: `${deck.deckName}の代表モンスター`, interactive: false }) : null),
-    el('div', { className: 'deck-summary-copy' }, [
-      el('h2', { text: deck.deckName }),
-      locked ? el('span', { className: 'deck-run-lock', text: '大会参加中・編集不可' }) : null,
-      el('p', { text: representative ? `リーダー ${representative.name}` : 'モンスターなし' }),
-      el('dl', {}, [
-        el('dt', { text: '総プレイTP' }), el('dd', { text: deck.totalPlayTp }),
-        el('dt', { text: '最高到達' }), el('dd', { text: TOURNAMENT_LABELS[deck.highestReached] }),
-        el('dt', { text: '出場資格' }), el('dd', { text: `${TOURNAMENT_LABELS[deck.qualification]}まで` }),
+    el('button', {
+      className: 'deck-summary-open',
+      attrs: { type: 'button', 'aria-label': `${deck.deckName}を開く${locked ? '（大会参加中・編集不可）' : ''}` },
+      onclick: () => onSelect(deck),
+    }, [
+      el('div', { className: 'deck-representative' }, representative ? renderCard({ definition: representative, label: `${deck.deckName}の代表モンスター`, interactive: false }) : null),
+      el('div', { className: 'deck-summary-copy' }, [
+        el('div', { className: 'deck-name-row' }, [
+          el('h2', { text: deck.deckName }),
+        ]),
+        locked ? el('span', { className: 'deck-run-lock', text: '大会参加中・編集不可' }) : null,
+        el('p', { text: representative ? `リーダー ${representative.name}` : 'モンスターなし' }),
+        el('dl', {}, [
+          el('dt', { text: 'デッキ総TP' }), el('dd', { text: deck.totalPlayTp }),
+          el('dt', { text: '最高到達' }), el('dd', { text: TOURNAMENT_LABELS[deck.highestReached] }),
+          el('dt', { text: '出場資格' }), el('dd', { text: `${TOURNAMENT_LABELS[deck.qualification]}まで` }),
+        ]),
+        el('small', { text: `更新 ${formatDate(deck.updatedAt)}` }),
       ]),
-      el('small', { text: `更新 ${formatDate(deck.updatedAt)}` }),
     ]),
+    onRename ? el('button', {
+      className: 'deck-rename-button',
+      text: '✎',
+      disabled: locked,
+      attrs: { type: 'button', 'aria-label': `${deck.deckName}の名前を変更`, title: locked ? '大会終了後に変更できます' : 'デッキ名を変更' },
+      onclick: () => onRename(deck),
+    }) : null,
   ]);
 }
 
 export class DeckListScreen {
-  constructor({ root, collection, masterIndex, onSelect, onCreate, onBack, onCatalog = null, lockedDeckId = null }) {
+  constructor({ root, collection, masterIndex, onSelect, onCreate, onBack, onCatalog = null, onInventory = null, onRename = null, lockedDeckId = null }) {
     this.root = root;
     this.collection = collection;
     this.masterIndex = masterIndex;
@@ -70,23 +82,64 @@ export class DeckListScreen {
     this.onCreate = onCreate;
     this.onBack = onBack;
     this.onCatalog = onCatalog;
+    this.onInventory = onInventory;
+    this.onRename = onRename;
     this.lockedDeckId = lockedDeckId;
     this.render();
+  }
+
+  openRenameDialog(deck) {
+    if (!this.onRename || deck.deckId === this.lockedDeckId) return;
+    const input = el('input', { value: deck.deckName, attrs: { maxlength: '30', 'aria-label': '新しいデッキ名' } });
+    const errorCopy = el('p', { className: 'invalid-copy deck-rename-error' });
+    let modal = null;
+    const save = async () => {
+      const button = modal.modal.querySelector('.deck-rename-confirm');
+      if (button?.disabled) return;
+      if (button) button.disabled = true;
+      try {
+        await this.onRename(deck, input.value);
+        modal.close();
+        this.render();
+      } catch (error) {
+        errorCopy.textContent = error.message;
+        if (button) button.disabled = false;
+      }
+    };
+    input.addEventListener('keydown', (event) => {
+      if (event.key !== 'Enter') return;
+      event.preventDefault();
+      save();
+    });
+    modal = openModal({
+      title: 'デッキ名を変更',
+      className: 'deck-rename-modal',
+      content: el('div', { className: 'deck-rename-editor' }, [
+        el('label', {}, [el('span', { text: 'デッキ名（30文字以内）' }), input]),
+        errorCopy,
+        el('div', { className: 'modal-actions' }, [
+          el('button', { className: 'text-button', text: 'キャンセル', onclick: () => modal.close() }),
+          el('button', { className: 'primary-button deck-rename-confirm', text: '変更を保存', onclick: save }),
+        ]),
+      ]),
+    });
+    globalThis.setTimeout(() => { input.focus(); input.select(); }, 0);
   }
 
   render() {
     const decks = this.collection.list();
     replace(this.root, el('main', { className: 'deck-list-screen' }, [
-      el('header', { className: 'screen-header' }, [
+      el('header', { className: 'screen-header deck-list-header' }, [
         el('div', {}, [el('p', { className: 'eyebrow', text: 'SAVED 40-CARD DECKS' }), el('h1', { text: '保存デッキ' })]),
-        el('div', { className: 'header-actions' }, [
+        el('div', { className: 'header-actions deck-list-actions' }, [
           this.onBack ? el('button', { className: 'text-button', text: '戻る', onclick: this.onBack }) : null,
-          this.onCatalog ? el('button', { className: 'text-button catalog-open-button', text: 'カード一覧', onclick: this.onCatalog }) : null,
+          this.onCatalog ? el('button', { className: 'text-button catalog-open-button', text: 'カード図鑑', onclick: this.onCatalog }) : null,
+          this.onInventory ? el('button', { className: 'text-button inventory-open-button', text: '未所属カード', onclick: this.onInventory }) : null,
           el('button', { className: 'primary-button', text: `新規作成 ${decks.length}/5`, disabled: decks.length >= 5, onclick: this.onCreate }),
         ]),
       ]),
       el('section', { className: 'deck-summary-grid' }, decks.length
-        ? decks.map((deck) => deckSummaryCard(deck, this.masterIndex, this.onSelect, deck.deckId === this.lockedDeckId))
+        ? decks.map((deck) => deckSummaryCard(deck, this.masterIndex, this.onSelect, (entry) => this.openRenameDialog(entry), deck.deckId === this.lockedDeckId))
         : el('div', { className: 'empty-state' }, [el('h2', { text: '保存デッキがありません' }), el('p', { text: '最初の40枚デッキを作成してください。' })])),
     ]));
   }
@@ -151,17 +204,6 @@ export class DeckDetailScreen {
     });
   }
 
-  rename(input) {
-    if (this.locked) return;
-    try {
-      const deck = this.collection.rename(this.deckId, input.value);
-      this.onChanged?.(deck);
-      this.error = '';
-    }
-    catch (error) { this.error = error.message; }
-    this.render();
-  }
-
   openLeaderPicker() {
     if (this.locked) return;
     const deck = this.collection.get(this.deckId);
@@ -206,7 +248,7 @@ export class DeckDetailScreen {
       el('header', { className: 'screen-header deck-detail-header' }, [
         el('div', {}, [el('p', { className: 'eyebrow', text: '40-CARD DECK' }), el('h1', { text: deck.deckName })]),
         el('div', { className: 'deck-stats-inline' }, [
-          el('span', { text: `40枚` }), el('span', { text: `総TP ${deck.totalPlayTp}` }), el('span', { text: `${TOURNAMENT_LABELS[deck.qualification]}まで` }),
+          el('span', { text: `40枚` }), el('span', { text: `デッキ総TP ${deck.totalPlayTp}` }), el('span', { text: `${TOURNAMENT_LABELS[deck.qualification]}まで` }),
         ]),
         el('div', { className: 'header-actions' }, [
           el('button', { className: 'text-button', text: '一覧へ', onclick: this.onBack }),
@@ -227,8 +269,6 @@ export class DeckDetailScreen {
           el('small', { text: '大会を終了すると、名前・リーダー・40枚構成の編集と削除が再び可能になります。' }),
         ]),
       ]) : el('section', { className: 'deck-editor-bar' }, [
-        el('label', {}, [el('span', { text: 'デッキ名' }), el('input', { value: deck.deckName, attrs: { maxlength: '30', 'aria-label': 'デッキ名' } })]),
-        el('button', { className: 'text-button', text: '名前を保存', onclick: (event) => this.rename(event.currentTarget.previousElementSibling.querySelector('input')) }),
         el('div', { className: 'deck-leader-edit' }, [
           el('span', { text: 'リーダー' }),
           el('strong', { text: leader?.name ?? '未設定' }),

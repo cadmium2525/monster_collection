@@ -158,6 +158,19 @@ class MonsterConstructionApp {
       onBack: () => this.showHome(),
       onSelect: (deck) => this.showDeckDetail(deck.deckId),
       onCatalog: () => this.showCardCatalog(),
+      onInventory: () => this.showAssetCollection({ returnTo: 'decks' }),
+      onRename: async (deck, nextName) => {
+        if (this.isDeckEditingLocked(deck.deckId)) throw new Error('大会参加中はデッキ名を変更できません');
+        const previousName = deck.deckName;
+        const updated = this.decks.rename(deck.deckId, nextName);
+        try {
+          await this.repository.saveDeck(updated);
+          return updated;
+        } catch (error) {
+          this.decks.rename(deck.deckId, previousName);
+          throw error;
+        }
+      },
       onCreate: () => openStarterDeckPicker({
         masterIndex: this.masterIndex,
         options: STARTER_DECK_OPTIONS,
@@ -217,13 +230,15 @@ class MonsterConstructionApp {
     });
   }
 
-  showAssetCollection() {
+  showAssetCollection({ returnTo = 'boosters' } = {}) {
     this.currentScreen = 'assets';
+    const returnToDecks = returnTo === 'decks';
     new AssetCollectionScreen({
       root: this.root,
       economy: this.economy,
       masterIndex: this.masterIndex,
-      onBack: () => this.showBoosterShop(),
+      onBack: () => returnToDecks ? this.showDeckList() : this.showBoosterShop(),
+      backLabel: returnToDecks ? '保存デッキへ' : 'パックへ',
     });
   }
 
@@ -290,7 +305,7 @@ class MonsterConstructionApp {
         onBack: () => this.showDeckList(),
       });
     } catch (error) {
-      this.showError(error, 'カード一覧を読み込めません');
+      this.showError(error, 'カード図鑑を読み込めません');
       this.showDeckList();
     }
   }

@@ -3,10 +3,11 @@ import { acquisitionLabel } from '../gacha/acquisition.js';
 import { assetStackKey } from '../gacha/economy-state.js';
 import { el, replace } from './dom.js';
 import { openCardDetails, renderCard } from './card-renderer.js';
+import { diamondIcon } from './currency-icon.js';
 
 function diamondBalance(economy) {
   return el('div', { className: 'diamond-balance', attrs: { 'aria-label': `所持ダイヤ ${economy.diamonds}` } }, [
-    el('i', { attrs: { 'aria-hidden': 'true' } }),
+    diamondIcon('diamond-balance-icon'),
     el('strong', { text: economy.diamonds.toLocaleString('ja-JP') }),
     economy.freePackCredits ? el('small', { text: `初回無料 ×${economy.freePackCredits}` }) : null,
   ]);
@@ -56,10 +57,9 @@ export class BoosterShopScreen {
             el('p', { text: pack.description }),
             el('button', {
               className: 'primary-button booster-open-button',
-              text: free ? '初回無料で開封' : `◆ ${pack.cost}で開封`,
               disabled: !affordable || Boolean(this.economy.pendingPack),
               onclick: () => this.onOpen(pack),
-            }),
+            }, free ? '初回無料で開封' : [diamondIcon('booster-cost-icon'), el('span', { text: `${pack.cost}で開封` })]),
           ]),
         ]);
       })),
@@ -246,11 +246,12 @@ export class PackOpeningScreen {
 }
 
 export class AssetCollectionScreen {
-  constructor({ root, economy, masterIndex, onBack }) {
+  constructor({ root, economy, masterIndex, onBack, backLabel = 'パックへ' }) {
     this.root = root;
     this.economy = economy;
     this.masterIndex = masterIndex;
     this.onBack = onBack;
+    this.backLabel = backLabel;
     this.render();
   }
 
@@ -266,7 +267,7 @@ export class AssetCollectionScreen {
           el('h1', { text: '未所属カード' }),
           el('p', { text: 'パックから入手し、まだ保存デッキへ所属させていないカードです。' }),
         ]),
-        el('button', { className: 'utility-button', text: 'パックへ', onclick: this.onBack }),
+        el('button', { className: 'utility-button', text: this.backLabel, onclick: this.onBack }),
       ]),
       stacks.length ? el('section', { className: 'asset-card-grid' }, stacks.map((asset) => {
         const definition = this.masterIndex.cards.get(asset.masterId);

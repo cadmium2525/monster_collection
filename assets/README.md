@@ -20,6 +20,8 @@ Generation mode was the built-in ImageGen raster workflow. Base prompts establis
 
 `ui/card-badges/{life,cost,atk,def}.webp` are transparent status badges supplied by the project owner. The original green heart, cyan cost coin, blue sword, and red shield artwork is preserved; only the uniform gray JPEG background was removed and the assets were normalized to transparent 512px canvases. These four files use lossless WebP so their alpha edges and visible pixels are retained.
 
+`ui/currency/diamond-premium.webp` is the shared free-currency icon generated for v1.15.8 with the built-in ImageGen workflow. It is a centered cyan/sapphire faceted gemstone with a restrained magical glint and genuine transparency, designed to remain readable at 21–36px. The project copy is 384×384 WebP quality 90 with alpha quality 100; numbers and prices remain dynamic HTML.
+
 All runtime game artwork is delivered as WebP as of v1.12.0. Lossy illustrations use high-quality settings (quality 90–92, effort 6, alpha quality 100); status badges use lossless WebP. PNG is retained only for the tiny PWA installation icons required for broad OS/iOS compatibility, and `icons/app-icon.svg` remains the editable source mark.
 
 Exact built-in ImageGen prompts and JPEG optimization notes are recorded in `CHANGELOG.md`.
