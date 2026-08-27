@@ -38,17 +38,18 @@ export function openStarterDeckPicker({ masterIndex, options, onChoose }) {
   return modal;
 }
 
-function deckSummaryCard(deck, masterIndex, onSelect) {
+function deckSummaryCard(deck, masterIndex, onSelect, locked = false) {
   const representative = masterIndex.monsters.get(deck.representativeMonsterId);
   return el('article', {
-    className: 'deck-summary-card',
-    attrs: { role: 'button', tabindex: '0', 'aria-label': `${deck.deckName}を開く` },
+    className: `deck-summary-card${locked ? ' tournament-locked' : ''}`,
+    attrs: { role: 'button', tabindex: '0', 'aria-label': `${deck.deckName}を開く${locked ? '（大会参加中・編集不可）' : ''}` },
     onclick: () => onSelect(deck),
     onkeydown: (event) => { if (event.key === 'Enter' || event.key === ' ') onSelect(deck); },
   }, [
     el('div', { className: 'deck-representative' }, representative ? renderCard({ definition: representative, label: `${deck.deckName}の代表モンスター`, interactive: false }) : null),
     el('div', { className: 'deck-summary-copy' }, [
       el('h2', { text: deck.deckName }),
+      locked ? el('span', { className: 'deck-run-lock', text: '大会参加中・編集不可' }) : null,
       el('p', { text: representative ? `リーダー ${representative.name}` : 'モンスターなし' }),
       el('dl', {}, [
         el('dt', { text: '総プレイTP' }), el('dd', { text: deck.totalPlayTp }),
@@ -61,7 +62,7 @@ function deckSummaryCard(deck, masterIndex, onSelect) {
 }
 
 export class DeckListScreen {
-  constructor({ root, collection, masterIndex, onSelect, onCreate, onBack, onCatalog = null }) {
+  constructor({ root, collection, masterIndex, onSelect, onCreate, onBack, onCatalog = null, lockedDeckId = null }) {
     this.root = root;
     this.collection = collection;
     this.masterIndex = masterIndex;
@@ -69,6 +70,7 @@ export class DeckListScreen {
     this.onCreate = onCreate;
     this.onBack = onBack;
     this.onCatalog = onCatalog;
+    this.lockedDeckId = lockedDeckId;
     this.render();
   }
 
@@ -84,14 +86,14 @@ export class DeckListScreen {
         ]),
       ]),
       el('section', { className: 'deck-summary-grid' }, decks.length
-        ? decks.map((deck) => deckSummaryCard(deck, this.masterIndex, this.onSelect))
+        ? decks.map((deck) => deckSummaryCard(deck, this.masterIndex, this.onSelect, deck.deckId === this.lockedDeckId))
         : el('div', { className: 'empty-state' }, [el('h2', { text: '保存デッキがありません' }), el('p', { text: '最初の40枚デッキを作成してください。' })])),
     ]));
   }
 }
 
 export class DeckDetailScreen {
-  constructor({ root, collection, masterIndex, deckId, onBack, onUse, onDelete, onChanged, onBuild = null }) {
+  constructor({ root, collection, masterIndex, deckId, onBack, onUse, onDelete, onChanged, onBuild = null, locked = false }) {
     this.root = root;
     this.collection = collection;
     this.masterIndex = masterIndex;
@@ -101,10 +103,12 @@ export class DeckDetailScreen {
     this.onDelete = onDelete;
     this.onChanged = onChanged;
     this.onBuild = onBuild;
+    this.locked = locked;
     this.render();
   }
 
   rename(input) {
+    if (this.locked) return;
     try {
       const deck = this.collection.rename(this.deckId, input.value);
       this.onChanged?.(deck);
@@ -115,6 +119,7 @@ export class DeckDetailScreen {
   }
 
   openLeaderPicker() {
+    if (this.locked) return;
     const deck = this.collection.get(this.deckId);
     const monsterIds = [...new Set(deck.cards
       .map((card) => card.masterId)
@@ -164,7 +169,13 @@ export class DeckDetailScreen {
           this.onUse ? el('button', { className: 'primary-button', text: 'このデッキを使う', onclick: () => this.onUse(deck) }) : null,
         ]),
       ]),
-      el('section', { className: 'deck-editor-bar' }, [
+      this.locked ? el('section', { className: 'deck-editor-bar tournament-locked' }, [
+        el('span', { className: 'deck-lock-mark', text: 'LOCK' }),
+        el('div', { className: 'deck-lock-copy' }, [
+          el('strong', { text: '大会参加中のため編集できません' }),
+          el('small', { text: '大会を終了すると、名前・リーダー・40枚構成の編集と削除が再び可能になります。' }),
+        ]),
+      ]) : el('section', { className: 'deck-editor-bar' }, [
         el('label', {}, [el('span', { text: 'デッキ名' }), el('input', { value: deck.deckName, attrs: { maxlength: '30', 'aria-label': 'デッキ名' } })]),
         el('button', { className: 'text-button', text: '名前を保存', onclick: (event) => this.rename(event.currentTarget.previousElementSibling.querySelector('input')) }),
         el('div', { className: 'deck-leader-edit' }, [

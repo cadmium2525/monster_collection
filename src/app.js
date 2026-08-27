@@ -9,6 +9,7 @@ import { TournamentSeedSource } from './core/tournament-seed.js';
 import { BattleScreen } from './ui/battle-screen.js';
 import { CardCatalogScreen } from './ui/catalog-screen.js';
 import { DeckBuildScreen, DeckDetailScreen, DeckListScreen, openStarterDeckPicker } from './ui/deck-screens.js';
+import { activeRunDeckId, isDeckLockedByActiveRun } from './tournament/active-run.js';
 import { el, replace } from './ui/dom.js';
 import { HomeScreen } from './ui/home-screen.js';
 import { openModal } from './ui/modal.js';
@@ -146,6 +147,7 @@ class MonsterConstructionApp {
       root: this.root,
       collection: this.decks,
       masterIndex: this.masterIndex,
+      lockedDeckId: activeRunDeckId(this.activeRun),
       onBack: () => this.showHome(),
       onSelect: (deck) => this.showDeckDetail(deck.deckId),
       onCatalog: () => this.showCardCatalog(),
@@ -288,11 +290,13 @@ class MonsterConstructionApp {
 
   showDeckDetail(deckId) {
     this.currentScreen = 'deck-detail';
+    const locked = this.isDeckEditingLocked(deckId);
     new DeckDetailScreen({
       root: this.root,
       collection: this.decks,
       masterIndex: this.masterIndex,
       deckId,
+      locked,
       onBack: () => this.showDeckList(),
       onChanged: (deck) => this.repository.saveDeck(deck).catch((error) => this.showError(error, 'デッキを同期できません')),
       onDelete: (deck) => this.confirmDeleteDeck(deck),
@@ -301,6 +305,11 @@ class MonsterConstructionApp {
   }
 
   showDeckBuilder(deck) {
+    if (this.isDeckEditingLocked(deck.deckId)) {
+      this.showDeckDetail(deck.deckId);
+      this.showError(new Error('このデッキは進行中の大会で使用されています。大会終了後に編集できます。'), '大会参加中のデッキ');
+      return;
+    }
     this.currentScreen = 'deck-builder';
     new DeckBuildScreen({
       root: this.root,
@@ -309,6 +318,11 @@ class MonsterConstructionApp {
       masterIndex: this.masterIndex,
       onBack: () => this.showDeckDetail(deck.deckId),
       onSave: async (draft, economy) => {
+        if (this.isDeckEditingLocked(deck.deckId)) {
+          this.showDeckDetail(deck.deckId);
+          this.showError(new Error('大会データを保護するため、進行中デッキの変更は保存できません。'), '大会参加中のデッキ');
+          return;
+        }
         this.showLoading('40枚とデッキ専用プールを安全に保存しています…');
         try {
           const saved = this.decks.replaceCardsAndPool(deck.deckId, { cards: draft.cards, pool: draft.pool });
@@ -324,11 +338,20 @@ class MonsterConstructionApp {
   }
 
   confirmDeleteDeck(deck) {
+    if (this.isDeckEditingLocked(deck.deckId)) {
+      this.showError(new Error('このデッキは進行中の大会で使用されているため削除できません。'), '大会参加中のデッキ');
+      return;
+    }
     const content = el('div', {}, [
       el('p', { text: `「${deck.deckName}」と、そのデッキ固有の大会資格を削除します。` }),
       el('div', { className: 'modal-actions' }, [
         el('button', { className: 'text-button', text: 'キャンセル', onclick: () => modal.close() }),
         el('button', { className: 'text-button danger-button', text: '削除する', onclick: async () => {
+          if (this.isDeckEditingLocked(deck.deckId)) {
+            modal.close();
+            this.showError(new Error('大会データを保護するため、進行中デッキは削除できません。'), '大会参加中のデッキ');
+            return;
+          }
           try {
             await this.repository.deleteDeck(deck.deckId);
             this.decks.remove(deck.deckId);
@@ -339,6 +362,10 @@ class MonsterConstructionApp {
       ]),
     ]);
     const modal = openModal({ title: '保存デッキを削除しますか？', content });
+  }
+
+  isDeckEditingLocked(deckId) {
+    return isDeckLockedByActiveRun(this.activeRun, deckId);
   }
 
   showTournamentSetup() {

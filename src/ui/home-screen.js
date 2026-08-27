@@ -1,4 +1,5 @@
 import { TOURNAMENT_LABELS } from '../battle/rules.js';
+import { activeTournamentState } from '../tournament/active-run.js';
 import { representativeMonster } from '../battle/deck.js';
 import { ROUND_LABELS } from '../tournament/TournamentRun.js';
 import { el, formatDate, replace } from './dom.js';
@@ -111,9 +112,8 @@ export function homeFooterMode({ debugMode = false, syncError = null } = {}) {
 }
 
 export function activeRunSummary(activeRun) {
-  if (!activeRun || !['tournament', 'battle', 'reward'].includes(activeRun.phase)) return null;
-  const state = activeRun.tournament?.state;
-  if (!state || (activeRun.phase === 'reward' ? !['active', 'won', 'champion'].includes(state.status) : state.status !== 'active')) return null;
+  const state = activeTournamentState(activeRun);
+  if (!state) return null;
   const phaseLabel = activeRun.phase === 'battle' ? '試合中' : activeRun.phase === 'reward' ? 'カード奪取中' : '対戦前';
   const displayedRound = activeRun.phase === 'reward' && state.status === 'active'
     ? Math.max(0, state.roundIndex - 1)

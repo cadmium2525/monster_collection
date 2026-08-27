@@ -882,9 +882,11 @@ button:disabled { opacity: .38; cursor: not-allowed; }
 .deck-summary-grid { min-height: 0; overflow: auto; display: grid; grid-template-columns: repeat(3,minmax(230px,1fr)); align-content: start; gap: 8px; }
 .deck-summary-card { min-height: 150px; display: grid; grid-template-columns: 100px minmax(0,1fr); gap: 10px; padding: 9px; border: 1px solid var(--line); border-radius: var(--radius); text-align: left; background: var(--panel); cursor: pointer; }
 .deck-summary-card:hover { border-color: var(--gold); }
+.deck-summary-card.tournament-locked { border-color:rgba(232,186,98,.48); background:linear-gradient(135deg,rgba(70,47,17,.28),var(--panel) 48%); }
 .deck-representative .game-card { width: 92px; pointer-events: none; }
 .deck-summary-copy h2 { margin: 2px 0; color: var(--gold); font-size: 17px; }
 .deck-summary-copy p, .deck-summary-copy small { margin: 2px 0; color: var(--muted); font-size: 10px; }
+.deck-run-lock { display:inline-block; margin:2px 0; padding:3px 6px; border:1px solid rgba(232,186,98,.55); border-radius:12px; color:#ffe5a2; background:rgba(91,58,18,.62); font-size:9px; font-weight:900; }
 .deck-summary-copy dl { display: grid; grid-template-columns: auto 1fr; gap: 3px 8px; margin: 8px 0; font-size: 11px; }
 .deck-summary-copy dd { margin: 0; text-align: right; }
 .starter-picker-modal { width: min(890px,96vw); }
@@ -910,6 +912,11 @@ button:disabled { opacity: .38; cursor: not-allowed; }
 .deck-editor-bar { display: flex; align-items: center; gap: 7px; padding: 6px 9px; border: 1px solid var(--line); border-radius: 10px; background: var(--panel); }
 .deck-editor-bar label { display: flex; align-items: center; gap: 7px; color: var(--muted); font-size: 11px; }
 .deck-editor-bar input { min-width: 220px; padding: 7px 9px; border: 1px solid var(--line); border-radius: 7px; color: var(--ink); background: #081421; }
+.deck-editor-bar.tournament-locked { min-height:48px; border-color:rgba(232,186,98,.58); background:linear-gradient(90deg,rgba(86,55,18,.55),rgba(8,20,33,.94)); }
+.deck-lock-mark { flex:0 0 auto; padding:6px 9px; border:1px solid rgba(255,224,145,.68); border-radius:7px; color:#ffe6a3; font:900 10px/1 Georgia,serif; letter-spacing:.12em; }
+.deck-lock-copy { min-width:0; display:grid; gap:3px; }
+.deck-lock-copy strong { color:#fff0bd; font-size:12px; }
+.deck-lock-copy small { overflow:hidden; color:#c8d1d6; font-size:10px; text-overflow:ellipsis; white-space:nowrap; }
 .deck-leader-edit { display: flex; align-items: center; gap: 6px; padding-left: 7px; border-left: 1px solid var(--line); }
 .deck-leader-edit span { color: var(--muted); font-size: 10px; }
 .deck-leader-edit strong { max-width: 100px; overflow: hidden; color: #fff0bd; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
