@@ -294,6 +294,8 @@ export class FirebaseGameRepository {
         championDeckId: payload.championDeckId,
         championDeckName: payload.championDeckName,
         championDeckSnapshot: clone(payload.championDeckSnapshot),
+        championGrowthSnapshot: clone(payload.championGrowthSnapshot ?? {}),
+        championSnapshotVersion: payload.championSnapshotVersion ?? 2,
         representativeMonsterId: payload.representativeMonsterId ?? null,
         crownedAt: this.sdk.serverTimestamp(),
         defenseCount: 0,

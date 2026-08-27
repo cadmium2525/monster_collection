@@ -19,12 +19,17 @@ function savedDeck(deckId = 'deck-1') {
 }
 
 function championPayload(expectedVersion = 0) {
+  const championDeckSnapshot = legalDeck('champion');
   return {
     expectedVersion,
     championDisplayName: 'テスト王者',
     championDeckId: 'deck-1',
     championDeckName: '王者40',
-    championDeckSnapshot: legalDeck('champion'),
+    championDeckSnapshot,
+    championGrowthSnapshot: {
+      [championDeckSnapshot[0].instanceId]: { life: 15, atk: 10, def: 5, learnedMoveIds: [], equippedMoveIds: [] },
+    },
+    championSnapshotVersion: 2,
     representativeMonsterId: 'monster-003',
   };
 }
@@ -43,6 +48,8 @@ test('local repository stores user decks and emits champion updates with version
   const unsubscribe = repository.subscribeChampion((champion) => updates.push(champion));
   const champion = await repository.claimChampionship(championPayload(0));
   assert.equal(champion.championVersion, 1);
+  assert.equal(champion.championSnapshotVersion, 2);
+  assert.equal(champion.championGrowthSnapshot['champion-1'].life, 15);
   await assert.rejects(() => repository.claimChampionship(championPayload(0)), { code: 'champion/version-conflict' });
   await Promise.resolve();
   assert.ok(updates.some((entry) => entry?.championVersion === 1));
@@ -196,6 +203,8 @@ test('Firebase repository uses a transaction and rejects stale championVersion',
   const transactionsBeforeCrown = fake.transactionCount;
   const crowned = await repository.claimChampionship(championPayload(0));
   assert.equal(crowned.championVersion, 1);
+  assert.equal(crowned.championSnapshotVersion, 2);
+  assert.equal(crowned.championGrowthSnapshot['champion-1'].atk, 10);
   assert.equal(fake.transactionCount, transactionsBeforeCrown + 1);
   await assert.rejects(() => repository.claimChampionship(championPayload(0)), { code: 'champion/version-conflict' });
   assert.equal((await repository.getChampion()).championVersion, 1, 'stale write must not overwrite champion');
@@ -273,4 +282,6 @@ test('Firestore rules expose Legend snapshots read-only to authenticated opponen
   assert.match(rules, /source\.qualification == 'legend'/);
   assert.match(rules, /source\.cards == d\.cards/);
   assert.match(rules, /allow delete: if signedIn\(\) && resource\.data\.ownerUserId == request\.auth\.uid/);
+  assert.match(rules, /championGrowthSnapshot is map/);
+  assert.match(rules, /championSnapshotVersion == 2/);
 });

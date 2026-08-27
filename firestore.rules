@@ -41,6 +41,9 @@ service cloud.firestore {
         && c.championDeckName is string
         && c.championDeckSnapshot is list
         && c.championDeckSnapshot.size() == 40
+        && (!('championGrowthSnapshot' in c)
+          || (c.championGrowthSnapshot is map && c.championGrowthSnapshot.size() <= 40))
+        && (!('championSnapshotVersion' in c) || c.championSnapshotVersion is int)
         && c.defenseCount is int
         && c.defenseCount >= 0
         && c.championVersion is int;
@@ -106,6 +109,8 @@ service cloud.firestore {
         && validChampion()
         && request.resource.data.championUserId == request.auth.uid
         && request.resource.data.crownedAt == request.time
+        && request.resource.data.championGrowthSnapshot is map
+        && request.resource.data.championSnapshotVersion == 2
         && request.resource.data.championVersion == 1;
       allow update: if signedIn()
         && validChampion()
@@ -114,6 +119,8 @@ service cloud.firestore {
           (
             request.resource.data.championUserId == request.auth.uid
             && request.resource.data.crownedAt == request.time
+            && request.resource.data.championGrowthSnapshot is map
+            && request.resource.data.championSnapshotVersion == 2
             && request.resource.data.defenseCount == 0
           )
           ||

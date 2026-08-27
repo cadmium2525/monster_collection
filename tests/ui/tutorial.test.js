@@ -12,6 +12,7 @@ test('beginner tutorial covers the complete first tournament interaction loop', 
   assert.doesNotMatch(copy, /距離廃止版/);
   const homeSource = fs.readFileSync(new URL('../../src/ui/home-screen.js', import.meta.url), 'utf8');
   assert.doesNotMatch(homeSource, /距離廃止版ルール/);
+  assert.match(homeSource, /戴冠した大会の決勝開始時点の40枚と育成状態を再現/);
 });
 
 test('technical home footer stays hidden for players but preserves debug and sync warning modes', () => {

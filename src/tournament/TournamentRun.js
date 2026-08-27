@@ -6,6 +6,7 @@ import { analyzeDeck, scoreGeneratedDeck } from './deck-analyzer.js';
 import { generateCpuDeck } from './deck-generator.js';
 import { generateCpuNames } from './cpu-names.js';
 import { advanceCpuTournamentGrowth, cpuTournamentGrowthValue } from './cpu-growth.js';
+import { normalizeTournamentGrowthSnapshot } from './growth-snapshot.js';
 
 export const ROUND_LABELS = Object.freeze(['1回戦', '2回戦', '準決勝', '決勝']);
 export const NEXT_RANK = Object.freeze({ bronze: 'silver', silver: 'gold', gold: 'legend', legend: null });
@@ -145,13 +146,24 @@ export class TournamentRun {
       };
     }
     if (this.state.rank === 'legend') {
+      const championCards = assertLegalDeck(
+        champion.championDeckSnapshot ?? champion.cards ?? createBaselineDeck(this.masterData, 'champion-fallback'),
+        this.masterIndex,
+        { deckId: 'champion' },
+      );
       this.state.entrants.champion = {
         ...clone(champion),
         id: 'champion',
         type: 'champion',
-        cards: clone(champion.cards ?? champion.championDeckSnapshot ?? createBaselineDeck(this.masterData, 'champion-fallback')),
+        displayName: champion.championDisplayName ?? champion.displayName ?? '初代王者 アルカナ',
+        deckName: champion.championDeckName ?? champion.deckName ?? '王座の原型',
+        cards: clone(championCards),
         qualityScore: Number.MAX_SAFE_INTEGER,
-        tournamentGrowth: {},
+        tournamentGrowth: normalizeTournamentGrowthSnapshot(
+          championCards,
+          champion.championGrowthSnapshot ?? champion.tournamentGrowth ?? {},
+          this.masterIndex,
+        ),
         growthHistory: [],
         virtualMatchWins: 0,
       };
@@ -198,7 +210,7 @@ export class TournamentRun {
 
   _recordCpuWinGrowth(match, winnerId) {
     const winner = this.state.entrants[winnerId];
-    if (!winner || winner.type === 'player') return;
+    if (!winner || winner.type === 'player' || winner.type === 'champion') return;
     Object.assign(winner, advanceCpuTournamentGrowth({
       entrant: winner,
       masterData: this.masterData,
@@ -241,6 +253,22 @@ export class TournamentRun {
 
   updateGrowth(growth) {
     this.state.tournamentGrowth = clone(growth);
+  }
+
+  captureLegendFinalSnapshot() {
+    if (this.state.rank !== 'legend' || this.state.roundIndex !== 3 || this.state.status !== 'active') return null;
+    if (!this.state.legendFinalSnapshot) {
+      const cards = clone(this.state.playerDeck.cards);
+      this.state.legendFinalSnapshot = {
+        cards,
+        tournamentGrowth: normalizeTournamentGrowthSnapshot(cards, this.state.tournamentGrowth, this.masterIndex),
+      };
+    }
+    return clone(this.state.legendFinalSnapshot);
+  }
+
+  getLegendFinalSnapshot() {
+    return clone(this.state.legendFinalSnapshot ?? null);
   }
 
   recordPlayerResult({ won, draw = false }) {

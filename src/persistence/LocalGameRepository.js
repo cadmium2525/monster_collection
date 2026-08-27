@@ -172,6 +172,8 @@ export class LocalGameRepository {
       championDeckId: payload.championDeckId,
       championDeckName: payload.championDeckName,
       championDeckSnapshot: clone(payload.championDeckSnapshot),
+      championGrowthSnapshot: clone(payload.championGrowthSnapshot ?? {}),
+      championSnapshotVersion: payload.championSnapshotVersion ?? 2,
       representativeMonsterId: payload.representativeMonsterId ?? null,
       crownedAt: this.now(),
       defenseCount: 0,

@@ -118,7 +118,7 @@ test('elimination preserves the latest 40 cards but grants no next qualification
   assert.equal(saves.at(-1).cards.length, 40);
 });
 
-test('Legend fourth win crowns the post-reward saved 40 with captured championVersion', async () => {
+test('Legend fourth win crowns the final-start 40 and growth with captured championVersion', async () => {
   const champion = {
     displayName: '旧王者', deckName: '旧王者40', championVersion: 7, cards: createBaselineDeck(masterData, 'old-king'),
   };
@@ -128,11 +128,54 @@ test('Legend fourth win crowns the post-reward saved 40 with captured championVe
   decks.grantTournamentWin(deck.deckId, 'gold');
   await session.startTournament(deck.deckId, 'legend');
   let final;
+  let finalStartCards;
+  let finalStartGrowth;
   for (let round = 0; round < 4; round += 1) {
-    const outcome = await session.completeBattle(fakeFinishedBattle('player'));
+    if (round === 3) {
+      finalStartCards = structuredClone(session.tournament.state.playerDeck.cards);
+      finalStartGrowth = structuredClone(session.tournament.state.tournamentGrowth);
+    }
+    const monster = session.tournament.state.playerDeck.cards.find((card) => masterIndex.cards.get(card.masterId)?.kind === 'monster');
+    const growth = {
+      ...session.tournament.state.tournamentGrowth,
+      [monster.instanceId]: { life: (round + 1) * 5, atk: round * 5, def: 0, learnedMoveIds: [], equippedMoveIds: [] },
+    };
+    const outcome = await session.completeBattle(fakeFinishedBattle('player', growth));
     final = await session.completeReward(outcome.reward.skip());
   }
   assert.equal(final.crowned.expectedVersion, 7);
   assert.equal(final.crowned.championVersion, 8);
-  assert.equal(final.crowned.championDeckSnapshot.length, 40);
+  assert.deepEqual(final.crowned.championDeckSnapshot, finalStartCards);
+  for (const [instanceId, growth] of Object.entries(finalStartGrowth)) {
+    assert.equal(final.crowned.championGrowthSnapshot[instanceId].life, growth.life);
+    assert.equal(final.crowned.championGrowthSnapshot[instanceId].atk, growth.atk);
+  }
+  assert.equal(final.crowned.championSnapshotVersion, 2);
+});
+
+test('the next Legend challenger enters the final against the saved champion growth snapshot', async () => {
+  const championCards = createBaselineDeck(masterData, 'grown-champion');
+  const developedCard = championCards.find((card) => card.masterId === 'monster-002');
+  const champion = {
+    championDisplayName: '育成王者',
+    championDeckName: '戴冠時40枚',
+    championVersion: 12,
+    championDeckSnapshot: championCards,
+    championGrowthSnapshot: {
+      [developedCard.instanceId]: { life: 30, atk: 20, def: 10, learnedMoveIds: [], equippedMoveIds: [] },
+    },
+    championSnapshotVersion: 2,
+  };
+  const { session, decks, deck } = setup(champion);
+  decks.grantTournamentWin(deck.deckId, 'bronze');
+  decks.grantTournamentWin(deck.deckId, 'silver');
+  decks.grantTournamentWin(deck.deckId, 'gold');
+  await session.startTournament(deck.deckId, 'legend');
+  for (let round = 0; round < 3; round += 1) session.tournament.recordPlayerResult({ won: true });
+
+  const battle = session.createCurrentBattle();
+  const restoredGrowth = battle.player('champion').tournamentGrowth[developedCard.instanceId];
+  assert.equal(restoredGrowth.life, 30);
+  assert.equal(restoredGrowth.atk, 20);
+  assert.equal(restoredGrowth.def, 10);
 });

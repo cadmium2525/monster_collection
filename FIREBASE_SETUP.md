@@ -61,7 +61,7 @@ v1.14.0以降は同じ`users/{uid}`に`economy`も保存します。ここには
 
 保存デッキが`qualification: "legend"`を獲得すると、Repositoryは個人情報を除いた40枚スナップショットを`legendDecks`へ公開します。認証済みプレイヤーはこのスナップショットを読み込めますが、作成・更新・削除できるのは所有者だけです。Security Rulesでは、公開スナップショットを所有者の非公開`users/{uid}/savedDecks/{deckId}`ドキュメントおよびプロフィールと照合します。
 
-レジェンドカップでは、他ユーザーの有効なスナップショットを最大14デッキ読み込みます。不正なデータや現在のマスターデータと整合しない古いデータは除外し、空き枠は自動生成したLegend CPUで補います。決勝の対戦相手は常に`gameState/champion`の現チャンピオンです。
+レジェンドカップでは、他ユーザーの有効なスナップショットを最大14デッキ読み込みます。不正なデータや現在のマスターデータと整合しない古いデータは除外し、空き枠は自動生成したLegend CPUで補います。決勝の対戦相手は常に`gameState/champion`の現チャンピオンで、戴冠した大会の決勝開始時40枚と成長状態を再現します。
 
 チャンピオンのドキュメントには、次の項目を保存します。
 
@@ -70,6 +70,8 @@ v1.14.0以降は同じ`users/{uid}`に`economy`も保存します。ここには
 - `championDeckId`
 - `championDeckName`
 - `championDeckSnapshot`（40枚）
+- `championGrowthSnapshot`（決勝開始時のカードインスタンス別LIFE／ATK／DEF成長・習得技・実戦4技）
+- `championSnapshotVersion`（現行は`2`）
 - `representativeMonsterId`
 - `crownedAt`
 - `defenseCount`
@@ -84,6 +86,8 @@ Security Rulesのデプロイ後、デッキでゴールドカップに優勝し
 ## 5. 王座更新時の競合ポリシー
 
 レジェンド決勝の開始時に`championVersion`を取得します。勝利後はFirestore transactionで現在のチャンピオンを読み込み、バージョンが一致している場合だけ新チャンピオンを書き込みます。
+
+王座へ保存する40枚と成長状態は、決勝のBattleEngineを作成する直前に固定します。決勝中に追加されたTraining・修行、および決勝勝利後のカード奪取はユーザーの保存デッキには反映されますが、今回の王座防衛スナップショットには含めません。旧形式の現チャンピオンに`championGrowthSnapshot`がない場合は、次の戴冠まで成長量0として互換動作します。
 
 対戦中に別ユーザーが王座を更新していた場合は`champion/version-conflict`となり、古い王者データが新しい王者を上書きすることはありません。現在のゲームポリシーは、`src/champion/policy.js`の`strict-version-rechallenge`です。
 

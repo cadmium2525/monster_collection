@@ -132,6 +132,7 @@ export class GameSession {
   createCurrentBattle() {
     if (!this.tournament || this.tournament.state.status !== 'active') throw new Error('開始可能な大会がありません');
     if (this.activeBattle?.state.status === 'active') throw new Error('試合は既に進行中です');
+    this.tournament.captureLegendFinalSnapshot();
     const opponent = this.tournament.getCurrentOpponent();
     const round = this.tournament.state.roundIndex + 1;
     this.activeBattle = new BattleEngine({
@@ -154,6 +155,7 @@ export class GameSession {
 
   async completeBattle(engine = this.activeBattle) {
     if (!engine || engine.state.status !== 'finished') throw new Error('終了済みの試合がありません');
+    this.tournament.captureLegendFinalSnapshot();
     const opponent = this.tournament.getCurrentOpponent();
     const discoveredFusionIds = [...new Set((engine.state.log ?? [])
       .filter((event) => event.type === 'fusion-special' && event.playerId === 'player' && event.fusionId)
@@ -222,6 +224,10 @@ export class GameSession {
     let checkpointCleared = false;
     if (this.tournament.state.status === 'champion') {
       try {
+        const finalSnapshot = this.tournament.getLegendFinalSnapshot();
+        if (!finalSnapshot?.cards?.length || !finalSnapshot?.tournamentGrowth) {
+          throw new Error('王座へ保存する決勝開始時スナップショットがありません');
+        }
         const expectedVersion = this.tournament.state.championVersionAtStart;
         const alreadyCrowned = this.champion?.championUserId === this.user.id
           && this.champion?.championDeckId === saved.deckId
@@ -231,9 +237,12 @@ export class GameSession {
           championDisplayName: this.user.displayName,
           championDeckId: saved.deckId,
           championDeckName: saved.deckName,
-          championDeckSnapshot: saved.cards,
-          representativeMonsterId: saved.representativeMonsterId
-            ?? representativeMonster(saved.cards, this.masterIndex)?.id
+          championDeckSnapshot: finalSnapshot.cards,
+          championGrowthSnapshot: finalSnapshot.tournamentGrowth,
+          championSnapshotVersion: 2,
+          representativeMonsterId: finalSnapshot.cards.some((card) => card.masterId === saved.representativeMonsterId)
+            ? saved.representativeMonsterId
+            : representativeMonster(finalSnapshot.cards, this.masterIndex)?.id
             ?? null,
         });
         this.champion = crowned;

@@ -95,8 +95,13 @@ test('loss or draw saves elimination state and does not grant qualification', ()
 });
 
 test('Legend rounds 1-3 use Legend opponents and final is the captured champion snapshot', () => {
+  const championCards = createBaselineDeck(masterData, 'king');
+  const developedCard = championCards.find((card) => card.masterId === 'monster-002');
   const champion = {
-    displayName: '現王者テスト', deckName: '王者40', cards: createBaselineDeck(masterData, 'king'), championVersion: 42,
+    championDisplayName: '現王者テスト', championDeckName: '王者40', championDeckSnapshot: championCards, championVersion: 42,
+    championGrowthSnapshot: {
+      [developedCard.instanceId]: { life: 25, atk: 15, def: 10, learnedMoveIds: [], equippedMoveIds: [] },
+    },
   };
   const run = new TournamentRun({ masterData, rank: 'legend', playerDeck: playerDeck(), seed: 'legend-final', champion });
   for (let round = 0; round < 3; round += 1) {
@@ -106,11 +111,33 @@ test('Legend rounds 1-3 use Legend opponents and final is the captured champion 
   }
   assert.equal(run.getCurrentOpponent().type, 'champion');
   assert.equal(run.getCurrentOpponent().displayName, '現王者テスト');
-  assert.equal(summarizeCpuTournamentGrowth(run.getCurrentOpponent()).wins, 3);
+  assert.equal(run.getCurrentOpponent().tournamentGrowth[developedCard.instanceId].life, 25);
+  assert.equal(run.getCurrentOpponent().tournamentGrowth[developedCard.instanceId].atk, 15);
+  assert.equal(summarizeCpuTournamentGrowth(run.getCurrentOpponent()).wins, 0, '王者へ新たな仮想育成を加えない');
   assert.equal(run.getCurrentAiLevel(), 'champion');
   const result = run.recordPlayerResult({ won: true });
   assert.equal(result.status, 'champion');
   assert.equal(result.defeatedChampionVersion, 42);
+});
+
+test('Legend final-start snapshot freezes the challenger 40 and growth and survives checkpoints', () => {
+  const run = new TournamentRun({ masterData, rank: 'legend', playerDeck: playerDeck(), seed: 'crown-snapshot' });
+  for (let round = 0; round < 3; round += 1) run.recordPlayerResult({ won: true });
+  const developedCard = run.state.playerDeck.cards.find((card) => card.masterId === 'monster-002');
+  run.updateGrowth({
+    [developedCard.instanceId]: { life: 20, atk: 10, def: 5, learnedMoveIds: [], equippedMoveIds: [] },
+    'released-card-not-in-final-deck': { life: 99, atk: 99, def: 99, learnedMoveIds: [], equippedMoveIds: [] },
+  });
+  const snapshot = run.captureLegendFinalSnapshot();
+  run.state.playerDeck.cards[0] = { instanceId: 'after-final-card', masterId: 'monster-019' };
+  run.state.tournamentGrowth[developedCard.instanceId].life = 99;
+
+  assert.equal(snapshot.cards.length, 40);
+  assert.equal(snapshot.tournamentGrowth[developedCard.instanceId].life, 20);
+  assert.equal('released-card-not-in-final-deck' in snapshot.tournamentGrowth, false);
+  assert.deepEqual(run.captureLegendFinalSnapshot(), snapshot, '決勝中の変化で上書きしない');
+  const restored = TournamentRun.fromCheckpoint({ masterData, checkpoint: run.toCheckpoint() });
+  assert.deepEqual(restored.getLegendFinalSnapshot(), snapshot);
 });
 
 test('Legend bracket includes valid public player decks, fills remaining slots with CPUs, and reserves the final for champion', () => {
