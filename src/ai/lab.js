@@ -62,6 +62,7 @@ export function runAiMatchup({
   seed = 'ai-lab',
   deckFactory = createBaselineDeck,
   aiOptions = { timeBudgetMs: 25 },
+  aiOptionsBySide = null,
 }) {
   const summary = {
     mode: 'same-deck-ai-comparison',
@@ -101,7 +102,13 @@ export function runAiMatchup({
     const completed = runAutomatedBattle(battle, {
       seed: `${gameSeed}:driver`,
       maxActions: 3000,
-      chooseAction: (engine, playerId) => chooseAiAction(levels[playerId], engine, playerId, rngs[playerId], aiOptions),
+      chooseAction: (engine, playerId) => chooseAiAction(
+        levels[playerId],
+        engine,
+        playerId,
+        rngs[playerId],
+        aiOptionsBySide?.[playerId] ?? aiOptions,
+      ),
     });
     const winnerLevel = completed.result.winnerId ? levels[completed.result.winnerId] : 'draw';
     summary.wins[winnerLevel] += 1;

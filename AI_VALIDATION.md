@@ -1,12 +1,24 @@
 # AI検証結果
 
-実施日: 2026-08-24
+実施日: 2026-08-28
 
 基準: Sim8.7正本 + ユーザー指定の距離システム廃止
 
 条件: 両者に同じ40枚スターターデッキを与え、AIレベルだけを変更
 
 CPUは全レベルで人間と同じ `BattleEngine` の合法手APIを使用する。参照できるのは自分の手札と公開情報だけで、相手手札、山札順、次のドロー、未確定乱数は探索へ渡さない。
+
+## Champion AI v1.15.12
+
+レジェンド決勝専用Champion AIは、以下の3層を制限時間内で評価する。
+
+1. Championの現在ターン行動列（最大5行動）
+2. 相手の公開盤面にいるモンスターによる返し（最大3行動）
+3. Championの次ターンにおける既知カード／盤面の継続（最大2行動）
+
+相手の召喚・Training・修行・ブリーダー・手札合体は、手札内容を見なければ確定できないため探索分岐へ入れず、公開されている手札枚数、空き枠、合体解禁状況から危険度として評価する。Championの次ドローも実カードを候補へ入れず、探索前から既知の手札、墓地、場のカードだけを使用可能とする。公開盤面が同一になった相手応手は重複除去する。
+
+本番予算はLegend 55ms、Champion 140ms。固定seed `champion-minimax-v1`、同一40枚、両者10msへ圧縮した回帰12戦ではChampion 7勝、Legend 5勝。固定seed `champion-before-1.15.11`の6戦は旧Championが0勝6敗だった時間切れ条件から、新Championは6勝0敗へ改善した。140ms設定の初期盤面12判断は開発環境で平均105.0ms、最大129.9msだった。小標本かつ端末性能依存のため、勝率は強度の絶対保証ではなく回帰基準として扱う。
 
 ## 最終キャリブレーション
 
@@ -45,6 +57,7 @@ npm run sim -- --a bronze --b silver --games 20 --seed tune2-bs --time-ms 12 --s
 npm run sim -- --a silver --b gold --games 20 --seed tune2-sg --time-ms 22 --summary
 npm run sim -- --a gold --b legend --games 20 --seed tune2-gl --time-ms 55 --summary
 npm run sim -- --a legend --b champion --games 20 --seed final-lc-v2 --time-ms 85 --summary
+npm run sim -- --a legend --b champion --games 20 --seed champion-production --time-a 55 --time-b 140 --summary
 npm run sim -- --a gold --b gold --games 30 --seed final-first-second --time-ms 22 --summary
 npm run sim:decks -- --runs 5 --seed final-deck-lab --summary
 ```

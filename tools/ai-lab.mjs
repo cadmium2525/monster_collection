@@ -12,6 +12,8 @@ const levelB = option('b', 'silver');
 const games = Number(option('games', '20'));
 const seed = option('seed', 'ai-lab');
 const timeBudgetMs = Number(option('time-ms', '20'));
+const timeBudgetA = Number(option('time-a', String(timeBudgetMs)));
+const timeBudgetB = Number(option('time-b', String(timeBudgetMs)));
 
 if (!Number.isInteger(games) || games <= 0) throw new Error('--games must be a positive integer');
 
@@ -22,6 +24,10 @@ const result = runAiMatchup({
   games,
   seed,
   aiOptions: { timeBudgetMs },
+  aiOptionsBySide: {
+    a: { timeBudgetMs: timeBudgetA },
+    b: { timeBudgetMs: timeBudgetB },
+  },
 });
 
 const printable = process.argv.includes('--summary') ? {
@@ -29,6 +35,7 @@ const printable = process.argv.includes('--summary') ? {
   seed: result.seed,
   matchup: `${result.levelA}-vs-${result.levelB}`,
   games: result.games,
+  timeBudgetMs: { a: timeBudgetA, b: timeBudgetB },
   wins: result.wins,
   winRates: result.winRates,
   firstPlayerWinRate: result.firstPlayerWinRate,

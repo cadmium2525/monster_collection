@@ -20,7 +20,7 @@ import { AssetCollectionScreen, BoosterShopScreen, PackOpeningScreen } from './u
 import { AdminToolScreen } from './ui/admin-screen.js';
 import { generateBoosterPack } from './gacha/pack-generator.js';
 
-const AI_BUDGET = Object.freeze({ bronze: 4, silver: 8, gold: 22, legend: 55, champion: 85 });
+const AI_BUDGET = Object.freeze({ bronze: 4, silver: 8, gold: 22, legend: 55, champion: 140 });
 
 class MonsterConstructionApp {
   constructor(root) {

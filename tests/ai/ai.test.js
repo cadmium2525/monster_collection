@@ -3,8 +3,13 @@ import assert from 'node:assert/strict';
 import { SeededRng } from '../../src/core/rng.js';
 import { actionKey } from '../../src/battle/state.js';
 import { runAutomatedBattle } from '../../src/battle/simulation.js';
-import { AI_LEVELS, chooseAiAction, createAiPolicy } from '../../src/ai/index.js';
-import { engine, moveByName, placeUnit } from '../helpers.js';
+import {
+  AI_LEVELS,
+  chooseAiAction,
+  createAiPolicy,
+  searchPublicResponseSequences,
+} from '../../src/ai/index.js';
+import { engine, masterIndex, moveByName, placeUnit } from '../helpers.js';
 
 test('every AI level returns a legal action without changing battle state', () => {
   for (const level of AI_LEVELS) {
@@ -46,6 +51,63 @@ test('AI choice does not depend on opponent hidden hand identities', () => {
     const choiceB = chooseAiAction(level, b, 'p1', new SeededRng(`same-${level}`), options);
     assert.equal(actionKey(choiceA), actionKey(choiceB), `${level} used hidden opponent cards`);
   }
+});
+
+test('Champion continuation does not inspect its own next draw identity', () => {
+  const a = engine({ seed: 'hidden-next-draw', firstPlayerId: 'p1' });
+  const b = a.clone();
+  const future = b.player('p1').deck;
+  [future[0], future[future.length - 1]] = [future[future.length - 1], future[0]];
+  const options = {
+    deterministicSearch: true,
+    beamWidth: 5,
+    branchLimit: 4,
+    maxDepth: 3,
+    replyBeamWidth: 4,
+    replyBranchLimit: 3,
+    replyDepth: 2,
+    continuationBeamWidth: 3,
+    continuationBranchLimit: 3,
+    continuationDepth: 2,
+  };
+  const choiceA = chooseAiAction('champion', a, 'p1', new SeededRng('same-next-draw'), options);
+  const choiceB = chooseAiAction('champion', b, 'p1', new SeededRng('same-next-draw'), options);
+  assert.equal(actionKey(choiceA), actionKey(choiceB));
+});
+
+test('Champion reply search considers a sequence of public board attacks', () => {
+  const battle = engine({ seed: 'champion-public-reply', firstPlayerId: 'p1' });
+  battle.state.currentPlayerId = 'p2';
+  battle.player('p2').tp = 10;
+  for (const [slot, name] of ['ヒノトリ', 'ヘンガー'].entries()) {
+    const attacker = placeUnit(battle, 'p2', name, slot);
+    attacker.equippedMoveIds = [attacker.equippedMoveIds.find((moveId) => masterIndex.moves.get(moveId)?.power != null)];
+  }
+  for (const [slot, name] of ['ゴーレム', 'モノリス', 'デュラハン'].entries()) {
+    const defender = placeUnit(battle, 'p1', name, slot);
+    defender.maxLife = 300;
+    defender.life = 300;
+  }
+  const before = battle.getState();
+  const replies = searchPublicResponseSequences(battle, 'p2', 'p1', {
+    replyDepth: 3,
+    replyBeamWidth: 8,
+    replyBranchLimit: 5,
+    replyWidth: 12,
+  });
+  assert.ok(replies.some((reply) => reply.actions.length >= 2));
+  assert.ok(replies.every((reply) => reply.actions.every((action) => action.type === 'move')));
+  assert.deepEqual(battle.getState(), before);
+});
+
+test('Champion keeps an immediate tactical floor when its deep-search clock is exhausted', () => {
+  const battle = engine({ seed: 'champion-free-attack', firstPlayerId: 'p1' });
+  const unit = placeUnit(battle, 'p1', 'ヒノトリ', 0);
+  unit.equippedMoveIds = [moveByName('ヒノトリ', '火炎').id];
+  battle.player('p2').board = [null, null, null];
+  const action = chooseAiAction('champion', battle, 'p1', new SeededRng('champion-free-attack'), { timeBudgetMs: 1 });
+  assert.equal(action.type, 'move');
+  assert.equal(action.targetPlayerId, 'p2');
 });
 
 test('Silver takes a free attack instead of ending a favorable turn', () => {

@@ -113,24 +113,50 @@ function legend(engine, playerId, options = {}) {
 }
 
 function champion(engine, playerId, options = {}) {
+  const overallDeadline = searchDeadline(options, 140);
   const searchOptions = {
-    beamWidth: options.beamWidth ?? 10,
-    branchLimit: options.branchLimit ?? 7,
+    beamWidth: options.beamWidth ?? 9,
+    branchLimit: options.branchLimit ?? 6,
     maxDepth: options.maxDepth ?? 5,
     counterWeight: .34,
     lifeWeight: 9,
     boardWeight: 1.3,
     costWeight: .9,
-    deadline: searchDeadline(options, 85),
-    replyWidth: 4,
+    deadline: overallDeadline,
+    overallDeadline,
+    replyWidth: 3,
+    replyBeamWidth: options.replyBeamWidth ?? 4,
+    replyBranchLimit: options.replyBranchLimit ?? 3,
+    replyDepth: options.replyDepth ?? 3,
+    continuationBeamWidth: options.continuationBeamWidth ?? 3,
+    continuationBranchLimit: options.continuationBranchLimit ?? 3,
+    continuationDepth: options.continuationDepth ?? 2,
   };
-  const lines = searchTurnSequences(engine, playerId, searchOptions).slice(0, 6);
-  if (!lines.length) return legal(engine, playerId).find((action) => action.type === 'end-turn');
-  const evaluated = lines.map((line) => ({
-    line,
-    score: performance.now() < searchOptions.deadline ? championLineScore(line, playerId, searchOptions) : line.score,
-  })).sort((a, b) => b.score - a.score || a.line.actions.length - b.line.actions.length);
-  return evaluated[0].line.actions[0];
+  const immediate = bestImmediate(engine, playerId, searchOptions);
+  if (performance.now() >= overallDeadline) return immediate;
+  const rootDeadline = Number.isFinite(overallDeadline)
+    ? performance.now() + Math.max(1, overallDeadline - performance.now()) * .42
+    : Number.POSITIVE_INFINITY;
+  const lines = searchTurnSequences(engine, playerId, { ...searchOptions, deadline: rootDeadline }).slice(0, 3);
+  if (!lines.length) return immediate;
+  const evaluated = [];
+  for (let index = 0; index < lines.length; index += 1) {
+    const remainingLines = lines.length - index;
+    const lineDeadline = Number.isFinite(overallDeadline)
+      ? performance.now() + Math.max(1, overallDeadline - performance.now()) / remainingLines
+      : Number.POSITIVE_INFINITY;
+    const line = lines[index];
+    evaluated.push({
+      line,
+      score: performance.now() < overallDeadline
+        ? championLineScore(line, playerId, { ...searchOptions, deadline: lineDeadline, overallDeadline: lineDeadline })
+        : line.score,
+    });
+  }
+  evaluated.sort((a, b) => b.score - a.score
+    || a.line.actions.length - b.line.actions.length
+    || a.line.actions.map(actionKey).join('|').localeCompare(b.line.actions.map(actionKey).join('|')));
+  return keepTacticalFloor(engine, playerId, evaluated[0].line.actions[0], immediate, searchOptions, 1.5);
 }
 
 export function chooseAiAction(level, engine, playerId, rng, options = {}) {
