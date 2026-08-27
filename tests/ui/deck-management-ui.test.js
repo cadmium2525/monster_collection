@@ -61,3 +61,12 @@ test('deck editing keeps tap-to-swap and adds long-press card details', () => {
   assert.match(longPress, /suppressNextClick = true/);
   assert.match(longPress, /stopImmediatePropagation/);
 });
+
+test('tournament entry names the deck choice and renders its leader as art only', () => {
+  const tournamentSetup = readFileSync(new URL('../../src/ui/tournament-setup-screen.js', import.meta.url), 'utf8');
+  assert.match(tournamentSetup, /text: '使用するデッキ'/);
+  assert.doesNotMatch(tournamentSetup, /text: '使用する40枚'/);
+  assert.match(tournamentSetup, /\$\{entry\.deckName\}のリーダー画像/);
+  assert.match(css, /\.setup-deck \.game-card \.card-top,[\s\S]*\.setup-deck \.game-card \.card-corner,[\s\S]*display: none;/);
+  assert.match(css, /\.setup-deck \.game-card > \.card-art\s*\{[^}]*inset: 0;[^}]*top: 0;/s);
+});

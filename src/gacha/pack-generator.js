@@ -12,6 +12,16 @@ const FEATURED_VARIANTS = Object.freeze({
   '怪物': Object.freeze({ masterId: 'monster-024', artVariantId: 'showcase-monster-01' }),
 });
 
+export const BOOSTER_DRAW_RATES = Object.freeze({
+  showcase: 0.04,
+  showcaseFoil: 0.35,
+  firstMonsterBoosterWeight: 2,
+  themedMonsterWeight: 1.4,
+  themedBreederWeight: 1.3,
+  genericTrainingWeight: 1.2,
+  rareMonsterWeight: 2.2,
+});
+
 function uniqueDefinitions(masterIndex) {
   return [...masterIndex.cards.values()].filter(isPackEligible);
 }
@@ -22,6 +32,103 @@ function factionFor(definition) {
     return definition.name.split('・')[0];
   }
   return null;
+}
+
+export function boosterPools(masterIndex, faction) {
+  const eligible = uniqueDefinitions(masterIndex);
+  return {
+    eligible,
+    themed: eligible.filter((definition) => factionFor(definition) === faction),
+    monsters: eligible.filter((definition) => definition.kind === 'monster' && definition.faction === faction),
+    generic: eligible.filter((definition) => !factionFor(definition)),
+    featured: FEATURED_VARIANTS[faction],
+  };
+}
+
+function weightedDistribution(definitions, weightFor = () => 1) {
+  const weights = definitions.map((definition) => Math.max(0, Number(weightFor(definition)) || 0));
+  const total = weights.reduce((sum, weight) => sum + weight, 0);
+  const distribution = new Map();
+  if (total <= 0) return distribution;
+  definitions.forEach((definition, index) => {
+    distribution.set(definition.id, (distribution.get(definition.id) ?? 0) + weights[index] / total);
+  });
+  return distribution;
+}
+
+function certainDistribution(definition) {
+  return definition ? new Map([[definition.id, 1]]) : new Map();
+}
+
+function mixedDistribution(parts) {
+  const mixed = new Map();
+  for (const { distribution, weight } of parts) {
+    for (const [masterId, probability] of distribution) {
+      mixed.set(masterId, (mixed.get(masterId) ?? 0) + probability * weight);
+    }
+  }
+  return mixed;
+}
+
+export function boosterPackDisclosure({ masterIndex, faction, openedCount = 0 }) {
+  const { eligible, themed, monsters, generic, featured } = boosterPools(masterIndex, faction);
+  const nextPackNumber = Math.max(0, Math.trunc(Number(openedCount) || 0)) + 1;
+  const featuredDefinition = featured ? masterIndex.cards.get(featured.masterId) : null;
+  const newMonsterGuaranteed = openedCount === 0 || nextPackNumber % 5 === 0;
+  const foilGuaranteed = nextPackNumber % 10 === 0;
+  const showcaseGuaranteed = nextPackNumber % 20 === 0;
+  const hasFeatured = Boolean(featuredDefinition);
+
+  const firstMonster = newMonsterGuaranteed && hasFeatured
+    ? certainDistribution(featuredDefinition)
+    : weightedDistribution(monsters, (definition) => acquisitionOrigin(definition) === 'booster'
+      ? BOOSTER_DRAW_RATES.firstMonsterBoosterWeight : 1);
+  const themedMonster = weightedDistribution(themed, (definition) => definition.kind === 'monster'
+    ? BOOSTER_DRAW_RATES.themedMonsterWeight : 1);
+  const themedBreeder = weightedDistribution(themed, (definition) => definition.kind === 'breeder'
+    ? BOOSTER_DRAW_RATES.themedBreederWeight : 1);
+  const common = weightedDistribution(generic, (definition) => definition.kind === 'training'
+    ? BOOSTER_DRAW_RATES.genericTrainingWeight : 1);
+  const rarePool = foilGuaranteed ? monsters : [...monsters, ...themed, ...generic];
+  const rare = weightedDistribution(rarePool, (definition) => definition.kind === 'monster'
+    ? BOOSTER_DRAW_RATES.rareMonsterWeight : 1);
+  const showcaseChance = hasFeatured ? (showcaseGuaranteed ? 1 : BOOSTER_DRAW_RATES.showcase) : 0;
+  const premium = showcaseGuaranteed && hasFeatured
+    ? certainDistribution(featuredDefinition)
+    : mixedDistribution([
+      { distribution: certainDistribution(featuredDefinition), weight: showcaseChance },
+      { distribution: rare, weight: 1 - showcaseChance },
+    ]);
+  const slots = [
+    { label: 'モンスター枠', distribution: firstMonster },
+    { label: 'モン類枠A', distribution: themedMonster },
+    { label: 'モン類枠B', distribution: themedBreeder },
+    { label: '共通枠', distribution: common },
+    { label: 'Rare以上枠', distribution: premium },
+  ];
+  const cards = eligible.map((definition) => {
+    const slotProbabilities = slots.map(({ distribution }) => distribution.get(definition.id) ?? 0);
+    const probability = 1 - slotProbabilities.reduce((remaining, chance) => remaining * (1 - chance), 1);
+    return {
+      definition,
+      probability,
+      slots: slots.filter(({ distribution }) => (distribution.get(definition.id) ?? 0) > 0).map(({ label }) => label),
+    };
+  }).filter((entry) => entry.probability > 0)
+    .sort((a, b) => b.probability - a.probability || a.definition.name.localeCompare(b.definition.name, 'ja'));
+
+  return {
+    faction,
+    nextPackNumber,
+    cards,
+    slots,
+    guarantees: { newMonsterGuaranteed, foilGuaranteed, showcaseGuaranteed },
+    appearanceRates: {
+      rareOrBetter: 1,
+      showcase: showcaseChance,
+      foil: foilGuaranteed ? 1 : showcaseChance * BOOSTER_DRAW_RATES.showcaseFoil,
+    },
+  };
 }
 
 function asset(definition, { rarity = 'common', artVariantId = 'base', finish = 'normal' } = {}) {
@@ -44,10 +151,7 @@ export function generateBoosterPack({ masterIndex, faction, seed, openedCount = 
   const pack = boosterPack(faction);
   if (!pack) throw new Error(`Unknown booster faction: ${faction}`);
   const rng = new SeededRng(seed);
-  const eligible = uniqueDefinitions(masterIndex);
-  const themed = eligible.filter((definition) => factionFor(definition) === faction);
-  const monsters = eligible.filter((definition) => definition.kind === 'monster' && definition.faction === faction);
-  const generic = eligible.filter((definition) => !factionFor(definition));
+  const { eligible, themed, monsters, generic } = boosterPools(masterIndex, faction);
   if (!monsters.length || !themed.length || !generic.length) throw new Error('パック候補マスターが不足しています');
 
   const cards = [];
@@ -55,24 +159,24 @@ export function generateBoosterPack({ masterIndex, faction, seed, openedCount = 
   const newMonsterGuaranteed = openedCount === 0 || (openedCount + 1) % 5 === 0;
   const firstMonster = newMonsterGuaranteed && featured && masterIndex.cards.has(featured.masterId)
     ? masterIndex.cards.get(featured.masterId)
-    : chooseDefinition(rng, monsters, (definition) => acquisitionOrigin(definition) === 'booster' ? 2 : 1);
+    : chooseDefinition(rng, monsters, (definition) => acquisitionOrigin(definition) === 'booster' ? BOOSTER_DRAW_RATES.firstMonsterBoosterWeight : 1);
   cards.push(asset(firstMonster, { rarity: acquisitionOrigin(firstMonster) === 'booster' ? 'rare' : 'common' }));
-  cards.push(asset(chooseDefinition(rng, themed, (definition) => definition.kind === 'monster' ? 1.4 : 1)));
-  cards.push(asset(chooseDefinition(rng, themed, (definition) => definition.kind === 'breeder' ? 1.3 : 1)));
-  cards.push(asset(chooseDefinition(rng, generic, (definition) => definition.kind === 'training' ? 1.2 : 1)));
+  cards.push(asset(chooseDefinition(rng, themed, (definition) => definition.kind === 'monster' ? BOOSTER_DRAW_RATES.themedMonsterWeight : 1)));
+  cards.push(asset(chooseDefinition(rng, themed, (definition) => definition.kind === 'breeder' ? BOOSTER_DRAW_RATES.themedBreederWeight : 1)));
+  cards.push(asset(chooseDefinition(rng, generic, (definition) => definition.kind === 'training' ? BOOSTER_DRAW_RATES.genericTrainingWeight : 1)));
 
   const showcaseGuaranteed = (openedCount + 1) % 20 === 0;
   const foilGuaranteed = (openedCount + 1) % 10 === 0;
-  const showcase = showcaseGuaranteed || rng.next() < 0.04;
+  const showcase = showcaseGuaranteed || rng.next() < BOOSTER_DRAW_RATES.showcase;
   if (showcase && featured && masterIndex.cards.has(featured.masterId)) {
     cards.push(asset(masterIndex.cards.get(featured.masterId), {
       rarity: 'showcase',
       artVariantId: featured.artVariantId,
-      finish: foilGuaranteed || rng.next() < 0.35 ? 'foil' : 'normal',
+      finish: foilGuaranteed || rng.next() < BOOSTER_DRAW_RATES.showcaseFoil ? 'foil' : 'normal',
     }));
   } else {
     const rarePool = foilGuaranteed ? monsters : [...monsters, ...themed, ...generic];
-    cards.push(asset(chooseDefinition(rng, rarePool, (definition) => definition.kind === 'monster' ? 2.2 : 1), {
+    cards.push(asset(chooseDefinition(rng, rarePool, (definition) => definition.kind === 'monster' ? BOOSTER_DRAW_RATES.rareMonsterWeight : 1), {
       rarity: 'rare',
       finish: foilGuaranteed ? 'foil' : 'normal',
     }));

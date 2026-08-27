@@ -1,9 +1,11 @@
 import { BOOSTER_PACKS } from '../gacha/pack-catalog.js';
 import { acquisitionLabel } from '../gacha/acquisition.js';
 import { assetStackKey } from '../gacha/economy-state.js';
+import { boosterPackDisclosure } from '../gacha/pack-generator.js';
 import { el, replace } from './dom.js';
 import { openCardDetails, renderCard } from './card-renderer.js';
 import { diamondIcon } from './currency-icon.js';
+import { openModal } from './modal.js';
 
 function diamondBalance(economy) {
   return el('div', { className: 'diamond-balance', attrs: { 'aria-label': `所持ダイヤ ${economy.diamonds}` } }, [
@@ -13,18 +15,80 @@ function diamondBalance(economy) {
   ]);
 }
 
+function percentage(value) {
+  const percent = Math.max(0, Number(value) || 0) * 100;
+  if (percent >= 99.995) return '100%';
+  if (percent >= 10) return `${percent.toFixed(1)}%`;
+  return `${percent.toFixed(2)}%`;
+}
+
+function cardTypeLabel(definition) {
+  if (definition.kind === 'monster') return `${definition.faction}モンスター`;
+  if (definition.kind === 'breeder') return definition.category === 'モン類専用' ? 'モン類ブリーダー' : '汎用ブリーダー';
+  if (definition.kind === 'shugyo') return '修行';
+  return 'Training';
+}
+
 export class BoosterShopScreen {
-  constructor({ root, economy, onBack, onOpen, onInventory }) {
+  constructor({ root, economy, masterIndex, onBack, onOpen, onInventory }) {
     this.root = root;
     this.economy = economy;
+    this.masterIndex = masterIndex;
     this.onBack = onBack;
     this.onOpen = onOpen;
     this.onInventory = onInventory;
     this.render();
   }
 
+  openPackDisclosure(pack) {
+    const disclosure = boosterPackDisclosure({
+      masterIndex: this.masterIndex,
+      faction: pack.faction,
+      openedCount: this.economy.packCounters?.[pack.faction] ?? 0,
+    });
+    const guaranteeLabels = [
+      disclosure.guarantees.newMonsterGuaranteed ? '新モンスター保証' : null,
+      disclosure.guarantees.foilGuaranteed ? 'Foil保証' : null,
+      disclosure.guarantees.showcaseGuaranteed ? '特別イラスト保証' : null,
+    ].filter(Boolean);
+    return openModal({
+      title: `${pack.name} 提供内容`,
+      className: 'pack-disclosure-modal',
+      content: el('div', { className: 'pack-disclosure' }, [
+        el('section', { className: 'pack-disclosure-summary', attrs: { style: `--pack-color:${pack.color}` } }, [
+          el('div', {}, [
+            el('small', { text: `${pack.faction} BOOSTER` }),
+            el('strong', { text: `次回は第${disclosure.nextPackNumber}パック` }),
+          ]),
+          guaranteeLabels.length ? el('div', { className: 'pack-guarantee-chips' }, guaranteeLabels.map((label) => el('span', { text: label }))) : el('span', { className: 'pack-standard-draw', text: '通常提供割合' }),
+          el('dl', { className: 'pack-appearance-rates' }, [
+            el('div', {}, [el('dt', { text: 'Rare以上' }), el('dd', { text: percentage(disclosure.appearanceRates.rareOrBetter) })]),
+            el('div', {}, [el('dt', { text: 'Foil' }), el('dd', { text: percentage(disclosure.appearanceRates.foil) })]),
+            el('div', {}, [el('dt', { text: '特別イラスト' }), el('dd', { text: percentage(disclosure.appearanceRates.showcase) })]),
+          ]),
+        ]),
+        el('p', { className: 'pack-rate-note', text: '各カードの割合は、次の1パック（5枚）に同じカードが1枚以上含まれる確率です。複数の抽選枠から出るカードがあるため、割合の合計は100%になりません。' }),
+        el('div', { className: 'pack-card-rate-table-wrap' }, [
+          el('table', { className: 'pack-card-rate-table' }, [
+            el('thead', {}, el('tr', {}, ['カード名', '種類', '出現枠', '提供割合'].map((label) => el('th', { text: label })))),
+            el('tbody', {}, disclosure.cards.map(({ definition, probability, slots }) => el('tr', {}, [
+              el('td', {}, el('button', {
+                className: 'pack-card-detail-button',
+                attrs: { type: 'button', 'aria-label': `${definition.name}のカード詳細を表示` },
+                onclick: () => openCardDetails({ definition, masterIndex: this.masterIndex }),
+              }, [el('strong', { text: definition.name }), el('small', { text: acquisitionLabel(definition) })])),
+              el('td', { text: cardTypeLabel(definition) }),
+              el('td', { text: slots.join('・') }),
+              el('td', { text: percentage(probability) }),
+            ]))),
+          ]),
+        ]),
+      ]),
+    });
+  }
+
   render() {
-    replace(this.root, el('main', { className: 'booster-shop-screen' }, [
+    replace(this.root, el('main', { className: `booster-shop-screen${this.economy.pendingPack ? ' has-pending' : ''}` }, [
       el('header', { className: 'screen-header booster-header' }, [
         el('div', {}, [
           el('p', { className: 'eyebrow', text: 'FREE BOOSTER LAB' }),
@@ -56,6 +120,12 @@ export class BoosterShopScreen {
             el('h2', { text: pack.name }),
             el('p', { text: pack.description }),
             el('button', {
+              className: 'pack-disclosure-button',
+              text: '収録カード・提供割合',
+              attrs: { type: 'button', 'aria-label': `${pack.name}の収録カードと提供割合を確認` },
+              onclick: () => this.openPackDisclosure(pack),
+            }),
+            el('button', {
               className: 'primary-button booster-open-button',
               disabled: !affordable || Boolean(this.economy.pendingPack),
               onclick: () => this.onOpen(pack),
@@ -64,7 +134,6 @@ export class BoosterShopScreen {
         ]);
       })),
       el('footer', { className: 'booster-notes' }, [
-        el('strong', { text: 'このゲームに課金要素はありません。' }),
         el('span', { text: 'ダイヤは大会報酬だけで獲得できます。初回と5パックごとにそのモン類の新モンスター、20パックごとに奪取不可の特別イラストを保証します。' }),
       ]),
     ]));

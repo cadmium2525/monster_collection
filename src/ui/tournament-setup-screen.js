@@ -26,7 +26,7 @@ export class TournamentSetupScreen {
       ]),
       el('section', { className: 'setup-grid' }, [
         el('section', { className: 'setup-decks' }, [
-          el('div', { className: 'section-title' }, [el('span', { className: 'step-number', text: '1' }), el('div', {}, [el('h2', { text: '使用する40枚' }), el('p', { text: '資格とカード交換はこのデッキ単位です。' })])]),
+          el('div', { className: 'section-title' }, [el('span', { className: 'step-number', text: '1' }), el('div', {}, [el('h2', { text: '使用するデッキ' }), el('p', { text: '資格とカード交換はこのデッキ単位です。' })])]),
           el('div', { className: 'setup-deck-list' }, decks.map((entry) => {
             const representative = this.masterIndex.monsters.get(entry.representativeMonsterId);
             return el('article', {
@@ -35,7 +35,7 @@ export class TournamentSetupScreen {
               onclick: () => { this.selectedDeckId = entry.deckId; this.render(); },
               onkeydown: (event) => { if (event.key === 'Enter' || event.key === ' ') { this.selectedDeckId = entry.deckId; this.render(); } },
             }, [
-              representative ? renderCard({ definition: representative, label: `${entry.deckName}の代表モンスター`, interactive: false }) : null,
+              representative ? renderCard({ definition: representative, label: `${entry.deckName}のリーダー画像`, interactive: false }) : null,
               el('div', {}, [el('strong', { text: entry.deckName }), el('span', { text: `デッキ総TP ${entry.totalPlayTp}` }), el('small', { text: `${TOURNAMENT_LABELS[entry.qualification]}まで` })]),
             ]);
           })),

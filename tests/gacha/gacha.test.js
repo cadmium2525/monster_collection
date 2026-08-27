@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { CardStealSession } from '../../src/reward/CardStealSession.js';
-import { generateBoosterPack } from '../../src/gacha/pack-generator.js';
+import { boosterPackDisclosure, generateBoosterPack } from '../../src/gacha/pack-generator.js';
 import { BOOSTER_MONSTER_IDS, TROPHY_BREEDER_IDS, acquisitionOrigin } from '../../src/gacha/acquisition.js';
 import { applyDiamondReward, applyPackPurchase, defaultEconomyState, normalizeEconomyState } from '../../src/gacha/economy-state.js';
 import { SeededRng } from '../../src/core/rng.js';
@@ -40,6 +40,33 @@ test('five, ten and twenty-pack guarantees are deterministic per faction', () =>
     assert.ok(tenth.cards.filter((card) => card.finish === 'foil').every((card) => masterIndex.cards.get(card.masterId)?.kind === 'monster'));
     assert.ok(twentieth.cards.some((card) => card.artVariantId !== 'base' && card.rarity === 'showcase'));
     assert.ok(twentieth.cards.filter((card) => card.artVariantId !== 'base').every((card) => masterIndex.cards.get(card.masterId)?.kind === 'monster'));
+  }
+});
+
+test('pack disclosures expose exact next-pack card and appearance rates for every faction', () => {
+  const expectedFeatured = { '無機': 'monster-019', '創造': 'monster-020', '幻霊': 'monster-021', '魔族': 'monster-022', '獣族': 'monster-023', '怪物': 'monster-024' };
+  for (const [faction, featuredId] of Object.entries(expectedFeatured)) {
+    const first = boosterPackDisclosure({ masterIndex, faction, openedCount: 0 });
+    const normal = boosterPackDisclosure({ masterIndex, faction, openedCount: 1 });
+    const fifth = boosterPackDisclosure({ masterIndex, faction, openedCount: 4 });
+    const tenth = boosterPackDisclosure({ masterIndex, faction, openedCount: 9 });
+    const twentieth = boosterPackDisclosure({ masterIndex, faction, openedCount: 19 });
+    for (const disclosure of [first, normal, fifth, tenth, twentieth]) {
+      assert.ok(disclosure.cards.length > 0);
+      assert.equal(disclosure.cards.some(({ definition }) => TROPHY_BREEDER_IDS.includes(definition.id)), false);
+      assert.equal(disclosure.cards.every(({ probability }) => probability > 0 && probability <= 1), true);
+      for (const slot of disclosure.slots) {
+        const total = [...slot.distribution.values()].reduce((sum, probability) => sum + probability, 0);
+        assert.ok(Math.abs(total - 1) < 1e-9, `${faction} ${slot.label} totals 100%`);
+      }
+    }
+    assert.equal(first.cards.find(({ definition }) => definition.id === featuredId).probability, 1);
+    assert.equal(fifth.cards.find(({ definition }) => definition.id === featuredId).probability, 1);
+    assert.equal(normal.appearanceRates.showcase, 0.04);
+    assert.ok(Math.abs(normal.appearanceRates.foil - 0.014) < 1e-12);
+    assert.equal(tenth.appearanceRates.foil, 1);
+    assert.equal(twentieth.appearanceRates.showcase, 1);
+    assert.equal(twentieth.appearanceRates.foil, 1);
   }
 });
 

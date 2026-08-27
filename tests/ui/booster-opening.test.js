@@ -23,3 +23,12 @@ test('rare, foil and showcase pulls receive a dedicated readable burst', () => {
   assert.match(css, /@keyframes rarity-ring/);
   assert.match(source, /this\.disposed = true;[\s\S]*this\.burstToken \+= 1;[\s\S]*this\.onComplete\(\);/);
 });
+
+test('booster shop discloses next-pack card rates without the removed billing note', () => {
+  assert.match(source, /text: '収録カード・提供割合'/);
+  assert.match(source, /boosterPackDisclosure/);
+  assert.match(source, /次の1パック（5枚）に同じカードが1枚以上含まれる確率/);
+  assert.match(source, /初回と5パックごとにそのモン類の新モンスター/);
+  assert.doesNotMatch(source, /このゲームに課金要素はありません/);
+  assert.match(css, /\.pack-card-rate-table/);
+});

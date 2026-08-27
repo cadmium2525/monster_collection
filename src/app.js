@@ -224,6 +224,7 @@ class MonsterConstructionApp {
     new BoosterShopScreen({
       root: this.root,
       economy: this.economy,
+      masterIndex: this.masterIndex,
       onBack: () => this.showHome(),
       onInventory: () => this.showAssetCollection(),
       onOpen: (pack, resume = false) => this.openBooster(pack, resume),
