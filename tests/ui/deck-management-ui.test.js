@@ -51,3 +51,13 @@ test('premium diamond artwork replaces CSS and text placeholders', () => {
   assert.match(homeScreen, /diamondIcon\('home-diamond-icon'\)/);
   assert.doesNotMatch(css, /\.diamond-balance i\s*\{/);
 });
+
+test('deck editing keeps tap-to-swap and adds long-press card details', () => {
+  const longPress = readFileSync(new URL('../../src/ui/long-press.js', import.meta.url), 'utf8');
+  assert.match(deckScreens, /attachLongPress/);
+  assert.match(deckScreens, /renderEditableCard/);
+  assert.match(deckScreens, /長押しで詳細を確認できます/);
+  assert.match(longPress, /CARD_DETAILS_LONG_PRESS_MS = 520/);
+  assert.match(longPress, /suppressNextClick = true/);
+  assert.match(longPress, /stopImmediatePropagation/);
+});

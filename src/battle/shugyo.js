@@ -2,6 +2,13 @@ export function shugyoPoolType(cardDefinition) {
   return cardDefinition.id === 'shugyo-attack' ? 'attack' : 'defense';
 }
 
+export function shugyoMovePoolType(masterData, monsterName, moveName) {
+  const pools = masterData?.shugyoPools?.[monsterName];
+  if (pools?.attack?.includes(moveName)) return 'attack';
+  if (pools?.defense?.includes(moveName)) return 'defense';
+  return null;
+}
+
 export function learnableShugyoMoves(masterData, masterIndex, unit, cardDefinition) {
   const pool = masterData.shugyoPools[unit.baseMonsterName]?.[shugyoPoolType(cardDefinition)] ?? [];
   return pool

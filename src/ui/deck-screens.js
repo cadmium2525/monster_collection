@@ -4,6 +4,7 @@ import { openCardDetails, renderCard } from './card-renderer.js';
 import { openModal } from './modal.js';
 import { validateDeck } from '../battle/deck.js';
 import { assetStackKey, takeUnassignedAsset } from '../gacha/economy-state.js';
+import { attachLongPress } from './long-press.js';
 
 export function openStarterDeckPicker({ masterIndex, options, onChoose }) {
   let modal = null;
@@ -348,11 +349,21 @@ export class DeckBuildScreen {
     this.render();
   }
 
+  renderEditableCard({ definition, card, selected = false, disabled = false, onClick }) {
+    const node = renderCard({ definition, cardAsset: card, selected, disabled, onClick });
+    return attachLongPress(node, () => openCardDetails({
+      definition,
+      masterIndex: this.masterIndex,
+      cardAsset: card,
+      moveView: 'catalog',
+    }));
+  }
+
   renderCandidate(card, source, count = null) {
     const definition = this.masterIndex.cards.get(card.masterId);
     const action = source === 'pool' ? () => this.swapWithPool(card.instanceId) : () => this.swapWithUnassigned(card);
     return el('article', { className: `builder-candidate${this.selectedActiveId ? ' ready' : ''}` }, [
-      renderCard({ definition, cardAsset: card, disabled: !this.selectedActiveId, onClick: action }),
+      this.renderEditableCard({ definition, card, disabled: !this.selectedActiveId, onClick: action }),
       count != null ? el('strong', { text: `×${count}` }) : null,
       el('small', { text: source === 'pool' ? 'このデッキの予備' : '未所属資産' }),
     ]);
@@ -364,7 +375,7 @@ export class DeckBuildScreen {
         el('div', {}, [
           el('p', { className: 'eyebrow', text: 'DECK-BOUND CARD POOL' }),
           el('h1', { text: `${this.deck.deckName}を編集` }),
-          el('p', { text: '40枚から1枚選び、デッキ予備または未所属カードと交換します。採用した未所属カードはこのデッキ専用になります。' }),
+          el('p', { text: 'タップで交換、長押しで詳細を確認できます。採用した未所属カードはこのデッキ専用になります。' }),
         ]),
         el('div', { className: 'builder-header-actions' }, [
           el('button', { className: 'text-button', text: '変更を破棄', onclick: this.onBack }),
@@ -377,7 +388,12 @@ export class DeckBuildScreen {
           el('div', { className: 'section-title' }, [el('h2', { text: '使用中の40枚' }), el('span', { text: this.selectedActiveId ? '交換先を選択' : '外すカードを選択' })]),
           el('div', { className: 'builder-card-grid' }, this.deck.cards.map((card) => {
             const definition = this.masterIndex.cards.get(card.masterId);
-            return renderCard({ definition, cardAsset: card, selected: card.instanceId === this.selectedActiveId, onClick: () => this.selectActive(card.instanceId) });
+            return this.renderEditableCard({
+              definition,
+              card,
+              selected: card.instanceId === this.selectedActiveId,
+              onClick: () => this.selectActive(card.instanceId),
+            });
           })),
         ]),
         el('section', { className: 'builder-reserve' }, [

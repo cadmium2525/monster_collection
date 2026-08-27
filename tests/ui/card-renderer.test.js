@@ -1,9 +1,9 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, statSync } from 'node:fs';
-import { cardArtPlacement, cardDisplayStats, resolvedTrait } from '../../src/ui/card-renderer.js';
-import { shugyoMoveWeight } from '../../src/battle/shugyo.js';
-import { masterData, monsterByName } from '../helpers.js';
+import { cardArtPlacement, cardDisplayStats, detailMoveEntries, resolvedTrait } from '../../src/ui/card-renderer.js';
+import { shugyoMovePoolType, shugyoMoveWeight } from '../../src/battle/shugyo.js';
+import { masterData, masterIndex, monsterByName } from '../helpers.js';
 
 test('special-fusion cards display the replacement trait instead of the base trait', () => {
   const definition = monsterByName('ピクシー');
@@ -59,6 +59,40 @@ test('shugyo rank weighting stays deliberately small', () => {
   const weights = [1, 2, 3, 4, 5].map((rank) => shugyoMoveWeight({ rank }));
   assert.ok(Math.max(...weights) / Math.min(...weights) < 1.12);
   assert.ok(weights[0] > weights[4]);
+});
+
+test('saved-deck details show all nine moves with their actual shugyo source', () => {
+  for (const definition of masterData.monsters) {
+    const entries = detailMoveEntries({ definition, masterIndex, moveView: 'catalog' });
+    assert.equal(entries.length, 9, `${definition.name} has all nine moves`);
+    assert.deepEqual(
+      Object.fromEntries(['初期習得', '攻撃修行', '防御修行'].map((label) => [label, entries.filter((entry) => entry.label === label).length])),
+      { 初期習得: 3, 攻撃修行: 3, 防御修行: 3 },
+      `${definition.name} labels the same pools used by battle shugyo`,
+    );
+  }
+  assert.equal(shugyoMovePoolType(masterData, 'ドラゴン', 'ルインクロス'), 'attack');
+  assert.equal(shugyoMovePoolType(masterData, 'ドラゴン', 'ドラゴンラッシュ'), 'defense');
+});
+
+test('battle details expose only the current equipped moves after replacement', () => {
+  const definition = monsterByName('ドラゴン');
+  const initial = definition.moveIds.filter((id) => masterIndex.moves.get(id).initial);
+  const learnedAttack = masterIndex.movesByName.get('ドラゴン:ルインクロス').id;
+  const replacement = masterIndex.movesByName.get('ドラゴン:インフェルノ').id;
+  const equippedMoveIds = [initial[1], initial[2], learnedAttack, replacement];
+  const entries = detailMoveEntries({
+    definition,
+    masterIndex,
+    moveView: 'battle',
+    growth: {
+      learnedMoveIds: [...initial, learnedAttack, replacement],
+      equippedMoveIds,
+    },
+  });
+  assert.deepEqual(new Set(entries.map((entry) => entry.move.id)), new Set(equippedMoveIds));
+  assert.equal(entries.some((entry) => entry.move.id === initial[0]), false, 'replaced old technique is hidden');
+  assert.equal(entries.every((entry) => entry.label === '実戦'), true);
 });
 
 test('card art placement keeps legacy art below the name band and uses standalone fusion cells', () => {

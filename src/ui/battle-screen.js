@@ -290,7 +290,13 @@ export class BattleScreen {
           return;
         }
         if (this.selection?.id === card.instanceId) {
-          openCardDetails({ definition, masterIndex: this.engine.masterIndex, growth: player.tournamentGrowth[card.instanceId], cardAsset: card });
+          openCardDetails({
+            definition,
+            masterIndex: this.engine.masterIndex,
+            growth: player.tournamentGrowth[card.instanceId],
+            cardAsset: card,
+            moveView: 'battle',
+          });
         } else {
           this.pendingMove = null;
           this.selection = { kind: 'hand', id: card.instanceId };
@@ -395,6 +401,7 @@ export class BattleScreen {
       masterIndex: this.engine.masterIndex,
       selectableMoveIds,
       onMoveSelect: selectableMoveIds.length ? (move) => this.selectMove(unit.id, move.id) : null,
+      moveView: 'battle',
     });
   }
 

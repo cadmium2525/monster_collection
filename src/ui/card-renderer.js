@@ -1,4 +1,5 @@
 import { effectiveAtk, effectiveDef } from '../battle/state.js';
+import { shugyoMovePoolType } from '../battle/shugyo.js';
 import { el } from './dom.js';
 import { openModal } from './modal.js';
 
@@ -202,19 +203,40 @@ function currentMoveSets(definition, unit, growth, masterIndex) {
   return { learned, equipped };
 }
 
-function moveRows({ definition, unit, growth, masterIndex, selectableMoveIds, onMoveSelect, closeDetails }) {
+function moveLearningLabel(definition, move, masterIndex) {
+  if (move.initial) return '初期習得';
+  const poolType = shugyoMovePoolType(masterIndex.data, definition.name, move.name);
+  if (poolType === 'attack') return '攻撃修行';
+  if (poolType === 'defense') return '防御修行';
+  return '習得方法不明';
+}
+
+export function detailMoveEntries({ definition, unit = null, growth = null, masterIndex, moveView = 'catalog' }) {
   const { learned, equipped } = currentMoveSets(definition, unit, growth, masterIndex);
-  const selectable = new Set(selectableMoveIds ?? []);
-  return definition.moveIds.filter((moveId) => learned.has(moveId)).map((moveId) => {
+  const moveIds = moveView === 'battle'
+    ? definition.moveIds.filter((moveId) => equipped.has(moveId))
+    : definition.moveIds;
+  return moveIds.map((moveId) => {
     const move = masterIndex.moves.get(moveId);
-    const state = equipped.has(moveId) ? '実戦' : learned.has(moveId) ? '習得' : '未習得';
-    return el('tr', { className: equipped.has(moveId) ? 'equipped' : '' }, [
-      el('td', { text: state }),
+    return {
+      move,
+      equipped: moveView === 'battle' && equipped.has(moveId),
+      learned: learned.has(moveId),
+      label: moveView === 'battle' ? '実戦' : moveLearningLabel(definition, move, masterIndex),
+    };
+  }).filter((entry) => entry.move);
+}
+
+function moveRows({ definition, unit, growth, masterIndex, moveView, selectableMoveIds, onMoveSelect, closeDetails }) {
+  const selectable = new Set(selectableMoveIds ?? []);
+  return detailMoveEntries({ definition, unit, growth, masterIndex, moveView }).map(({ move, equipped, label }) => {
+    return el('tr', { className: equipped ? 'equipped' : '' }, [
+      el('td', { text: label }),
       el('td', {}, onMoveSelect ? el('button', {
         className: 'move-choice',
         text: move.name,
-        disabled: !selectable.has(moveId),
-        attrs: { type: 'button', 'aria-label': selectable.has(moveId) ? `${move.name}を選択` : `${move.name}は現在使用できません` },
+        disabled: !selectable.has(move.id),
+        attrs: { type: 'button', 'aria-label': selectable.has(move.id) ? `${move.name}を選択` : `${move.name}は現在使用できません` },
         onclick: () => {
           closeDetails();
           onMoveSelect(move);
@@ -236,6 +258,7 @@ export function openCardDetails({
   selectableMoveIds = [],
   onMoveSelect = null,
   cardAsset = null,
+  moveView = 'catalog',
 }) {
   const isMonster = definition.kind === 'monster';
   const name = unit?.specialForm ?? definition.name;
@@ -272,18 +295,20 @@ export function openCardDetails({
   ]);
 
   let modalController = null;
+  const battleMoveView = moveView === 'battle';
   const moves = isMonster ? el('section', { className: 'known-moves' }, [
     el('div', { className: 'moves-heading' }, [
-      el('strong', { text: '覚えている技' }),
+      el('strong', { text: battleMoveView ? '現在の実戦技' : '全技一覧' }),
       onMoveSelect ? el('small', { text: '使用する実戦技をタップ' }) : null,
     ]),
     el('table', { className: 'moves-table' }, [
-      el('thead', {}, el('tr', {}, ['状態', '技名', 'Rank', '威力', 'TP', '追加効果'].map((text) => el('th', { text })))),
+      el('thead', {}, el('tr', {}, [battleMoveView ? '状態' : '習得方法', '技名', 'Rank', '威力', 'TP', '追加効果'].map((text) => el('th', { text })))),
       el('tbody', {}, moveRows({
         definition,
         unit,
         growth,
         masterIndex,
+        moveView,
         selectableMoveIds,
         onMoveSelect,
         closeDetails: () => modalController?.close(),
