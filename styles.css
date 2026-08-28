@@ -958,8 +958,10 @@ button:disabled { opacity: .38; cursor: not-allowed; }
 .fusion-catalog-card .card-art { position: absolute; z-index: -1; inset: 0; width: 100%; height: auto; margin: 0; border: 0; border-radius: 5px; }
 .fusion-catalog-card > .card-art.special-fusion-art { top: clamp(18px,14%,21px); border-radius:0 0 5px 5px; }
 .fusion-catalog-card > strong { position: absolute; z-index: 4; right: 8%; bottom: 6px; left: 8%; overflow: hidden; padding: 3px 5px; border-radius: 8px; color: #ffe8a8; background: rgba(4,10,17,.72); font-size: 7px; text-align: center; text-overflow: ellipsis; white-space: nowrap; }
+.fusion-catalog-card.fusion-showcase-card { border-color:#fff0a5; box-shadow:0 0 0 1px rgba(255,238,151,.7),0 0 18px rgba(194,111,255,.48),0 8px 18px rgba(0,0,0,.7); }
+.fusion-catalog-card.fusion-showcase-card::after { content:"SPECIAL"; position:absolute; z-index:5; top:17%; right:5%; padding:2px 5px; border:1px solid rgba(255,242,164,.74); border-radius:8px; color:#fff4b5; background:rgba(28,10,48,.78); box-shadow:0 0 10px rgba(196,113,255,.52); font:800 6px/1 Georgia,serif; letter-spacing:.08em; }
 .fusion-catalog-detail { display: grid; grid-template-columns: minmax(170px,.72fr) minmax(260px,1.28fr); gap: 14px; margin-top: 12px; }
-.fusion-catalog-detail > .card-art { width: min(100%,260px); height: auto; aspect-ratio: 1; justify-self: center; }
+.fusion-catalog-detail > .card-art { width: min(100%,260px); height: auto; aspect-ratio: .75; justify-self: center; }
 .fusion-catalog-detail dl { display: grid; grid-template-columns: auto 1fr; align-content: start; gap: 8px 12px; margin: 0; padding: 12px; border-radius: 10px; background: rgba(255,255,255,.04); font-size: 12px; }
 .fusion-catalog-detail dt { color: var(--muted); }
 .fusion-catalog-detail dd { margin: 0; line-height: 1.5; }

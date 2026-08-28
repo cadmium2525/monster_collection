@@ -107,9 +107,11 @@ test('fusion is unavailable before first 6 / second 5 and costs 1 or 2 afterward
   assert.equal(actions.some((action) => action.type === 'fusion-special' && action.cost === 2), true);
 
   main.actionPoints = 0;
+  main.artVariantId = 'showcase-monster-001';
   const special = actions.find((action) => action.type === 'fusion-special');
   battle.applyAction(special);
   assert.equal(main.specialForm, 'フューチャー');
+  assert.equal(main.artVariantId, 'showcase-monster-001', 'special-fusion result keeps the main card appearance');
   assert.equal(main.actionPoints, 0, 'fusion must not restore action points');
   assert.equal(battle.player('p1').tp, 8);
 });

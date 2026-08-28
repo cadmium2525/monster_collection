@@ -12,6 +12,7 @@ const KIND_LABELS = Object.freeze({
   breeder: 'ブリーダー',
   fusion: '特殊合体',
   showcase: '特別イラスト',
+  'fusion-showcase': '特殊合体特別絵',
 });
 
 export const ADMIN_GUARANTEE_PROFILES = Object.freeze([
@@ -56,7 +57,15 @@ export function adminCatalogEntries(masterIndex) {
       },
     };
   }));
-  return [...base, ...fusions, ...showcases];
+  const fusionShowcases = masterIndex.data.fusions.map((fusion) => ({
+    id: `showcase-${fusion.id}`,
+    kind: 'fusion-showcase',
+    name: `${fusion.name} 特別イラスト`,
+    faction: masterIndex.monstersByName.get(fusion.main)?.faction ?? '',
+    origin: 'fusion',
+    fusion,
+  }));
+  return [...base, ...fusions, ...showcases, ...fusionShowcases];
 }
 
 export function generateAdminPreviewPack({ masterIndex, packId, profileId = 'standard', seed = 'admin-preview' }) {
@@ -81,8 +90,9 @@ function entrySearchText(entry) {
 }
 
 function adminEntryTile(entry, masterIndex) {
-  const visual = entry.kind === 'fusion'
-    ? fusionTile(entry.fusion, masterIndex)
+  const fusionEntry = entry.kind === 'fusion' || entry.kind === 'fusion-showcase';
+  const visual = fusionEntry
+    ? fusionTile(entry.fusion, masterIndex, { showcase: entry.kind === 'fusion-showcase' })
     : renderCard({
       definition: entry.definition,
       cardAsset: entry.cardAsset ?? null,
@@ -90,6 +100,7 @@ function adminEntryTile(entry, masterIndex) {
       onClick: () => openCardDetails({ definition: entry.definition, masterIndex, cardAsset: entry.cardAsset ?? null }),
     });
   const origin = entry.kind === 'fusion' ? '合体レシピ'
+    : entry.kind === 'fusion-showcase' ? '特別絵メインで出現'
     : entry.kind === 'showcase' ? 'ブースター特別絵'
       : acquisitionLabel(entry.definition);
   return el('article', { className: 'admin-card-entry' }, [
@@ -140,6 +151,7 @@ export class AdminToolScreen {
     const kindFilters = [
       ['all', 'すべて'], ['monster', 'モンスター'], ['training', 'Training'], ['shugyo', '修行'],
       ['breeder', 'ブリーダー'], ['fusion', '特殊合体'], ['showcase', '特別絵'],
+      ['fusion-showcase', '特殊合体特別絵'],
     ];
     const search = el('input', {
       value: this.query,
@@ -175,7 +187,7 @@ export class AdminToolScreen {
       ]),
       el('div', { className: 'admin-result-summary' }, [
         el('strong', { text: `${filtered.length}件表示` }),
-        el('span', { text: `基本カード ${this.masterIndex.cards.size} / 特殊合体 ${this.masterIndex.data.fusions.length} / 特別絵 ${Object.values(SHOWCASE_VARIANTS).flat().length}` }),
+        el('span', { text: `基本カード ${this.masterIndex.cards.size} / 特殊合体 ${this.masterIndex.data.fusions.length} / 通常特別絵 ${Object.values(SHOWCASE_VARIANTS).flat().length} / 特殊合体特別絵 ${this.masterIndex.data.fusions.length}` }),
       ]),
       el('div', { className: 'admin-card-grid' }, filtered.map((entry) => adminEntryTile(entry, this.masterIndex))),
     ]);

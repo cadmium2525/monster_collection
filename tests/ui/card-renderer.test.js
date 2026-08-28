@@ -106,6 +106,13 @@ test('card art placement keeps legacy art below the name band and uses standalon
   assert.equal(blueDrill.style, '--monster-art:url("./assets/images/special-fusions/fusion-014.webp")');
   const yuma = cardArtPlacement(monster, { specialFusionId: 'fusion-028', specialForm: 'ユーマ' });
   assert.equal(yuma.style, '--monster-art:url("./assets/images/special-fusions/fusion-028.webp");--fusion-art-x:8%');
+  const premiumFusion = cardArtPlacement(monster, {
+    specialFusionId: 'fusion-001',
+    specialForm: 'フューチャー',
+    artVariantId: 'showcase-monster-001',
+  });
+  assert.equal(premiumFusion.className, 'monster-art special-fusion-art standalone-fusion-art showcase-fusion-art');
+  assert.equal(premiumFusion.style, '--monster-art:url("./assets/images/showcase-fusions/showcase-fusion-001.webp")');
   const support = cardArtPlacement({ id: 'breeder-020', kind: 'breeder' });
   assert.equal(support.className, 'support-card-art legacy-name-safe-art');
   assert.match(support.style, /--art-x:100%;--art-y:100%/);
@@ -123,6 +130,17 @@ test('all thirty-six special fusion cells are valid standalone WebP assets', () 
     assert.equal(bytes.subarray(0, 4).toString('ascii'), 'RIFF', `fusion-${id} starts with RIFF marker`);
     assert.equal(bytes.subarray(8, 12).toString('ascii'), 'WEBP', `fusion-${id} has WEBP signature`);
     assert.ok(statSync(url).size < 500_000, `fusion-${id} stays practical for on-demand loading`);
+  }
+});
+
+test('all thirty-six premium special-fusion illustrations are optimized standalone WebP assets', () => {
+  for (let number = 1; number <= 36; number += 1) {
+    const id = String(number).padStart(3, '0');
+    const url = new URL(`../../assets/images/showcase-fusions/showcase-fusion-${id}.webp`, import.meta.url);
+    const bytes = readFileSync(url);
+    assert.equal(bytes.subarray(0, 4).toString('ascii'), 'RIFF', `showcase-fusion-${id} starts with RIFF marker`);
+    assert.equal(bytes.subarray(8, 12).toString('ascii'), 'WEBP', `showcase-fusion-${id} has WEBP signature`);
+    assert.ok(statSync(url).size < 900_000, `showcase-fusion-${id} stays practical for on-demand loading`);
   }
 });
 

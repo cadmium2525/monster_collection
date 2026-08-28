@@ -4,12 +4,16 @@ import { openModal } from './modal.js';
 
 const KIND_ORDER = Object.freeze({ monster: 0, training: 1, shugyo: 2, breeder: 3 });
 
-export function openFusionDetails(fusion, masterIndex) {
+export function openFusionDetails(fusion, masterIndex, { showcase = false } = {}) {
   const main = masterIndex.monstersByName.get(fusion.main);
   const material = masterIndex.monstersByName.get(fusion.material);
-  const art = cardArtPlacement(main, { specialFusionId: fusion.id, specialForm: fusion.name });
+  const art = cardArtPlacement(main, {
+    specialFusionId: fusion.id,
+    specialForm: fusion.name,
+    artVariantId: showcase ? 'showcase-preview' : 'base',
+  });
   openModal({
-    title: fusion.name,
+    title: showcase ? `${fusion.name} 特別イラスト` : fusion.name,
     content: el('div', { className: 'fusion-catalog-detail' }, [
       el('div', { className: `card-art ${art.className}`, attrs: art.style ? { style: art.style } : null }),
       el('dl', {}, [
@@ -22,13 +26,17 @@ export function openFusionDetails(fusion, masterIndex) {
   });
 }
 
-export function fusionTile(fusion, masterIndex) {
+export function fusionTile(fusion, masterIndex, { showcase = false } = {}) {
   const main = masterIndex.monstersByName.get(fusion.main);
-  const art = cardArtPlacement(main, { specialFusionId: fusion.id, specialForm: fusion.name });
+  const art = cardArtPlacement(main, {
+    specialFusionId: fusion.id,
+    specialForm: fusion.name,
+    artVariantId: showcase ? 'showcase-preview' : 'base',
+  });
   return el('button', {
-    className: 'fusion-catalog-card',
-    attrs: { type: 'button', 'aria-label': `${fusion.name}の詳細を表示` },
-    onclick: () => openFusionDetails(fusion, masterIndex),
+    className: `fusion-catalog-card${showcase ? ' fusion-showcase-card' : ''}`,
+    attrs: { type: 'button', 'aria-label': `${fusion.name}${showcase ? '特別イラスト' : ''}の詳細を表示` },
+    onclick: () => openFusionDetails(fusion, masterIndex, { showcase }),
   }, [
     el('div', { className: 'card-top' }, el('b', { text: fusion.name })),
     el('div', { className: `card-art ${art.className}`, attrs: art.style ? { style: art.style } : null }),

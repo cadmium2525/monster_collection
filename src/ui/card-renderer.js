@@ -52,23 +52,29 @@ export function cardArtPlacement(definition, unit = null, cardAsset = null) {
   const artVariantId = definition.kind === 'monster'
     ? cardAsset?.artVariantId ?? unit?.artVariantId ?? 'base'
     : 'base';
-  if (artVariantId !== 'base') {
-    return {
-      className: 'monster-art standalone-monster-art showcase-monster-art',
-      style: `--monster-art:url("./assets/images/showcase/${artVariantId}.webp")`,
-    };
-  }
-
   const fusionFromId = Number(unit?.specialFusionId?.match(/(\d+)$/)?.[1]) - 1;
   const fusionIndex = Number.isInteger(fusionFromId) && fusionFromId >= 0
     ? fusionFromId
     : SPECIAL_FUSION_NAMES.indexOf(unit?.specialForm);
   if (fusionIndex >= 0 && fusionIndex < SPECIAL_FUSION_NAMES.length) {
     const fusionAssetId = `fusion-${String(fusionIndex + 1).padStart(3, '0')}`;
+    if (artVariantId !== 'base') {
+      return {
+        className: 'monster-art special-fusion-art standalone-fusion-art showcase-fusion-art',
+        style: `--monster-art:url("./assets/images/showcase-fusions/showcase-${fusionAssetId}.webp")`,
+      };
+    }
     const horizontalCorrection = fusionIndex === 27 ? ';--fusion-art-x:8%' : '';
     return {
       className: 'monster-art special-fusion-art standalone-fusion-art',
       style: `--monster-art:url("./assets/images/special-fusions/${fusionAssetId}.webp")${horizontalCorrection}`,
+    };
+  }
+
+  if (artVariantId !== 'base') {
+    return {
+      className: 'monster-art standalone-monster-art showcase-monster-art',
+      style: `--monster-art:url("./assets/images/showcase/${artVariantId}.webp")`,
     };
   }
 
