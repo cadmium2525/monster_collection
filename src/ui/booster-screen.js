@@ -148,17 +148,19 @@ export class BoosterShopScreen {
             el('small', { text: `${pack.faction} BOOSTER / 5 CARDS` }),
             el('h2', { text: pack.name }),
             el('p', { text: pack.description }),
-            el('button', {
-              className: 'pack-disclosure-button',
-              text: '収録カード・提供割合',
-              attrs: { type: 'button', 'aria-label': `${pack.name}の収録カードと提供割合を確認` },
-              onclick: () => this.openPackDisclosure(pack),
-            }),
-            el('button', {
-              className: 'primary-button booster-open-button',
-              disabled: !affordable || Boolean(this.economy.pendingPack),
-              onclick: () => this.onOpen(pack),
-            }, free ? '初回無料で開封' : [diamondIcon('booster-cost-icon'), el('span', { text: `${pack.cost}で開封` })]),
+            el('div', { className: 'booster-pack-actions' }, [
+              el('button', {
+                className: 'pack-disclosure-button',
+                text: '収録カード・提供割合',
+                attrs: { type: 'button', 'aria-label': `${pack.name}の収録カードと提供割合を確認` },
+                onclick: () => this.openPackDisclosure(pack),
+              }),
+              el('button', {
+                className: 'primary-button booster-open-button',
+                disabled: !affordable || Boolean(this.economy.pendingPack),
+                onclick: () => this.onOpen(pack),
+              }, free ? '初回無料で開封' : [diamondIcon('booster-cost-icon'), el('span', { text: `${pack.cost}で開封` })]),
+            ]),
           ]),
         ]);
       })),
