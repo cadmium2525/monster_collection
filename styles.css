@@ -682,6 +682,7 @@ body:has(.battle-screen) {
 .detail-summary > .card-art { width: min(100%,clamp(140px,38dvh,220px)); height: auto; aspect-ratio: .75; justify-self: center; margin: 0; }
 .detail-summary > .card-art.special-fusion-art,
 .detail-summary > .card-art.support-card-art { aspect-ratio: 1; }
+.detail-summary > .card-art.showcase-fusion-art { aspect-ratio: .75; }
 .detail-summary dl { display: grid; grid-template-columns: auto 1fr; gap: 5px 9px; margin: 9px 0 0; font-size: 13px; }
 .detail-summary dt { color: var(--muted); }
 .detail-summary dd { margin: 0; text-align: right; font-weight: 700; }
@@ -1207,7 +1208,9 @@ button:disabled { opacity: .38; cursor: not-allowed; }
   background-position: center,center top;
 }
 .game-card.variant-showcase { border-color: #fff0a5; box-shadow: 0 0 0 1px rgba(255,238,151,.7),0 0 18px rgba(194,111,255,.48),0 8px 18px rgba(0,0,0,.7); }
-.game-card.finish-foil::before {
+.game-card.finish-foil::before,
+.fusion-catalog-card.finish-foil::before,
+.card-art.finish-foil-art::after {
   content:""; position:absolute; z-index:6; inset:0; border-radius:inherit; pointer-events:none; mix-blend-mode:screen;
   background:linear-gradient(115deg,transparent 32%,rgba(77,231,255,.16) 41%,rgba(255,244,149,.48) 49%,rgba(255,113,230,.2) 57%,transparent 66%);
   background-repeat:no-repeat; background-size:260% 100%; background-position:170% 0; animation:foil-sheen 3.4s ease-in-out infinite;
@@ -1487,6 +1490,6 @@ button:disabled { opacity: .38; cursor: not-allowed; }
 }
 
 @media (prefers-reduced-motion:reduce) {
-  .opening-pack,.opening-aura,.opening-aura i,.pack-particle-field i,.pack-foil-sheen,.pack-break-flash,.pack-break-flash::before,.pack-break-flash i,.pack-card-slot,.pack-card-reveal-shell,.pack-rarity-burst,.rarity-burst-rings i,.pack-rarity-burst strong,.game-card.finish-foil::before { animation:none !important; }
+  .opening-pack,.opening-aura,.opening-aura i,.pack-particle-field i,.pack-foil-sheen,.pack-break-flash,.pack-break-flash::before,.pack-break-flash i,.pack-card-slot,.pack-card-reveal-shell,.pack-rarity-burst,.rarity-burst-rings i,.pack-rarity-burst strong,.game-card.finish-foil::before,.fusion-catalog-card.finish-foil::before,.card-art.finish-foil-art::after { animation:none !important; }
   .pack-particle-field { display:none; }
 }

@@ -33,6 +33,21 @@ function atlasPosition(index, columns, rows) {
   return `--art-x:${x}%;--art-y:${y}%`;
 }
 
+function specialFusionIndex(unit) {
+  const fusionFromId = Number(unit?.specialFusionId?.match(/(\d+)$/)?.[1]) - 1;
+  return Number.isInteger(fusionFromId) && fusionFromId >= 0
+    ? fusionFromId
+    : SPECIAL_FUSION_NAMES.indexOf(unit?.specialForm);
+}
+
+export function isFoilAppearance(definition, unit = null, cardAsset = null) {
+  if (definition.kind !== 'monster') return false;
+  if ((cardAsset?.finish ?? unit?.finish) === 'foil') return true;
+  const artVariantId = cardAsset?.artVariantId ?? unit?.artVariantId ?? 'base';
+  const fusionIndex = specialFusionIndex(unit);
+  return artVariantId !== 'base' && fusionIndex >= 0 && fusionIndex < SPECIAL_FUSION_NAMES.length;
+}
+
 export function cardArtPlacement(definition, unit = null, cardAsset = null) {
   if (definition.kind !== 'monster') {
     const breederNumber = definition.kind === 'breeder' ? Number(definition.id.match(/(\d+)$/)?.[1]) : 0;
@@ -52,10 +67,7 @@ export function cardArtPlacement(definition, unit = null, cardAsset = null) {
   const artVariantId = definition.kind === 'monster'
     ? cardAsset?.artVariantId ?? unit?.artVariantId ?? 'base'
     : 'base';
-  const fusionFromId = Number(unit?.specialFusionId?.match(/(\d+)$/)?.[1]) - 1;
-  const fusionIndex = Number.isInteger(fusionFromId) && fusionFromId >= 0
-    ? fusionFromId
-    : SPECIAL_FUSION_NAMES.indexOf(unit?.specialForm);
+  const fusionIndex = specialFusionIndex(unit);
   if (fusionIndex >= 0 && fusionIndex < SPECIAL_FUSION_NAMES.length) {
     const fusionAssetId = `fusion-${String(fusionIndex + 1).padStart(3, '0')}`;
     if (artVariantId !== 'base') {
@@ -163,7 +175,7 @@ export function renderCard({
     dragReady ? 'drag-ready' : '',
     unit && (unit.actionPoints <= 0 || unit.summonedThisTurn || unit.stunnedThisTurn) ? 'exhausted' : '',
     interactive ? '' : 'static',
-    definition.kind === 'monster' && (cardAsset?.finish ?? unit?.finish) === 'foil' ? 'finish-foil' : '',
+    isFoilAppearance(definition, unit, cardAsset) ? 'finish-foil' : '',
     definition.kind === 'monster' && (cardAsset?.artVariantId ?? unit?.artVariantId ?? 'base') !== 'base' ? 'variant-showcase' : '',
   ].filter(Boolean).join(' ');
   const node = el(interactive ? 'button' : 'div', {
@@ -270,9 +282,10 @@ export function openCardDetails({
   const name = unit?.specialForm ?? definition.name;
   const trait = isMonster ? resolvedTrait(definition, unit) : null;
   const art = cardArtPlacement(definition, unit, cardAsset);
+  const foilArtClass = isFoilAppearance(definition, unit, cardAsset) ? ' finish-foil-art' : '';
   const summary = isMonster ? el('section', { className: 'detail-summary' }, [
     el('div', {
-      className: `card-art ${art.className} ${FACTION_CLASS[unit?.faction ?? definition.faction] ?? ''}`,
+      className: `card-art ${art.className} ${FACTION_CLASS[unit?.faction ?? definition.faction] ?? ''}${foilArtClass}`,
       attrs: { style: art.style },
     }),
     el('dl', {}, [

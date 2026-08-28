@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, statSync } from 'node:fs';
-import { cardArtPlacement, cardDisplayStats, detailMoveEntries, resolvedTrait } from '../../src/ui/card-renderer.js';
+import { cardArtPlacement, cardDisplayStats, detailMoveEntries, isFoilAppearance, resolvedTrait } from '../../src/ui/card-renderer.js';
 import { shugyoMovePoolType, shugyoMoveWeight } from '../../src/battle/shugyo.js';
 import { masterData, masterIndex, monsterByName } from '../helpers.js';
 
@@ -122,6 +122,28 @@ test('card art placement keeps legacy art below the name band and uses standalon
   });
 });
 
+test('every showcase special fusion is Foil even when its main asset has a normal finish', () => {
+  const monster = monsterByName('メタルナー');
+  assert.equal(isFoilAppearance(monster, {
+    specialFusionId: 'fusion-027',
+    specialForm: 'ラブラブセイジン',
+    artVariantId: 'showcase-monster-005',
+    finish: 'normal',
+  }), true);
+  assert.equal(isFoilAppearance(monster, {
+    specialFusionId: 'fusion-027',
+    specialForm: 'ラブラブセイジン',
+    artVariantId: 'base',
+    finish: 'normal',
+  }), false);
+  assert.equal(isFoilAppearance(monster, {
+    artVariantId: 'showcase-monster-005',
+    finish: 'normal',
+  }), false, 'an unfused showcase keeps its independently rolled finish');
+  assert.equal(isFoilAppearance(monster, { finish: 'foil' }), true);
+  assert.equal(isFoilAppearance({ id: 'breeder-001', kind: 'breeder' }, null, { finish: 'foil' }), false);
+});
+
 test('all thirty-six special fusion cells are valid standalone WebP assets', () => {
   for (let number = 1; number <= 36; number += 1) {
     const id = String(number).padStart(3, '0');
@@ -213,10 +235,13 @@ test('standalone booster monster art and asset cards share one fixed footprint',
 
 test('Foil uses one non-repeating sweep and premium classes are monster-only', () => {
   const renderer = readFileSync(new URL('../../src/ui/card-renderer.js', import.meta.url), 'utf8');
+  const catalog = readFileSync(new URL('../../src/ui/catalog-screen.js', import.meta.url), 'utf8');
   const css = readFileSync(new URL('../../styles.css', import.meta.url), 'utf8');
-  assert.match(renderer, /definition\.kind === 'monster' && \(cardAsset\?\.finish/);
+  assert.match(renderer, /isFoilAppearance\(definition, unit, cardAsset\) \? 'finish-foil'/);
   assert.match(renderer, /definition\.kind === 'monster' && \(cardAsset\?\.artVariantId/);
-  assert.match(css, /\.game-card\.finish-foil::before\s*\{[^}]*background-repeat:no-repeat/s);
+  assert.match(catalog, /fusion-showcase-card finish-foil/);
+  assert.match(css, /\.game-card\.finish-foil::before,[^{]+\.fusion-catalog-card\.finish-foil::before,[^{]+\.card-art\.finish-foil-art::after\s*\{[^}]*background-repeat:no-repeat/s);
+  assert.match(css, /\.detail-summary > \.card-art\.showcase-fusion-art\s*\{\s*aspect-ratio: \.75/s);
   assert.match(css, /@keyframes foil-sheen\s*\{\s*0%,14%/s);
   assert.match(css, /@keyframes foil-sheen[^}]+\}[^}]*74%,100%/s);
 });

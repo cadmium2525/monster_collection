@@ -15,7 +15,7 @@ export function openFusionDetails(fusion, masterIndex, { showcase = false } = {}
   openModal({
     title: showcase ? `${fusion.name} 特別イラスト` : fusion.name,
     content: el('div', { className: 'fusion-catalog-detail' }, [
-      el('div', { className: `card-art ${art.className}`, attrs: art.style ? { style: art.style } : null }),
+      el('div', { className: `card-art ${art.className}${showcase ? ' finish-foil-art' : ''}`, attrs: art.style ? { style: art.style } : null }),
       el('dl', {}, [
         el('dt', { text: '特殊合体' }), el('dd', { text: `${main?.name ?? fusion.main} ＋ ${material?.name ?? fusion.material}` }),
         el('dt', { text: '特殊特性' }), el('dd', { text: fusion.trait }),
@@ -34,7 +34,7 @@ export function fusionTile(fusion, masterIndex, { showcase = false } = {}) {
     artVariantId: showcase ? 'showcase-preview' : 'base',
   });
   return el('button', {
-    className: `fusion-catalog-card${showcase ? ' fusion-showcase-card' : ''}`,
+    className: `fusion-catalog-card${showcase ? ' fusion-showcase-card finish-foil' : ''}`,
     attrs: { type: 'button', 'aria-label': `${fusion.name}${showcase ? '特別イラスト' : ''}の詳細を表示` },
     onclick: () => openFusionDetails(fusion, masterIndex, { showcase }),
   }, [
