@@ -1244,7 +1244,7 @@ button:disabled { opacity: .38; cursor: not-allowed; }
 .booster-notes strong { color:#91eee6; }
 .booster-notes span { color:var(--muted); }
 .modal.pack-disclosure-modal { width:min(960px,97vw); overflow:hidden; display:grid; grid-template-rows:auto minmax(0,1fr); }
-.pack-disclosure { min-height:0; overflow:hidden; display:grid; grid-template-rows:auto auto minmax(0,1fr); gap:8px; margin-top:9px; }
+.pack-disclosure { min-height:0; overflow:auto; display:flex; flex-direction:column; gap:8px; margin-top:9px; padding-right:2px; }
 .pack-disclosure-summary { display:grid; grid-template-columns:minmax(150px,.8fr) minmax(190px,1fr) minmax(260px,1.4fr); align-items:center; gap:8px; padding:9px 11px; border:1px solid color-mix(in srgb,var(--pack-color) 45%,#3c4e5f); border-radius:11px; background:linear-gradient(110deg,color-mix(in srgb,var(--pack-color) 10%,#0a1725),#09131f); }
 .pack-disclosure-summary > div:first-child { display:grid; gap:3px; }
 .pack-disclosure-summary small { color:var(--pack-color); font:800 8px/1 Georgia,serif; letter-spacing:.12em; }
@@ -1258,6 +1258,13 @@ button:disabled { opacity: .38; cursor: not-allowed; }
 .pack-appearance-rates dd { margin:2px 0 0; color:#f8e7ad; font:900 13px/1 Georgia,serif; }
 .pack-rate-note { margin:0; color:var(--muted); font-size:9px; line-height:1.45; }
 .pack-card-rate-table-wrap { min-height:0; overflow:auto; border:1px solid var(--line); border-radius:10px; background:rgba(2,10,18,.68); }
+.pack-disclosure > .pack-card-rate-table-wrap { flex:1 0 180px; }
+.pack-showcase-rate-section { flex:0 0 auto; display:grid; gap:5px; }
+.pack-showcase-rate-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:0 3px; }
+.pack-showcase-rate-heading strong { color:#ffe49a; font-size:11px; }
+.pack-showcase-rate-heading span { color:#8fe6e3; font-size:9px; }
+.pack-showcase-rate-section .pack-card-rate-table-wrap { max-height:172px; }
+.pack-showcase-rate-table td:nth-child(2) { color:#d9baff; }
 .pack-card-rate-table { width:100%; border-collapse:collapse; font-size:10px; }
 .pack-card-rate-table th,.pack-card-rate-table td { padding:8px 10px; border-bottom:1px solid rgba(94,121,143,.2); text-align:left; vertical-align:middle; }
 .pack-card-rate-table th { position:sticky; z-index:1; top:0; color:#b8cbd5; background:#0d1a28; }

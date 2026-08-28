@@ -1,7 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
+import { existsSync } from 'node:fs';
 import { CardStealSession } from '../../src/reward/CardStealSession.js';
-import { boosterPackDisclosure, generateBoosterPack } from '../../src/gacha/pack-generator.js';
+import { SHOWCASE_VARIANTS, boosterPackDisclosure, generateBoosterPack } from '../../src/gacha/pack-generator.js';
 import { BOOSTER_MONSTER_IDS, TROPHY_BREEDER_IDS, acquisitionOrigin } from '../../src/gacha/acquisition.js';
 import { applyDiamondReward, applyPackPurchase, defaultEconomyState, normalizeEconomyState } from '../../src/gacha/economy-state.js';
 import { SeededRng } from '../../src/core/rng.js';
@@ -67,6 +68,27 @@ test('pack disclosures expose exact next-pack card and appearance rates for ever
     assert.equal(tenth.appearanceRates.foil, 1);
     assert.equal(twentieth.appearanceRates.showcase, 1);
     assert.equal(twentieth.appearanceRates.foil, 1);
+    assert.equal(normal.showcaseCards.length, 4);
+    assert.equal(twentieth.showcaseCards.length, 4);
+    assert.ok(normal.showcaseCards.every(({ probability }) => Math.abs(probability - 0.01) < 1e-12));
+    assert.ok(twentieth.showcaseCards.every(({ probability }) => Math.abs(probability - 0.25) < 1e-12));
+  }
+});
+
+test('each faction booster can award all four steal-proof showcase illustrations', () => {
+  for (const [faction, variants] of Object.entries(SHOWCASE_VARIANTS)) {
+    assert.equal(variants.length, 4);
+    for (const variant of variants) {
+      assert.equal(existsSync(new URL(`../../assets/images/showcase/${variant.artVariantId}.webp`, import.meta.url)), true);
+    }
+    const seen = new Set();
+    for (let seed = 0; seed < 120 && seen.size < variants.length; seed += 1) {
+      const pack = generateBoosterPack({ masterIndex, faction, openedCount: 19, seed: `showcase-all:${faction}:${seed}` });
+      const special = pack.cards.find((card) => card.rarity === 'showcase');
+      assert.ok(special);
+      seen.add(special.artVariantId);
+    }
+    assert.deepEqual(seen, new Set(variants.map((variant) => variant.artVariantId)));
   }
 });
 

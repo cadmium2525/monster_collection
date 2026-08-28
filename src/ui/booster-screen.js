@@ -67,7 +67,36 @@ export class BoosterShopScreen {
             el('div', {}, [el('dt', { text: '特別イラスト' }), el('dd', { text: percentage(disclosure.appearanceRates.showcase) })]),
           ]),
         ]),
-        el('p', { className: 'pack-rate-note', text: '各カードの割合は、次の1パック（5枚）に同じカードが1枚以上含まれる確率です。複数の抽選枠から出るカードがあるため、割合の合計は100%になりません。' }),
+        el('p', { className: 'pack-rate-note', text: 'カード名別の割合は、通常絵と特別絵を合わせて、次の1パック（5枚）に同じカードが1枚以上含まれる確率です。複数の抽選枠から出るカードがあるため、割合の合計は100%になりません。' }),
+        disclosure.showcaseCards.length ? el('section', { className: 'pack-showcase-rate-section' }, [
+          el('div', { className: 'pack-showcase-rate-heading' }, [
+            el('strong', { text: '特別イラスト候補' }),
+            el('span', { text: `${pack.faction}4種 / 奪取不可` }),
+          ]),
+          el('div', { className: 'pack-card-rate-table-wrap' }, [
+            el('table', { className: 'pack-card-rate-table pack-showcase-rate-table' }, [
+              el('thead', {}, el('tr', {}, ['カード名', '外観', '提供割合'].map((label) => el('th', { text: label })))),
+              el('tbody', {}, disclosure.showcaseCards.map(({ definition, variant, probability }) => {
+                const cardAsset = {
+                  masterId: variant.masterId,
+                  artVariantId: variant.artVariantId,
+                  finish: 'normal',
+                  rarity: 'showcase',
+                  origin: 'booster',
+                };
+                return el('tr', {}, [
+                  el('td', {}, el('button', {
+                    className: 'pack-card-detail-button',
+                    attrs: { type: 'button', 'aria-label': `${definition.name}の特別イラスト詳細を表示` },
+                    onclick: () => openCardDetails({ definition, masterIndex: this.masterIndex, cardAsset }),
+                  }, [el('strong', { text: definition.name }), el('small', { text: 'ブースター限定外観' })])),
+                  el('td', { text: '特別イラスト' }),
+                  el('td', { text: percentage(probability) }),
+                ]);
+              })),
+            ]),
+          ]),
+        ]) : null,
         el('div', { className: 'pack-card-rate-table-wrap' }, [
           el('table', { className: 'pack-card-rate-table' }, [
             el('thead', {}, el('tr', {}, ['カード名', '種類', '出現枠', '提供割合'].map((label) => el('th', { text: label })))),
@@ -134,7 +163,7 @@ export class BoosterShopScreen {
         ]);
       })),
       el('footer', { className: 'booster-notes' }, [
-        el('span', { text: 'ダイヤは大会報酬だけで獲得できます。初回と5パックごとにそのモン類の新モンスター、20パックごとに奪取不可の特別イラストを保証します。' }),
+        el('span', { text: 'ダイヤは大会報酬だけで獲得できます。初回と5パックごとにそのモン類の新モンスター、20パックごとに各モン類4種から奪取不可の特別イラストを保証します。' }),
       ]),
     ]));
   }

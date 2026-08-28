@@ -12,6 +12,25 @@ const FEATURED_VARIANTS = Object.freeze({
   '怪物': Object.freeze({ masterId: 'monster-024', artVariantId: 'showcase-monster-01' }),
 });
 
+const LEGACY_SHOWCASE_IDS = Object.freeze({
+  '無機': Object.freeze(['monster-001', 'monster-002', 'monster-003']),
+  '創造': Object.freeze(['monster-004', 'monster-005', 'monster-006']),
+  '幻霊': Object.freeze(['monster-007', 'monster-008', 'monster-009']),
+  '魔族': Object.freeze(['monster-010', 'monster-011', 'monster-012']),
+  '獣族': Object.freeze(['monster-013', 'monster-014', 'monster-015']),
+  '怪物': Object.freeze(['monster-016', 'monster-017', 'monster-018']),
+});
+
+const SHOWCASE_VARIANTS = Object.freeze(Object.fromEntries(
+  Object.entries(FEATURED_VARIANTS).map(([faction, featured]) => [faction, Object.freeze([
+    featured,
+    ...LEGACY_SHOWCASE_IDS[faction].map((masterId) => Object.freeze({
+      masterId,
+      artVariantId: `showcase-${masterId}`,
+    })),
+  ])]),
+));
+
 export const BOOSTER_DRAW_RATES = Object.freeze({
   showcase: 0.04,
   showcaseFoil: 0.35,
@@ -42,6 +61,7 @@ export function boosterPools(masterIndex, faction) {
     monsters: eligible.filter((definition) => definition.kind === 'monster' && definition.faction === faction),
     generic: eligible.filter((definition) => !factionFor(definition)),
     featured: FEATURED_VARIANTS[faction],
+    showcases: SHOWCASE_VARIANTS[faction] ?? [],
   };
 }
 
@@ -71,13 +91,16 @@ function mixedDistribution(parts) {
 }
 
 export function boosterPackDisclosure({ masterIndex, faction, openedCount = 0 }) {
-  const { eligible, themed, monsters, generic, featured } = boosterPools(masterIndex, faction);
+  const { eligible, themed, monsters, generic, featured, showcases } = boosterPools(masterIndex, faction);
   const nextPackNumber = Math.max(0, Math.trunc(Number(openedCount) || 0)) + 1;
   const featuredDefinition = featured ? masterIndex.cards.get(featured.masterId) : null;
+  const availableShowcases = showcases.filter((variant) => masterIndex.cards.has(variant.masterId));
+  const showcaseDefinitions = availableShowcases.map((variant) => masterIndex.cards.get(variant.masterId));
   const newMonsterGuaranteed = openedCount === 0 || nextPackNumber % 5 === 0;
   const foilGuaranteed = nextPackNumber % 10 === 0;
   const showcaseGuaranteed = nextPackNumber % 20 === 0;
   const hasFeatured = Boolean(featuredDefinition);
+  const hasShowcases = availableShowcases.length > 0;
 
   const firstMonster = newMonsterGuaranteed && hasFeatured
     ? certainDistribution(featuredDefinition)
@@ -92,11 +115,12 @@ export function boosterPackDisclosure({ masterIndex, faction, openedCount = 0 })
   const rarePool = foilGuaranteed ? monsters : [...monsters, ...themed, ...generic];
   const rare = weightedDistribution(rarePool, (definition) => definition.kind === 'monster'
     ? BOOSTER_DRAW_RATES.rareMonsterWeight : 1);
-  const showcaseChance = hasFeatured ? (showcaseGuaranteed ? 1 : BOOSTER_DRAW_RATES.showcase) : 0;
-  const premium = showcaseGuaranteed && hasFeatured
-    ? certainDistribution(featuredDefinition)
+  const showcaseChance = hasShowcases ? (showcaseGuaranteed ? 1 : BOOSTER_DRAW_RATES.showcase) : 0;
+  const showcaseDistribution = weightedDistribution(showcaseDefinitions);
+  const premium = showcaseGuaranteed && hasShowcases
+    ? showcaseDistribution
     : mixedDistribution([
-      { distribution: certainDistribution(featuredDefinition), weight: showcaseChance },
+      { distribution: showcaseDistribution, weight: showcaseChance },
       { distribution: rare, weight: 1 - showcaseChance },
     ]);
   const slots = [
@@ -116,11 +140,18 @@ export function boosterPackDisclosure({ masterIndex, faction, openedCount = 0 })
     };
   }).filter((entry) => entry.probability > 0)
     .sort((a, b) => b.probability - a.probability || a.definition.name.localeCompare(b.definition.name, 'ja'));
+  const showcaseProbability = availableShowcases.length ? showcaseChance / availableShowcases.length : 0;
+  const showcaseCards = availableShowcases.map((variant) => ({
+    variant,
+    definition: masterIndex.cards.get(variant.masterId),
+    probability: showcaseProbability,
+  }));
 
   return {
     faction,
     nextPackNumber,
     cards,
+    showcaseCards,
     slots,
     guarantees: { newMonsterGuaranteed, foilGuaranteed, showcaseGuaranteed },
     appearanceRates: {
@@ -151,7 +182,7 @@ export function generateBoosterPack({ masterIndex, faction, seed, openedCount = 
   const pack = boosterPack(faction);
   if (!pack) throw new Error(`Unknown booster faction: ${faction}`);
   const rng = new SeededRng(seed);
-  const { eligible, themed, monsters, generic } = boosterPools(masterIndex, faction);
+  const { eligible, themed, monsters, generic, showcases } = boosterPools(masterIndex, faction);
   if (!monsters.length || !themed.length || !generic.length) throw new Error('パック候補マスターが不足しています');
 
   const cards = [];
@@ -168,10 +199,12 @@ export function generateBoosterPack({ masterIndex, faction, seed, openedCount = 
   const showcaseGuaranteed = (openedCount + 1) % 20 === 0;
   const foilGuaranteed = (openedCount + 1) % 10 === 0;
   const showcase = showcaseGuaranteed || rng.next() < BOOSTER_DRAW_RATES.showcase;
-  if (showcase && featured && masterIndex.cards.has(featured.masterId)) {
-    cards.push(asset(masterIndex.cards.get(featured.masterId), {
+  const availableShowcases = showcases.filter((variant) => masterIndex.cards.has(variant.masterId));
+  if (showcase && availableShowcases.length) {
+    const showcaseVariant = rng.choice(availableShowcases);
+    cards.push(asset(masterIndex.cards.get(showcaseVariant.masterId), {
       rarity: 'showcase',
-      artVariantId: featured.artVariantId,
+      artVariantId: showcaseVariant.artVariantId,
       finish: foilGuaranteed || rng.next() < BOOSTER_DRAW_RATES.showcaseFoil ? 'foil' : 'normal',
     }));
   } else {
@@ -190,4 +223,4 @@ export function generateBoosterPack({ masterIndex, faction, seed, openedCount = 
   };
 }
 
-export { FEATURED_VARIANTS };
+export { FEATURED_VARIANTS, SHOWCASE_VARIANTS };

@@ -1,6 +1,6 @@
 import { acquisitionLabel, acquisitionOrigin } from '../gacha/acquisition.js';
 import { BOOSTER_PACKS } from '../gacha/pack-catalog.js';
-import { FEATURED_VARIANTS, generateBoosterPack } from '../gacha/pack-generator.js';
+import { SHOWCASE_VARIANTS, generateBoosterPack } from '../gacha/pack-generator.js';
 import { openCardDetails, renderCard } from './card-renderer.js';
 import { fusionTile } from './catalog-screen.js';
 import { el, replace } from './dom.js';
@@ -38,7 +38,7 @@ export function adminCatalogEntries(masterIndex) {
     origin: 'fusion',
     fusion,
   }));
-  const showcases = Object.entries(FEATURED_VARIANTS).map(([faction, variant]) => {
+  const showcases = Object.entries(SHOWCASE_VARIANTS).flatMap(([faction, variants]) => variants.map((variant) => {
     const definition = masterIndex.cards.get(variant.masterId);
     return {
       id: variant.artVariantId,
@@ -55,7 +55,7 @@ export function adminCatalogEntries(masterIndex) {
         origin: 'booster',
       },
     };
-  });
+  }));
   return [...base, ...fusions, ...showcases];
 }
 
@@ -175,7 +175,7 @@ export class AdminToolScreen {
       ]),
       el('div', { className: 'admin-result-summary' }, [
         el('strong', { text: `${filtered.length}件表示` }),
-        el('span', { text: `基本カード ${this.masterIndex.cards.size} / 特殊合体 ${this.masterIndex.data.fusions.length} / 特別絵 ${Object.keys(FEATURED_VARIANTS).length}` }),
+        el('span', { text: `基本カード ${this.masterIndex.cards.size} / 特殊合体 ${this.masterIndex.data.fusions.length} / 特別絵 ${Object.values(SHOWCASE_VARIANTS).flat().length}` }),
       ]),
       el('div', { className: 'admin-card-grid' }, filtered.map((entry) => adminEntryTile(entry, this.masterIndex))),
     ]);
