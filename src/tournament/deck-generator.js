@@ -9,12 +9,13 @@ export const GENERATOR_CONFIG = Object.freeze({
   bronze: { candidates: 1, monsters: 16, targetedRecipes: 1, recipeDensity: 1, themeTarget: 6, selectionNoise: 14 },
   silver: { candidates: 4, monsters: 15, targetedRecipes: 2, recipeDensity: 1, themeTarget: 7, selectionNoise: 7 },
   gold: { candidates: 12, monsters: 15, targetedRecipes: 3, recipeDensity: 2, themeTarget: 8, selectionNoise: 2 },
-  legend: { candidates: 24, monsters: 14, targetedRecipes: 4, recipeDensity: 2, themeTarget: 9, selectionNoise: 0 },
+  legend: { candidates: 64, monsters: 15, targetedRecipes: 5, recipeDensity: 2, themeTarget: 11, selectionNoise: 0 },
 });
 
 const GENERIC_BREEDERS = [
   'breeder-001', 'breeder-002', 'breeder-003', 'breeder-004', 'breeder-005', 'breeder-006', 'breeder-007', 'breeder-008',
   'breeder-021', 'breeder-022', 'breeder-023', 'breeder-024', 'breeder-025', 'breeder-026', 'breeder-027', 'breeder-028',
+  'breeder-041', 'breeder-042', 'breeder-043', 'breeder-044', 'breeder-045', 'breeder-046',
 ];
 
 function addCopy(counts, id, max = 3) {
@@ -91,11 +92,25 @@ function fillMonsterCounts(masterIndex, theme, config, recipes, rng) {
   return counts;
 }
 
+function genericBreederScore(masterIndex, id, theme, rank) {
+  const card = masterIndex.cards.get(id);
+  if (!card) return 0;
+  let score = 1;
+  if (rank === 'legend') {
+    if (['強化解除指示', '状態浄化', '反転防壁'].includes(card.name)) score += 4;
+    if (['合体妨害工作', '技術封鎖', '緊急撤退指示'].includes(card.name)) score += 3;
+    if (['融合強化指示', '素材探索', '全体防御命令', 'TP前借り'].includes(card.name)) score += 2;
+  }
+  if (theme === '混合' && card.faction == null) score += 1;
+  return score;
+}
+
 function selectBreeders(masterIndex, theme, rng, rank) {
   const factionBreeders = theme === '混合'
     ? []
     : masterIndex.data.breeders.filter((card) => card.name.startsWith(theme)).map((card) => card.id);
-  const generic = rng.shuffle(GENERIC_BREEDERS);
+  const generic = rng.shuffle(GENERIC_BREEDERS.filter((id) => masterIndex.cards.has(id)))
+    .sort((a, b) => genericBreederScore(masterIndex, b, theme, rank) - genericBreederScore(masterIndex, a, theme, rank));
   if (rank === 'bronze') return rng.shuffle([...factionBreeders, ...generic]).slice(0, 4);
   if (theme === '混合') return generic.slice(0, 4);
   return [...rng.shuffle(factionBreeders).slice(0, 2), ...generic.slice(0, 2)];

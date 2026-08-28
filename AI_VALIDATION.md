@@ -1,12 +1,22 @@
 # AI検証結果
 
-実施日: 2026-08-28
+実施日: 2026-08-29
 
 基準: Sim8.7正本 + ユーザー指定の距離システム廃止
 
 条件: 両者に同じ40枚スターターデッキを与え、AIレベルだけを変更
 
 CPUは全レベルで人間と同じ `BattleEngine` の合法手APIを使用する。参照できるのは自分の手札と公開情報だけで、相手手札、山札順、次のドロー、未確定乱数は探索へ渡さない。
+
+## Champion / Legend AI v1.16.0
+
+決勝は1試合のまま、Championの自ターンを最大7行動、相手の公開盤面による返しを最大4行動、Championの既知カードによる次ターン継続を最大3行動まで探索する。本番予算はLegend 85ms、Champion 240ms。候補行動は48件まで即時評価してから枝刈りするため、技の対象候補が多い盤面でも強化解除や合体妨害などのサポート札が探索前に脱落しにくい。
+
+評価には、実戦4技の威力とTPから見積もる公開打点、有効な強化・弱体状態、最大TP変化、合体妨害、次ターン最初の技TP増加、終盤の残LIFE優位を含める。相手の召喚、手札合体、Training、修行、ブリーダーは引き続き具体的カードを見ず、公開手札枚数と空き枠による危険度だけを使う。
+
+同一40枚で左右を入れ替えた計24戦ではChampion 17勝、Legend 7勝でChampion勝率70.8%。先攻13勝、後攻11勝、40T判定0%、合体発生83.3%、特殊合体発生62.5%だった。強度差を明確にする今回の目標に合わせ、従来の隣接AI調整目安55〜60%より決勝だけ意図的に高くしている。
+
+道中用Legend AIは同一40枚12戦でGoldへ7勝5敗（58.3%）。先攻・後攻は6勝ずつ、40T判定0%だった。デッキ生成は64候補・狙いレシピ5・モンスター15へ変更し、35生成の平均品質281.04、素材密度17.97。CPU同士の勝者は1試合10TPまで、修行を最大2枚使って成長を持ち越す。
 
 ## Champion AI v1.15.12
 
@@ -58,6 +68,9 @@ npm run sim -- --a silver --b gold --games 20 --seed tune2-sg --time-ms 22 --sum
 npm run sim -- --a gold --b legend --games 20 --seed tune2-gl --time-ms 55 --summary
 npm run sim -- --a legend --b champion --games 20 --seed final-lc-v2 --time-ms 85 --summary
 npm run sim -- --a legend --b champion --games 20 --seed champion-production --time-a 55 --time-b 140 --summary
+npm run sim -- --a champion --b legend --games 12 --seed post-strengthening --time-a 240 --time-b 85 --summary
+npm run sim -- --a legend --b champion --games 12 --seed post-strengthening-swap --time-a 85 --time-b 240 --summary
+npm run sim -- --a legend --b gold --games 12 --seed legend-road-strengthening --time-a 85 --time-b 22 --summary
 npm run sim -- --a gold --b gold --games 30 --seed final-first-second --time-ms 22 --summary
 npm run sim:decks -- --runs 5 --seed final-deck-lab --summary
 ```

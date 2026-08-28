@@ -51,7 +51,7 @@ export function isFoilAppearance(definition, unit = null, cardAsset = null) {
 export function cardArtPlacement(definition, unit = null, cardAsset = null) {
   if (definition.kind !== 'monster') {
     const breederNumber = definition.kind === 'breeder' ? Number(definition.id.match(/(\d+)$/)?.[1]) : 0;
-    if (breederNumber > 20 && breederNumber <= 40) {
+    if (breederNumber > 20 && breederNumber <= 46) {
       return {
         className: 'support-card-art standalone-support-art',
         style: `--support-art:url("./assets/images/breeders/${definition.id}.webp")`,

@@ -8,6 +8,7 @@
     "legacyDistanceFieldsAreNonGameplay": true,
     "expectedMonsterCount": 24,
     "expectedMoveCount": 216,
+    "expectedBreederCount": 46,
     "boosterExpansion": "First Flight 2026-08-26"
   },
   "monsters": [
@@ -2809,6 +2810,60 @@
       "name": "怪物・捕食進化",
       "tp": 3,
       "effect": "怪物1体が次に敵を撃破したとき、LIFE10回復・ATK+5。試合中1回だけ発動"
+    },
+    {
+      "id": "breeder-041",
+      "kind": "breeder",
+      "category": "汎用",
+      "faction": null,
+      "name": "強化解除指示",
+      "tp": 2,
+      "effect": "敵1体のバトル中に付与されたATK・DEF上昇と技ダメージ増加・軽減などを解除"
+    },
+    {
+      "id": "breeder-042",
+      "kind": "breeder",
+      "category": "汎用",
+      "faction": null,
+      "name": "合体妨害工作",
+      "tp": 3,
+      "effect": "相手は次のターン、通常合体と特殊合体を実行できない"
+    },
+    {
+      "id": "breeder-043",
+      "kind": "breeder",
+      "category": "汎用",
+      "faction": null,
+      "name": "技術封鎖",
+      "tp": 3,
+      "effect": "相手が次のターン最初に使用する技のTP+2"
+    },
+    {
+      "id": "breeder-044",
+      "kind": "breeder",
+      "category": "汎用",
+      "faction": null,
+      "name": "状態浄化",
+      "tp": 2,
+      "effect": "味方1体のATK・DEF低下、スタン、継続ダメージなどの不利な状態変化を解除"
+    },
+    {
+      "id": "breeder-045",
+      "kind": "breeder",
+      "category": "汎用",
+      "faction": null,
+      "name": "反転防壁",
+      "tp": 2,
+      "effect": "敵陣の合計ATKが自陣より高い場合、味方全員DEF+5を2ターン"
+    },
+    {
+      "id": "breeder-046",
+      "kind": "breeder",
+      "category": "汎用",
+      "faction": null,
+      "name": "緊急撤退指示",
+      "tp": 2,
+      "effect": "合体していない味方1体を手札へ戻す。バトル中の状態変化は解除される"
     }
   ],
   "growthCards": [

@@ -93,8 +93,14 @@ export class TournamentRun {
         // Public documents are untrusted input. Invalid or stale master data is ignored.
       }
     }
-    candidates.sort((a, b) => a.stableId.localeCompare(b.stableId));
-    return this.rng.fork('legend:public-decks').shuffle(candidates).slice(0, 14);
+    const selectionRng = this.rng.fork('legend:public-decks');
+    candidates.sort((a, b) => b.qualityScore - a.qualityScore || a.stableId.localeCompare(b.stableId));
+    const elitePool = candidates.slice(0, Math.min(candidates.length, 24));
+    return elitePool
+      .map((candidate, index) => ({ candidate, score: candidate.qualityScore + selectionRng.next() * Math.max(1, 6 - index * .15) }))
+      .sort((a, b) => b.score - a.score || a.candidate.stableId.localeCompare(b.candidate.stableId))
+      .slice(0, 14)
+      .map(({ candidate }) => candidate);
   }
 
   _createEntrants(champion, legendDecks) {
@@ -173,7 +179,19 @@ export class TournamentRun {
   _buildInitialRound() {
     const ids = Object.keys(this.state.entrants).filter((id) => id !== 'player' && id !== 'champion');
     let ordered;
-    if (this.state.rank === 'legend') ordered = ['player', ...this.rng.shuffle(ids), 'champion'];
+    if (this.state.rank === 'legend') {
+      const seeded = ids
+        .map((id) => ({ id, score: this.state.entrants[id].qualityScore + this.rng.next() * 3 }))
+        .sort((a, b) => b.score - a.score || a.id.localeCompare(b.id))
+        .map((entry) => entry.id);
+      const elite = seeded.slice(0, 4);
+      const upperMiddle = seeded.slice(4, 8);
+      const openingOpponent = seeded[8];
+      const playerHalf = ['player', openingOpponent, ...upperMiddle.slice(0, 2), ...elite];
+      const used = new Set(playerHalf);
+      const championHalf = this.rng.shuffle(seeded.filter((id) => !used.has(id)));
+      ordered = [...playerHalf, ...championHalf, 'champion'];
+    }
     else {
       ordered = this.rng.shuffle(['player', ...ids]);
     }

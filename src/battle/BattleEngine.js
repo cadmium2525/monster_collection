@@ -22,6 +22,7 @@ import {
   applyDefDebuff,
   applyIncomingModifiers,
   combatStats,
+  consumeMoveSurcharge,
   defenseIgnore,
   hasNormalTrait,
   outgoingDamageMultiplier,
@@ -71,6 +72,10 @@ export class BattleEngine {
     engine.unitSequence = Math.max(0, Number(checkpoint.unitSequence) || 0);
     engine.eventSequence = Math.max(0, Number(checkpoint.eventSequence) || 0);
     engine.state = clone(checkpoint.state);
+    for (const player of Object.values(engine.state.players)) {
+      player.effects.nextTurnFusionLocks ??= [];
+      player.effects.nextTurnMoveSurcharges ??= [];
+    }
     return engine;
   }
 
@@ -181,6 +186,7 @@ export class BattleEngine {
         deckCount: opponent.deck.length,
         graveyard: opponent.graveyard,
         board: opponent.board,
+        effects: opponent.effects,
         metrics: opponent.metrics,
       },
       log: clone(this.state.log),
@@ -334,7 +340,9 @@ export class BattleEngine {
     }
 
     const unlockTurn = player.isFirst ? RULES.firstFusionTurn : RULES.secondFusionTurn;
-    if (player.turnNumber >= unlockTurn) {
+    const fusionLocked = (player.effects.nextTurnFusionLocks ?? [])
+      .some((effect) => effect.activeFromTurn <= player.turnNumber && effect.remaining > 0);
+    if (player.turnNumber >= unlockTurn && !fusionLocked) {
       const materials = player.hand
         .map((card) => ({ card, definition: cardDefinition(this.masterIndex, card) }))
         .filter(({ definition }) => definition.kind === 'monster');
@@ -721,6 +729,7 @@ export class BattleEngine {
     if (target) target = this._redirectMonolith(opponent, target);
     const cost = resolvedMoveTp(player, unit, target, move);
     player.tp -= cost;
+    consumeMoveSurcharge(player);
     unit.actionPoints -= 1;
     player.metrics.attacks += 1;
     const echoRatio = unit.statuses.echoNext ?? 0;
@@ -1132,8 +1141,16 @@ export class BattleEngine {
     for (const effect of player.effects.nextTurnMaxTpPenalties) {
       if (effect.activeFromTurn <= player.turnNumber && effect.remaining > 0) effect.remaining -= 1;
     }
+    for (const effect of player.effects.nextTurnFusionLocks ?? []) {
+      if (effect.activeFromTurn <= player.turnNumber && effect.remaining > 0) effect.remaining -= 1;
+    }
+    for (const effect of player.effects.nextTurnMoveSurcharges ?? []) {
+      if (effect.activeFromTurn <= player.turnNumber && effect.remaining > 0) effect.remaining -= 1;
+    }
     player.effects.nextOwnMaxTpBonuses = player.effects.nextOwnMaxTpBonuses.filter((effect) => effect.remaining > 0);
     player.effects.nextTurnMaxTpPenalties = player.effects.nextTurnMaxTpPenalties.filter((effect) => effect.remaining > 0);
+    player.effects.nextTurnFusionLocks = (player.effects.nextTurnFusionLocks ?? []).filter((effect) => effect.remaining > 0);
+    player.effects.nextTurnMoveSurcharges = (player.effects.nextTurnMoveSurcharges ?? []).filter((effect) => effect.remaining > 0);
   }
 
   _normalDraw(player) {
@@ -1237,6 +1254,20 @@ export class BattleEngine {
         return player.tp < player.maxTp ? [{ ...base, targetUnitId: null, label: definition.name }] : [];
       case '逆境の号令':
         return player.life < opponent.life && own.length ? [{ ...base, targetUnitId: null, label: definition.name }] : [];
+      case '強化解除指示':
+        return targetActions(enemy.filter((unit) => this._hasRemovableBuff(unit)));
+      case '合体妨害工作':
+      case '技術封鎖':
+        return [{ ...base, targetUnitId: null, label: definition.name }];
+      case '状態浄化':
+        return targetActions(own.filter((unit) => this._hasRemovableDebuff(unit)));
+      case '反転防壁': {
+        const ownAtk = own.reduce((sum, unit) => sum + effectiveAtk(unit), 0);
+        const enemyAtk = enemy.reduce((sum, unit) => sum + effectiveAtk(unit), 0);
+        return own.length && enemyAtk > ownAtk ? [{ ...base, targetUnitId: null, label: definition.name }] : [];
+      }
+      case '緊急撤退指示':
+        return targetActions(own.filter((unit) => unit.fusionStage === 0 && !(unit.absorbedCardInstanceIds ?? []).length));
       case '応急処置':
       case '捨て身命令':
         return targetActions(own);
@@ -1367,6 +1398,35 @@ export class BattleEngine {
           unit.timedDefBuffs.push({ amount: 5, remaining: 2 });
         }
         break;
+      case '強化解除指示':
+        this._clearPositiveBattleEffects(enemyTarget);
+        break;
+      case '合体妨害工作':
+        opponent.effects.nextTurnFusionLocks ??= [];
+        opponent.effects.nextTurnFusionLocks.push({ remaining: 1, activeFromTurn: opponent.turnNumber + 1 });
+        break;
+      case '技術封鎖':
+        opponent.effects.nextTurnMoveSurcharges ??= [];
+        opponent.effects.nextTurnMoveSurcharges.push({ amount: 2, remaining: 1, activeFromTurn: opponent.turnNumber + 1 });
+        break;
+      case '状態浄化':
+        this._clearNegativeBattleEffects(ownTarget);
+        break;
+      case '反転防壁':
+        for (const unit of livingUnits(player)) unit.timedDefBuffs.push({ amount: 5, remaining: 2 });
+        break;
+      case '緊急撤退指示': {
+        const slot = findUnitSlot(player, ownTarget.id);
+        player.board[slot] = null;
+        player.hand.push({
+          instanceId: ownTarget.sourceCardInstanceId,
+          masterId: ownTarget.sourceMasterId,
+          artVariantId: ownTarget.artVariantId ?? 'base',
+          finish: ownTarget.finish ?? 'normal',
+          origin: ownTarget.origin ?? 'core',
+        });
+        break;
+      }
       case '無機・オーバークロック':
         ownTarget.temporaryAtk += 10;
         ownTarget.statuses.overclockPendingDefPenalty = 5;
@@ -1420,6 +1480,56 @@ export class BattleEngine {
       cardMasterId: definition.id,
       targetUnitId: action.targetUnitId,
     });
+  }
+
+  _hasRemovableBuff(unit) {
+    return unit.atkMod > 0 || unit.defMod > 0 || unit.temporaryAtk > 0 || unit.temporaryDef > 0
+      || (unit.timedAtkBuffs ?? []).some((buff) => buff.amount > 0)
+      || (unit.timedDefBuffs ?? []).some((buff) => buff.amount > 0)
+      || unit.statuses.nextDamageBonus > 0 || unit.statuses.nextDamageReduction > 0
+      || unit.statuses.spareParts || unit.statuses.echoNext > 0
+      || unit.statuses.autoRepairRemaining > 0 || unit.statuses.tpOnNextKill > 0
+      || unit.statuses.predationEvolution;
+  }
+
+  _clearPositiveBattleEffects(unit) {
+    unit.atkMod = Math.min(0, unit.atkMod);
+    unit.defMod = Math.min(0, unit.defMod);
+    unit.temporaryAtk = Math.min(0, unit.temporaryAtk);
+    unit.temporaryDef = Math.min(0, unit.temporaryDef);
+    unit.timedAtkBuffs = (unit.timedAtkBuffs ?? []).filter((buff) => buff.amount <= 0);
+    unit.timedDefBuffs = (unit.timedDefBuffs ?? []).filter((buff) => buff.amount <= 0);
+    unit.statuses.nextDamageBonus = 0;
+    unit.statuses.nextDamageReduction = 0;
+    unit.statuses.spareParts = false;
+    unit.statuses.echoNext = 0;
+    unit.statuses.autoRepairRemaining = 0;
+    unit.statuses.tpOnNextKill = 0;
+    unit.statuses.predationEvolution = false;
+  }
+
+  _hasRemovableDebuff(unit) {
+    return unit.atkMod < 0 || unit.defMod < 0 || unit.temporaryAtk < 0 || unit.temporaryDef < 0
+      || unit.statuses.nextDamagePenalty > 0 || unit.statuses.stunOnNextTurn > 0 || unit.stunnedThisTurn
+      || Boolean(unit.statuses.parasite) || Boolean(unit.statuses.incomingFlatDamage)
+      || unit.statuses.overclockPendingDefPenalty > 0 || unit.statuses.recoilOnNextAttack > 0;
+  }
+
+  _clearNegativeBattleEffects(unit) {
+    unit.atkMod = Math.max(0, unit.atkMod);
+    unit.defMod = Math.max(0, unit.defMod);
+    unit.temporaryAtk = Math.max(0, unit.temporaryAtk);
+    unit.temporaryDef = Math.max(0, unit.temporaryDef);
+    unit.statuses.nextDamagePenalty = 0;
+    unit.statuses.stunOnNextTurn = 0;
+    unit.statuses.parasite = null;
+    unit.statuses.incomingFlatDamage = null;
+    unit.statuses.overclockPendingDefPenalty = 0;
+    unit.statuses.recoilOnNextAttack = 0;
+    if (unit.stunnedThisTurn && !unit.summonedThisTurn) {
+      unit.stunnedThisTurn = false;
+      unit.actionPoints = Math.max(1, unit.actionPoints);
+    }
   }
 
   _checkPlayerLife(player, winnerId, reason) {

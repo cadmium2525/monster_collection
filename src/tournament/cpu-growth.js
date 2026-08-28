@@ -2,7 +2,8 @@ import { RULES } from '../battle/rules.js';
 import { normalizeGrowth } from '../battle/state.js';
 import { chooseShugyoMove, learnableShugyoMoves } from '../battle/shugyo.js';
 
-const MATCH_TP_BUDGET = Object.freeze({ bronze: 5, silver: 6, gold: 7, legend: 8 });
+const MATCH_TP_BUDGET = Object.freeze({ bronze: 5, silver: 6, gold: 8, legend: 10 });
+const MAX_SHUGYO_USES = Object.freeze({ bronze: 1, silver: 1, gold: 1, legend: 2 });
 const TARGET_PRECISION = Object.freeze({ bronze: 0.35, silver: 0.58, gold: 0.82, legend: 1 });
 
 function clone(value) { return structuredClone(value); }
@@ -92,10 +93,11 @@ export function advanceCpuTournamentGrowth({ entrant, masterData, masterIndex, r
     .filter((entry) => ['training', 'shugyo'].includes(entry.definition?.kind));
   const events = [];
   let remainingTp = MATCH_TP_BUDGET[rank] ?? MATCH_TP_BUDGET.bronze;
-  let usedShugyo = false;
+  let usedShugyo = 0;
 
   while (available.length) {
-    const legal = available.filter((entry) => entry.definition.tp <= remainingTp && !(usedShugyo && entry.definition.kind === 'shugyo'));
+    const legal = available.filter((entry) => entry.definition.tp <= remainingTp
+      && !(usedShugyo >= (MAX_SHUGYO_USES[rank] ?? 1) && entry.definition.kind === 'shugyo'));
     if (!legal.length) break;
     const support = rng.weightedChoice(legal, (entry) => entry.definition.kind === 'shugyo'
       ? ({ bronze: 0.72, silver: 0.88, gold: 1, legend: 1.12 }[rank] ?? 0.72)
@@ -104,7 +106,7 @@ export function advanceCpuTournamentGrowth({ entrant, masterData, masterIndex, r
     if (!target) break;
     events.push(applyGrowthCard({ entrant, support, target, growth, masterData, masterIndex, rng, roundIndex }));
     remainingTp -= support.definition.tp;
-    if (support.definition.kind === 'shugyo') usedShugyo = true;
+    if (support.definition.kind === 'shugyo') usedShugyo += 1;
     available.splice(available.indexOf(support), 1);
   }
 

@@ -17,12 +17,75 @@ function useOnUnit(battle, breederId, unit, extraHand = []) {
   return action;
 }
 
-test('all twenty proposed breeder cards are canonical and have explanatory copy', () => {
+test('all twenty-six expansion breeder cards are canonical and have explanatory copy', () => {
   const battle = engine();
   const additions = battle.masterData.breeders.filter((entry) => Number(entry.id.slice(-3)) >= 21);
-  assert.equal(additions.length, 20);
-  assert.deepEqual(additions.map((entry) => entry.id), Array.from({ length: 20 }, (_, index) => `breeder-${String(index + 21).padStart(3, '0')}`));
+  assert.equal(additions.length, 26);
+  assert.deepEqual(additions.map((entry) => entry.id), Array.from({ length: 26 }, (_, index) => `breeder-${String(index + 21).padStart(3, '0')}`));
   assert.equal(additions.every((entry) => entry.effect && entry.tp >= 1), true);
+});
+
+test('counter command cards dispel buffs, cleanse debuffs and build a conditional defense wall', () => {
+  const dispel = engine();
+  const enhanced = placeUnit(dispel, 'p2', 'ゴーレム', 0);
+  enhanced.atkMod = 10;
+  enhanced.timedDefBuffs.push({ amount: 5, remaining: 3 });
+  enhanced.statuses.nextDamageReduction = 0.5;
+  setHand(dispel, 'p1', [card('breeder-041', 'dispel')]);
+  dispel.applyAction(breederAction(dispel, 'breeder-041', (action) => action.targetUnitId === enhanced.id));
+  assert.equal(enhanced.atkMod, 0);
+  assert.equal(enhanced.timedDefBuffs.length, 0);
+  assert.equal(enhanced.statuses.nextDamageReduction, 0);
+
+  const cleanse = engine();
+  const weakened = placeUnit(cleanse, 'p1', 'ヘンガー', 0);
+  weakened.atkMod = -10;
+  weakened.statuses.stunOnNextTurn = 1;
+  weakened.statuses.incomingFlatDamage = { amount: 5, remaining: 2 };
+  useOnUnit(cleanse, 'breeder-044', weakened);
+  assert.equal(weakened.atkMod, 0);
+  assert.equal(weakened.statuses.stunOnNextTurn, 0);
+  assert.equal(weakened.statuses.incomingFlatDamage, null);
+
+  const wall = engine();
+  const ally = placeUnit(wall, 'p1', 'モノリス', 0);
+  const enemy = placeUnit(wall, 'p2', 'ドラゴン', 0);
+  enemy.atkBase = ally.atkBase + 30;
+  const before = effectiveDef(ally);
+  setHand(wall, 'p1', [card('breeder-045', 'reversal-wall')]);
+  wall.applyAction(breederAction(wall, 'breeder-045'));
+  assert.equal(effectiveDef(ally), before + 5);
+});
+
+test('disruption and retreat cards delay fusion, surcharge one move and safely return a base monster', () => {
+  const fusionLock = engine({ firstPlayerId: 'p1' });
+  placeUnit(fusionLock, 'p2', 'ピクシー', 0);
+  fusionLock.player('p2').turnNumber = 4;
+  setHand(fusionLock, 'p2', [card(monsterByName('メタルナー').id, 'locked-material')]);
+  setHand(fusionLock, 'p1', [card('breeder-042', 'fusion-lock')]);
+  fusionLock.applyAction(breederAction(fusionLock, 'breeder-042'));
+  fusionLock.applyAction(fusionLock.getLegalActions().find((action) => action.type === 'end-turn'));
+  assert.equal(fusionLock.player('p2').turnNumber, 5);
+  assert.equal(fusionLock.getLegalActions().some((action) => action.type.startsWith('fusion-')), false);
+
+  const moveLock = engine({ firstPlayerId: 'p1' });
+  const attacker = placeUnit(moveLock, 'p2', 'ヒノトリ', 0);
+  attacker.equippedMoveIds = [moveByName('ヒノトリ', '火炎').id];
+  setHand(moveLock, 'p1', [card('breeder-043', 'move-lock')]);
+  moveLock.applyAction(breederAction(moveLock, 'breeder-043'));
+  moveLock.applyAction(moveLock.getLegalActions().find((action) => action.type === 'end-turn'));
+  const taxed = moveLock.getLegalActions().find((action) => action.type === 'move');
+  assert.equal(taxed.cost, moveByName('ヒノトリ', '火炎').tp + 2);
+  moveLock.applyAction(taxed);
+  assert.equal(moveLock.player('p2').effects.nextTurnMoveSurcharges[0].remaining, 0);
+
+  const retreat = engine();
+  const rescued = placeUnit(retreat, 'p1', 'ワーム', 0, { instanceId: 'rescued-monster' });
+  rescued.atkMod = -10;
+  setHand(retreat, 'p1', [card('breeder-046', 'retreat-card')]);
+  retreat.applyAction(breederAction(retreat, 'breeder-046', (action) => action.targetUnitId === rescued.id));
+  assert.equal(retreat.player('p1').board[0], null);
+  assert.equal(retreat.player('p1').hand.some((entry) => entry.instanceId === 'rescued-monster'), true);
 });
 
 test('frontline reorganization redraws selected hand cards and material search chooses from the top five', () => {

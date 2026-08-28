@@ -47,7 +47,16 @@ export function resolvedMoveTp(player, unit, target, move) {
 
   if (target && hasNormalTrait(target, 'ドラゴン')) cost += 1;
   if (unit.specialForm === 'クレバス') cost = Math.max(2, cost - 1);
+  const surcharge = (player.effects.nextTurnMoveSurcharges ?? [])
+    .find((effect) => effect.activeFromTurn <= player.turnNumber && effect.remaining > 0);
+  if (surcharge) cost += Math.max(0, Number(surcharge.amount) || 0);
   return cost;
+}
+
+export function consumeMoveSurcharge(player) {
+  const surcharge = (player.effects.nextTurnMoveSurcharges ?? [])
+    .find((effect) => effect.activeFromTurn <= player.turnNumber && effect.remaining > 0);
+  if (surcharge) surcharge.remaining = 0;
 }
 
 export function resolvedMovePower(unit, target, move) {

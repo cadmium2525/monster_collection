@@ -77,11 +77,12 @@ function cheapActionOrder(engine, action) {
 }
 
 function topCandidateActions(engine, playerId, limit, options, deadline) {
+  const evaluationLimit = options.candidateEvaluationLimit ?? Math.max(limit * 3, 24);
   const shortlist = uniqueActions(engine.getLegalActions(playerId))
     .filter((action) => action.type !== 'end-turn')
     .filter((action) => typeof options.actionFilter !== 'function' || options.actionFilter(action))
     .sort((a, b) => cheapActionOrder(engine, b) - cheapActionOrder(engine, a) || actionKey(a).localeCompare(actionKey(b)))
-    .slice(0, Math.max(limit, limit * 2));
+    .slice(0, evaluationLimit);
   const scored = [];
   for (const action of shortlist) {
     if (performance.now() >= deadline && scored.length) break;

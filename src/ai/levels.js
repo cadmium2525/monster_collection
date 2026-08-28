@@ -98,14 +98,15 @@ function gold(engine, playerId, options = {}) {
 
 function legend(engine, playerId, options = {}) {
   const searchOptions = {
-    beamWidth: 6,
-    branchLimit: 5,
-    maxDepth: 4,
-    counterWeight: .28,
-    lifeWeight: 8.2,
-    boardWeight: 1.2,
-    costWeight: 1.05,
-    deadline: searchDeadline(options, 55),
+    beamWidth: options.beamWidth ?? 8,
+    branchLimit: options.branchLimit ?? 6,
+    maxDepth: options.maxDepth ?? 5,
+    candidateEvaluationLimit: options.candidateEvaluationLimit ?? 32,
+    counterWeight: .34,
+    lifeWeight: 8.8,
+    boardWeight: 1.28,
+    costWeight: .95,
+    deadline: searchDeadline(options, 85),
   };
   const planned = sequenceChoice(engine, playerId, searchOptions);
   const immediate = bestImmediate(engine, playerId, searchOptions);
@@ -113,31 +114,34 @@ function legend(engine, playerId, options = {}) {
 }
 
 function champion(engine, playerId, options = {}) {
-  const overallDeadline = searchDeadline(options, 140);
+  const overallDeadline = searchDeadline(options, 240);
   const searchOptions = {
-    beamWidth: options.beamWidth ?? 9,
-    branchLimit: options.branchLimit ?? 6,
-    maxDepth: options.maxDepth ?? 5,
-    counterWeight: .34,
-    lifeWeight: 9,
-    boardWeight: 1.3,
-    costWeight: .9,
+    beamWidth: options.beamWidth ?? 12,
+    branchLimit: options.branchLimit ?? 8,
+    maxDepth: options.maxDepth ?? 7,
+    candidateEvaluationLimit: options.candidateEvaluationLimit ?? 48,
+    counterWeight: .48,
+    lifeWeight: 10.5,
+    boardWeight: 1.42,
+    costWeight: .78,
     deadline: overallDeadline,
     overallDeadline,
-    replyWidth: 3,
-    replyBeamWidth: options.replyBeamWidth ?? 4,
-    replyBranchLimit: options.replyBranchLimit ?? 3,
-    replyDepth: options.replyDepth ?? 3,
-    continuationBeamWidth: options.continuationBeamWidth ?? 3,
-    continuationBranchLimit: options.continuationBranchLimit ?? 3,
-    continuationDepth: options.continuationDepth ?? 2,
+    replyWidth: options.replyWidth ?? 5,
+    replyBeamWidth: options.replyBeamWidth ?? 6,
+    replyBranchLimit: options.replyBranchLimit ?? 5,
+    replyDepth: options.replyDepth ?? 4,
+    continuationBeamWidth: options.continuationBeamWidth ?? 5,
+    continuationBranchLimit: options.continuationBranchLimit ?? 5,
+    continuationDepth: options.continuationDepth ?? 3,
+    futureWeight: options.futureWeight ?? .66,
+    hiddenReplyWeight: options.hiddenReplyWeight ?? .62,
   };
   const immediate = bestImmediate(engine, playerId, searchOptions);
   if (performance.now() >= overallDeadline) return immediate;
   const rootDeadline = Number.isFinite(overallDeadline)
     ? performance.now() + Math.max(1, overallDeadline - performance.now()) * .42
     : Number.POSITIVE_INFINITY;
-  const lines = searchTurnSequences(engine, playerId, { ...searchOptions, deadline: rootDeadline }).slice(0, 3);
+  const lines = searchTurnSequences(engine, playerId, { ...searchOptions, deadline: rootDeadline }).slice(0, 4);
   if (!lines.length) return immediate;
   const evaluated = [];
   for (let index = 0; index < lines.length; index += 1) {

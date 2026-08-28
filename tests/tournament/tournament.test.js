@@ -1,8 +1,8 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { TournamentRun, ROUND_LABELS, summarizeCpuTournamentGrowth } from '../../src/tournament/index.js';
+import { advanceCpuTournamentGrowth, TournamentRun, ROUND_LABELS, summarizeCpuTournamentGrowth } from '../../src/tournament/index.js';
 import { createBaselineDeck } from '../../src/data/default-decks.js';
-import { masterData } from '../helpers.js';
+import { card, masterData, masterIndex, monsterByName } from '../helpers.js';
 
 function playerDeck() {
   return { deckId: 'deck-1', deckName: 'テスト40', ownerDisplayName: 'テスター', cards: createBaselineDeck(masterData, 'player') };
@@ -84,6 +84,31 @@ test('CPU bracket growth is reproducible from the tournament seed', () => {
     return snapshots;
   };
   assert.deepEqual(collect(), collect());
+});
+
+test('Legend virtual winners can invest the full 10TP into two shugyo cards', () => {
+  const monster = monsterByName('ドラゴン');
+  const entrant = {
+    cards: [
+      card(monster.id, 'legend-growth-monster'),
+      card('shugyo-attack', 'legend-shugyo-a'),
+      card('shugyo-defense', 'legend-shugyo-b'),
+    ],
+    tournamentGrowth: {},
+    growthHistory: [],
+    virtualMatchWins: 0,
+  };
+  const advanced = advanceCpuTournamentGrowth({
+    entrant,
+    masterData,
+    masterIndex,
+    rank: 'legend',
+    roundIndex: 1,
+    rng: { weightedChoice: (items) => items[0], int: (min) => min },
+  });
+  assert.equal(advanced.growthHistory.length, 2);
+  assert.equal(advanced.growthHistory.every((event) => event.cardMasterId.startsWith('shugyo-')), true);
+  assert.equal(advanced.virtualMatchWins, 1);
 });
 
 test('loss or draw saves elimination state and does not grant qualification', () => {

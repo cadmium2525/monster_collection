@@ -31,6 +31,8 @@ export function createPlayerState(definition, cards, rng, growth = {}) {
     effects: {
       nextOwnMaxTpBonuses: [],
       nextTurnMaxTpPenalties: [],
+      nextTurnFusionLocks: [],
+      nextTurnMoveSurcharges: [],
       factionMoveDiscount: {},
       tpDebt: 0,
       nextFusionBuff: false,

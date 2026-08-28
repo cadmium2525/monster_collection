@@ -9,7 +9,7 @@ import {
   createAiPolicy,
   searchPublicResponseSequences,
 } from '../../src/ai/index.js';
-import { engine, masterIndex, moveByName, placeUnit } from '../helpers.js';
+import { card, engine, masterIndex, moveByName, placeUnit, setHand } from '../helpers.js';
 
 test('every AI level returns a legal action without changing battle state', () => {
   for (const level of AI_LEVELS) {
@@ -108,6 +108,27 @@ test('Champion keeps an immediate tactical floor when its deep-search clock is e
   const action = chooseAiAction('champion', battle, 'p1', new SeededRng('champion-free-attack'), { timeBudgetMs: 1 });
   assert.equal(action.type, 'move');
   assert.equal(action.targetPlayerId, 'p2');
+});
+
+test('Champion recognizes a public enemy enhancement and uses its counter card', () => {
+  const battle = engine({ seed: 'champion-dispel', firstPlayerId: 'p1' });
+  const own = placeUnit(battle, 'p1', 'モノリス', 0, { actionPoints: 0 });
+  own.summonedThisTurn = true;
+  const threat = placeUnit(battle, 'p2', 'ドラゴン', 0);
+  threat.atkMod = 30;
+  threat.statuses.nextDamageBonus = .3;
+  setHand(battle, 'p1', [card('breeder-041', 'champion-counter')]);
+  const action = chooseAiAction('champion', battle, 'p1', new SeededRng('champion-counter'), {
+    deterministicSearch: true,
+    beamWidth: 5,
+    branchLimit: 4,
+    maxDepth: 3,
+    replyDepth: 2,
+    continuationDepth: 1,
+  });
+  assert.equal(action.type, 'breeder');
+  assert.equal(action.breederId, 'breeder-041');
+  assert.equal(action.targetUnitId, threat.id);
 });
 
 test('Silver takes a free attack instead of ending a favorable turn', () => {

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
 import { CardStealSession } from '../../src/reward/CardStealSession.js';
 import { SHOWCASE_VARIANTS, boosterPackDisclosure, generateBoosterPack } from '../../src/gacha/pack-generator.js';
-import { BOOSTER_MONSTER_IDS, TROPHY_BREEDER_IDS, acquisitionOrigin } from '../../src/gacha/acquisition.js';
+import { BOOSTER_MONSTER_IDS, TROPHY_BREEDER_IDS, acquisitionOrigin, isPackEligible } from '../../src/gacha/acquisition.js';
 import { applyDiamondReward, applyPackPurchase, defaultEconomyState, normalizeEconomyState } from '../../src/gacha/economy-state.js';
 import { SeededRng } from '../../src/core/rng.js';
 import { generateCpuDeck } from '../../src/tournament/deck-generator.js';
@@ -130,6 +130,31 @@ test('normal CPU decks keep trophy breeders obtainable but never generate booste
     }
   }
   assert.equal(trophySeen, true);
+});
+
+test('all six counter commands are available from boosters, normal CPUs and post-win capture', () => {
+  const counterIds = Array.from({ length: 6 }, (_, index) => `breeder-${String(index + 41).padStart(3, '0')}`);
+  assert.equal(counterIds.every((id) => isPackEligible(masterIndex.cards.get(id))), true);
+  const disclosure = boosterPackDisclosure({ masterIndex, faction: '無機', openedCount: 1 });
+  assert.equal(counterIds.every((id) => disclosure.cards.some(({ definition }) => definition.id === id)), true);
+
+  const generated = generateCpuDeck({ masterIndex, rank: 'legend', theme: '混合', rng: new SeededRng('counter-command-cpu') });
+  assert.equal(generated.cards.some((entry) => counterIds.includes(entry.masterId)), true);
+
+  const defeated = legalDeck('counter-capture');
+  defeated[0] = { ...defeated[0], masterId: 'breeder-041' };
+  let offered = false;
+  for (let seed = 0; seed < 100 && !offered; seed += 1) {
+    const session = new CardStealSession({
+      playerCards: legalDeck(`counter-player-${seed}`),
+      defeatedCards: defeated,
+      masterIndex,
+      deckId: `counter-player-${seed}`,
+      seed: `counter-offer:${seed}`,
+    });
+    offered = session.getState().offered.some((entry) => entry.masterId === 'breeder-041');
+  }
+  assert.equal(offered, true);
 });
 
 test('pack purchase persists five assets before reveal and operation ids prevent double spending or rewards', () => {
