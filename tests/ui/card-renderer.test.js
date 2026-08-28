@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, statSync } from 'node:fs';
-import { cardArtPlacement, cardDisplayStats, detailMoveEntries, isFoilAppearance, resolvedTrait } from '../../src/ui/card-renderer.js';
+import { cardArtPlacement, cardDisplayStats, detailMoveEntries, isFoilAppearance, monsterPortraitPresentation, resolvedTrait } from '../../src/ui/card-renderer.js';
 import { shugyoMovePoolType, shugyoMoveWeight } from '../../src/battle/shugyo.js';
 import { masterData, masterIndex, monsterByName } from '../helpers.js';
 
@@ -120,6 +120,22 @@ test('card art placement keeps legacy art below the name band and uses standalon
     className: 'support-card-art standalone-support-art',
     style: '--support-art:url("./assets/images/breeders/breeder-040.webp")',
   });
+});
+
+test('champion portraits retain standalone and showcase artwork instead of falling back to Monolith', () => {
+  const chronogear = masterIndex.monsters.get('monster-019');
+  const base = monsterPortraitPresentation(chronogear, { masterId: chronogear.id, artVariantId: 'base' });
+  assert.match(base.className, /standalone-monster-art/);
+  assert.match(base.className, /booster-monster-art/);
+  assert.equal(base.style, '--monster-art:url("./assets/images/booster/monster-019.webp")');
+
+  const showcase = monsterPortraitPresentation(chronogear, { masterId: chronogear.id, artVariantId: 'showcase-inorganic-01' });
+  assert.match(showcase.className, /standalone-monster-art/);
+  assert.match(showcase.className, /showcase-monster-art/);
+  assert.equal(showcase.style, '--monster-art:url("./assets/images/showcase/showcase-inorganic-01.webp")');
+
+  const css = readFileSync(new URL('../../styles.css', import.meta.url), 'utf8');
+  assert.match(css, /\.champion-art \.monster-portrait\.standalone-monster-art\s*\{[^}]*var\(--monster-art\)[^}]*background-size: 100% 100%,cover/s);
 });
 
 test('every showcase special fusion is Foil even when its main asset has a normal finish', () => {

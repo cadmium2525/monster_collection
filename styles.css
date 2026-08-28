@@ -1020,6 +1020,11 @@ button:disabled { opacity: .38; cursor: not-allowed; }
 .champion-panel { position: relative; min-height: 0; overflow: hidden; display: grid; grid-template-columns: 76px minmax(90px,150px) minmax(0,1fr); align-items: center; gap: clamp(10px,2vw,25px); padding: clamp(12px,2vw,24px); border: 1px solid rgba(232,186,98,.43); border-radius: 16px; background: linear-gradient(112deg,rgba(48,31,14,.92),rgba(7,18,31,.9) 62%), radial-gradient(circle at 70% 40%,rgba(232,186,98,.15),transparent); box-shadow: inset 0 0 45px rgba(232,186,98,.055); }
 .champion-crown { color: var(--gold); font-size: clamp(50px,8vw,92px); text-shadow: 0 0 24px rgba(232,186,98,.38); text-align: center; }
 .champion-art .monster-portrait { width: min(100%,150px); aspect-ratio: .82; border: 2px solid color-mix(in srgb,var(--faction) 65%,#e7c77f); border-radius: 10px; background-image: linear-gradient(180deg,transparent 58%,rgba(2,7,13,.72)),url("./assets/images/monster-atlas.webp"); background-repeat: no-repeat; background-size: 100% 100%,600% 300%; background-position: center,var(--art-x) var(--art-y); box-shadow: 0 10px 24px rgba(0,0,0,.48),inset 0 0 18px rgba(255,255,255,.08); }
+.champion-art .monster-portrait.standalone-monster-art {
+  background-image: linear-gradient(180deg,transparent 58%,rgba(2,7,13,.72)),var(--monster-art);
+  background-size: 100% 100%,cover;
+  background-position: center,center top;
+}
 .champion-placeholder { display: grid; place-items: center; height: 140px; border: 1px dashed var(--gold); border-radius: 10px; color: var(--gold); font-size: 48px; }
 .champion-copy h2 { margin: 3px 0; color: #fff0c3; font-size: clamp(19px,3vw,35px); }
 .champion-copy strong { color: var(--gold); font-size: 13px; }

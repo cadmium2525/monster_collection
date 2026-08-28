@@ -206,11 +206,19 @@ export function renderCard({
   return node;
 }
 
-export function renderMonsterPortrait(definition, label = definition.name) {
-  const art = cardArtPlacement(definition);
+export function monsterPortraitPresentation(definition, cardAsset = null) {
+  const art = cardArtPlacement(definition, null, cardAsset);
+  return {
+    className: `monster-portrait ${art.className} ${FACTION_CLASS[definition.faction] ?? ''}`.trim(),
+    style: art.style,
+  };
+}
+
+export function renderMonsterPortrait(definition, label = definition.name, cardAsset = null) {
+  const presentation = monsterPortraitPresentation(definition, cardAsset);
   return el('div', {
-    className: `monster-portrait ${FACTION_CLASS[definition.faction] ?? ''}`,
-    attrs: { role: 'img', 'aria-label': label, style: art.style },
+    className: presentation.className,
+    attrs: { role: 'img', 'aria-label': label, style: presentation.style },
   });
 }
 
