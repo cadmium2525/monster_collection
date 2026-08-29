@@ -14,7 +14,7 @@ test('read-only admin catalog exposes every base card, special fusion and showca
   assert.equal(entries.filter((entry) => entry.kind === 'fusion').length, masterIndex.data.fusions.length);
   assert.equal(entries.filter((entry) => entry.kind === 'showcase').length, 24);
   assert.equal(entries.filter((entry) => entry.kind === 'fusion-showcase').length, masterIndex.data.fusions.length);
-  assert.equal(entries.length, 177);
+  assert.equal(entries.length, 201);
   for (const definition of masterIndex.cards.values()) {
     assert.ok(entries.some((entry) => entry.id === definition.id), `${definition.id} is visible to administrators`);
   }

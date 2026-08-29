@@ -9,6 +9,7 @@
     "expectedMonsterCount": 24,
     "expectedMoveCount": 216,
     "expectedBreederCount": 52,
+    "expectedFusionCount": 48,
     "boosterExpansion": "First Flight 2026-08-26"
   },
   "monsters": [
@@ -3369,6 +3370,138 @@
       "powerIndex": 90.74587530748983,
       "verdict": "基準帯",
       "watch": "通常"
+    },
+    {
+      "id": "fusion-037",
+      "main": "クロノギア",
+      "material": "ゴースト",
+      "name": "ファントムギア",
+      "trait": "各ターン最初の被ダメージを25%軽減。その攻撃後にLIFE50%以下なら、次の自ターンの行動権+1",
+      "archetype": "防御・再行動",
+      "powerIndex": 116,
+      "verdict": "強め監視",
+      "watch": "監視"
+    },
+    {
+      "id": "fusion-038",
+      "main": "クロノギア",
+      "material": "アルケミア",
+      "name": "アルケノクロック",
+      "trait": "各ターン最初の技TP-1（最低1）。TP3以上の技使用後、次の被ダメージを25%軽減",
+      "archetype": "TP効率・防御",
+      "powerIndex": 117,
+      "verdict": "強め監視",
+      "watch": "監視"
+    },
+    {
+      "id": "fusion-039",
+      "main": "アルケミア",
+      "material": "ヒノトリ",
+      "name": "ソルフェニキア",
+      "trait": "各ターン最初の技TP-1（最低1）。初回撃破時にLIFE20%で一度だけ復活",
+      "archetype": "TP効率・復活",
+      "powerIndex": 119,
+      "verdict": "強め監視",
+      "watch": "監視"
+    },
+    {
+      "id": "fusion-040",
+      "main": "アルケミア",
+      "material": "ミストレイ",
+      "name": "ネビュラミア",
+      "trait": "各ターン最初の技はDEF10無視。ダメージを与えた場合、自身LIFE5回復",
+      "archetype": "貫通・回復",
+      "powerIndex": 114,
+      "verdict": "強め監視",
+      "watch": "監視"
+    },
+    {
+      "id": "fusion-041",
+      "main": "ミストレイ",
+      "material": "メタルナー",
+      "name": "アストラレイ",
+      "trait": "各ターン最初の技TP-1（最低1）かつDEF10無視",
+      "archetype": "TP効率・貫通",
+      "powerIndex": 118,
+      "verdict": "強め監視",
+      "watch": "監視"
+    },
+    {
+      "id": "fusion-042",
+      "main": "ミストレイ",
+      "material": "ノクティス",
+      "name": "エクリプスレイ",
+      "trait": "LIFE50%超では被ダメージ20%軽減。LIFE50%以下では与ダメージ25%増加",
+      "archetype": "変転・攻防",
+      "powerIndex": 116,
+      "verdict": "強め監視",
+      "watch": "監視"
+    },
+    {
+      "id": "fusion-043",
+      "main": "ノクティス",
+      "material": "ガリ",
+      "name": "ノクスオラクル",
+      "trait": "自ターン開始時、LIFE50%超なら次の技ダメージ+20%、LIFE50%以下ならLIFE10%回復",
+      "archetype": "予言・攻防",
+      "powerIndex": 115,
+      "verdict": "強め監視",
+      "watch": "監視"
+    },
+    {
+      "id": "fusion-044",
+      "main": "ノクティス",
+      "material": "ヴォルファング",
+      "name": "フェンリルノクス",
+      "trait": "LIFE50%以下で与ダメージ25%増加。敵撃破時TP1回復",
+      "archetype": "逆境・撃破",
+      "powerIndex": 117,
+      "verdict": "強め監視",
+      "watch": "監視"
+    },
+    {
+      "id": "fusion-045",
+      "main": "ヴォルファング",
+      "material": "ゴーレム",
+      "name": "ガイアヴォルフ",
+      "trait": "被ダメージごとに次の技ダメージ+10%（最大30%）。技使用時に全て消費",
+      "archetype": "反撃・蓄積",
+      "powerIndex": 114,
+      "verdict": "強め監視",
+      "watch": "監視"
+    },
+    {
+      "id": "fusion-046",
+      "main": "ヴォルファング",
+      "material": "グラトン",
+      "name": "ベヒモスファング",
+      "trait": "敵撃破時、LIFE10回復・TP1回復・ATK+3（ATK上昇は最大+9）",
+      "archetype": "撃破・成長",
+      "powerIndex": 118,
+      "verdict": "強め監視",
+      "watch": "監視"
+    },
+    {
+      "id": "fusion-047",
+      "main": "グラトン",
+      "material": "モノリス",
+      "name": "オベリスクグラトン",
+      "trait": "20以上の被ダメージを25%軽減。軽減量を最大15まで蓄積し、次の技ダメージへ加算",
+      "archetype": "防御・反射",
+      "powerIndex": 120,
+      "verdict": "強め監視",
+      "watch": "監視"
+    },
+    {
+      "id": "fusion-048",
+      "main": "グラトン",
+      "material": "クロノギア",
+      "name": "クロノヴォア",
+      "trait": "各ターン最初の技でダメージを与えた時、LIFE8%回復。敵撃破時TP1回復",
+      "archetype": "捕食・継戦",
+      "powerIndex": 117,
+      "verdict": "強め監視",
+      "watch": "監視"
     }
   ],
   "shugyoPools": {

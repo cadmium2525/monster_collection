@@ -26,6 +26,7 @@ import {
   defenseIgnore,
   hasNormalTrait,
   outgoingDamageMultiplier,
+  specialFlatDamageBonus,
   resolvedMovePower,
   resolvedMoveTp,
   updateConsecutiveTarget,
@@ -677,6 +678,8 @@ export class BattleEngine {
       main.statuses.hamKillBonus = 0;
       main.statuses.specialReviveUsed = false;
       main.statuses.firstIncomingUsed = false;
+      main.statuses.phantomReducedThisHit = false;
+      main.statuses.phantomExtraActionPending = false;
       main.statuses.glaciaCharged = false;
       main.statuses.temporaryTurnDamageBonus = 0;
       main.statuses.gallionGuard = false;
@@ -734,6 +737,7 @@ export class BattleEngine {
     player.metrics.attacks += 1;
     const echoRatio = unit.statuses.echoNext ?? 0;
     const recoilDamage = unit.statuses.recoilOnNextAttack ?? 0;
+    const flatDamageBonus = specialFlatDamageBonus(unit);
 
     if (move.power == null) {
       unit.statuses.formAlphaUsed = true;
@@ -748,7 +752,7 @@ export class BattleEngine {
     if (!target) {
       const attack = effectiveAtk(unit);
       const multiplier = outgoingDamageMultiplier(unit, null, move, opponent);
-      const damage = Math.max(0, Math.floor(attack * (power / 100) * multiplier));
+      const damage = Math.max(0, Math.floor(attack * (power / 100) * multiplier) + flatDamageBonus);
       const echoDamage = echoRatio > 0 ? Math.max(0, Math.floor(damage * echoRatio)) : 0;
       const totalDamage = damage + echoDamage;
       opponent.life -= totalDamage;
@@ -776,7 +780,7 @@ export class BattleEngine {
     const effectiveDefense = Math.max(1, defense - ignored);
     const baseDamage = Math.max(0, Math.floor(attack * (power / 100) - effectiveDefense));
     const multiplier = outgoingDamageMultiplier(unit, target, move, opponent);
-    const rawDamage = Math.max(0, Math.floor(baseDamage * multiplier));
+    const rawDamage = Math.max(0, Math.floor(baseDamage * multiplier) + flatDamageBonus);
     const damageResult = this._damageUnit(opponent, target, rawDamage, unit);
     let echoDamage = 0;
     if (echoRatio > 0 && !damageResult.defeated && damageResult.actual > 0) {
@@ -859,6 +863,12 @@ export class BattleEngine {
       defeated = false;
       overflow = 0;
       triggers.push('ガルーダ');
+    } else if (defeated && unit.specialForm === 'ソルフェニキア' && !unit.statuses.specialReviveUsed) {
+      unit.statuses.specialReviveUsed = true;
+      unit.life = roundedPercent(unit.maxLife, 0.2);
+      defeated = false;
+      overflow = 0;
+      triggers.push('ソルフェニキア');
     }
 
     const actual = Math.min(before, damage);
@@ -868,6 +878,10 @@ export class BattleEngine {
   }
 
   _onAttacked(unit, attacker, actualDamage, defeated) {
+    if (unit.statuses.phantomReducedThisHit) {
+      if (actualDamage > 0 && !defeated && lifeRatio(unit) <= 0.5) unit.statuses.phantomExtraActionPending = true;
+      unit.statuses.phantomReducedThisHit = false;
+    }
     if (hasNormalTrait(unit, 'デュラハン') && actualDamage > 0 && !defeated) unit.statuses.knightWill = true;
     if (unit.specialForm === 'オキクサン' && attacker && actualDamage > 0) {
       const applied = unit.statuses.specialCounters.okikuAtkLoss ?? 0;
@@ -908,6 +922,10 @@ export class BattleEngine {
         unit.statuses.specialCounters.usubaDef = applied + amount;
       }
     }
+    if (unit.specialForm === 'ガイアヴォルフ' && actualDamage > 0 && !defeated) {
+      unit.statuses.specialCounters.gaiaRetaliation = Math.min(0.3,
+        (unit.statuses.specialCounters.gaiaRetaliation ?? 0) + 0.1);
+    }
     if (unit.specialForm === 'オチムシャ' && !defeated && lifeRatio(unit) <= 0.5 && !unit.statuses.ochimushaTriggered) {
       unit.statuses.ochimushaTriggered = true;
       unit.atkMod += 10;
@@ -937,6 +955,10 @@ export class BattleEngine {
     }
 
     if (move.effect.includes('自身LIFE5回復') && (!move.effect.includes('寄生中') || target?.statuses.parasite)) this._heal(unit, 5);
+    if (unit.movesUsedThisTurn === 0 && result.actual > 0 && unit.specialForm === 'ネビュラミア') this._heal(unit, 5);
+    if (unit.movesUsedThisTurn === 0 && result.actual > 0 && unit.specialForm === 'クロノヴォア') {
+      this._heal(unit, roundedPercent(unit.maxLife, 0.08));
+    }
     if (move.effect.includes('使用後、自身DEF-5')) applyDefDebuff(unit, 5);
     if (move.effect.includes('使用後、自身ATK-5')) applyAtkDebuff(unit, 5);
     if (move.effect.includes('使用後、自身DEF+5')) applyDefBuff(unit, 5);
@@ -968,6 +990,18 @@ export class BattleEngine {
       }
       if (unit.specialForm === 'サクラチル') this._heal(unit, roundedPercent(unit.maxLife, 0.25));
       if (unit.specialForm === 'エンドブリンガー') unit.atkMod += 8;
+      if (['フェンリルノクス', 'ベヒモスファング', 'クロノヴォア'].includes(unit.specialForm)) {
+        player.tp = Math.min(player.maxTp, player.tp + 1);
+      }
+      if (unit.specialForm === 'ベヒモスファング') {
+        this._heal(unit, 10);
+        const applied = unit.statuses.specialCounters.behemothAtk ?? 0;
+        const amount = Math.min(3, 9 - applied);
+        if (amount > 0) {
+          unit.atkMod += amount;
+          unit.statuses.specialCounters.behemothAtk = applied + amount;
+        }
+      }
     }
   }
 
@@ -1000,6 +1034,9 @@ export class BattleEngine {
       }
     }
     if (unit.specialForm === 'ガリオン' && unit.movesUsedThisTurn + 1 >= 2) unit.statuses.gallionGuard = true;
+    if (unit.specialForm === 'アルケノクロック' && move.tp >= 3) {
+      unit.statuses.nextDamageReduction = Math.max(unit.statuses.nextDamageReduction, 0.25);
+    }
     void defeatedTarget;
   }
 
@@ -1009,6 +1046,8 @@ export class BattleEngine {
     unit.statuses.echoNext = 0;
     unit.statuses.recoilOnNextAttack = 0;
     unit.statuses.tpOnNextKill = 0;
+    if (unit.specialForm === 'ガイアヴォルフ') unit.statuses.specialCounters.gaiaRetaliation = 0;
+    if (unit.specialForm === 'オベリスクグラトン') unit.statuses.specialCounters.obeliskCharge = 0;
   }
 
   _selfDamage(owner, unit, amount) {
@@ -1076,6 +1115,10 @@ export class BattleEngine {
     }
 
     for (const unit of livingUnits(player)) {
+      if (unit.statuses.phantomExtraActionPending) {
+        if (!unit.stunnedThisTurn) unit.actionPoints += 1;
+        unit.statuses.phantomExtraActionPending = false;
+      }
       if (hasNormalTrait(unit, 'ガリ') && unit.life >= unit.maxLife) {
         const current = unit.statuses.specialCounters.gariBlessing ?? 0;
         const amount = Math.min(5, 10 - current);
@@ -1096,6 +1139,10 @@ export class BattleEngine {
       if (unit.specialForm === 'ベニヒメソウ') {
         const healed = this._heal(unit, roundedPercent(unit.maxLife, 0.08));
         if (healed > 0) unit.statuses.benihimeCharged = true;
+      }
+      if (unit.specialForm === 'ノクスオラクル') {
+        if (lifeRatio(unit) > 0.5) unit.statuses.nextDamageBonus = Math.max(unit.statuses.nextDamageBonus, 0.2);
+        else this._heal(unit, roundedPercent(unit.maxLife, 0.1));
       }
     }
   }

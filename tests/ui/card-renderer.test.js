@@ -185,8 +185,8 @@ test('every showcase special fusion is Foil even when its main asset has a norma
   assert.equal(isFoilAppearance({ id: 'breeder-001', kind: 'breeder' }, null, { finish: 'foil' }), false);
 });
 
-test('all thirty-six special fusion cells are valid standalone WebP assets', () => {
-  for (let number = 1; number <= 36; number += 1) {
+test('all forty-eight special fusion cells are valid standalone WebP assets', () => {
+  for (let number = 1; number <= 48; number += 1) {
     const id = String(number).padStart(3, '0');
     const url = new URL(`../../assets/images/special-fusions/fusion-${id}.webp`, import.meta.url);
     const bytes = readFileSync(url);
@@ -196,8 +196,8 @@ test('all thirty-six special fusion cells are valid standalone WebP assets', () 
   }
 });
 
-test('all thirty-six premium special-fusion illustrations are optimized standalone WebP assets', () => {
-  for (let number = 1; number <= 36; number += 1) {
+test('all forty-eight premium special-fusion illustrations are optimized standalone WebP assets', () => {
+  for (let number = 1; number <= 48; number += 1) {
     const id = String(number).padStart(3, '0');
     const url = new URL(`../../assets/images/showcase-fusions/showcase-fusion-${id}.webp`, import.meta.url);
     const bytes = readFileSync(url);

@@ -6,7 +6,9 @@
 
 `images/special-fusion-atlas-v1.webp` is the original source sheet for `fusion-001` through `fusion-036` in master order. Its six row heights are not uniform (`234 / 235 / 230 / 205 / 178 / 172px`), so it is retained for provenance but is no longer sampled with CSS atlas coordinates.
 
-`images/special-fusions/fusion-001.webp` through `fusion-036.webp` are the runtime illustrations cropped at the source sheet's measured row boundaries. `fusion-014.webp` uses the dedicated full-bleed Blue Drill replacement from `images/blue-drill-v2.webp`. Every special form therefore loads one standalone image without adjacent-cell bleed.
+`images/special-fusions/fusion-001.webp` through `fusion-048.webp` are standalone runtime illustrations. The first 36 are cropped at the legacy source sheet's measured row boundaries (`fusion-014` uses the dedicated full-bleed Blue Drill replacement); `fusion-037` through `fusion-048` are native vertical illustrations for the second-generation monsters. Every form therefore loads one image without adjacent-cell bleed. Matching premium alternates are stored as `images/showcase-fusions/showcase-fusion-001.webp` through `showcase-fusion-048.webp`.
+
+The 12 second-generation forms use built-in ImageGen in two passes: a regular fusion constrained by the main and material references, followed by a showcase edit constrained to the completed regular design. Their exact design briefs and generated-source mapping are recorded in `images/special-fusions/GENERATION_037_048.md`.
 
 `images/support-card-atlas-v1.webp` is an original 5-by-5 atlas. Cells 1–5 map to `growthCards` master order, followed by `breeder-001` through `breeder-020`. All card names, TP, effects, and changing game state remain HTML.
 

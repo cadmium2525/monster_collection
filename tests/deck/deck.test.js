@@ -9,7 +9,7 @@ test('master data contains all canonical records', () => {
   assert.equal(masterData.monsters.length, 24);
   assert.equal(masterData.moves.length, 216);
   assert.equal(masterData.breeders.length, 52);
-  assert.equal(masterData.fusions.length, 36);
+  assert.equal(masterData.fusions.length, 48);
   for (const monster of masterData.monsters) {
     const moves = masterData.moves.filter((move) => move.monsterName === monster.name);
     assert.equal(moves.length, 9, monster.name);

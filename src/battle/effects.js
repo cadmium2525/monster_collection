@@ -43,6 +43,7 @@ export function resolvedMoveTp(player, unit, target, move) {
   cost -= player.effects.factionMoveDiscount[unit.faction] ?? 0;
 
   if (unit.specialForm === 'ラブラブセイジン' && firstMove) cost -= 1;
+  if (['アルケノクロック', 'ソルフェニキア', 'アストラレイ'].includes(unit.specialForm) && firstMove) cost -= 1;
   cost = Math.max(1, cost);
 
   if (target && hasNormalTrait(target, 'ドラゴン')) cost += 1;
@@ -84,6 +85,7 @@ export function defenseIgnore(player, unit, target, move) {
   if (move.effect.includes('追加でDEF5無視')) ignore += 5;
   if (move.effect.includes('追加でDEF10無視')) ignore += 10;
   if (move.name === 'デスゲート' && lifeRatio(target) <= 0.5) ignore += 5;
+  if (['ネビュラミア', 'アストラレイ'].includes(unit.specialForm) && unit.movesUsedThisTurn === 0) ignore += 10;
   const breederIgnore = unit.statuses.vsCreationDefIgnore;
   if (breederIgnore) {
     ignore += typeof breederIgnore === 'number'
@@ -130,7 +132,16 @@ export function outgoingDamageMultiplier(unit, target, move, opponent) {
     const minimum = Math.min(...livingUnits(opponent).map((candidate) => effectiveDef(candidate)));
     if (effectiveDef(target) === minimum) multiplier *= 1.5;
   }
+  if (special === 'エクリプスレイ' && lowSelf) multiplier *= 1.25;
+  if (special === 'フェンリルノクス' && lowSelf) multiplier *= 1.25;
+  if (special === 'ガイアヴォルフ') multiplier *= 1 + Math.min(0.3, unit.statuses.specialCounters.gaiaRetaliation ?? 0);
   return multiplier;
+}
+
+export function specialFlatDamageBonus(unit) {
+  return unit.specialForm === 'オベリスクグラトン'
+    ? Math.max(0, Math.min(15, Number(unit.statuses.specialCounters.obeliskCharge) || 0))
+    : 0;
 }
 
 export function applyIncomingModifiers(unit, rawDamage) {
@@ -178,6 +189,24 @@ export function applyIncomingModifiers(unit, rawDamage) {
   if (unit.specialForm === 'ジュラスウォール' && lifeRatio(unit) >= 0.7) {
     damage = Math.floor(damage * 0.7);
     triggers.push('ジュラスウォール');
+  }
+  if (unit.specialForm === 'ファントムギア' && !unit.statuses.firstIncomingUsed) {
+    damage = Math.floor(damage * 0.75);
+    unit.statuses.firstIncomingUsed = true;
+    unit.statuses.phantomReducedThisHit = true;
+    triggers.push('ファントムギア');
+  }
+  if (unit.specialForm === 'エクリプスレイ' && lifeRatio(unit) > 0.5) {
+    damage = Math.floor(damage * 0.8);
+    triggers.push('エクリプスレイ');
+  }
+  if (unit.specialForm === 'オベリスクグラトン' && damage >= 20) {
+    const reduced = Math.floor(damage * 0.75);
+    const prevented = Math.max(0, damage - reduced);
+    damage = reduced;
+    unit.statuses.specialCounters.obeliskCharge = Math.min(15,
+      (unit.statuses.specialCounters.obeliskCharge ?? 0) + prevented);
+    triggers.push(`オベリスクグラトン（蓄積${prevented}）`);
   }
   if (unit.statuses.gallionGuard) {
     damage = Math.floor(damage * 0.7);

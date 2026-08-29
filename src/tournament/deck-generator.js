@@ -32,7 +32,13 @@ function monsterDefinitionByName(masterIndex, name) {
 }
 
 function chooseTargetRecipes(masterIndex, theme, count, rng) {
-  const all = masterIndex.data.fusions;
+  // Normal tournament CPUs may carry capture-only cards, but booster monsters
+  // remain player assets. Therefore their deliberately targeted fusion routes
+  // must also be buildable entirely from normal-CPU-eligible monsters.
+  const all = masterIndex.data.fusions.filter((fusion) => (
+    isNormalCpuEligible(monsterDefinitionByName(masterIndex, fusion.main))
+    && isNormalCpuEligible(monsterDefinitionByName(masterIndex, fusion.material))
+  ));
   const themed = theme === '混合' ? all : all.filter((fusion) => {
     const main = monsterDefinitionByName(masterIndex, fusion.main);
     const material = monsterDefinitionByName(masterIndex, fusion.material);

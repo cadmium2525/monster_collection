@@ -137,6 +137,8 @@ export function createUnit({ unitId, card, monster, growth, masterIndex, slot })
       moltUsed: false,
       specialReviveUsed: false,
       firstIncomingUsed: false,
+      phantomReducedThisHit: false,
+      phantomExtraActionPending: false,
       normalFirstIncomingUsedThisTurn: false,
       glaciaCharged: false,
       temporaryTurnDamageBonus: 0,
