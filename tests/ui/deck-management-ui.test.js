@@ -60,6 +60,15 @@ test('deck editing keeps tap-to-swap and adds long-press card details', () => {
   assert.match(longPress, /CARD_DETAILS_LONG_PRESS_MS = 520/);
   assert.match(longPress, /suppressNextClick = true/);
   assert.match(longPress, /stopImmediatePropagation/);
+  assert.match(longPress, /contextmenu/);
+  assert.match(css, /\.deck-builder-screen \.game-card,[\s\S]*\.deck-builder-screen \.game-card \*\s*\{[^}]*-webkit-user-select:none;[^}]*user-select:none;[^}]*-webkit-touch-callout:none;/s);
+});
+
+test('saved deck cards omit redundant player-wide qualification labels', () => {
+  assert.doesNotMatch(deckScreens, /プレイヤー解禁/);
+  assert.doesNotMatch(deckScreens, /全デッキ共通/);
+  assert.match(deckScreens, /最高到達/);
+  assert.match(deckScreens, /デッキ総TP/);
 });
 
 test('saved deck details and editing expose display-only card sorting', () => {

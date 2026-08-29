@@ -902,7 +902,9 @@ body:has(.battle-screen) {
 .section-title h2 { margin: 0; color: var(--gold); font-size: 15px; }
 .section-title p { margin: 1px 0; color: var(--muted); font-size: 9px; }
 .step-number { flex: 0 0 auto; display: grid; place-items: center; width: 26px; height: 26px; border: 1px solid var(--teal); border-radius: 50%; color: var(--teal); font-weight: 800; }
-.reward-card-row { min-height: 0; display: flex; align-items: center; justify-content: center; gap: clamp(16px,1.7vw,22px); overflow-x: auto; padding: 12px; }
+.reward-card-row { min-height: 0; display: flex; align-items: center; justify-content: flex-start; gap: clamp(16px,1.7vw,22px); overflow-x: auto; padding: 14px; scroll-padding-inline: 14px; }
+.reward-card-row .selectable-card:first-child { margin-left: auto; }
+.reward-card-row .selectable-card:last-child { margin-right: auto; }
 .selectable-card { position: relative; flex: 0 0 auto; }
 .selectable-card .game-card { width: clamp(65px,8.4vw,104px); }
 .selectable-card.selected { filter: drop-shadow(0 0 7px rgba(232,186,98,.55)); }
@@ -1453,7 +1455,8 @@ button:disabled { opacity: .38; cursor: not-allowed; }
 .builder-candidate .game-card { width:100%; }
 .builder-candidate > strong { position:absolute; z-index:15; right:-5px; top:-7px; min-width:22px; padding:3px; border-radius:10px; color:#fff4b4; background:#17253a; text-align:center; font-size:8px; box-shadow:0 2px 6px #000; }
 .builder-candidate > small { overflow:hidden; color:var(--muted); font-size:6px; text-overflow:ellipsis; white-space:nowrap; }
-.deck-builder-screen .game-card { -webkit-touch-callout:none; user-select:none; }
+.deck-builder-screen .game-card,
+.deck-builder-screen .game-card * { -webkit-user-select:none; user-select:none; -webkit-touch-callout:none; }
 .deck-builder-screen .game-card.long-press-arming { filter:brightness(1.12); box-shadow:0 0 0 2px rgba(95,212,206,.58),0 0 18px rgba(95,212,206,.3); transform:translateY(-1px) scale(1.015); }
 .deck-builder-screen .game-card.long-press-fired { box-shadow:0 0 0 2px rgba(232,186,98,.82),0 0 22px rgba(232,186,98,.5); }
 .deck-build-button { min-height:36px; padding-inline:14px; }
