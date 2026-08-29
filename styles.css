@@ -987,6 +987,14 @@ button:disabled { opacity: .38; cursor: not-allowed; }
 .deck-leader-edit span { color: var(--muted); font-size: 10px; }
 .deck-leader-edit strong { max-width: 100px; overflow: hidden; color: #fff0bd; font-size: 11px; text-overflow: ellipsis; white-space: nowrap; }
 .deck-delete { margin-left: auto; }
+.deck-card-browser { min-height:0; display:grid; grid-template-rows:auto minmax(0,1fr); gap:5px; overflow:hidden; }
+.deck-card-toolbar { min-height:34px; display:flex; align-items:center; justify-content:space-between; gap:9px; padding:4px 9px; border:1px solid var(--line); border-radius:9px; background:var(--panel); }
+.deck-card-toolbar-copy { min-width:0; display:flex; align-items:baseline; gap:8px; }
+.deck-card-toolbar-copy strong { color:#f0d18a; font-size:12px; }
+.deck-card-toolbar-copy small { overflow:hidden; color:var(--muted); font-size:8px; text-overflow:ellipsis; white-space:nowrap; }
+.deck-sort-control { flex:0 0 auto; display:flex; align-items:center; gap:5px; color:var(--muted); font-size:9px; }
+.deck-sort-control select { min-width:112px; min-height:29px; padding:4px 24px 4px 8px; border:1px solid rgba(95,212,206,.4); border-radius:7px; color:#e9f7f5; background:#081b27; font-size:10px; font-weight:800; cursor:pointer; }
+.deck-sort-control option { color:#eef5f7; background:#081421; }
 .deck-card-grid { min-height: 0; overflow: auto; display: grid; grid-template-columns: repeat(10,minmax(54px,1fr)); align-content: start; gap: clamp(16px,1.7vw,22px); padding: 18px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
 .deck-card-grid .game-card { width: 100%; }
 .leader-picker > p { margin: 8px 0 10px; color: var(--muted); font-size: 11px; }
@@ -1435,6 +1443,9 @@ button:disabled { opacity: .38; cursor: not-allowed; }
 .builder-active .section-title,.builder-reserve .section-title { display:flex; justify-content:space-between; align-items:center; min-height:28px; }
 .builder-active .section-title h2,.builder-reserve .section-title h2 { margin:0; color:#e8cd82; font-size:13px; }
 .builder-active .section-title span,.builder-reserve .section-title span { color:var(--muted); font-size:8px; }
+.builder-section-tools { min-width:0; display:flex; align-items:center; justify-content:flex-end; gap:6px; }
+.deck-sort-control.compact span { font-size:8px; }
+.deck-sort-control.compact select { min-width:102px; min-height:26px; padding-block:2px; font-size:9px; }
 .builder-card-grid { min-height:0; overflow:auto; display:grid; grid-template-columns:repeat(10,minmax(48px,1fr)); align-content:start; gap:12px 9px; padding:9px; }
 .builder-card-grid .game-card { width:100%; }
 .builder-candidate-grid { min-height:0; overflow:auto; display:grid; grid-template-columns:repeat(5,minmax(58px,1fr)); align-content:start; gap:14px 9px; padding:9px; }

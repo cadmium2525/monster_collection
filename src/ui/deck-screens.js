@@ -5,6 +5,21 @@ import { openModal } from './modal.js';
 import { validateDeck } from '../battle/deck.js';
 import { assetStackKey, takeUnassignedAsset } from '../gacha/economy-state.js';
 import { attachLongPress } from './long-press.js';
+import { DECK_CARD_SORT_OPTIONS, sortDeckCards } from './deck-card-sort.js';
+
+function deckSortControl(value, onChange, className = '') {
+  return el('label', { className: `deck-sort-control${className ? ` ${className}` : ''}` }, [
+    el('span', { text: '並び順' }),
+    el('select', {
+      attrs: { 'aria-label': 'デッキカードの並び順', title: '表示順だけを変更します。対戦開始時のシャッフルには影響しません。' },
+      onchange: (event) => onChange(event.target.value),
+    }, DECK_CARD_SORT_OPTIONS.map((option) => el('option', {
+      value: option.id,
+      selected: option.id === value,
+      text: option.label,
+    }))),
+  ]);
+}
 
 export function openStarterDeckPicker({ masterIndex, options, onChoose }) {
   let modal = null;
@@ -161,6 +176,7 @@ export class DeckDetailScreen {
     this.onRecover = onRecover;
     this.catalog = catalog;
     this.locked = locked;
+    this.sortMode = 'kind';
     this.render();
   }
 
@@ -246,6 +262,7 @@ export class DeckDetailScreen {
   render() {
     const deck = this.collection.get(this.deckId);
     const leader = this.masterIndex.monsters.get(deck.representativeMonsterId);
+    const sortedCards = sortDeckCards(deck.cards, this.masterIndex, this.sortMode);
     replace(this.root, el('main', { className: 'deck-detail-screen' }, [
       el('header', { className: 'screen-header deck-detail-header' }, [
         el('div', {}, [el('p', { className: 'eyebrow', text: '40-CARD DECK' }), el('h1', { text: deck.deckName })]),
@@ -280,10 +297,19 @@ export class DeckDetailScreen {
         this.onBuild ? el('button', { className: 'primary-button deck-build-button', text: `デッキ編集${deck.pool.length ? `（予備${deck.pool.length}）` : ''}`, onclick: () => this.onBuild(deck) }) : null,
         this.onDelete ? el('button', { className: 'text-button danger-button deck-delete', text: '削除', onclick: () => this.onDelete(deck) }) : null,
       ]),
-      el('section', { className: 'deck-card-grid', attrs: { 'aria-label': `${deck.deckName}の40枚` } }, deck.cards.map((card) => {
-        const definition = this.masterIndex.cards.get(card.masterId);
-        return renderCard({ definition, cardAsset: card, onClick: () => openCardDetails({ definition, masterIndex: this.masterIndex, cardAsset: card }) });
-      })),
+      el('section', { className: 'deck-card-browser' }, [
+        el('div', { className: 'deck-card-toolbar' }, [
+          el('div', { className: 'deck-card-toolbar-copy' }, [
+            el('strong', { text: 'デッキ40枚' }),
+            el('small', { text: '表示順のみ変更・対戦時はシャッフル' }),
+          ]),
+          deckSortControl(this.sortMode, (value) => { this.sortMode = value; this.render(); }),
+        ]),
+        el('div', { className: 'deck-card-grid', attrs: { 'aria-label': `${deck.deckName}の40枚` } }, sortedCards.map((card) => {
+          const definition = this.masterIndex.cards.get(card.masterId);
+          return renderCard({ definition, cardAsset: card, onClick: () => openCardDetails({ definition, masterIndex: this.masterIndex, cardAsset: card }) });
+        })),
+      ]),
     ]));
   }
 }
@@ -297,6 +323,7 @@ export class DeckBuildScreen {
     this.deck = structuredClone(deck);
     this.economy = structuredClone(economy);
     this.selectedActiveId = null;
+    this.sortMode = 'kind';
     this.error = '';
     this.render();
   }
@@ -371,6 +398,7 @@ export class DeckBuildScreen {
   }
 
   render() {
+    const sortedActiveCards = sortDeckCards(this.deck.cards, this.masterIndex, this.sortMode);
     replace(this.root, el('main', { className: 'deck-builder-screen' }, [
       el('header', { className: 'screen-header deck-builder-header' }, [
         el('div', {}, [
@@ -386,8 +414,14 @@ export class DeckBuildScreen {
       this.error ? el('p', { className: 'invalid-copy builder-error', text: this.error }) : null,
       el('section', { className: 'deck-builder-workspace' }, [
         el('section', { className: 'builder-active' }, [
-          el('div', { className: 'section-title' }, [el('h2', { text: '使用中の40枚' }), el('span', { text: this.selectedActiveId ? '交換先を選択' : '外すカードを選択' })]),
-          el('div', { className: 'builder-card-grid' }, this.deck.cards.map((card) => {
+          el('div', { className: 'section-title' }, [
+            el('h2', { text: '使用中の40枚' }),
+            el('div', { className: 'builder-section-tools' }, [
+              el('span', { text: this.selectedActiveId ? '交換先を選択' : '外すカードを選択' }),
+              deckSortControl(this.sortMode, (value) => { this.sortMode = value; this.render(); }, 'compact'),
+            ]),
+          ]),
+          el('div', { className: 'builder-card-grid' }, sortedActiveCards.map((card) => {
             const definition = this.masterIndex.cards.get(card.masterId);
             return this.renderEditableCard({
               definition,

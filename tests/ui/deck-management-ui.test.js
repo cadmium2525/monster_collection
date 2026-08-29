@@ -62,6 +62,15 @@ test('deck editing keeps tap-to-swap and adds long-press card details', () => {
   assert.match(longPress, /stopImmediatePropagation/);
 });
 
+test('saved deck details and editing expose display-only card sorting', () => {
+  assert.match(deckScreens, /DECK_CARD_SORT_OPTIONS/);
+  assert.match(deckScreens, /aria-label': 'デッキカードの並び順'/);
+  assert.match(deckScreens, /表示順のみ変更・対戦時はシャッフル/);
+  assert.match(deckScreens, /sortedCards\.map/);
+  assert.match(deckScreens, /sortedActiveCards\.map/);
+  assert.match(css, /\.deck-sort-control select/);
+});
+
 test('tournament entry names the deck choice and renders its leader as art only', () => {
   const tournamentSetup = readFileSync(new URL('../../src/ui/tournament-setup-screen.js', import.meta.url), 'utf8');
   assert.match(tournamentSetup, /text: '使用するデッキ'/);
