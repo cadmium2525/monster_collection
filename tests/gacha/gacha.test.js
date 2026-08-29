@@ -8,6 +8,7 @@ import { applyDiamondReward, applyPackPurchase, defaultEconomyState, normalizeEc
 import { SeededRng } from '../../src/core/rng.js';
 import { generateCpuDeck } from '../../src/tournament/deck-generator.js';
 import { legalDeck, masterIndex } from '../helpers.js';
+import { baseCardRarity } from '../../src/cards/card-rarity.js';
 
 test('all eighteen faction trophy breeders are capture-only and never enter boosters', () => {
   assert.deepEqual(TROPHY_BREEDER_IDS, [
@@ -31,6 +32,26 @@ test('tutorial booster guarantees its faction booster monster and every pack has
     assert.ok(result.cards.some((card) => card.masterId === monsterId));
     assert.ok(result.cards.some((card) => masterIndex.cards.get(card.masterId).kind === 'monster'));
     assert.ok(result.cards.some((card) => ['rare', 'showcase'].includes(card.rarity)));
+  }
+});
+
+test('base card rarity is stable per card instead of depending on the pack slot', () => {
+  for (const definition of masterIndex.cards.values()) {
+    assert.equal(baseCardRarity(definition), definition.kind === 'monster' ? 'rare' : 'common');
+  }
+  const observed = new Map();
+  for (const faction of ['無機', '創造', '幻霊', '魔族', '獣族', '怪物']) {
+    for (let seed = 0; seed < 180; seed += 1) {
+      const pack = generateBoosterPack({ masterIndex, faction, seed: `canonical-rarity:${faction}:${seed}`, openedCount: seed % 20 });
+      for (const card of pack.cards.filter((entry) => entry.artVariantId === 'base')) {
+        if (!observed.has(card.masterId)) observed.set(card.masterId, new Set());
+        observed.get(card.masterId).add(card.rarity);
+      }
+    }
+  }
+  assert.equal([...observed.values()].every((rarities) => rarities.size === 1), true);
+  for (const [masterId, rarities] of observed) {
+    assert.deepEqual([...rarities], [baseCardRarity(masterIndex.cards.get(masterId))]);
   }
 });
 
@@ -106,11 +127,11 @@ test('legacy premium support assets are migrated to normal appearance', () => {
   };
   const migrated = normalizeEconomyState(legacy);
   assert.deepEqual(migrated.unassignedAssets[0], {
-    masterId: 'breeder-001', artVariantId: 'base', finish: 'normal', rarity: 'rare', origin: 'core', quantity: 2, firstObtainedAt: null,
+    masterId: 'breeder-001', artVariantId: 'base', finish: 'normal', rarity: 'common', origin: 'core', quantity: 2, firstObtainedAt: null,
   });
   assert.equal(migrated.pendingPack.cards[0].artVariantId, 'base');
   assert.equal(migrated.pendingPack.cards[0].finish, 'normal');
-  assert.equal(migrated.pendingPack.cards[0].rarity, 'rare');
+  assert.equal(migrated.pendingPack.cards[0].rarity, 'common');
 });
 
 test('every generated Foil and special illustration belongs to a monster', () => {

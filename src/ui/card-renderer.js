@@ -29,6 +29,41 @@ const SUPPORT_CARD_IDS = Object.freeze([
   ...Array.from({ length: 20 }, (_, index) => `breeder-${String(index + 1).padStart(3, '0')}`),
 ]);
 
+let lazyArtObserver = null;
+
+function artObserver() {
+  if (typeof IntersectionObserver !== 'function') return null;
+  if (!lazyArtObserver) {
+    lazyArtObserver = new IntersectionObserver((entries, observer) => {
+      for (const entry of entries) {
+        if (!entry.isIntersecting) continue;
+        const style = entry.target.dataset.lazyArtStyle;
+        if (style) entry.target.setAttribute('style', style);
+        delete entry.target.dataset.lazyArtStyle;
+        observer.unobserve(entry.target);
+      }
+    }, { rootMargin: '320px 0px' });
+  }
+  return lazyArtObserver;
+}
+
+export function deferCardArt(node) {
+  const observer = artObserver();
+  if (!observer) return node;
+  const artNodes = node.classList?.contains('card-art')
+    ? [node]
+    : [...(node.querySelectorAll?.('.card-art') ?? [])];
+  for (const artNode of artNodes) {
+    const style = artNode.getAttribute('style');
+    // アトラスは全カードで共有するため、単体画像URLだけを遅延設定する。
+    if (!style?.includes('url(')) continue;
+    artNode.removeAttribute('style');
+    artNode.dataset.lazyArtStyle = style;
+    observer.observe(artNode);
+  }
+  return node;
+}
+
 function atlasPosition(index, columns, rows) {
   if (!Number.isInteger(index) || index < 0 || index >= columns * rows) return null;
   const x = columns === 1 ? 0 : (index % columns) * (100 / (columns - 1));
@@ -163,6 +198,7 @@ export function renderCard({
   showMonsterEffect = true,
   dragReady = false,
   cardAsset = null,
+  lazyArt = false,
 }) {
   const meta = cardMeta(definition, unit, growth);
   const art = cardArtPlacement(definition, unit, cardAsset);
@@ -217,13 +253,13 @@ export function renderCard({
       group.count > 1 ? el('small', { text: group.count }) : null,
     ]))) : null,
   ]);
-  return node;
+  return lazyArt ? deferCardArt(node) : node;
 }
 
 export function monsterPortraitPresentation(definition, cardAsset = null) {
   const art = cardArtPlacement(definition, null, cardAsset);
   return {
-    className: `monster-portrait ${art.className} ${FACTION_CLASS[definition.faction] ?? ''}`.trim(),
+    className: `monster-portrait ${art.className} ${FACTION_CLASS[definition.faction] ?? ''} ${isFoilAppearance(definition, null, cardAsset) ? 'finish-foil' : ''}`.trim(),
     style: art.style,
   };
 }

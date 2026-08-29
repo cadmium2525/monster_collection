@@ -152,7 +152,7 @@ test('legacy recovery credit restores the player-selected owned card to the deck
     finish: 'normal',
     origin: 'legacy-recovery',
     boundDeckId: 'legacy-recovery-deck',
-    rarity: 'common',
+    rarity: 'rare',
   });
   assert.throws(() => decks.recoverLegacyAsset('legacy-recovery-deck', 'monster-019', 'another-card'), /復元できるカード/);
 });
@@ -196,7 +196,7 @@ test('saved decks migrate legacy Foil and special art off support cards', () => 
   const deck = decks.create({ deckName: '旧プレミアム移行', cards });
   assert.equal(deck.cards[supportIndex].artVariantId, 'base');
   assert.equal(deck.cards[supportIndex].finish, 'normal');
-  assert.equal(deck.cards[supportIndex].rarity, 'rare');
+  assert.equal(deck.cards[supportIndex].rarity, 'common');
 });
 
 test('deck leader can be selected from its monsters and survives card updates while present', () => {

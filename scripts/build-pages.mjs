@@ -6,8 +6,14 @@ const outputRoot = path.join(projectRoot, 'dist');
 const packageJson = JSON.parse(fs.readFileSync(path.join(projectRoot, 'package.json'), 'utf8'));
 const version = packageJson.version;
 const publicEntries = ['index.html', 'styles.css', 'manifest.webmanifest', 'sw.js', 'assets', 'src', '.nojekyll'];
+const deployIgnored = new Set([
+  'assets/images/special-fusion-atlas-v1.webp',
+  'assets/images/blue-drill-v2.webp',
+]);
 
 function copyEntry(source, destination) {
+  const relative = path.relative(projectRoot, source).replaceAll('\\', '/');
+  if (deployIgnored.has(relative)) return;
   const stats = fs.statSync(source);
   if (stats.isDirectory()) {
     fs.mkdirSync(destination, { recursive: true });
@@ -28,6 +34,13 @@ for (const entry of publicEntries) {
   const source = path.join(projectRoot, entry);
   if (!fs.existsSync(source)) throw new Error(`Missing public entry: ${entry}`);
   copyEntry(source, path.join(outputRoot, entry));
+}
+// Keep source-only reconstruction atlases in Git, never in the Pages artifact.
+for (const relative of deployIgnored) {
+  const destination = path.resolve(outputRoot, relative);
+  if (!destination.startsWith(`${outputRoot}${path.sep}`)) throw new Error(`Unsafe ignored asset path: ${relative}`);
+  if (fs.existsSync(destination)) fs.unlinkSync(destination);
+  if (fs.existsSync(destination)) throw new Error(`Failed to exclude source-only asset: ${relative}`);
 }
 
 function filesUnder(directory) {

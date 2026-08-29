@@ -60,7 +60,7 @@ test('release version cache-busts the page shell and service worker together', (
   assert.match(worker, new RegExp(`CACHE_VERSION = '${version.replaceAll('.', '\\.')}';`));
 });
 
-test('growing booster art is copied but excluded from install-time precache', () => {
+test('growing booster art is excluded from install-time precache and source atlases stay out of deploy', () => {
   const buildScript = text('scripts/build-pages.mjs');
   assert.match(buildScript, /assets\/images\/booster\//);
   assert.match(buildScript, /assets\/images\/showcase\//);
@@ -68,4 +68,5 @@ test('growing booster art is copied but excluded from install-time precache', ()
   assert.match(buildScript, /startsWith/);
   assert.match(buildScript, /special-fusion-atlas-v1\.webp/);
   assert.match(buildScript, /blue-drill-v2\.webp/);
+  assert.match(buildScript, /deployIgnored/);
 });

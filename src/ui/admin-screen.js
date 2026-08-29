@@ -92,12 +92,13 @@ function entrySearchText(entry) {
 function adminEntryTile(entry, masterIndex) {
   const fusionEntry = entry.kind === 'fusion' || entry.kind === 'fusion-showcase';
   const visual = fusionEntry
-    ? fusionTile(entry.fusion, masterIndex, { showcase: entry.kind === 'fusion-showcase' })
+    ? fusionTile(entry.fusion, masterIndex, { showcase: entry.kind === 'fusion-showcase', lazyArt: true })
     : renderCard({
       definition: entry.definition,
       cardAsset: entry.cardAsset ?? null,
       label: `${entry.name}の管理者詳細を表示`,
       onClick: () => openCardDetails({ definition: entry.definition, masterIndex, cardAsset: entry.cardAsset ?? null }),
+      lazyArt: true,
     });
   const origin = entry.kind === 'fusion' ? '合体レシピ'
     : entry.kind === 'fusion-showcase' ? '特別絵メインで出現'

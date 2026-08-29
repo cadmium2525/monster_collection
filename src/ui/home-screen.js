@@ -1,6 +1,7 @@
 import { TOURNAMENT_LABELS } from '../battle/rules.js';
 import { activeTournamentState } from '../tournament/active-run.js';
 import { representativeMonster } from '../battle/deck.js';
+import { representativeCardAsset } from './representative-card.js';
 import { ROUND_LABELS } from '../tournament/TournamentRun.js';
 import { el, formatDate, replace } from './dom.js';
 import { renderMonsterPortrait } from './card-renderer.js';
@@ -156,9 +157,7 @@ export class HomeScreen {
     const representative = champion?.representativeMonsterId
       ? this.masterIndex.monsters.get(champion.representativeMonsterId)
       : cards.length ? representativeMonster(cards, this.masterIndex) : this.masterIndex.monsters.get('monster-004');
-    const representativeAsset = representative
-      ? cards.find((card) => card.masterId === representative.id) ?? null
-      : null;
+    const representativeAsset = representative ? representativeCardAsset(cards, representative.id) : null;
     return el('section', { className: 'champion-panel' }, [
       el('div', { className: 'champion-crown', text: '♛', attrs: { 'aria-hidden': 'true' } }),
       el('div', { className: 'champion-art' }, representative ? renderMonsterPortrait(representative, '現チャンピオンの代表モンスター', representativeAsset) : el('div', { className: 'champion-placeholder', text: '?' })),

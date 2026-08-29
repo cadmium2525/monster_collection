@@ -2,6 +2,7 @@ import { SeededRng } from '../core/rng.js';
 import { normalizeCardAppearance } from '../cards/card-appearance.js';
 import { acquisitionOrigin, isPackEligible } from './acquisition.js';
 import { boosterPack } from './pack-catalog.js';
+import { baseCardRarity } from '../cards/card-rarity.js';
 
 const FEATURED_VARIANTS = Object.freeze({
   '無機': Object.freeze({ masterId: 'monster-019', artVariantId: 'showcase-inorganic-01' }),
@@ -112,7 +113,7 @@ export function boosterPackDisclosure({ masterIndex, faction, openedCount = 0 })
     ? BOOSTER_DRAW_RATES.themedBreederWeight : 1);
   const common = weightedDistribution(generic, (definition) => definition.kind === 'training'
     ? BOOSTER_DRAW_RATES.genericTrainingWeight : 1);
-  const rarePool = foilGuaranteed ? monsters : [...monsters, ...themed, ...generic];
+  const rarePool = monsters.filter((definition) => baseCardRarity(definition) === 'rare');
   const rare = weightedDistribution(rarePool, (definition) => definition.kind === 'monster'
     ? BOOSTER_DRAW_RATES.rareMonsterWeight : 1);
   const showcaseChance = hasShowcases ? (showcaseGuaranteed ? 1 : BOOSTER_DRAW_RATES.showcase) : 0;
@@ -162,12 +163,12 @@ export function boosterPackDisclosure({ masterIndex, faction, openedCount = 0 })
   };
 }
 
-function asset(definition, { rarity = 'common', artVariantId = 'base', finish = 'normal' } = {}) {
+function asset(definition, { artVariantId = 'base', finish = 'normal' } = {}) {
   return normalizeCardAppearance({
     masterId: definition.id,
     artVariantId,
     finish,
-    rarity,
+    rarity: artVariantId !== 'base' ? 'showcase' : baseCardRarity(definition),
     origin: acquisitionOrigin(definition) === 'booster' ? 'booster' : 'core',
   });
 }
@@ -191,7 +192,7 @@ export function generateBoosterPack({ masterIndex, faction, seed, openedCount = 
   const firstMonster = newMonsterGuaranteed && featured && masterIndex.cards.has(featured.masterId)
     ? masterIndex.cards.get(featured.masterId)
     : chooseDefinition(rng, monsters, (definition) => acquisitionOrigin(definition) === 'booster' ? BOOSTER_DRAW_RATES.firstMonsterBoosterWeight : 1);
-  cards.push(asset(firstMonster, { rarity: acquisitionOrigin(firstMonster) === 'booster' ? 'rare' : 'common' }));
+  cards.push(asset(firstMonster));
   cards.push(asset(chooseDefinition(rng, themed, (definition) => definition.kind === 'monster' ? BOOSTER_DRAW_RATES.themedMonsterWeight : 1)));
   cards.push(asset(chooseDefinition(rng, themed, (definition) => definition.kind === 'breeder' ? BOOSTER_DRAW_RATES.themedBreederWeight : 1)));
   cards.push(asset(chooseDefinition(rng, generic, (definition) => definition.kind === 'training' ? BOOSTER_DRAW_RATES.genericTrainingWeight : 1)));
@@ -203,14 +204,12 @@ export function generateBoosterPack({ masterIndex, faction, seed, openedCount = 
   if (showcase && availableShowcases.length) {
     const showcaseVariant = rng.choice(availableShowcases);
     cards.push(asset(masterIndex.cards.get(showcaseVariant.masterId), {
-      rarity: 'showcase',
       artVariantId: showcaseVariant.artVariantId,
       finish: foilGuaranteed || rng.next() < BOOSTER_DRAW_RATES.showcaseFoil ? 'foil' : 'normal',
     }));
   } else {
-    const rarePool = foilGuaranteed ? monsters : [...monsters, ...themed, ...generic];
+    const rarePool = monsters.filter((definition) => baseCardRarity(definition) === 'rare');
     cards.push(asset(chooseDefinition(rng, rarePool, (definition) => definition.kind === 'monster' ? BOOSTER_DRAW_RATES.rareMonsterWeight : 1), {
-      rarity: 'rare',
       finish: foilGuaranteed ? 'foil' : 'normal',
     }));
   }

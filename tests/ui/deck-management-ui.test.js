@@ -73,11 +73,35 @@ test('saved deck cards omit redundant player-wide qualification labels', () => {
 
 test('saved deck details and editing expose display-only card sorting', () => {
   assert.match(deckScreens, /DECK_CARD_SORT_OPTIONS/);
-  assert.match(deckScreens, /aria-label': 'デッキカードの並び順'/);
+  assert.match(deckScreens, /label = 'デッキカードの並び順'/);
+  assert.match(deckScreens, /'aria-label': label/);
   assert.match(deckScreens, /表示順のみ変更・対戦時はシャッフル/);
   assert.match(deckScreens, /sortedCards\.map/);
   assert.match(deckScreens, /sortedActiveCards\.map/);
+  assert.match(deckScreens, /candidateSortMode/);
+  assert.match(deckScreens, /入替候補の並び順/);
+  assert.match(deckScreens, /sortedCandidates\.map/);
   assert.match(css, /\.deck-sort-control select/);
+});
+
+test('large card collections defer standalone artwork until it approaches the viewport', () => {
+  const renderer = readFileSync(new URL('../../src/ui/card-renderer.js', import.meta.url), 'utf8');
+  assert.match(renderer, /IntersectionObserver/);
+  assert.match(renderer, /rootMargin: '320px 0px'/);
+  assert.match(renderer, /dataset\.lazyArtStyle/);
+  assert.match(deckScreens, /lazyArt: true/);
+  assert.match(catalogScreen, /lazyArt: true/);
+  assert.match(boosterScreen, /lazyArt: true/);
+  assert.match(css, /content-visibility:auto/);
+});
+
+test('leader artwork resolves the owned card appearance in every deck-facing screen', () => {
+  const tournamentSetup = readFileSync(new URL('../../src/ui/tournament-setup-screen.js', import.meta.url), 'utf8');
+  assert.match(deckScreens, /representativeCardAsset\(deck\.cards, deck\.representativeMonsterId\)/);
+  assert.match(deckScreens, /cardAsset: representativeAsset/);
+  assert.match(deckScreens, /cardAsset,/);
+  assert.match(tournamentSetup, /representativeCardAsset\(entry\.cards, entry\.representativeMonsterId\)/);
+  assert.match(tournamentSetup, /cardAsset: representativeAsset/);
 });
 
 test('tournament entry names the deck choice and renders its leader as art only', () => {

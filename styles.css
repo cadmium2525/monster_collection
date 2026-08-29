@@ -1006,11 +1006,17 @@ button:disabled { opacity: .38; cursor: not-allowed; }
 .card-catalog-screen { height: calc(100dvh - max(16px,var(--safe-top)) - max(16px,var(--safe-bottom))); min-height: 350px; display: grid; grid-template-rows: auto auto minmax(0,1fr); gap: 7px; overflow: hidden; }
 .catalog-progress { display: flex; gap: 6px; }
 .catalog-progress span { padding: 5px 8px; border: 1px solid var(--line); border-radius: 18px; color: var(--muted); font-size: 9px; }
-.catalog-filters { display: flex; gap: 5px; padding: 5px; border: 1px solid var(--line); border-radius: 9px; background: var(--panel); }
+.catalog-filters { display: flex; gap: 5px; overflow-x:auto; padding: 5px; border: 1px solid var(--line); border-radius: 9px; background: var(--panel); scrollbar-width:thin; }
 .catalog-filters button { min-height: 30px; padding: 4px 10px; border: 1px solid transparent; border-radius: 16px; color: var(--muted); background: rgba(255,255,255,.035); cursor: pointer; font-size: 10px; }
 .catalog-filters button.selected { border-color: rgba(232,186,98,.65); color: #fff1be; background: rgba(114,75,25,.52); }
 .catalog-card-grid { min-height: 0; overflow: auto; display: grid; grid-template-columns: repeat(10,minmax(54px,1fr)); align-content: start; gap: clamp(16px,1.7vw,22px); padding: 18px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
-.catalog-card-grid .game-card { width: 100%; }
+.catalog-entry { position:relative; width:100%; }
+.catalog-entry,.fusion-catalog-card,.admin-card-entry { content-visibility:auto; contain-intrinsic-size:120px 170px; }
+.catalog-entry .game-card { width: 100%; }
+.catalog-entry.catalog-locked .game-card,
+.fusion-catalog-card.catalog-locked { filter:grayscale(1) brightness(.42); cursor:default; }
+.catalog-lock-label { position:absolute; z-index:12; right:5%; bottom:8%; left:5%; padding:3px 4px; border:1px solid rgba(255,255,255,.32); border-radius:7px; color:#f1f4f5; background:rgba(4,9,15,.88); font-size:7px; font-weight:900; text-align:center; }
+.fusion-catalog-card.catalog-locked::after { content:"LOCKED"; position:absolute; z-index:7; inset:45% 10% auto; color:#f3f5f6; font:900 8px/1 Georgia,serif; letter-spacing:.12em; text-align:center; text-shadow:0 2px 5px #000; }
 .fusion-catalog-card { position: relative; isolation: isolate; width: 100%; aspect-ratio: .72; overflow: hidden; padding: 0; border: 2px solid #d5a759; border-radius: 7px; color: #fbf6e9; background: linear-gradient(180deg,#332411,#0b111a 68%); box-shadow: 0 4px 10px rgba(0,0,0,.5),inset 0 0 10px rgba(232,186,98,.08); cursor: pointer; text-align: left; }
 .fusion-catalog-card .card-art { position: absolute; z-index: -1; inset: 0; width: 100%; height: auto; margin: 0; border: 0; border-radius: 5px; }
 .fusion-catalog-card > .card-art.special-fusion-art { top: clamp(18px,14%,21px); border-radius:0 0 5px 5px; }
@@ -1075,11 +1081,11 @@ button:disabled { opacity: .38; cursor: not-allowed; }
 .home-main { min-height: 0; display: grid; grid-template-columns: minmax(420px,1.35fr) minmax(220px,.65fr); gap: 8px; }
 .champion-panel { position: relative; min-height: 0; overflow: hidden; display: grid; grid-template-columns: 76px minmax(90px,150px) minmax(0,1fr); align-items: center; gap: clamp(10px,2vw,25px); padding: clamp(12px,2vw,24px); border: 1px solid rgba(232,186,98,.43); border-radius: 16px; background: linear-gradient(112deg,rgba(48,31,14,.92),rgba(7,18,31,.9) 62%), radial-gradient(circle at 70% 40%,rgba(232,186,98,.15),transparent); box-shadow: inset 0 0 45px rgba(232,186,98,.055); }
 .champion-crown { color: var(--gold); font-size: clamp(50px,8vw,92px); text-shadow: 0 0 24px rgba(232,186,98,.38); text-align: center; }
-.champion-art .monster-portrait { width: min(100%,150px); aspect-ratio: .82; border: 2px solid color-mix(in srgb,var(--faction) 65%,#e7c77f); border-radius: 10px; background-image: linear-gradient(180deg,transparent 58%,rgba(2,7,13,.72)),url("./assets/images/monster-atlas.webp"); background-repeat: no-repeat; background-size: 100% 100%,600% 300%; background-position: center,var(--art-x) var(--art-y); box-shadow: 0 10px 24px rgba(0,0,0,.48),inset 0 0 18px rgba(255,255,255,.08); }
+.champion-art .monster-portrait { position:relative; overflow:hidden; width: min(100%,150px); aspect-ratio: .75; border: 2px solid color-mix(in srgb,var(--faction) 65%,#e7c77f); border-radius: 10px; background-color:#06101a; background-image: linear-gradient(180deg,transparent 58%,rgba(2,7,13,.72)),url("./assets/images/monster-atlas.webp"); background-repeat: no-repeat; background-size: 100% 100%,600% 300%; background-position: center,var(--art-x) var(--art-y); box-shadow: 0 10px 24px rgba(0,0,0,.48),inset 0 0 18px rgba(255,255,255,.08); }
 .champion-art .monster-portrait.standalone-monster-art {
   background-image: linear-gradient(180deg,transparent 58%,rgba(2,7,13,.72)),var(--monster-art);
-  background-size: 100% 100%,cover;
-  background-position: center,center top;
+  background-size: 100% 100%,contain;
+  background-position: center,center;
 }
 .champion-placeholder { display: grid; place-items: center; height: 140px; border: 1px dashed var(--gold); border-radius: 10px; color: var(--gold); font-size: 48px; }
 .champion-copy h2 { margin: 3px 0; color: #fff0c3; font-size: clamp(19px,3vw,35px); }
@@ -1271,6 +1277,7 @@ button:disabled { opacity: .38; cursor: not-allowed; }
 .game-card.variant-showcase { border-color: #fff0a5; box-shadow: 0 0 0 1px rgba(255,238,151,.7),0 0 18px rgba(194,111,255,.48),0 8px 18px rgba(0,0,0,.7); }
 .game-card.finish-foil::before,
 .fusion-catalog-card.finish-foil::before,
+.monster-portrait.finish-foil::after,
 .card-art.finish-foil-art::after {
   content:""; position:absolute; z-index:6; inset:0; border-radius:inherit; pointer-events:none; mix-blend-mode:screen;
   background:linear-gradient(115deg,transparent 32%,rgba(77,231,255,.16) 41%,rgba(255,244,149,.48) 49%,rgba(255,113,230,.2) 57%,transparent 66%);
@@ -1560,6 +1567,6 @@ button:disabled { opacity: .38; cursor: not-allowed; }
 }
 
 @media (prefers-reduced-motion:reduce) {
-  .opening-pack,.opening-aura,.opening-aura i,.pack-particle-field i,.pack-foil-sheen,.pack-break-flash,.pack-break-flash::before,.pack-break-flash i,.pack-card-slot,.pack-card-reveal-shell,.pack-rarity-burst,.rarity-burst-rings i,.pack-rarity-burst strong,.game-card.finish-foil::before,.fusion-catalog-card.finish-foil::before,.card-art.finish-foil-art::after,.game-card.life-critical .card-life,.login-bonus-diamond-art { animation:none !important; }
+  .opening-pack,.opening-aura,.opening-aura i,.pack-particle-field i,.pack-foil-sheen,.pack-break-flash,.pack-break-flash::before,.pack-break-flash i,.pack-card-slot,.pack-card-reveal-shell,.pack-rarity-burst,.rarity-burst-rings i,.pack-rarity-burst strong,.game-card.finish-foil::before,.fusion-catalog-card.finish-foil::before,.monster-portrait.finish-foil::after,.card-art.finish-foil-art::after,.game-card.life-critical .card-life,.login-bonus-diamond-art { animation:none !important; }
   .pack-particle-field { display:none; }
 }

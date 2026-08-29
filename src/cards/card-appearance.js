@@ -1,3 +1,5 @@
+import { canonicalCardRarity } from './card-rarity.js';
+
 function cleanString(value, fallback) {
   const normalized = String(value ?? '').trim();
   return normalized || fallback;
@@ -12,11 +14,13 @@ export function normalizeCardAppearance(asset = {}) {
     .some((key) => Object.prototype.hasOwnProperty.call(asset, key));
   if (!hasAppearance) return { ...asset };
   const premiumAllowed = isMonsterCardAsset(asset);
-  const rarity = cleanString(asset.rarity, 'common');
   return {
     ...asset,
     artVariantId: premiumAllowed ? cleanString(asset.artVariantId, 'base') : 'base',
     finish: premiumAllowed ? cleanString(asset.finish, 'normal') : 'normal',
-    rarity: !premiumAllowed && rarity === 'showcase' ? 'rare' : rarity,
+    rarity: canonicalCardRarity({
+      masterId: asset.masterId,
+      artVariantId: premiumAllowed ? cleanString(asset.artVariantId, 'base') : 'base',
+    }),
   };
 }

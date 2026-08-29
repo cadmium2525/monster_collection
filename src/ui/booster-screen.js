@@ -372,7 +372,7 @@ export class AssetCollectionScreen {
       stacks.length ? el('section', { className: 'asset-card-grid' }, stacks.map((asset) => {
         const definition = this.masterIndex.cards.get(asset.masterId);
         return el('article', { className: 'asset-card-entry' }, [
-          renderCard({ definition, cardAsset: asset, onClick: () => openCardDetails({ definition, masterIndex: this.masterIndex, cardAsset: asset }) }),
+          renderCard({ definition, cardAsset: asset, lazyArt: true, onClick: () => openCardDetails({ definition, masterIndex: this.masterIndex, cardAsset: asset }) }),
           el('div', {}, [
             el('strong', { text: `×${asset.quantity}` }),
             el('small', { text: `${acquisitionLabel(definition)} / ${asset.finish === 'foil' ? 'Foil' : asset.artVariantId !== 'base' ? '特別絵' : '通常絵'}` }),

@@ -154,13 +154,15 @@ test('champion portraits retain standalone and showcase artwork instead of falli
   assert.match(base.className, /booster-monster-art/);
   assert.equal(base.style, '--monster-art:url("./assets/images/booster/monster-019.webp")');
 
-  const showcase = monsterPortraitPresentation(chronogear, { masterId: chronogear.id, artVariantId: 'showcase-inorganic-01' });
+  const showcase = monsterPortraitPresentation(chronogear, { masterId: chronogear.id, artVariantId: 'showcase-inorganic-01', finish: 'foil' });
   assert.match(showcase.className, /standalone-monster-art/);
   assert.match(showcase.className, /showcase-monster-art/);
   assert.equal(showcase.style, '--monster-art:url("./assets/images/showcase/showcase-inorganic-01.webp")');
 
   const css = readFileSync(new URL('../../styles.css', import.meta.url), 'utf8');
-  assert.match(css, /\.champion-art \.monster-portrait\.standalone-monster-art\s*\{[^}]*var\(--monster-art\)[^}]*background-size: 100% 100%,cover/s);
+  assert.match(css, /\.champion-art \.monster-portrait\.standalone-monster-art\s*\{[^}]*var\(--monster-art\)[^}]*background-size: 100% 100%,contain/s);
+  assert.match(css, /\.champion-art \.monster-portrait\s*\{[^}]*aspect-ratio: \.75/s);
+  assert.match(showcase.className, /finish-foil/);
 });
 
 test('every showcase special fusion is Foil even when its main asset has a normal finish', () => {
@@ -192,7 +194,7 @@ test('all forty-eight special fusion cells are valid standalone WebP assets', ()
     const bytes = readFileSync(url);
     assert.equal(bytes.subarray(0, 4).toString('ascii'), 'RIFF', `fusion-${id} starts with RIFF marker`);
     assert.equal(bytes.subarray(8, 12).toString('ascii'), 'WEBP', `fusion-${id} has WEBP signature`);
-    assert.ok(statSync(url).size < 500_000, `fusion-${id} stays practical for on-demand loading`);
+    assert.ok(statSync(url).size < 300_000, `fusion-${id} stays practical for on-demand loading`);
   }
 });
 
@@ -203,7 +205,7 @@ test('all forty-eight premium special-fusion illustrations are optimized standal
     const bytes = readFileSync(url);
     assert.equal(bytes.subarray(0, 4).toString('ascii'), 'RIFF', `showcase-fusion-${id} starts with RIFF marker`);
     assert.equal(bytes.subarray(8, 12).toString('ascii'), 'WEBP', `showcase-fusion-${id} has WEBP signature`);
-    assert.ok(statSync(url).size < 900_000, `showcase-fusion-${id} stays practical for on-demand loading`);
+    assert.ok(statSync(url).size < 300_000, `showcase-fusion-${id} stays practical for on-demand loading`);
   }
 });
 
@@ -214,7 +216,15 @@ test('all thirty-two expansion breeder illustrations are optimized WebP project 
     const bytes = readFileSync(url);
     assert.equal(bytes.subarray(0, 4).toString('ascii'), 'RIFF', `breeder-${id} starts with RIFF marker`);
     assert.equal(bytes.subarray(8, 12).toString('ascii'), 'WEBP', `breeder-${id} has WEBP signature`);
-    assert.ok(statSync(url).size < 300_000, `breeder-${id} stays practical for PWA caching`);
+    assert.ok(statSync(url).size < 180_000, `breeder-${id} stays practical for PWA caching`);
+  }
+});
+
+test('second-generation monster illustrations stay below the mobile detail budget', () => {
+  for (let number = 19; number <= 24; number += 1) {
+    const id = String(number).padStart(3, '0');
+    const url = new URL(`../../assets/images/booster/monster-${id}.webp`, import.meta.url);
+    assert.ok(statSync(url).size < 200_000, `monster-${id} stays practical for on-demand loading`);
   }
 });
 

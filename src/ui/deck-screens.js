@@ -6,12 +6,13 @@ import { validateDeck } from '../battle/deck.js';
 import { assetStackKey, takeUnassignedAsset } from '../gacha/economy-state.js';
 import { attachLongPress } from './long-press.js';
 import { DECK_CARD_SORT_OPTIONS, sortDeckCards } from './deck-card-sort.js';
+import { representativeCardAsset } from './representative-card.js';
 
-function deckSortControl(value, onChange, className = '') {
+function deckSortControl(value, onChange, className = '', label = 'デッキカードの並び順') {
   return el('label', { className: `deck-sort-control${className ? ` ${className}` : ''}` }, [
     el('span', { text: '並び順' }),
     el('select', {
-      attrs: { 'aria-label': 'デッキカードの並び順', title: '表示順だけを変更します。対戦開始時のシャッフルには影響しません。' },
+      attrs: { 'aria-label': label, title: '表示順だけを変更します。カード資産や対戦時のシャッフルには影響しません。' },
       onchange: (event) => onChange(event.target.value),
     }, DECK_CARD_SORT_OPTIONS.map((option) => el('option', {
       value: option.id,
@@ -56,6 +57,7 @@ export function openStarterDeckPicker({ masterIndex, options, onChoose }) {
 
 function deckSummaryCard(deck, masterIndex, onSelect, onRename, locked = false) {
   const representative = masterIndex.monsters.get(deck.representativeMonsterId);
+  const representativeAsset = representativeCardAsset(deck.cards, deck.representativeMonsterId);
   return el('article', {
     className: `deck-summary-card${locked ? ' tournament-locked' : ''}`,
   }, [
@@ -64,7 +66,7 @@ function deckSummaryCard(deck, masterIndex, onSelect, onRename, locked = false) 
       attrs: { type: 'button', 'aria-label': `${deck.deckName}を開く${locked ? '（大会参加中・編集不可）' : ''}` },
       onclick: () => onSelect(deck),
     }, [
-      el('div', { className: 'deck-representative' }, representative ? renderCard({ definition: representative, label: `${deck.deckName}の代表モンスター`, interactive: false }) : null),
+      el('div', { className: 'deck-representative' }, representative ? renderCard({ definition: representative, cardAsset: representativeAsset, label: `${deck.deckName}の代表モンスター`, interactive: false }) : null),
       el('div', { className: 'deck-summary-copy' }, [
         el('div', { className: 'deck-name-row' }, [
           el('h2', { text: deck.deckName }),
@@ -229,8 +231,10 @@ export class DeckDetailScreen {
     let modal = null;
     const choices = el('div', { className: 'leader-choice-grid' }, monsterIds.map((monsterId) => {
       const definition = this.masterIndex.monsters.get(monsterId);
+      const cardAsset = representativeCardAsset(deck.cards, monsterId);
       return renderCard({
         definition,
+        cardAsset,
         selected: monsterId === deck.representativeMonsterId,
         label: `${definition.name}をリーダーにする`,
         onClick: () => {
@@ -305,7 +309,7 @@ export class DeckDetailScreen {
         ]),
         el('div', { className: 'deck-card-grid', attrs: { 'aria-label': `${deck.deckName}の40枚` } }, sortedCards.map((card) => {
           const definition = this.masterIndex.cards.get(card.masterId);
-          return renderCard({ definition, cardAsset: card, onClick: () => openCardDetails({ definition, masterIndex: this.masterIndex, cardAsset: card }) });
+          return renderCard({ definition, cardAsset: card, lazyArt: true, onClick: () => openCardDetails({ definition, masterIndex: this.masterIndex, cardAsset: card }) });
         })),
       ]),
     ]));
@@ -322,6 +326,7 @@ export class DeckBuildScreen {
     this.economy = structuredClone(economy);
     this.selectedActiveId = null;
     this.sortMode = 'kind';
+    this.candidateSortMode = 'kind';
     this.error = '';
     this.render();
   }
@@ -376,7 +381,7 @@ export class DeckBuildScreen {
   }
 
   renderEditableCard({ definition, card, selected = false, disabled = false, onClick }) {
-    const node = renderCard({ definition, cardAsset: card, selected, disabled, onClick });
+    const node = renderCard({ definition, cardAsset: card, selected, disabled, onClick, lazyArt: true });
     return attachLongPress(node, () => openCardDetails({
       definition,
       masterIndex: this.masterIndex,
@@ -397,6 +402,13 @@ export class DeckBuildScreen {
 
   render() {
     const sortedActiveCards = sortDeckCards(this.deck.cards, this.masterIndex, this.sortMode);
+    const candidateEntries = [
+      ...this.deck.pool.map((card) => ({ card, source: 'pool', count: null })),
+      ...this.economy.unassignedAssets.map((card) => ({ card, source: 'unassigned', count: card.quantity })),
+    ];
+    const entryByCard = new Map(candidateEntries.map((entry) => [entry.card, entry]));
+    const sortedCandidates = sortDeckCards(candidateEntries.map((entry) => entry.card), this.masterIndex, this.candidateSortMode)
+      .map((card) => entryByCard.get(card));
     replace(this.root, el('main', { className: 'deck-builder-screen' }, [
       el('header', { className: 'screen-header deck-builder-header' }, [
         el('div', {}, [
@@ -430,11 +442,14 @@ export class DeckBuildScreen {
           })),
         ]),
         el('section', { className: 'builder-reserve' }, [
-          el('div', { className: 'section-title' }, [el('h2', { text: '入替候補' }), el('span', { text: `予備${this.deck.pool.length} / 未所属${this.economy.unassignedAssets.reduce((sum, stack) => sum + stack.quantity, 0)}` })]),
-          el('div', { className: 'builder-candidate-grid' }, [
-            ...this.deck.pool.map((card) => this.renderCandidate(card, 'pool')),
-            ...this.economy.unassignedAssets.map((stack) => this.renderCandidate(stack, 'unassigned', stack.quantity)),
+          el('div', { className: 'section-title' }, [
+            el('h2', { text: '入替候補' }),
+            el('div', { className: 'builder-section-tools' }, [
+              el('span', { text: `予備${this.deck.pool.length} / 未所属${this.economy.unassignedAssets.reduce((sum, stack) => sum + stack.quantity, 0)}` }),
+              deckSortControl(this.candidateSortMode, (value) => { this.candidateSortMode = value; this.render(); }, 'compact', '入替候補の並び順'),
+            ]),
           ]),
+          el('div', { className: 'builder-candidate-grid' }, sortedCandidates.map((entry) => this.renderCandidate(entry.card, entry.source, entry.count))),
         ]),
       ]),
     ]));

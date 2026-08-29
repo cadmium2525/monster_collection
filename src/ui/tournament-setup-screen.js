@@ -1,6 +1,7 @@
 import { TOURNAMENTS, TOURNAMENT_LABELS } from '../battle/rules.js';
 import { el, replace } from './dom.js';
 import { renderCard } from './card-renderer.js';
+import { representativeCardAsset } from './representative-card.js';
 
 export class TournamentSetupScreen {
   constructor({ root, collection, masterIndex, onBack, onStart }) {
@@ -30,13 +31,14 @@ export class TournamentSetupScreen {
           el('div', { className: 'section-title' }, [el('span', { className: 'step-number', text: '1' }), el('div', {}, [el('h2', { text: '使用するデッキ' }), el('p', { text: '大会の解禁は全デッキ共通。交換カードは使用デッキに保存されます。' })])]),
           el('div', { className: 'setup-deck-list' }, decks.map((entry) => {
             const representative = this.masterIndex.monsters.get(entry.representativeMonsterId);
+            const representativeAsset = representativeCardAsset(entry.cards, entry.representativeMonsterId);
             return el('article', {
               className: `setup-deck ${entry.deckId === this.selectedDeckId ? 'selected' : ''}`,
               attrs: { role: 'button', tabindex: '0', 'aria-label': `${entry.deckName}を選択` },
               onclick: () => { this.selectedDeckId = entry.deckId; this.render(); },
               onkeydown: (event) => { if (event.key === 'Enter' || event.key === ' ') { this.selectedDeckId = entry.deckId; this.render(); } },
             }, [
-              representative ? renderCard({ definition: representative, label: `${entry.deckName}のリーダー画像`, interactive: false }) : null,
+              representative ? renderCard({ definition: representative, cardAsset: representativeAsset, label: `${entry.deckName}のリーダー画像`, interactive: false }) : null,
               el('div', {}, [el('strong', { text: entry.deckName }), el('span', { text: `デッキ総TP ${entry.totalPlayTp}` }), el('small', { text: `最高到達 ${TOURNAMENT_LABELS[entry.highestReached]}` })]),
             ]);
           })),
