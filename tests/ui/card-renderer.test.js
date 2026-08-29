@@ -22,6 +22,23 @@ test('battle cards use full art with four corner badges and no effect text', () 
   assert.doesNotMatch(renderer, /className: 'card-stats'/);
   assert.doesNotMatch(renderer, /className: 'card-effect'/);
   assert.doesNotMatch(renderer, /card-growth-badge/);
+  assert.doesNotMatch(renderer, /status-dots/);
+  assert.match(renderer, /status-indicators/);
+});
+
+test('battle LIFE conditions and status meanings are visible without changing compact corner values', () => {
+  const renderer = readFileSync(new URL('../../src/ui/card-renderer.js', import.meta.url), 'utf8');
+  const battle = readFileSync(new URL('../../src/ui/battle-screen.js', import.meta.url), 'utf8');
+  const css = readFileSync(new URL('../../styles.css', import.meta.url), 'utf8');
+  assert.match(renderer, /life\.current.*life\.max.*life\.percentage/s);
+  assert.match(renderer, /LIFE50%以下/);
+  assert.match(renderer, /className: 'detail-status-list'/);
+  assert.match(battle, /50%条件成立/);
+  assert.match(css, /\.game-card\.life-critical \.card-life/);
+  assert.match(css, /\.status-indicator\.positive/);
+  assert.match(css, /\.status-indicator\.negative/);
+  assert.match(css, /\.status-indicator\.special/);
+  assert.doesNotMatch(css, /\.status-dots/);
 });
 
 test('corner values use the supplied transparent badge artwork', () => {

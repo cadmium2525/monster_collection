@@ -2,6 +2,7 @@ import { effectiveAtk, effectiveDef } from '../battle/state.js';
 import { shugyoMovePoolType } from '../battle/shugyo.js';
 import { el } from './dom.js';
 import { openModal } from './modal.js';
+import { unitLifePresentation, unitStatusEntries, unitStatusGroups } from './status-presentation.js';
 
 const FACTION_CLASS = Object.freeze({
   '無機': 'faction-inorganic',
@@ -163,7 +164,8 @@ export function renderCard({
 }) {
   const meta = cardMeta(definition, unit, growth);
   const art = cardArtPlacement(definition, unit, cardAsset);
-  const statuses = unit ? Object.values(unit.statuses ?? {}).filter((value) => value === true || (typeof value === 'number' && value > 0)) : [];
+  const life = unit ? unitLifePresentation(unit) : null;
+  const statusGroups = unitStatusGroups(unit);
   const name = unit?.specialForm ?? definition.name;
   const classes = [
     'game-card',
@@ -174,6 +176,7 @@ export function renderCard({
     definition.kind === 'monster' && !showMonsterEffect ? 'effect-hidden' : '',
     dragReady ? 'drag-ready' : '',
     unit && (unit.actionPoints <= 0 || unit.summonedThisTurn || unit.stunnedThisTurn) ? 'exhausted' : '',
+    life?.low ? 'life-critical' : '',
     interactive ? '' : 'static',
     isFoilAppearance(definition, unit, cardAsset) ? 'finish-foil' : '',
     definition.kind === 'monster' && (cardAsset?.artVariantId ?? unit?.artVariantId ?? 'base') !== 'base' ? 'variant-showcase' : '',
@@ -201,7 +204,16 @@ export function renderCard({
     cornerBadge('cost', meta.cost, `${meta.cost}TP`),
     meta.stats ? cornerBadge('atk', meta.stats.atk, `ATK ${meta.stats.atk}`) : null,
     meta.stats ? cornerBadge('def', meta.stats.def, `DEF ${meta.stats.def}`, '') : null,
-    statuses.length ? el('span', { className: 'status-dots', attrs: { 'aria-label': `状態変化${statuses.length}件` } }, statuses.slice(0, 4).map(() => el('i'))) : null,
+    statusGroups.length ? el('span', {
+      className: 'status-indicators',
+      attrs: { 'aria-label': statusGroups.map((group) => `${group.label}、${group.count}件`).join('。') },
+    }, statusGroups.map((group) => el('i', {
+      className: `status-indicator ${group.tone}`,
+      attrs: { title: group.label, 'aria-hidden': 'true' },
+    }, [
+      el('b', { text: group.icon }),
+      group.count > 1 ? el('small', { text: group.count }) : null,
+    ]))) : null,
   ]);
   return node;
 }
@@ -289,6 +301,8 @@ export function openCardDetails({
   const isMonster = definition.kind === 'monster';
   const name = unit?.specialForm ?? definition.name;
   const trait = isMonster ? resolvedTrait(definition, unit) : null;
+  const life = unit ? unitLifePresentation(unit) : null;
+  const statusEntries = unitStatusEntries(unit);
   const art = cardArtPlacement(definition, unit, cardAsset);
   const foilArtClass = isFoilAppearance(definition, unit, cardAsset) ? ' finish-foil-art' : '';
   const summary = isMonster ? el('section', { className: 'detail-summary' }, [
@@ -300,7 +314,11 @@ export function openCardDetails({
       el('dt', { text: 'モン類' }), el('dd', { text: unit?.faction ?? definition.faction }),
       el('dt', { text: '役割' }), el('dd', { text: definition.role }),
       el('dt', { text: '召喚TP' }), el('dd', { text: definition.summonTp }),
-      el('dt', { text: 'LIFE' }), el('dd', { text: unit ? Math.max(0, unit.life) : definition.base.life + (growth?.life ?? 0) }),
+      el('dt', { text: 'LIFE' }), el('dd', {
+        text: unit
+          ? `${life.current} / ${life.max}（${life.percentage}%）`
+          : definition.base.life + (growth?.life ?? 0),
+      }),
       el('dt', { text: 'ATK' }), el('dd', { text: unit ? effectiveAtk(unit) : definition.base.atk + (growth?.atk ?? 0) }),
       el('dt', { text: 'DEF' }), el('dd', { text: unit ? effectiveDef(unit) : definition.base.def + (growth?.def ?? 0) }),
     ]),
@@ -309,6 +327,20 @@ export function openCardDetails({
       el('br'),
       trait.effect,
     ]),
+    unit && life.low ? el('div', { className: 'life-condition-active' }, [
+      el('strong', { text: 'LIFE50%以下' }),
+      el('span', { text: '割合条件が発動中です' }),
+    ]) : null,
+    unit ? el('section', { className: 'detail-status-list' }, [
+      el('strong', { text: '現在の状態' }),
+      statusEntries.length ? el('ul', {}, statusEntries.map((entry) => el('li', { className: entry.tone }, [
+        el('i', { text: entry.icon, attrs: { 'aria-hidden': 'true' } }),
+        el('span', {}, [
+          el('b', { text: entry.label }),
+          el('small', { text: entry.detail }),
+        ]),
+      ]))) : el('p', { text: '状態変化なし' }),
+    ]) : null,
   ]) : el('section', { className: 'detail-summary' }, [
     el('div', {
       className: `card-art ${art.className}`.trim(),

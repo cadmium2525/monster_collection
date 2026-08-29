@@ -5,6 +5,7 @@ import { renderCard, openCardDetails } from './card-renderer.js';
 import { createFusionAnimationModel, playFusionAnimation } from './fusion-animation.js';
 import { playFusionUnlockAnimation } from './fusion-unlock-animation.js';
 import { openModal } from './modal.js';
+import { lowLifeTargetEffects, unitLifePresentation } from './status-presentation.js';
 
 function delay(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 
@@ -150,6 +151,14 @@ export class BattleScreen {
       && action.moveId === this.pendingMove.moveId);
   }
 
+  pendingTargetEffects(target) {
+    if (!this.pendingMove) return [];
+    const source = this.engine.player(this.humanPlayerId).board
+      .find((unit) => unit?.id === this.pendingMove.unitId);
+    const move = this.engine.masterIndex.moves.get(this.pendingMove.moveId);
+    return lowLifeTargetEffects(source, target, move);
+  }
+
   renderStatusRail(own, opponent) {
     const fighter = (player, isOpponent) => {
       const handCount = isOpponent ? player.handCount : player.hand.length;
@@ -248,22 +257,28 @@ export class BattleScreen {
         && action.unitId === this.pendingMove.unitId
         && action.moveId === this.pendingMove.moveId
         && action.targetUnitId === unit.id);
+      const targetEffects = attackTarget ? this.pendingTargetEffects(unit) : [];
+      const life = unitLifePresentation(unit);
       const sourceSelected = this.pendingMove?.unitId === unit.id;
       const cardNode = renderCard({
         definition,
         unit,
         selected: sourceSelected,
-        label: `${isOpponent ? '相手' : '自分'}の${unit.specialForm ?? unit.name}${attackTarget ? ' 攻撃対象' : ' 詳細'}`,
+        label: `${isOpponent ? '相手' : '自分'}の${unit.specialForm ?? unit.name} LIFE ${life.current}/${life.max} ${life.percentage}%${targetEffects.length ? ` 50%条件成立 ${targetEffects.join('、')}` : attackTarget ? ' 攻撃対象' : ' 詳細'}`,
         onClick: (event) => {
           event.stopPropagation();
           this.handleBoardUnitClick(unit, definition, isOpponent);
         },
       });
       return el('div', {
-        className: `board-slot${handActions.length ? ' drop-valid' : ''}${attackTarget ? ' attack-target' : ''}`,
+        className: `board-slot${handActions.length ? ' drop-valid' : ''}${attackTarget ? ' attack-target' : ''}${targetEffects.length ? ' condition-ready' : ''}`,
         dataset: { unitId: unit.id, slot: String(slot), ownerId: player.id },
       }, [
         cardNode,
+        targetEffects.length ? el('span', { className: 'target-condition-bonus' }, [
+          el('strong', { text: '50%条件成立' }),
+          el('small', { text: targetEffects.join('・') }),
+        ]) : null,
         fusionPreview ? el('span', { className: 'fusion-drop-preview', text: `合体 SP +${fusionPreview.deltaSp}` }) : null,
       ]);
     }));
