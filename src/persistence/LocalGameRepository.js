@@ -4,7 +4,9 @@ import { mergeCardCatalogs, normalizeCardCatalog } from './card-catalog.js';
 import {
   acknowledgePendingPack,
   applyDiamondReward,
+  applyLoginRewards,
   applyPackPurchase,
+  applyTournamentUnlock,
   normalizeEconomyState,
 } from '../gacha/economy-state.js';
 
@@ -82,6 +84,17 @@ export class LocalGameRepository {
   async creditDiamonds(reward) {
     const next = applyDiamondReward(await this.getEconomy(), reward, this.now());
     return this.replaceEconomy(next);
+  }
+
+  async unlockTournamentRank(rank) {
+    const next = applyTournamentUnlock(await this.getEconomy(), rank, this.now());
+    return this.replaceEconomy(next);
+  }
+
+  async claimLoginRewards(config = {}) {
+    const result = applyLoginRewards(await this.getEconomy(), config, this.now());
+    await this.replaceEconomy(result.state);
+    return clone(result);
   }
 
   async getActiveRun() {

@@ -141,6 +141,10 @@ test('card art placement keeps legacy art below the name band and uses standalon
     className: 'support-card-art standalone-support-art',
     style: '--support-art:url("./assets/images/breeders/breeder-046.webp")',
   });
+  assert.deepEqual(cardArtPlacement({ id: 'breeder-052', kind: 'breeder' }), {
+    className: 'support-card-art standalone-support-art',
+    style: '--support-art:url("./assets/images/breeders/breeder-052.webp")',
+  });
 });
 
 test('champion portraits retain standalone and showcase artwork instead of falling back to Monolith', () => {
@@ -203,8 +207,8 @@ test('all thirty-six premium special-fusion illustrations are optimized standalo
   }
 });
 
-test('all twenty-six expansion breeder illustrations are optimized WebP project assets', () => {
-  for (let number = 21; number <= 46; number += 1) {
+test('all thirty-two expansion breeder illustrations are optimized WebP project assets', () => {
+  for (let number = 21; number <= 52; number += 1) {
     const id = String(number).padStart(3, '0');
     const url = new URL(`../../assets/images/breeders/breeder-${id}.webp`, import.meta.url);
     const bytes = readFileSync(url);

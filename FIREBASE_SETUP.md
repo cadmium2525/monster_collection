@@ -1,6 +1,6 @@
 # Firebaseセットアップ
 
-> 現在の本番環境はFirebaseプロジェクト`monster-collections`へ接続済みです。Webアプリ設定は`src/config/firebase-config.js`へ組み込み済みで、Firestore Security RulesとIndexesは2026-08-25に`(default)`データベースへデプロイ済みです。
+> 現在の本番環境はFirebaseプロジェクト`monster-collections`へ接続済みです。Webアプリ設定は`src/config/firebase-config.js`へ組み込み済みです。Firestore Security Rulesは2026-08-29、Indexesは2026-08-25に`(default)`データベースへデプロイ済みです。
 
 Firebaseが設定されていない場合、ゲームはローカル専用モードで動作します。セーブデータはブラウザーのストレージに保持され、Firebaseの初期化や書き込みに失敗しても削除されません。
 
@@ -53,13 +53,13 @@ gameState/champion
 
 `users/{uid}`にはプロフィール名に加えて、カード図鑑用の`ownedCardMasterIds`、`discoveredFusionIds`、`catalogSchemaVersion`、`catalogUpdatedAt`を保存します。これらは追加専用の履歴としてRepositoryのtransactionで集合統合し、カードをデッキから放出した後も削除しません。
 
-v1.14.0以降は同じ`users/{uid}`に`economy`も保存します。ここには所持ダイヤ、初回無料回数、未所属カード資産、モン類別パック回数、処理済みoperation ID、演出前に確定した未確認パックが入ります。パック購入・大会報酬はFirestore transactionで更新し、再送時の二重消費・二重受取を防ぎます。`savedDecks/{deckId}`には使用中40枚に加えて、その保存デッキだけで使える`pool`が保存されます。外観違いは`artVariantId`と`finish`で区別します。
+v1.14.0以降は同じ`users/{uid}`に`economy`も保存します。ここには所持ダイヤ、初回無料回数、未所属カード資産、モン類別パック回数、処理済みoperation ID、演出前に確定した未確認パックが入ります。v1.17.0以降はさらにプレイヤー共通の`tournamentQualification`、デイリー報酬の`lastDailyLoginDate`、一回性報酬の`claimedCampaignIds`を保存します。パック購入・大会報酬・ログイン報酬・大会解禁はFirestore transactionで更新し、再送時の二重消費・二重受取を防ぎます。`savedDecks/{deckId}`には使用中40枚に加えて、その保存デッキだけで使える`pool`が保存されます。外観違いは`artVariantId`と`finish`で区別します。
 
 同じユーザードキュメントの`activeRun`には、進行中大会・バトル・カード奪取の再開用チェックポイントを保存します。自分だけが読み書きでき、各端末のLocalStorageにも同じデータを先に保存します。`updatedAtMs`が新しい状態だけをtransactionで採用し、大会終了時は`phase: "cleared"`のtombstoneを残すため、遅れて届いた古い保存で終了済み大会が復活しません。
 
-保存デッキのドキュメントには、40枚分のカードインスタンスIDとマスターIDの組、デッキ名、総プレイTP、デッキ単位の大会出場資格、最高到達大会、代表モンスター、各種日時を保存します。
+保存デッキのドキュメントには、40枚分のカードインスタンスIDとマスターIDの組、デッキ名、デッキ総TP、最高到達大会、代表モンスター、各種日時を保存します。`qualification`は旧版および公開デッキ互換用にプレイヤー解禁をミラーしますが、解禁の正本は`users/{uid}.economy.tournamentQualification`です。
 
-保存デッキが`qualification: "legend"`を獲得すると、Repositoryは個人情報を除いた40枚スナップショットを`legendDecks`へ公開します。認証済みプレイヤーはこのスナップショットを読み込めますが、作成・更新・削除できるのは所有者だけです。Security Rulesでは、公開スナップショットを所有者の非公開`users/{uid}/savedDecks/{deckId}`ドキュメントおよびプロフィールと照合します。
+プレイヤーが`tournamentQualification: "legend"`を獲得した後、Repositoryは個人情報を除いた保存40枚スナップショットを`legendDecks`へ公開します。認証済みプレイヤーはこのスナップショットを読み込めますが、作成・更新・削除できるのは所有者だけです。Security Rulesでは、公開スナップショットを所有者の非公開`users/{uid}/savedDecks/{deckId}`ドキュメント、プロフィール、プレイヤーのLegend解禁と照合します。
 
 レジェンドカップでは、他ユーザーの有効なスナップショットを最大14デッキ読み込みます。不正なデータや現在のマスターデータと整合しない古いデータは除外し、空き枠は自動生成したLegend CPUで補います。決勝の対戦相手は常に`gameState/champion`の現チャンピオンで、戴冠した大会の決勝開始時40枚と成長状態を再現します。
 
@@ -79,7 +79,7 @@ v1.14.0以降は同じ`users/{uid}`に`economy`も保存します。ここには
 
 ## 4. 他プレイヤーのレジェンドデッキを確認する
 
-Security Rulesのデプロイ後、デッキでゴールドカップに優勝し、レジェンド出場資格を獲得します。その後、Firebase Consoleで`legendDecks`を確認してください。
+Security Rulesのデプロイ後、いずれかのデッキでゴールドカップに優勝し、プレイヤー共通のレジェンド出場資格を獲得します。その後、Firebase Consoleで`legendDecks`を確認してください。
 
 別のブラウザーまたは別の匿名アカウントでゲームを開き、レジェンドカップを開始します。最初のアカウントのデッキが、16人トーナメント表へ`他プレイヤー`枠として登場すれば正常です。自分が所有する公開スナップショットは、自分の大会には登場しません。
 

@@ -208,7 +208,12 @@ export class GameSession {
       releasedInstanceIds: this.pendingReward.state.selectedReleaseIds,
     });
     const completedTournament = ['won', 'champion'].includes(this.tournament.state.status);
+    const previousQualification = this.deckCollection.getPlayerQualification();
     if (completedTournament) saved = this.deckCollection.grantTournamentWin(deckId, this.tournament.state.rank);
+    const playerQualification = this.deckCollection.getPlayerQualification();
+    if (completedTournament && playerQualification !== previousQualification && this.repository.unlockTournamentRank) {
+      await this.repository.unlockTournamentRank(playerQualification);
+    }
     await this.repository.saveDeck(saved);
 
     const rewardConfig = DIAMOND_REWARDS[this.tournament.state.rank];
@@ -263,6 +268,7 @@ export class GameSession {
       tournamentStatus: this.tournament.state.status,
       savedDeck: saved,
       crowned,
+      playerQualification,
     };
   }
 }

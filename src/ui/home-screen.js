@@ -48,7 +48,7 @@ export const TUTORIAL_STEPS = Object.freeze([
     title: '勝利後にカードを奪う',
     copy: '相手の40枚から提示された5枚を見て、最大2枚を選び、同じ枚数だけ自分のカードと交換します。',
     tokens: [['5', '候補を見る'], ['2', '最大獲得'], ['40', '必ず維持']],
-    tip: '敗退しても確定した交換は保存されます。優勝したデッキだけ次大会へ進めます。',
+    tip: '敗退しても確定した交換は保存されます。一度解禁した上位大会には、どの保存デッキでも挑戦できます。',
   },
 ]);
 
@@ -92,7 +92,7 @@ function howToPlayContent(onTutorial) {
       el('li', { text: 'Training・修行の成長は同じ大会の次試合へ引き継ぎ、大会終了時に元へ戻ります。' }),
       el('li', { text: 'レジェンド決勝の現チャンピオンは、戴冠した大会の決勝開始時点の40枚と育成状態を再現して登場します。' }),
       el('li', { text: '相手盤面が空ならプレイヤーへ直接攻撃。LIFEを0にすれば勝利です。' }),
-      el('li', { text: '敗退しても確定済みの交換カードは保存。優勝したデッキだけ次大会へ進めます。' }),
+      el('li', { text: '敗退しても確定済みの交換カードは保存。上位大会を一度解禁すれば、ほかの保存デッキでも挑戦できます。' }),
     ]),
     el('button', { className: 'primary-button tutorial-start', text: '7ステップのチュートリアルを始める', onclick: onTutorial }),
     el('p', { className: 'legacy-note', text: 'アプリとして遊ぶ場合は「アプリに追加」を使用します。iPhone/iPadはSafariの共有メニューから「ホーム画面に追加」を選んでください。' }),
@@ -174,10 +174,7 @@ export class HomeScreen {
   }
 
   render() {
-    const highest = this.decks.reduce((best, deck) => {
-      const order = ['bronze', 'silver', 'gold', 'legend'];
-      return order.indexOf(deck.qualification) > order.indexOf(best) ? deck.qualification : best;
-    }, 'bronze');
+    const highest = this.economy?.tournamentQualification ?? 'bronze';
     const footerMode = homeFooterMode({ debugMode: this.debugMode, syncError: this.repositoryStatus.error });
     const showFooter = footerMode !== 'hidden';
     const resume = activeRunSummary(this.activeRun);

@@ -8,9 +8,11 @@ import { masterData, masterIndex } from '../helpers.js';
 function setup(champion = null) {
   const saves = [];
   const catalogUpdates = [];
+  const unlocks = [];
   const repository = {
     async saveDeck(deck) { saves.push(structuredClone(deck)); return deck; },
     async recordCardCatalog(update) { catalogUpdates.push(structuredClone(update)); return update; },
+    async unlockTournamentRank(rank) { unlocks.push(rank); return { tournamentQualification: rank }; },
     async claimChampionship(payload) { return { ...payload, championVersion: payload.expectedVersion + 1, crownedAt: '2026-08-24T00:00:00Z' }; },
   };
   let id = 0;
@@ -19,7 +21,7 @@ function setup(champion = null) {
   const session = new GameSession({
     masterData, masterIndex, deckCollection: decks, repository, user: { id: 'u1', displayName: '通しテスター' }, champion, seed: 'full-flow',
   });
-  return { session, decks, deck, saves, repository, catalogUpdates };
+  return { session, decks, deck, saves, repository, catalogUpdates, unlocks };
 }
 
 function fakeFinishedBattle(winnerId = 'player', growth = {}, log = []) {
@@ -94,7 +96,8 @@ test('a later-round opponent enters the shared BattleEngine with its accumulated
 });
 
 test('home-equivalent deck selection -> four wins -> rewards -> next rank qualification', async () => {
-  const { session, decks, deck, saves } = setup();
+  const { session, decks, deck, saves, unlocks } = setup();
+  const otherDeck = decks.create({ deckName: '別の40枚', cards: createBaselineDeck(masterData, 'other-source') });
   await session.startTournament(deck.deckId, 'bronze');
   for (let round = 0; round < 4; round += 1) {
     const outcome = await session.completeBattle(fakeFinishedBattle('player'));
@@ -104,6 +107,9 @@ test('home-equivalent deck selection -> four wins -> rewards -> next rank qualif
     assert.equal(afterReward.type, round === 3 ? 'tournament-end' : 'advanced');
   }
   assert.equal(decks.get(deck.deckId).qualification, 'silver');
+  assert.equal(decks.get(otherDeck.deckId).qualification, 'silver');
+  assert.doesNotThrow(() => decks.recordTournamentEntry(otherDeck.deckId, 'silver'));
+  assert.deepEqual(unlocks, ['silver']);
   assert.equal(session.tournament.state.wins, 4);
   assert.ok(saves.length >= 5);
 });

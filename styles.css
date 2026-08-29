@@ -689,6 +689,25 @@ body:has(.battle-screen) {
 .modal-header { display: flex; justify-content: space-between; align-items: center; gap: 12px; border-bottom: 1px solid var(--line); padding-bottom: 9px; }
 .modal-header h2 { margin: 0; font-size: 20px; color: var(--gold); }
 .icon-button { width: 42px; height: 42px; border: 1px solid var(--line); border-radius: 50%; background: #162537; cursor: pointer; }
+.login-bonus-modal { width:min(610px,96vw); border-color:rgba(102,231,247,.68); background:radial-gradient(circle at 50% 12%,rgba(27,126,157,.24),transparent 42%),linear-gradient(180deg,#102436,#070d16); box-shadow:0 22px 70px rgba(0,0,0,.78),0 0 30px rgba(72,216,242,.16); }
+.login-bonus-panel { display:grid; grid-template-columns:90px minmax(0,1fr); gap:8px 14px; align-items:center; padding-top:10px; }
+.login-bonus-diamond { grid-row:1/4; display:grid; place-items:center; width:90px; height:90px; border:1px solid rgba(100,232,247,.35); border-radius:50%; background:radial-gradient(circle,rgba(74,218,244,.24),rgba(5,17,30,.2) 67%); box-shadow:inset 0 0 22px rgba(73,224,247,.14); }
+.login-bonus-diamond-art { width:70px; height:70px; object-fit:contain; filter:drop-shadow(0 0 11px rgba(83,232,255,.85)); animation:login-diamond-float 1.8s ease-in-out infinite alternate; }
+.login-bonus-panel > p { margin:0; color:#d8e8ed; font-size:11px; line-height:1.45; }
+.login-bonus-rewards { display:grid; gap:5px; }
+.login-reward { min-width:0; display:grid; grid-template-columns:28px minmax(0,1fr) auto; align-items:center; gap:7px; padding:7px 9px; border:1px solid rgba(94,213,229,.28); border-radius:9px; background:rgba(4,19,33,.72); }
+.login-reward-campaign { border-color:rgba(232,186,98,.55); background:linear-gradient(135deg,rgba(91,57,12,.42),rgba(5,25,39,.78)); }
+.login-reward-diamond { width:26px; height:26px; object-fit:contain; filter:drop-shadow(0 0 5px rgba(76,225,250,.7)); }
+.login-reward div,.login-reward strong,.login-reward small { min-width:0; display:block; }
+.login-reward strong { overflow:hidden; color:#e8f7f9; font-size:11px; white-space:nowrap; text-overflow:ellipsis; }
+.login-reward small { margin-top:1px; color:#8cc9d1; font-size:8px; }
+.login-reward b { color:#fff0aa; font:900 17px/1 Georgia,serif; white-space:nowrap; }
+.login-bonus-total { display:grid; grid-template-columns:1fr auto; align-items:baseline; gap:2px 8px; padding-top:3px; border-top:1px solid rgba(255,255,255,.1); }
+.login-bonus-total span { color:var(--muted); font-size:9px; }
+.login-bonus-total strong { color:#a7f6ff; font-size:14px; }
+.login-bonus-total small { grid-column:1/-1; color:#d5e1e5; font-size:8px; text-align:right; }
+.login-bonus-panel > .primary-button { grid-column:2; min-height:36px; }
+@keyframes login-diamond-float { to { transform:translateY(-4px) scale(1.04); filter:drop-shadow(0 0 16px rgba(96,238,255,.95)) brightness(1.08); } }
 .detail-grid { display: grid; grid-template-columns: minmax(150px, .7fr) minmax(220px, 1.3fr); gap: 14px; margin-top: 12px; }
 .detail-summary { display: grid; align-content: start; padding: 12px; border-radius: 12px; background: rgba(255,255,255,.04); }
 .detail-summary > .card-art { width: min(100%,clamp(140px,38dvh,220px)); height: auto; aspect-ratio: .75; justify-self: center; margin: 0; }
@@ -1527,6 +1546,6 @@ button:disabled { opacity: .38; cursor: not-allowed; }
 }
 
 @media (prefers-reduced-motion:reduce) {
-  .opening-pack,.opening-aura,.opening-aura i,.pack-particle-field i,.pack-foil-sheen,.pack-break-flash,.pack-break-flash::before,.pack-break-flash i,.pack-card-slot,.pack-card-reveal-shell,.pack-rarity-burst,.rarity-burst-rings i,.pack-rarity-burst strong,.game-card.finish-foil::before,.fusion-catalog-card.finish-foil::before,.card-art.finish-foil-art::after,.game-card.life-critical .card-life { animation:none !important; }
+  .opening-pack,.opening-aura,.opening-aura i,.pack-particle-field i,.pack-foil-sheen,.pack-break-flash,.pack-break-flash::before,.pack-break-flash i,.pack-card-slot,.pack-card-reveal-shell,.pack-rarity-burst,.rarity-burst-rings i,.pack-rarity-burst strong,.game-card.finish-foil::before,.fusion-catalog-card.finish-foil::before,.card-art.finish-foil-art::after,.game-card.life-critical .card-life,.login-bonus-diamond-art { animation:none !important; }
   .pack-particle-field { display:none; }
 }

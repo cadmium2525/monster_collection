@@ -17,8 +17,9 @@ export class TournamentSetupScreen {
   render() {
     const decks = this.collection.list();
     const deck = this.selectedDeckId ? this.collection.get(this.selectedDeckId) : null;
-    const maxRankIndex = deck ? TOURNAMENTS.indexOf(deck.qualification) : -1;
-    if (TOURNAMENTS.indexOf(this.selectedRank) > maxRankIndex) this.selectedRank = deck?.qualification ?? 'bronze';
+    const playerQualification = this.collection.getPlayerQualification();
+    const maxRankIndex = deck ? TOURNAMENTS.indexOf(playerQualification) : -1;
+    if (TOURNAMENTS.indexOf(this.selectedRank) > maxRankIndex) this.selectedRank = playerQualification;
     replace(this.root, el('main', { className: 'tournament-setup-screen' }, [
       el('header', { className: 'screen-header' }, [
         el('div', {}, [el('p', { className: 'eyebrow', text: 'ENTRY SETUP' }), el('h1', { text: '大会エントリー' })]),
@@ -26,7 +27,7 @@ export class TournamentSetupScreen {
       ]),
       el('section', { className: 'setup-grid' }, [
         el('section', { className: 'setup-decks' }, [
-          el('div', { className: 'section-title' }, [el('span', { className: 'step-number', text: '1' }), el('div', {}, [el('h2', { text: '使用するデッキ' }), el('p', { text: '資格とカード交換はこのデッキ単位です。' })])]),
+          el('div', { className: 'section-title' }, [el('span', { className: 'step-number', text: '1' }), el('div', {}, [el('h2', { text: '使用するデッキ' }), el('p', { text: '大会の解禁は全デッキ共通。交換カードは使用デッキに保存されます。' })])]),
           el('div', { className: 'setup-deck-list' }, decks.map((entry) => {
             const representative = this.masterIndex.monsters.get(entry.representativeMonsterId);
             return el('article', {
@@ -36,7 +37,7 @@ export class TournamentSetupScreen {
               onkeydown: (event) => { if (event.key === 'Enter' || event.key === ' ') { this.selectedDeckId = entry.deckId; this.render(); } },
             }, [
               representative ? renderCard({ definition: representative, label: `${entry.deckName}のリーダー画像`, interactive: false }) : null,
-              el('div', {}, [el('strong', { text: entry.deckName }), el('span', { text: `デッキ総TP ${entry.totalPlayTp}` }), el('small', { text: `${TOURNAMENT_LABELS[entry.qualification]}まで` })]),
+              el('div', {}, [el('strong', { text: entry.deckName }), el('span', { text: `デッキ総TP ${entry.totalPlayTp}` }), el('small', { text: `最高到達 ${TOURNAMENT_LABELS[entry.highestReached]}` })]),
             ]);
           })),
         ]),

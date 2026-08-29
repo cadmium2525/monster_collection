@@ -83,7 +83,8 @@ service cloud.firestore {
       let profile = get(/databases/$(database)/documents/users/$(ownerId)).data;
       return source.ownerUserId == ownerId
         && source.deckId == sourceDeckId
-        && source.qualification == 'legend'
+        && profile.economy is map
+        && profile.economy.tournamentQualification == 'legend'
         && source.deckName == d.deckName
         && source.cards == d.cards
         && source.totalPlayTp == d.totalPlayTp

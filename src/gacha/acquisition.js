@@ -1,7 +1,10 @@
 export const FACTIONS = Object.freeze(['無機', '創造', '幻霊', '魔族', '獣族', '怪物']);
 
 export const TROPHY_BREEDER_IDS = Object.freeze(
-  Array.from({ length: 12 }, (_, index) => `breeder-${String(index + 29).padStart(3, '0')}`),
+  [
+    ...Array.from({ length: 12 }, (_, index) => `breeder-${String(index + 29).padStart(3, '0')}`),
+    ...Array.from({ length: 6 }, (_, index) => `breeder-${String(index + 47).padStart(3, '0')}`),
+  ],
 );
 
 export const BOOSTER_MONSTER_IDS = Object.freeze(

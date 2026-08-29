@@ -95,6 +95,32 @@ export class ResilientGameRepository {
     }
   }
 
+  async unlockTournamentRank(rank) {
+    const localResult = await this.local.unlockTournamentRank(rank);
+    if (!this.activeCloud?.unlockTournamentRank) return localResult;
+    try {
+      const cloudResult = await this.activeCloud.unlockTournamentRank(rank);
+      await this.local.replaceEconomy(cloudResult);
+      return cloudResult;
+    } catch (error) {
+      this.lastError = error;
+      return localResult;
+    }
+  }
+
+  async claimLoginRewards(config = {}) {
+    const localResult = await this.local.claimLoginRewards(config);
+    if (!this.activeCloud?.claimLoginRewards) return localResult;
+    try {
+      const cloudResult = await this.activeCloud.claimLoginRewards(config);
+      await this.local.replaceEconomy(cloudResult.state);
+      return cloudResult;
+    } catch (error) {
+      this.lastError = error;
+      return localResult;
+    }
+  }
+
   async listDecks() {
     const localDecks = await this.local.listDecks();
     if (!this.activeCloud) return localDecks;

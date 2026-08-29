@@ -34,5 +34,11 @@
 18. `breeder-038` 獣族・群れの守り — three different allied fantasy beasts standing shoulder to shoulder around their ranger breeder as a warm golden pack aura forms a protective circle
 19. `breeder-039` 怪物・暴食 — a majestic aberrant monster devouring a glowing summoned creature crystal from its breeder's offering, wounds sealing with emerald energy, dark fantasy without gore
 20. `breeder-040` 怪物・捕食進化 — a victorious eldritch monster evolving after defeating prey, new armored growths and emerald power erupting while its breeder watches from below
+21. `breeder-047` 無機・機神起動 — a dramatic high three-quarter view of an elite engineer on a circular cathedral-forge platform, pulling twin control levers while separate ancient armor plates and mechanical limbs spiral into assembly around a suspended blue-white reactor
+22. `breeder-048` 創造・神造再演 — a master artificer in profile striking a radiant geometric mirror with a forging hammer as two identical porcelain-and-brass celestial knights step out in synchronized opposite directions
+23. `breeder-049` 幻霊・黄泉の残唱 — a moonlit mystic opening a spirit gate while a spectral dragon and its brighter echo repeat one attack before soul-light returns to the gate
+24. `breeder-050` 魔族・終末契約 — a high diagonal view over a ruined obsidian amphitheater, where an empty split altar feeds narrow crimson life-energy streams into a total eclipse above; no visible human or demon, with broken chains and floating black-glass shards emphasizing the catastrophic bargain
+25. `breeder-051` 獣族・王者の咆哮 — a winged lion alpha in side profile roaring a broad golden shockwave from a storm cliff toward an antlered stag, saber cat, and armored boar charging through the valley below, with a ranger raising a torn standard
+26. `breeder-052` 怪物・完全捕食 — an enormous many-eyed mantis-centipede aberration in side profile curling through ruined jungle arches, crushing and absorbing a summoned-monster crystal while emerald-gold armor grows along its segmented body
 
-生成PNGを目視確認後、当初のゲーム配信用コピーはSystem.DrawingのHighQualityBicubicで768×768へ縮小し、JPEG品質90で保存した。v1.12.0でこの768×768配信画像をWebP quality 90・effort 6・alpha quality 100へ変換し、JPEGは配信対象から削除した。元の生成PNGはCodex生成画像保管場所に残している。
+生成PNGを目視確認後、ゲーム配信用コピーは768×768へ高品質縮小し、WebP quality 90・effort 6で保存した。元の生成PNGはCodex生成画像保管場所に残している。

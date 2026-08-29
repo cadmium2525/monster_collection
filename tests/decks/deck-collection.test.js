@@ -25,16 +25,30 @@ test('up to five named 40-card decks are stored with summaries', () => {
   assert.throws(() => decks.create({ deckName: '6個目', cards: legalDeck('six') }), /最大5/);
 });
 
-test('qualification belongs to a deck and advances only on tournament win', () => {
+test('qualification belongs to the player and unlocks the next cup for every deck', () => {
   const decks = collection();
-  const deck = decks.create({ deckName: '挑戦者', cards: legalDeck('qual') });
-  assert.equal(deck.qualification, 'bronze');
-  assert.throws(() => decks.recordTournamentEntry(deck.deckId, 'silver'), /出場資格/);
-  decks.recordTournamentEntry(deck.deckId, 'bronze');
-  assert.equal(decks.grantTournamentWin(deck.deckId, 'bronze').qualification, 'silver');
-  assert.equal(decks.get(deck.deckId).highestReached, 'bronze');
-  decks.recordTournamentEntry(deck.deckId, 'silver');
-  assert.equal(decks.get(deck.deckId).highestReached, 'silver');
+  const first = decks.create({ deckName: '挑戦者A', cards: legalDeck('qual-a') });
+  const second = decks.create({ deckName: '挑戦者B', cards: legalDeck('qual-b') });
+  assert.equal(decks.getPlayerQualification(), 'bronze');
+  assert.throws(() => decks.recordTournamentEntry(second.deckId, 'silver'), /未解禁/);
+  decks.recordTournamentEntry(first.deckId, 'bronze');
+  assert.equal(decks.grantTournamentWin(first.deckId, 'bronze').qualification, 'silver');
+  assert.equal(decks.getPlayerQualification(), 'silver');
+  assert.equal(decks.get(first.deckId).highestReached, 'bronze');
+  assert.equal(decks.get(second.deckId).qualification, 'silver');
+  assert.doesNotThrow(() => decks.recordTournamentEntry(second.deckId, 'silver'));
+  assert.equal(decks.get(second.deckId).highestReached, 'silver');
+});
+
+test('legacy per-deck qualification migrates to the highest player-wide unlock', () => {
+  const records = [
+    { deckId: 'legacy-bronze', deckName: '旧銅', cards: legalDeck('legacy-bronze'), qualification: 'bronze' },
+    { deckId: 'legacy-gold', deckName: '旧金', cards: legalDeck('legacy-gold'), qualification: 'gold' },
+  ];
+  const decks = new DeckCollection({ masterIndex, records, playerQualification: 'silver' });
+  assert.equal(decks.getPlayerQualification(), 'gold');
+  assert.equal(decks.list().every((deck) => deck.qualification === 'gold'), true);
+  assert.equal(decks.create({ deckName: '新規', cards: legalDeck('new-after-unlock') }).qualification, 'gold');
 });
 
 test('replacing cards recalculates total TP and does not store tournament growth', () => {

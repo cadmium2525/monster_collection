@@ -1,8 +1,13 @@
 import { FACTIONS } from './acquisition.js';
 import { normalizeCardAppearance } from '../cards/card-appearance.js';
+import { TOURNAMENTS } from '../battle/rules.js';
 
 export const ECONOMY_SCHEMA_VERSION = 1;
 export const STARTER_DIAMONDS = 600;
+export const DAILY_LOGIN_DIAMONDS = 300;
+export const SUMMER_BONUS_DIAMONDS = 3000;
+export const SUMMER_BONUS_ID = 'summer-vacation-2026';
+export const SUMMER_BONUS_START = '2026-08-29';
 
 function clone(value) { return value == null ? value : structuredClone(value); }
 
@@ -61,6 +66,9 @@ export function defaultEconomyState(now = null) {
     pendingPack: null,
     packCounters: Object.fromEntries(FACTIONS.map((faction) => [faction, 0])),
     processedOperationIds: [],
+    tournamentQualification: 'bronze',
+    lastDailyLoginDate: null,
+    claimedCampaignIds: [],
     archivedDecks: [],
     updatedAt: now,
   };
@@ -80,9 +88,54 @@ export function normalizeEconomyState(value, now = null) {
       Math.max(0, Math.trunc(Number(value.packCounters?.[faction]) || 0)),
     ])),
     processedOperationIds: [...new Set((value.processedOperationIds ?? []).map(String))].slice(-160),
+    tournamentQualification: TOURNAMENTS.includes(value.tournamentQualification) ? value.tournamentQualification : 'bronze',
+    lastDailyLoginDate: /^\d{4}-\d{2}-\d{2}$/.test(String(value.lastDailyLoginDate ?? ''))
+      ? String(value.lastDailyLoginDate)
+      : null,
+    claimedCampaignIds: [...new Set((value.claimedCampaignIds ?? []).map(String))].slice(-32),
     archivedDecks: Array.isArray(value.archivedDecks) ? clone(value.archivedDecks) : [],
     updatedAt: value.updatedAt ?? now,
   };
+}
+
+export function japanDateKey(value = new Date()) {
+  const parts = new Intl.DateTimeFormat('en', {
+    timeZone: 'Asia/Tokyo', year: 'numeric', month: '2-digit', day: '2-digit',
+  }).formatToParts(value instanceof Date ? value : new Date(value));
+  const part = (type) => parts.find((entry) => entry.type === type)?.value;
+  return `${part('year')}-${part('month')}-${part('day')}`;
+}
+
+export function applyTournamentUnlock(current, rank, now = new Date().toISOString()) {
+  const state = normalizeEconomyState(current, now);
+  if (!TOURNAMENTS.includes(rank)) throw new Error(`不明な大会です: ${rank}`);
+  if (TOURNAMENTS.indexOf(rank) > TOURNAMENTS.indexOf(state.tournamentQualification)) {
+    state.tournamentQualification = rank;
+    state.updatedAt = now;
+  }
+  return state;
+}
+
+export function applyLoginRewards(current, {
+  loginDate = japanDateKey(),
+  campaignId = SUMMER_BONUS_ID,
+  campaignStart = SUMMER_BONUS_START,
+} = {}, now = new Date().toISOString()) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(loginDate)) throw new Error('ログイン日が不正です');
+  const state = normalizeEconomyState(current, now);
+  const rewards = [];
+  if (!state.lastDailyLoginDate || loginDate > state.lastDailyLoginDate) {
+    state.diamonds += DAILY_LOGIN_DIAMONDS;
+    state.lastDailyLoginDate = loginDate;
+    rewards.push({ type: 'daily', amount: DAILY_LOGIN_DIAMONDS, label: 'デイリーログインボーナス' });
+  }
+  if (loginDate >= campaignStart && campaignId && !state.claimedCampaignIds.includes(campaignId)) {
+    state.diamonds += SUMMER_BONUS_DIAMONDS;
+    state.claimedCampaignIds = [...state.claimedCampaignIds, campaignId].slice(-32);
+    rewards.push({ type: 'campaign', amount: SUMMER_BONUS_DIAMONDS, label: '夏休みボーナス' });
+  }
+  if (rewards.length) state.updatedAt = now;
+  return { state, rewards };
 }
 
 function rememberOperation(state, operationId) {

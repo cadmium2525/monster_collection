@@ -1,11 +1,15 @@
 import { normalizeDeckCards, representativeMonster, totalPlayTp, validateDeck } from '../battle/deck.js';
-import { TOURNAMENTS } from '../battle/rules.js';
+import { TOURNAMENTS, TOURNAMENT_LABELS } from '../battle/rules.js';
 import { normalizeCardAppearance } from '../cards/card-appearance.js';
 
 const MAX_DECKS = 5;
 
 function clone(value) { return structuredClone(value); }
 function rankIndex(rank) { return TOURNAMENTS.indexOf(rank); }
+function highestRank(ranks = []) {
+  return ranks.filter((rank) => TOURNAMENTS.includes(rank))
+    .reduce((best, rank) => rankIndex(rank) > rankIndex(best) ? rank : best, 'bronze');
+}
 
 function validName(name) {
   const normalized = String(name ?? '').trim();
@@ -49,12 +53,13 @@ function removeDuplicatePoolReferences(cards, pool) {
 }
 
 export class DeckCollection {
-  constructor({ masterIndex, records = [], now = () => new Date().toISOString(), idFactory = null }) {
+  constructor({ masterIndex, records = [], playerQualification = 'bronze', now = () => new Date().toISOString(), idFactory = null }) {
     this.masterIndex = masterIndex;
     this.now = now;
     this.sequence = records.length;
     this.idFactory = idFactory ?? (() => `deck-${Date.now().toString(36)}-${++this.sequence}`);
     this.assetRepairCounts = new Map();
+    this.playerQualification = highestRank([playerQualification, ...records.map((record) => record.qualification)]);
     this.records = records.map((record) => this._normalizeRecord(record));
     if (this.records.length > MAX_DECKS) throw new Error(`保存デッキは最大${MAX_DECKS}個です`);
     if (new Set(this.records.map((record) => record.deckId)).size !== this.records.length) throw new Error('deckIdが重複しています');
@@ -65,7 +70,7 @@ export class DeckCollection {
     const cards = normalizeDeckCards(record.cards, deckId);
     const validation = validateDeck(cards, this.masterIndex, { deckId });
     if (!validation.valid) throw new Error(`不正な保存デッキ ${deckId}:\n${validation.errors.join('\n')}`);
-    const qualification = TOURNAMENTS.includes(record.qualification) ? record.qualification : 'bronze';
+    const qualification = this.playerQualification;
     const highestReached = TOURNAMENTS.includes(record.highestReached) ? record.highestReached : 'bronze';
     const normalizedPool = (record.pool ?? []).map((card, index) => normalizeCardAppearance({
       ...clone(card),
@@ -115,7 +120,7 @@ export class DeckCollection {
     if (this.records.some((deck) => deck.deckId === deckId)) throw new Error(`deckIdが重複しています: ${deckId}`);
     const timestamp = this.now();
     const record = this._normalizeRecord({
-      deckId, deckName, cards: normalizeDeckCards(cards, deckId), qualification: 'bronze', highestReached: 'bronze', createdAt: timestamp, updatedAt: timestamp,
+      deckId, deckName, cards: normalizeDeckCards(cards, deckId), qualification: this.playerQualification, highestReached: 'bronze', createdAt: timestamp, updatedAt: timestamp,
     });
     this.records.push(record);
     return clone(record);
@@ -215,7 +220,7 @@ export class DeckCollection {
   recordTournamentEntry(deckId, rank) {
     const record = this._find(deckId);
     if (!TOURNAMENTS.includes(rank)) throw new Error(`Unknown tournament: ${rank}`);
-    if (rankIndex(rank) > rankIndex(record.qualification)) throw new Error(`${record.deckName}には出場資格がありません`);
+    if (rankIndex(rank) > rankIndex(this.playerQualification)) throw new Error(`${TOURNAMENT_LABELS[rank]}は未解禁です`);
     if (rankIndex(rank) > rankIndex(record.highestReached)) record.highestReached = rank;
     record.updatedAt = this.now();
     return clone(record);
@@ -226,9 +231,19 @@ export class DeckCollection {
     if (!TOURNAMENTS.includes(rank)) throw new Error(`Unknown tournament: ${rank}`);
     if (rankIndex(rank) > rankIndex(record.highestReached)) record.highestReached = rank;
     const next = TOURNAMENTS[rankIndex(rank) + 1];
-    if (next && rankIndex(next) > rankIndex(record.qualification)) record.qualification = next;
+    if (next) this.setPlayerQualification(next);
     record.updatedAt = this.now();
     return clone(record);
+  }
+
+  getPlayerQualification() { return this.playerQualification; }
+
+  setPlayerQualification(rank) {
+    if (!TOURNAMENTS.includes(rank)) throw new Error(`Unknown tournament: ${rank}`);
+    if (rankIndex(rank) <= rankIndex(this.playerQualification)) return this.playerQualification;
+    this.playerQualification = rank;
+    for (const record of this.records) record.qualification = rank;
+    return this.playerQualification;
   }
 
   remove(deckId) {

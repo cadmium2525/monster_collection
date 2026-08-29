@@ -8,7 +8,7 @@
     "legacyDistanceFieldsAreNonGameplay": true,
     "expectedMonsterCount": 24,
     "expectedMoveCount": 216,
-    "expectedBreederCount": 46,
+    "expectedBreederCount": 52,
     "boosterExpansion": "First Flight 2026-08-26"
   },
   "monsters": [
@@ -2864,6 +2864,60 @@
       "name": "緊急撤退指示",
       "tp": 2,
       "effect": "合体していない味方1体を手札へ戻す。バトル中の状態変化は解除される"
+    },
+    {
+      "id": "breeder-047",
+      "kind": "breeder",
+      "category": "モン類専用",
+      "faction": "無機",
+      "name": "無機・機神起動",
+      "tp": 4,
+      "effect": "無機1体のATK+10・DEF+10。次の自分ターン終了まで継続"
+    },
+    {
+      "id": "breeder-048",
+      "kind": "breeder",
+      "category": "モン類専用",
+      "faction": "創造",
+      "name": "創造・神造再演",
+      "tp": 3,
+      "effect": "召喚ターンでない創造1体の行動権+1。さらに次の技ダメージ+30%"
+    },
+    {
+      "id": "breeder-049",
+      "kind": "breeder",
+      "category": "モン類専用",
+      "faction": "幻霊",
+      "name": "幻霊・黄泉の残唱",
+      "tp": 3,
+      "effect": "幻霊1体の次の技が元ダメージの60%を追加で与え、次に撃破されたとき手札へ戻る"
+    },
+    {
+      "id": "breeder-050",
+      "kind": "breeder",
+      "category": "モン類専用",
+      "faction": "魔族",
+      "name": "魔族・終末契約",
+      "tp": 2,
+      "effect": "自分のプレイヤーLIFEを15失い、魔族1体の次の技ダメージ+50%。LIFE15以下では使用不可"
+    },
+    {
+      "id": "breeder-051",
+      "kind": "breeder",
+      "category": "モン類専用",
+      "faction": "獣族",
+      "name": "獣族・王者の咆哮",
+      "tp": 3,
+      "effect": "場に獣族が2体以上いる場合、味方獣族全員ATK+5を2ターン。さらに次の被ダメージ25%軽減"
+    },
+    {
+      "id": "breeder-052",
+      "kind": "breeder",
+      "category": "モン類専用",
+      "faction": "怪物",
+      "name": "怪物・完全捕食",
+      "tp": 3,
+      "effect": "手札のモンスター1枚を捨て、怪物1体のLIFEを20回復・ATK+10"
     }
   ],
   "growthCards": [

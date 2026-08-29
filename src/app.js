@@ -19,6 +19,8 @@ import { TournamentSetupScreen } from './ui/tournament-setup-screen.js';
 import { AssetCollectionScreen, BoosterShopScreen, PackOpeningScreen } from './ui/booster-screen.js';
 import { AdminToolScreen } from './ui/admin-screen.js';
 import { generateBoosterPack } from './gacha/pack-generator.js';
+import { japanDateKey } from './gacha/economy-state.js';
+import { diamondIcon } from './ui/currency-icon.js';
 
 const AI_BUDGET = Object.freeze({ bronze: 4, silver: 8, gold: 22, legend: 85, champion: 240 });
 
@@ -51,12 +53,21 @@ class MonsterConstructionApp {
     this.repository = createGameRepository();
     this.user = await this.repository.initialize();
     this.economy = await this.repository.getEconomy();
+    const loginResult = this.repository.claimLoginRewards
+      ? await this.repository.claimLoginRewards({ loginDate: japanDateKey() })
+      : { state: this.economy, rewards: [] };
+    this.economy = loginResult.state;
+    this.loginRewards = loginResult.rewards;
     const records = await this.repository.listDecks();
     this.decks = new DeckCollection({
       masterIndex: this.masterIndex,
       records,
+      playerQualification: this.economy.tournamentQualification,
       idFactory: () => `deck-${globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 8)}`}`,
     });
+    if (this.decks.getPlayerQualification() !== this.economy.tournamentQualification && this.repository.unlockTournamentRank) {
+      this.economy = await this.repository.unlockTournamentRank(this.decks.getPlayerQualification());
+    }
     const assetRepairs = this.decks.assetRepairReport();
     if (assetRepairs.length) {
       const results = await Promise.allSettled(assetRepairs.map(({ deckId }) => this.repository.saveDeck(this.decks.get(deckId))));
@@ -84,7 +95,31 @@ class MonsterConstructionApp {
       if (this.currentScreen === 'home') this.showHome();
     });
     this.showHome();
+    if (this.loginRewards.length) this.showLoginBonus(this.loginRewards);
     globalThis.__MC_DEBUG__ = { app: this, masterData: this.masterData, masterIndex: this.masterIndex, repository: this.repository };
+  }
+
+  showLoginBonus(rewards) {
+    const total = rewards.reduce((sum, reward) => sum + reward.amount, 0);
+    let modal = null;
+    const content = el('div', { className: 'login-bonus-panel' }, [
+      el('div', { className: 'login-bonus-diamond', attrs: { 'aria-hidden': 'true' } }, diamondIcon('login-bonus-diamond-art')),
+      el('p', { text: rewards.some((reward) => reward.type === 'campaign')
+        ? 'いつものログインボーナスに加えて、期間プレゼントをお届けします。'
+        : '今日のログインプレゼントをお届けします。' }),
+      el('div', { className: 'login-bonus-rewards' }, rewards.map((reward) => el('article', { className: `login-reward login-reward-${reward.type}` }, [
+        el('span', {}, diamondIcon('login-reward-diamond')),
+        el('div', {}, [el('strong', { text: reward.label }), el('small', { text: reward.type === 'daily' ? '毎日1回' : '初回ログイン限定' })]),
+        el('b', { text: `+${reward.amount.toLocaleString('ja-JP')}` }),
+      ]))),
+      el('div', { className: 'login-bonus-total' }, [
+        el('span', { text: '今回のプレゼント' }),
+        el('strong', { text: `ダイヤ ${total.toLocaleString('ja-JP')}` }),
+        el('small', { text: `所持ダイヤ ${this.economy.diamonds.toLocaleString('ja-JP')}` }),
+      ]),
+      el('button', { className: 'primary-button', text: '受け取りました', onclick: () => modal.close() }),
+    ]);
+    modal = openModal({ title: 'ログインプレゼント', content, className: 'login-bonus-modal' });
   }
 
   showLoading(message) {
@@ -375,7 +410,7 @@ class MonsterConstructionApp {
       return;
     }
     const content = el('div', {}, [
-      el('p', { text: `「${deck.deckName}」と、そのデッキ固有の大会資格を削除します。` }),
+      el('p', { text: `「${deck.deckName}」の40枚と専用プールを削除します。プレイヤーの大会解禁状況は残ります。` }),
       el('div', { className: 'modal-actions' }, [
         el('button', { className: 'text-button', text: 'キャンセル', onclick: () => modal.close() }),
         el('button', { className: 'text-button danger-button', text: '削除する', onclick: async () => {

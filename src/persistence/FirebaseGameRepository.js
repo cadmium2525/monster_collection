@@ -4,7 +4,9 @@ import { mergeCardCatalogs, normalizeCardCatalog } from './card-catalog.js';
 import {
   acknowledgePendingPack,
   applyDiamondReward,
+  applyLoginRewards,
   applyPackPurchase,
+  applyTournamentUnlock,
   normalizeEconomyState,
 } from '../gacha/economy-state.js';
 
@@ -130,6 +132,21 @@ export class FirebaseGameRepository {
 
   async creditDiamonds(reward) {
     return this._updateEconomy((current) => applyDiamondReward(current, reward));
+  }
+
+  async unlockTournamentRank(rank) {
+    return this._updateEconomy((current) => applyTournamentUnlock(current, rank));
+  }
+
+  async claimLoginRewards(config = {}) {
+    let rewards = [];
+    const state = await this._updateEconomy((current) => {
+      const result = applyLoginRewards(current, config);
+      rewards = result.rewards;
+      return result.state;
+    });
+    this.profile = { ...this.profile, economy: state };
+    return { state, rewards: clone(rewards) };
   }
 
   async listDecks() {

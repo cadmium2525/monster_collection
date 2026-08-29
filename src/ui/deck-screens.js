@@ -39,7 +39,7 @@ export function openStarterDeckPicker({ masterIndex, options, onChoose }) {
   return modal;
 }
 
-function deckSummaryCard(deck, masterIndex, onSelect, onRename, locked = false) {
+function deckSummaryCard(deck, masterIndex, onSelect, onRename, locked = false, playerQualification = 'bronze') {
   const representative = masterIndex.monsters.get(deck.representativeMonsterId);
   return el('article', {
     className: `deck-summary-card${locked ? ' tournament-locked' : ''}`,
@@ -59,7 +59,7 @@ function deckSummaryCard(deck, masterIndex, onSelect, onRename, locked = false) 
         el('dl', {}, [
           el('dt', { text: 'デッキ総TP' }), el('dd', { text: deck.totalPlayTp }),
           el('dt', { text: '最高到達' }), el('dd', { text: TOURNAMENT_LABELS[deck.highestReached] }),
-          el('dt', { text: '出場資格' }), el('dd', { text: `${TOURNAMENT_LABELS[deck.qualification]}まで` }),
+          el('dt', { text: 'プレイヤー解禁' }), el('dd', { text: `${TOURNAMENT_LABELS[playerQualification]}まで` }),
         ]),
         el('small', { text: `更新 ${formatDate(deck.updatedAt)}` }),
       ]),
@@ -129,6 +129,7 @@ export class DeckListScreen {
 
   render() {
     const decks = this.collection.list();
+    const playerQualification = this.collection.getPlayerQualification();
     replace(this.root, el('main', { className: 'deck-list-screen' }, [
       el('header', { className: 'screen-header deck-list-header' }, [
         el('div', {}, [el('p', { className: 'eyebrow', text: 'SAVED 40-CARD DECKS' }), el('h1', { text: '保存デッキ' })]),
@@ -140,7 +141,7 @@ export class DeckListScreen {
         ]),
       ]),
       el('section', { className: 'deck-summary-grid' }, decks.length
-        ? decks.map((deck) => deckSummaryCard(deck, this.masterIndex, this.onSelect, (entry) => this.openRenameDialog(entry), deck.deckId === this.lockedDeckId))
+        ? decks.map((deck) => deckSummaryCard(deck, this.masterIndex, this.onSelect, (entry) => this.openRenameDialog(entry), deck.deckId === this.lockedDeckId, playerQualification))
         : el('div', { className: 'empty-state' }, [el('h2', { text: '保存デッキがありません' }), el('p', { text: '最初の40枚デッキを作成してください。' })])),
     ]));
   }
@@ -249,7 +250,7 @@ export class DeckDetailScreen {
       el('header', { className: 'screen-header deck-detail-header' }, [
         el('div', {}, [el('p', { className: 'eyebrow', text: '40-CARD DECK' }), el('h1', { text: deck.deckName })]),
         el('div', { className: 'deck-stats-inline' }, [
-          el('span', { text: `40枚` }), el('span', { text: `デッキ総TP ${deck.totalPlayTp}` }), el('span', { text: `${TOURNAMENT_LABELS[deck.qualification]}まで` }),
+          el('span', { text: `40枚` }), el('span', { text: `デッキ総TP ${deck.totalPlayTp}` }), el('span', { text: `${TOURNAMENT_LABELS[this.collection.getPlayerQualification()]}まで・全デッキ共通` }),
         ]),
         el('div', { className: 'header-actions' }, [
           el('button', { className: 'text-button', text: '一覧へ', onclick: this.onBack }),

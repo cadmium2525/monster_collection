@@ -17,12 +17,59 @@ function useOnUnit(battle, breederId, unit, extraHand = []) {
   return action;
 }
 
-test('all twenty-six expansion breeder cards are canonical and have explanatory copy', () => {
+test('all thirty-two expansion breeder cards are canonical and have explanatory copy', () => {
   const battle = engine();
   const additions = battle.masterData.breeders.filter((entry) => Number(entry.id.slice(-3)) >= 21);
-  assert.equal(additions.length, 26);
-  assert.deepEqual(additions.map((entry) => entry.id), Array.from({ length: 26 }, (_, index) => `breeder-${String(index + 21).padStart(3, '0')}`));
+  assert.equal(additions.length, 32);
+  assert.deepEqual(additions.map((entry) => entry.id), Array.from({ length: 32 }, (_, index) => `breeder-${String(index + 21).padStart(3, '0')}`));
   assert.equal(additions.every((entry) => entry.effect && entry.tp >= 1), true);
+});
+
+test('high-tier capture breeders give every faction a strong but constrained payoff', () => {
+  const inorganic = engine();
+  const machine = placeUnit(inorganic, 'p1', 'ゴーレム', 0);
+  const machineAtk = effectiveAtk(machine);
+  const machineDef = effectiveDef(machine);
+  useOnUnit(inorganic, 'breeder-047', machine);
+  assert.equal(effectiveAtk(machine), machineAtk + 10);
+  assert.equal(effectiveDef(machine), machineDef + 10);
+
+  const creation = engine();
+  const construct = placeUnit(creation, 'p1', 'ヒノトリ', 0);
+  useOnUnit(creation, 'breeder-048', construct);
+  assert.equal(construct.actionPoints, 2);
+  assert.equal(construct.statuses.nextDamageBonus, 0.3);
+
+  const spirit = engine();
+  const phantom = placeUnit(spirit, 'p1', 'ウンディーネ', 0);
+  useOnUnit(spirit, 'breeder-049', phantom);
+  assert.equal(phantom.statuses.echoNext, 0.6);
+  assert.equal(phantom.statuses.returnToHandOnDefeat, true);
+
+  const demon = engine();
+  const fiend = placeUnit(demon, 'p1', 'ドラゴン', 0);
+  useOnUnit(demon, 'breeder-050', fiend);
+  assert.equal(demon.player('p1').life, 85);
+  assert.equal(fiend.statuses.nextDamageBonus, 0.5);
+
+  const beast = engine();
+  const alpha = placeUnit(beast, 'p1', 'ライガー', 0);
+  const packmate = placeUnit(beast, 'p1', 'ディノ', 1);
+  const alphaAtk = effectiveAtk(alpha);
+  setHand(beast, 'p1', [card('breeder-051', 'king-roar')]);
+  beast.applyAction(breederAction(beast, 'breeder-051'));
+  assert.equal(effectiveAtk(alpha), alphaAtk + 5);
+  assert.equal(alpha.statuses.nextDamageReduction, 0.25);
+  assert.equal(packmate.statuses.nextDamageReduction, 0.25);
+
+  const monster = engine();
+  const devourer = placeUnit(monster, 'p1', 'ワーム', 0, { life: 5 });
+  const devourerAtk = effectiveAtk(devourer);
+  const food = card(monsterByName('ドラゴン').id, 'perfect-food');
+  useOnUnit(monster, 'breeder-052', devourer, [food]);
+  assert.equal(devourer.life, 25);
+  assert.equal(effectiveAtk(devourer), devourerAtk + 10);
+  assert.equal(monster.player('p1').graveyard.some((entry) => entry.instanceId === food.instanceId), true);
 });
 
 test('counter command cards dispel buffs, cleanse debuffs and build a conditional defense wall', () => {

@@ -1302,6 +1302,28 @@ export class BattleEngine {
       }
       case '怪物・捕食進化':
         return factionTargets('怪物');
+      case '無機・機神起動':
+        return factionTargets('無機');
+      case '創造・神造再演':
+        return targetActions(own.filter((unit) => unit.faction === '創造' && !unit.summonedThisTurn && !unit.stunnedThisTurn));
+      case '幻霊・黄泉の残唱':
+        return factionTargets('幻霊');
+      case '魔族・終末契約':
+        return player.life > 15 ? factionTargets('魔族') : [];
+      case '獣族・王者の咆哮':
+        return own.filter((unit) => unit.faction === '獣族').length >= 2
+          ? [{ ...base, targetUnitId: null, label: definition.name }]
+          : [];
+      case '怪物・完全捕食': {
+        const materials = player.hand.filter((candidate) => candidate.instanceId !== card.instanceId
+          && cardDefinition(this.masterIndex, candidate)?.kind === 'monster');
+        return own.filter((unit) => unit.faction === '怪物').flatMap((unit) => materials.map((material) => ({
+          ...base,
+          targetUnitId: unit.id,
+          materialCardInstanceId: material.instanceId,
+          label: `怪物・完全捕食：${unit.name}が${cardDefinition(this.masterIndex, material).name}を捕食`,
+        })));
+      }
       default:
         return [];
     }
@@ -1472,6 +1494,35 @@ export class BattleEngine {
       case '怪物・捕食進化':
         ownTarget.statuses.predationEvolution = true;
         break;
+      case '無機・機神起動':
+        ownTarget.timedAtkBuffs.push({ amount: 10, remaining: 2 });
+        ownTarget.timedDefBuffs.push({ amount: 10, remaining: 2 });
+        break;
+      case '創造・神造再演':
+        ownTarget.actionPoints += 1;
+        ownTarget.statuses.nextDamageBonus += 0.3;
+        break;
+      case '幻霊・黄泉の残唱':
+        ownTarget.statuses.echoNext = Math.max(ownTarget.statuses.echoNext, 0.6);
+        ownTarget.statuses.returnToHandOnDefeat = true;
+        break;
+      case '魔族・終末契約':
+        player.life -= 15;
+        ownTarget.statuses.nextDamageBonus += 0.5;
+        break;
+      case '獣族・王者の咆哮':
+        for (const unit of livingUnits(player).filter((candidate) => candidate.faction === '獣族')) {
+          unit.timedAtkBuffs.push({ amount: 5, remaining: 2 });
+          unit.statuses.nextDamageReduction = Math.min(0.9, unit.statuses.nextDamageReduction + 0.25);
+        }
+        break;
+      case '怪物・完全捕食': {
+        const material = removeFrom(player.hand, (candidate) => candidate.instanceId === action.materialCardInstanceId);
+        if (material) player.graveyard.push(material);
+        this._heal(ownTarget, 20);
+        applyAtkBuff(ownTarget, 10);
+        break;
+      }
       default: throw new Error(`Unsupported breeder: ${definition.name}`);
     }
     this._log('breeder', `${player.displayName}は${definition.name}を使用`, {

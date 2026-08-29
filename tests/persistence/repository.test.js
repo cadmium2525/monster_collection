@@ -93,6 +93,40 @@ test('local and Firebase repositories persist pack results before reveal without
   assert.ok(fake.transactionCount >= 2);
 });
 
+test('local and Firebase login rewards are atomic and idempotent for the same Japan date', async () => {
+  const local = new LocalGameRepository({ storage: new MemoryStorage(), idFactory: () => 'login-local' });
+  await local.initialize();
+  const localFirst = await local.claimLoginRewards({ loginDate: '2026-08-29' });
+  const localAgain = await local.claimLoginRewards({ loginDate: '2026-08-29' });
+  assert.equal(localFirst.state.diamonds, 3900);
+  assert.deepEqual(localFirst.rewards.map((reward) => reward.amount), [300, 3000]);
+  assert.deepEqual(localAgain.rewards, []);
+  assert.equal(localAgain.state.diamonds, 3900);
+
+  const fake = fakeFirebaseSdk();
+  const firebase = new FirebaseGameRepository({ config: { projectId: 'test' }, sdkLoader: async () => fake.sdk });
+  await firebase.initialize();
+  const cloudFirst = await firebase.claimLoginRewards({ loginDate: '2026-08-29' });
+  const cloudAgain = await firebase.claimLoginRewards({ loginDate: '2026-08-29' });
+  assert.equal(cloudFirst.state.diamonds, 3900);
+  assert.deepEqual(cloudAgain.rewards, []);
+  assert.equal(cloudAgain.state.diamonds, 3900);
+  assert.ok(fake.transactionCount >= 2);
+});
+
+test('repository stores player-wide tournament unlock without downgrading it', async () => {
+  const local = new LocalGameRepository({ storage: new MemoryStorage(), idFactory: () => 'unlock-local' });
+  await local.initialize();
+  assert.equal((await local.unlockTournamentRank('gold')).tournamentQualification, 'gold');
+  assert.equal((await local.unlockTournamentRank('silver')).tournamentQualification, 'gold');
+
+  const fake = fakeFirebaseSdk();
+  const firebase = new FirebaseGameRepository({ config: { projectId: 'test' }, sdkLoader: async () => fake.sdk });
+  await firebase.initialize();
+  assert.equal((await firebase.unlockTournamentRank('legend')).tournamentQualification, 'legend');
+  assert.equal((await firebase.unlockTournamentRank('bronze')).tournamentQualification, 'legend');
+});
+
 test('resilient repository preserves local deck when cloud write fails', async () => {
   const local = new LocalGameRepository({ storage: new MemoryStorage(), idFactory: () => 'fallback' });
   const cloud = {
@@ -279,7 +313,7 @@ test('Firestore rules expose Legend snapshots read-only to authenticated opponen
   assert.match(rules, /match \/legendDecks\/\{publicDeckId\}/);
   assert.match(rules, /allow read: if signedIn\(\)/);
   assert.match(rules, /validLegendSource\(request\.resource\.data\)/);
-  assert.match(rules, /source\.qualification == 'legend'/);
+  assert.match(rules, /profile\.economy\.tournamentQualification == 'legend'/);
   assert.match(rules, /source\.cards == d\.cards/);
   assert.match(rules, /allow delete: if signedIn\(\) && resource\.data\.ownerUserId == request\.auth\.uid/);
   assert.match(rules, /championGrowthSnapshot is map/);

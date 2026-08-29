@@ -9,8 +9,11 @@ import { SeededRng } from '../../src/core/rng.js';
 import { generateCpuDeck } from '../../src/tournament/deck-generator.js';
 import { legalDeck, masterIndex } from '../helpers.js';
 
-test('recent faction breeders are the twelve trophy-only cards and never enter boosters', () => {
-  assert.deepEqual(TROPHY_BREEDER_IDS, Array.from({ length: 12 }, (_, index) => `breeder-${String(index + 29).padStart(3, '0')}`));
+test('all eighteen faction trophy breeders are capture-only and never enter boosters', () => {
+  assert.deepEqual(TROPHY_BREEDER_IDS, [
+    ...Array.from({ length: 12 }, (_, index) => `breeder-${String(index + 29).padStart(3, '0')}`),
+    ...Array.from({ length: 6 }, (_, index) => `breeder-${String(index + 47).padStart(3, '0')}`),
+  ]);
   for (const id of TROPHY_BREEDER_IDS) assert.equal(acquisitionOrigin(masterIndex.cards.get(id)), 'trophy');
   for (const faction of ['無機', '創造', '幻霊', '魔族', '獣族', '怪物']) {
     for (let seed = 0; seed < 30; seed += 1) {
@@ -130,6 +133,39 @@ test('normal CPU decks keep trophy breeders obtainable but never generate booste
     }
   }
   assert.equal(trophySeen, true);
+});
+
+test('the six stronger trophy breeders are used by matching CPUs and can be captured after a win', () => {
+  const newest = Array.from({ length: 6 }, (_, index) => `breeder-${String(index + 47).padStart(3, '0')}`);
+  const factions = ['無機', '創造', '幻霊', '魔族', '獣族', '怪物'];
+  for (const [index, breederId] of newest.entries()) {
+    let cpuSeen = false;
+    for (let seed = 0; seed < 160 && !cpuSeen; seed += 1) {
+      const generated = generateCpuDeck({
+        masterIndex,
+        rank: 'legend',
+        theme: factions[index],
+        rng: new SeededRng(`new-trophy-cpu:${breederId}:${seed}`),
+      });
+      cpuSeen = generated.cards.some((card) => card.masterId === breederId);
+    }
+    assert.equal(cpuSeen, true, `${breederId} should enter its faction CPU deck pool`);
+
+    const defeated = legalDeck(`new-trophy-defeated-${breederId}`);
+    defeated[0] = { ...defeated[0], masterId: breederId };
+    let offered = false;
+    for (let seed = 0; seed < 100 && !offered; seed += 1) {
+      const session = new CardStealSession({
+        playerCards: legalDeck(`new-trophy-player-${breederId}-${seed}`),
+        defeatedCards: defeated,
+        masterIndex,
+        deckId: `new-trophy-player-${breederId}-${seed}`,
+        seed: `new-trophy-offer:${breederId}:${seed}`,
+      });
+      offered = session.getState().offered.some((card) => card.masterId === breederId);
+    }
+    assert.equal(offered, true, `${breederId} should be offered by capture`);
+  }
 });
 
 test('all six counter commands are available from boosters, normal CPUs and post-win capture', () => {
