@@ -64,4 +64,11 @@ test('portrait guidance has one global owner instead of competing battle overlay
 
   const page = fs.readFileSync(new URL('../../index.html', import.meta.url), 'utf8');
   assert.equal((page.match(/class="portrait-warning"/g) ?? []).length, 1);
+
+  const styles = fs.readFileSync(new URL('../../styles.css', import.meta.url), 'utf8');
+  const portraitRules = styles.match(/@media \(orientation: portrait\) \{[\s\S]*?\n\}/)?.[0] ?? '';
+  assert.match(portraitRules, /body > \.app-shell,[\s\S]*?body > #modal-root \{[\s\S]*?display: none !important;/);
+  assert.match(portraitRules, /body > \.portrait-warning \{[\s\S]*?contain: strict;/);
+  assert.match(portraitRules, /body > \.portrait-warning \{[\s\S]*?animation: none !important;/);
+  assert.doesNotMatch(styles, /@media \(orientation: portrait\) and \(max-width:/);
 });
