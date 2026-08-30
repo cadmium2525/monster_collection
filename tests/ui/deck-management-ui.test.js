@@ -98,6 +98,14 @@ test('large card collections use catalog atlases and defer other standalone artw
   assert.match(css, /content-visibility:auto/);
 });
 
+test('catalog grid gives every card a definite iPhone-safe row height', () => {
+  assert.match(css, /\.catalog-card-grid\s*\{[^}]*grid-auto-rows:max-content/s);
+  assert.match(css, /\.catalog-entry\s*\{[^}]*aspect-ratio:\.72/s);
+  assert.match(css, /\.catalog-entry \.game-card\s*\{[^}]*position:absolute;[^}]*height:100%;[^}]*aspect-ratio:auto/s);
+  assert.doesNotMatch(css, /\.catalog-entry[^\n{]*\{[^}]*contain:/s);
+  assert.doesNotMatch(css, /\.catalog-entry,\.fusion-catalog-card\s*\{[^}]*contain:/s);
+});
+
 test('leader artwork resolves the owned card appearance in every deck-facing screen', () => {
   const tournamentSetup = readFileSync(new URL('../../src/ui/tournament-setup-screen.js', import.meta.url), 'utf8');
   assert.match(deckScreens, /representativeCardAsset\(deck\.cards, deck\.representativeMonsterId\)/);
