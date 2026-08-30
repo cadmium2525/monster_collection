@@ -19,10 +19,6 @@ function accountCopy(account) {
     tone: 'offline', title: 'この端末だけに保存中',
     copy: 'Firebaseへ接続できていないため、現在は機種変更後の復旧を設定できません。',
   };
-  if (account.recoveryEnabled) return {
-    tone: 'safe', title: 'アカウント保護済み',
-    copy: `復旧ID「${account.playerId ?? '登録済み'}」とパスワードで別の端末から復旧できます。`,
-  };
   return {
     tone: 'warning', title: 'アカウント復旧が未設定です',
     copy: '端末の紛失やアプリ削除に備えて、任意の復旧IDとパスワードを登録してください。メールアドレスは不要です。',
@@ -37,6 +33,14 @@ function accountPanel(screen, account) {
         el('button', { className: 'primary-button', text: '新規登録', onclick: screen.onRegisterRecovery }),
         el('button', { className: 'utility-button', disabled: screen.hasActiveRun, text: 'ログイン', onclick: screen.onSignIn }),
       ]),
+    ]);
+  }
+
+  if (screen.account.mode === 'firebase' && screen.account.recoveryEnabled) {
+    return el('section', { className: 'profile-account profile-account-registered panel account-safe' }, [
+      el('p', { className: 'eyebrow', text: 'ACCOUNT' }),
+      el('h2', { text: `${screen.account.playerId ?? '登録済みID'}でログイン中` }),
+      el('span', { className: 'account-state-mark', text: '✓', attrs: { 'aria-label': 'ログイン済み' } }),
     ]);
   }
 

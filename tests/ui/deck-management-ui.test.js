@@ -84,14 +84,17 @@ test('saved deck details and editing expose display-only card sorting', () => {
   assert.match(css, /\.deck-sort-control select/);
 });
 
-test('large card collections defer standalone artwork until it approaches the viewport', () => {
+test('large card collections use catalog atlases and defer other standalone artwork', () => {
   const renderer = readFileSync(new URL('../../src/ui/card-renderer.js', import.meta.url), 'utf8');
   assert.match(renderer, /IntersectionObserver/);
   assert.match(renderer, /rootMargin: '320px 0px'/);
   assert.match(renderer, /dataset\.lazyArtStyle/);
   assert.match(deckScreens, /lazyArt: true/);
-  assert.match(catalogScreen, /lazyArt: true/);
+  assert.match(catalogScreen, /thumbnailArt: true/);
+  assert.doesNotMatch(catalogScreen, /lazyArt: true/);
   assert.match(boosterScreen, /lazyArt: true/);
+  assert.match(css, /catalog-thumbnails\/cards\.webp/);
+  assert.match(css, /catalog-thumbnails\/fusions\.webp/);
   assert.match(css, /content-visibility:auto/);
 });
 

@@ -1,20 +1,27 @@
 import { el, replace } from './dom.js';
-import { cardArtPlacement, deferCardArt, openCardDetails, renderCard } from './card-renderer.js';
+import {
+  cardArtPlacement,
+  catalogFusionThumbnailPlacement,
+  deferCardArt,
+  openCardDetails,
+  renderCard,
+  renderDetailArtwork,
+} from './card-renderer.js';
 import { openModal } from './modal.js';
 import { buildCatalogModel } from './catalog-model.js';
 
 export function openFusionDetails(fusion, masterIndex, { showcase = false } = {}) {
   const main = masterIndex.monstersByName.get(fusion.main);
   const material = masterIndex.monstersByName.get(fusion.material);
-  const art = cardArtPlacement(main, {
+  const fusionUnit = {
     specialFusionId: fusion.id,
     specialForm: fusion.name,
     artVariantId: showcase ? 'showcase-preview' : 'base',
-  });
+  };
   openModal({
     title: showcase ? `${fusion.name} 特別イラスト` : fusion.name,
     content: el('div', { className: 'fusion-catalog-detail' }, [
-      el('div', { className: `card-art ${art.className}${showcase ? ' finish-foil-art' : ''}`, attrs: art.style ? { style: art.style } : null }),
+      renderDetailArtwork({ definition: main, unit: fusionUnit, label: showcase ? `${fusion.name} 特別イラスト` : fusion.name }),
       el('dl', {}, [
         el('dt', { text: '特殊合体' }), el('dd', { text: `${main?.name ?? fusion.main} ＋ ${material?.name ?? fusion.material}` }),
         el('dt', { text: '特殊特性' }), el('dd', { text: fusion.trait }),
@@ -25,9 +32,9 @@ export function openFusionDetails(fusion, masterIndex, { showcase = false } = {}
   });
 }
 
-export function fusionTile(fusion, masterIndex, { showcase = false, locked = false, lazyArt = false } = {}) {
+export function fusionTile(fusion, masterIndex, { showcase = false, locked = false, lazyArt = false, thumbnailArt = false } = {}) {
   const main = masterIndex.monstersByName.get(fusion.main);
-  const art = cardArtPlacement(main, {
+  const art = thumbnailArt ? catalogFusionThumbnailPlacement(fusion) : cardArtPlacement(main, {
     specialFusionId: fusion.id,
     specialForm: fusion.name,
     artVariantId: showcase ? 'showcase-preview' : 'base',
@@ -53,7 +60,7 @@ function catalogCardTile(definition, owned, masterIndex) {
       interactive: owned,
       label: owned ? `${definition.name}の詳細を表示` : `${definition.name} 未所持`,
       onClick: owned ? () => openCardDetails({ definition, masterIndex }) : null,
-      lazyArt: true,
+      thumbnailArt: true,
     }),
     owned ? null : el('span', { className: 'catalog-lock-label', text: '🔒 未所持', attrs: { 'aria-hidden': 'true' } }),
   ]);
@@ -73,7 +80,7 @@ export class CardCatalogScreen {
     const model = buildCatalogModel(this.catalog, this.masterIndex, this.filter);
     const entries = [
       ...model.cards.map(({ definition, owned }) => catalogCardTile(definition, owned, this.masterIndex)),
-      ...model.fusions.map(({ fusion, discovered }) => fusionTile(fusion, this.masterIndex, { locked: !discovered, lazyArt: true })),
+      ...model.fusions.map(({ fusion, discovered }) => fusionTile(fusion, this.masterIndex, { locked: !discovered, thumbnailArt: true })),
     ];
 
     replace(this.root, el('main', { className: 'card-catalog-screen' }, [

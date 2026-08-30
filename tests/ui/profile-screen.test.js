@@ -20,6 +20,8 @@ test('my page exposes recovery, records and catalog progress', () => {
   assert.match(source, /カード図鑑/);
   assert.match(source, /text: '新規登録'/);
   assert.match(source, /text: 'ログイン'/);
+  assert.match(source, /でログイン中/);
+  assert.doesNotMatch(source, /title: 'アカウント保護済み'/);
   assert.doesNotMatch(source, /このデータに復旧設定を登録/);
   assert.doesNotMatch(source, /既存アカウントで復旧/);
   assert.match(source, /復旧ID/);

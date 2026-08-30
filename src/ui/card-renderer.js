@@ -78,6 +78,31 @@ function specialFusionIndex(unit) {
     : SPECIAL_FUSION_NAMES.indexOf(unit?.specialForm);
 }
 
+export function catalogCardThumbnailPlacement(definition) {
+  let index = -1;
+  if (definition.kind === 'monster') {
+    index = Number(definition.id.match(/(\d+)$/)?.[1]) - 1;
+  } else if (definition.id.startsWith('breeder-')) {
+    const number = Number(definition.id.match(/(\d+)$/)?.[1]);
+    index = number <= 20 ? 28 + number : 49 + (number - 21);
+  } else {
+    const supportIndex = SUPPORT_CARD_IDS.indexOf(definition.id);
+    index = supportIndex >= 0 ? 24 + supportIndex : -1;
+  }
+  return {
+    className: 'catalog-thumbnail-art',
+    style: atlasPosition(index, 9, 9),
+  };
+}
+
+export function catalogFusionThumbnailPlacement(fusion) {
+  const index = Number(fusion?.id?.match(/(\d+)$/)?.[1]) - 1;
+  return {
+    className: 'fusion-thumbnail-art',
+    style: atlasPosition(index, 8, 6),
+  };
+}
+
 export function isFoilAppearance(definition, unit = null, cardAsset = null) {
   if (definition.kind !== 'monster') return false;
   if ((cardAsset?.finish ?? unit?.finish) === 'foil') return true;
@@ -199,9 +224,12 @@ export function renderCard({
   dragReady = false,
   cardAsset = null,
   lazyArt = false,
+  thumbnailArt = false,
 }) {
   const meta = cardMeta(definition, unit, growth);
-  const art = cardArtPlacement(definition, unit, cardAsset);
+  const art = thumbnailArt
+    ? catalogCardThumbnailPlacement(definition)
+    : cardArtPlacement(definition, unit, cardAsset);
   const life = unit ? unitLifePresentation(unit) : null;
   const statusGroups = unitStatusGroups(unit);
   const name = unit?.specialForm ?? definition.name;
@@ -254,6 +282,25 @@ export function renderCard({
     ]))) : null,
   ]);
   return lazyArt ? deferCardArt(node) : node;
+}
+
+export function renderDetailArtwork({ definition, unit = null, cardAsset = null, label = definition.name }) {
+  const art = cardArtPlacement(definition, unit, cardAsset);
+  const standaloneUrl = art.style?.match(/--(?:monster|support)-art:url\("([^"]+)"\)/)?.[1] ?? null;
+  const foilClass = isFoilAppearance(definition, unit, cardAsset) ? ' finish-foil-art' : '';
+  if (standaloneUrl) {
+    return el('div', {
+      className: `detail-art-frame ${art.className}${foilClass}`.trim(),
+      attrs: { role: 'img', 'aria-label': label },
+    }, el('img', {
+      className: 'detail-art-image',
+      attrs: { src: standaloneUrl, alt: '', decoding: 'async' },
+    }));
+  }
+  return el('div', {
+    className: `card-art detail-atlas-art ${art.className} ${FACTION_CLASS[unit?.faction ?? definition.faction] ?? ''}${foilClass}`.trim(),
+    attrs: art.style ? { style: art.style, role: 'img', 'aria-label': label } : { role: 'img', 'aria-label': label },
+  });
 }
 
 export function monsterPortraitPresentation(definition, cardAsset = null) {
@@ -341,13 +388,8 @@ export function openCardDetails({
   const trait = isMonster ? resolvedTrait(definition, unit) : null;
   const life = unit ? unitLifePresentation(unit) : null;
   const statusEntries = unitStatusEntries(unit);
-  const art = cardArtPlacement(definition, unit, cardAsset);
-  const foilArtClass = isFoilAppearance(definition, unit, cardAsset) ? ' finish-foil-art' : '';
   const summary = isMonster ? el('section', { className: 'detail-summary' }, [
-    el('div', {
-      className: `card-art ${art.className} ${FACTION_CLASS[unit?.faction ?? definition.faction] ?? ''}${foilArtClass}`,
-      attrs: { style: art.style },
-    }),
+    renderDetailArtwork({ definition, unit, cardAsset, label: name }),
     el('dl', {}, [
       el('dt', { text: 'モン類' }), el('dd', { text: unit?.faction ?? definition.faction }),
       el('dt', { text: '役割' }), el('dd', { text: definition.role }),
@@ -380,10 +422,7 @@ export function openCardDetails({
       ]))) : el('p', { text: '状態変化なし' }),
     ]) : null,
   ]) : el('section', { className: 'detail-summary' }, [
-    el('div', {
-      className: `card-art ${art.className}`.trim(),
-      attrs: art.style ? { style: art.style } : null,
-    }),
+    renderDetailArtwork({ definition, unit, cardAsset, label: name }),
     el('dl', {}, [
       el('dt', { text: '種類' }), el('dd', { text: definition.kind === 'breeder' ? 'ブリーダー' : definition.kind === 'shugyo' ? '修行' : 'Training' }),
       el('dt', { text: '使用TP' }), el('dd', { text: definition.tp }),

@@ -1,7 +1,16 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync, statSync } from 'node:fs';
-import { cardArtPlacement, cardDisplayStats, detailMoveEntries, isFoilAppearance, monsterPortraitPresentation, resolvedTrait } from '../../src/ui/card-renderer.js';
+import {
+  cardArtPlacement,
+  cardDisplayStats,
+  catalogCardThumbnailPlacement,
+  catalogFusionThumbnailPlacement,
+  detailMoveEntries,
+  isFoilAppearance,
+  monsterPortraitPresentation,
+  resolvedTrait,
+} from '../../src/ui/card-renderer.js';
 import { shugyoMovePoolType, shugyoMoveWeight } from '../../src/battle/shugyo.js';
 import { masterData, masterIndex, monsterByName } from '../helpers.js';
 
@@ -161,7 +170,7 @@ test('champion portraits retain standalone and showcase artwork instead of falli
 
   const css = readFileSync(new URL('../../styles.css', import.meta.url), 'utf8');
   assert.match(css, /\.champion-art \.monster-portrait\.standalone-monster-art\s*\{[^}]*var\(--monster-art\)[^}]*background-size: 100% 100%,contain/s);
-  assert.match(css, /\.champion-art \.monster-portrait\s*\{[^}]*aspect-ratio: \.75/s);
+  assert.match(css, /\.champion-art \.monster-portrait\s*\{[^}]*aspect-ratio:\s*\.75/s);
   assert.match(showcase.className, /finish-foil/);
 });
 
@@ -235,6 +244,8 @@ test('all runtime game artwork uses valid WebP while compatibility PWA icons rem
     'assets/images/special-fusion-atlas-v1.webp',
     'assets/images/blue-drill-v2.webp',
     'assets/images/support-card-atlas-v1.webp',
+    'assets/images/catalog-thumbnails/cards.webp',
+    'assets/images/catalog-thumbnails/fusions.webp',
     'assets/ui/card-badges/life.webp',
     'assets/ui/card-badges/cost.webp',
     'assets/ui/card-badges/atk.webp',
@@ -249,12 +260,24 @@ test('all runtime game artwork uses valid WebP while compatibility PWA icons rem
   assert.doesNotMatch(css, /assets\/(?:images|ui\/card-badges)\/[^)"']+\.(?:png|jpe?g)/i);
 });
 
+test('catalog uses two bounded thumbnail atlases and keeps full art for details', () => {
+  assert.match(catalogCardThumbnailPlacement(masterIndex.cards.get('monster-001')).style, /--art-x:0%;--art-y:0%/);
+  assert.match(catalogCardThumbnailPlacement(masterIndex.cards.get('breeder-052')).style, /--art-x:100%;--art-y:100%/);
+  assert.match(catalogFusionThumbnailPlacement({ id: 'fusion-048' }).style, /--art-x:100%;--art-y:100%/);
+  assert.ok(statSync(new URL('../../assets/images/catalog-thumbnails/cards.webp', import.meta.url)).size < 350_000);
+  assert.ok(statSync(new URL('../../assets/images/catalog-thumbnails/fusions.webp', import.meta.url)).size < 300_000);
+  const catalog = readFileSync(new URL('../../src/ui/catalog-screen.js', import.meta.url), 'utf8');
+  const renderer = readFileSync(new URL('../../src/ui/card-renderer.js', import.meta.url), 'utf8');
+  assert.match(catalog, /thumbnailArt: true/);
+  assert.match(renderer, /className: 'detail-art-image'/);
+});
+
 test('opponent cards stay upright so their corner values remain readable', () => {
   const css = readFileSync(new URL('../../styles.css', import.meta.url), 'utf8');
   assert.doesNotMatch(css, /\.board-row\.opponent\s+\.game-card\s*\{[^}]*rotate\(180deg\)/s);
 });
 
-test('atlas artwork renders exactly once and keeps correct detail ratios', () => {
+test('atlas artwork renders exactly once while standalone details preserve the full image', () => {
   const css = readFileSync(new URL('../../styles.css', import.meta.url), 'utf8');
   assert.match(css, /\.game-card \.card-art\.monster-art::after,[^{]+\{\s*content: none;\s*display: none;/s);
   assert.doesNotMatch(css, /\.game-card \.card-art\.(?:monster-art|support-card-art)::after\s*\{[^}]*(?:background-image|top: 18%)/s);
@@ -266,8 +289,9 @@ test('atlas artwork renders exactly once and keeps correct detail ratios', () =>
   assert.match(css, /\.card-art\.monster-art\.special-fusion-art,[^{]+\{[^}]*var\(--monster-art\)[^}]*background-size: 100% 100%, cover/s);
   assert.match(css, /background-position: center, var\(--fusion-art-x, 50%\) top/);
   assert.doesNotMatch(css, /special-fusion-art[^}]+special-fusion-atlas-v1\.webp/s);
-  assert.match(css, /\.detail-summary > \.card-art\s*\{[^}]*aspect-ratio: \.75/s);
-  assert.match(css, /\.detail-summary > \.card-art\.support-card-art\s*\{\s*aspect-ratio: 1/s);
+  assert.match(css, /\.detail-summary > \.card-art,[^{]+\.detail-summary > \.detail-art-frame\s*\{[^}]*aspect-ratio: \.75/s);
+  assert.match(css, /\.detail-art-image\s*\{[^}]*object-fit:contain/s);
+  assert.match(css, /\.detail-summary > \.detail-atlas-art\.support-card-art,[^{]+\.detail-summary > \.detail-art-frame\.support-card-art\s*\{[^}]*aspect-ratio:1/s);
   assert.match(css, /\.card-cost\s*\{[^}]*width: clamp\(21px,25%,31px\)/s);
 });
 
@@ -291,8 +315,8 @@ test('Foil uses one non-repeating sweep and premium classes are monster-only', (
   assert.match(renderer, /isFoilAppearance\(definition, unit, cardAsset\) \? 'finish-foil'/);
   assert.match(renderer, /definition\.kind === 'monster' && \(cardAsset\?\.artVariantId/);
   assert.match(catalog, /fusion-showcase-card finish-foil/);
-  assert.match(css, /\.game-card\.finish-foil::before,[^{]+\.fusion-catalog-card\.finish-foil::before,[^{]+\.card-art\.finish-foil-art::after\s*\{[^}]*background-repeat:no-repeat/s);
-  assert.match(css, /\.detail-summary > \.card-art\.showcase-fusion-art\s*\{\s*aspect-ratio: \.75/s);
+  assert.match(css, /\.game-card\.finish-foil::before,[^{]+\.fusion-catalog-card\.finish-foil::before,[^{]+\.detail-art-frame\.finish-foil-art::after\s*\{[^}]*background-repeat:no-repeat/s);
+  assert.doesNotMatch(css, /\.detail-summary > \.card-art\.showcase-fusion-art\s*\{/s);
   assert.match(css, /@keyframes foil-sheen\s*\{\s*0%,14%/s);
   assert.match(css, /@keyframes foil-sheen[^}]+\}[^}]*74%,100%/s);
 });
