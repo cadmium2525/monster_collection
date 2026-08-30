@@ -15,10 +15,13 @@ test('my page exposes recovery, records and catalog progress', () => {
   assert.equal(progress.totalFusions, masterIndex.data.fusions.length);
 
   const source = fs.readFileSync(new URL('../../src/ui/profile-screen.js', import.meta.url), 'utf8');
-  assert.match(source, /アカウント復旧/);
+  assert.match(source, /text: 'ACCOUNT'/);
   assert.match(source, /王座獲得/);
   assert.match(source, /カード図鑑/);
-  assert.match(source, /既存アカウントで復旧/);
+  assert.match(source, /text: '新規登録'/);
+  assert.match(source, /text: 'ログイン'/);
+  assert.doesNotMatch(source, /このデータに復旧設定を登録/);
+  assert.doesNotMatch(source, /既存アカウントで復旧/);
   assert.match(source, /復旧ID/);
   assert.doesNotMatch(source, /パスワード再設定メール/);
 });

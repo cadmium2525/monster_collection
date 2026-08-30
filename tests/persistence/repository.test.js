@@ -179,12 +179,17 @@ function fakeFirebaseSdk() {
       uid: 'firebase-user', isAnonymous: true, email: null, emailVerified: false, providerData: [],
     },
     languageCode: null,
+    authStateReady: async () => {},
   };
+  let anonymousSignInCount = 0;
   const signInEmails = [];
   const sdk = {
     initializeApp: () => ({}),
     getAuth: () => auth,
-    signInAnonymously: async () => ({ user: auth.currentUser }),
+    signInAnonymously: async () => {
+      anonymousSignInCount += 1;
+      return { user: auth.currentUser };
+    },
     EmailAuthProvider: { credential: (email, password) => ({ email, password, providerId: 'password' }) },
     linkWithCredential: async (user, credential) => {
       auth.currentUser = {
@@ -248,8 +253,29 @@ function fakeFirebaseSdk() {
       return result;
     },
   };
-  return { sdk, auth, docs, signInEmails, get transactionCount() { return transactionCount; } };
+  return {
+    sdk, auth, docs, signInEmails,
+    get anonymousSignInCount() { return anonymousSignInCount; },
+    get transactionCount() { return transactionCount; },
+  };
 }
+
+test('Firebase waits for persisted authentication before creating an anonymous user', async () => {
+  const fake = fakeFirebaseSdk();
+  const restoredUser = {
+    uid: 'restored-player', isAnonymous: false,
+    email: 'mc.restored@accounts.monster-construction.invalid',
+    providerData: [{ providerId: 'password' }],
+  };
+  fake.auth.currentUser = null;
+  fake.auth.authStateReady = async () => { fake.auth.currentUser = restoredUser; };
+
+  const repository = new FirebaseGameRepository({ config: { projectId: 'test' }, sdkLoader: async () => fake.sdk });
+  const player = await repository.initialize();
+
+  assert.equal(player.id, 'restored-player');
+  assert.equal(fake.anonymousSignInCount, 0);
+});
 
 test('Firebase links a player ID without changing the user id and restores it through the synthetic address', async () => {
   const fake = fakeFirebaseSdk();

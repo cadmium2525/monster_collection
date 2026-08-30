@@ -55,6 +55,10 @@ export class FirebaseGameRepository {
     this.app = this.sdk.initializeApp(this.config);
     this.auth = this.sdk.getAuth(this.app);
     this.db = this.sdk.getFirestore(this.app);
+    // Firebase restores the persisted user asynchronously. Reading currentUser
+    // before that first restore settles can make an existing player look like a
+    // brand-new anonymous user on slower mobile/PWA launches.
+    await this.auth.authStateReady?.();
     const credential = this.auth.currentUser ? { user: this.auth.currentUser } : await this.sdk.signInAnonymously(this.auth);
     this.user = credential.user;
     await this._ensureProfile();

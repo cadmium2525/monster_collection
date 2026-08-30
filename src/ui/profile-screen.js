@@ -29,6 +29,28 @@ function accountCopy(account) {
   };
 }
 
+function accountPanel(screen, account) {
+  if (screen.account.mode === 'firebase' && !screen.account.recoveryEnabled) {
+    return el('section', { className: 'profile-account profile-account-unregistered panel account-warning' }, [
+      el('h2', { text: 'ACCOUNT' }),
+      el('div', { className: 'profile-account-actions' }, [
+        el('button', { className: 'primary-button', text: '新規登録', onclick: screen.onRegisterRecovery }),
+        el('button', { className: 'utility-button', disabled: screen.hasActiveRun, text: 'ログイン', onclick: screen.onSignIn }),
+      ]),
+    ]);
+  }
+
+  return el('section', { className: `profile-account panel account-${account.tone}` }, [
+    el('div', { className: 'profile-section-title' }, [
+      el('div', {}, [el('p', { className: 'eyebrow', text: 'ACCOUNT' }), el('h2', { text: account.title })]),
+      el('span', { className: 'account-state-mark', text: screen.account.recoveryEnabled ? '✓' : '!' }),
+    ]),
+    el('p', { text: account.copy }),
+    screen.account.recoveryEnabled
+      ? el('small', { className: 'profile-recovery-warning', text: '復旧IDとパスワードは忘れないよう端末外にも控えてください。現在、忘れた場合の再発行はできません。' }) : null,
+  ]);
+}
+
 export class ProfileScreen {
   constructor({ root, user, account, stats, catalogProgress, qualification, champion, hasActiveRun = false, onBack, onRename, onRegisterRecovery, onSignIn }) {
     this.root = root;
@@ -68,23 +90,7 @@ export class ProfileScreen {
           ]),
           el('button', { className: 'utility-button profile-rename', text: '名前を変更', onclick: this.onRename }),
         ]),
-        el('section', { className: `profile-account panel account-${account.tone}` }, [
-          el('div', { className: 'profile-section-title' }, [
-            el('div', {}, [el('p', { className: 'eyebrow', text: 'ACCOUNT RECOVERY' }), el('h2', { text: account.title })]),
-            el('span', { className: 'account-state-mark', text: this.account.recoveryEnabled ? '✓' : '!' }),
-          ]),
-          el('p', { text: account.copy }),
-          el('div', { className: 'profile-account-actions' }, [
-            this.account.mode === 'firebase' && !this.account.recoveryEnabled
-              ? el('button', { className: 'primary-button', text: 'このデータに復旧設定を登録', onclick: this.onRegisterRecovery }) : null,
-            this.account.mode === 'firebase' && !this.account.recoveryEnabled
-              ? el('button', { className: 'utility-button', disabled: this.hasActiveRun, text: '既存アカウントで復旧', onclick: this.onSignIn }) : null,
-          ]),
-          this.account.recoveryEnabled
-            ? el('small', { className: 'profile-recovery-warning', text: '復旧IDとパスワードは忘れないよう端末外にも控えてください。現在、忘れた場合の再発行はできません。' }) : null,
-          this.hasActiveRun && !this.account.recoveryEnabled
-            ? el('small', { className: 'invalid-copy', text: '大会中は別アカウントへの切替ができません。復旧設定の新規登録は可能です。' }) : null,
-        ]),
+        accountPanel(this, account),
         el('section', { className: 'profile-record panel' }, [
           el('div', { className: 'profile-section-title' }, [
             el('div', {}, [el('p', { className: 'eyebrow', text: 'BATTLE RECORD' }), el('h2', { text: '戦績' })]),
