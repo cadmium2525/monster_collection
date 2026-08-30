@@ -240,6 +240,7 @@ test('second-generation monster illustrations stay below the mobile detail budge
 test('all runtime game artwork uses valid WebP while compatibility PWA icons remain separate', () => {
   const assets = [
     'assets/images/battle-arena.webp',
+    'assets/images/tournament-grand-hall.webp',
     'assets/images/monster-atlas.webp',
     'assets/images/special-fusion-atlas-v1.webp',
     'assets/images/blue-drill-v2.webp',
@@ -258,6 +259,18 @@ test('all runtime game artwork uses valid WebP while compatibility PWA icons rem
   }
   const css = readFileSync(new URL('../../styles.css', import.meta.url), 'utf8');
   assert.doesNotMatch(css, /assets\/(?:images|ui\/card-badges)\/[^)"']+\.(?:png|jpe?g)/i);
+});
+
+test('tournament bracket uses an optimized ceremonial WebP background and restrained entrance motion', () => {
+  const assetUrl = new URL('../../assets/images/tournament-grand-hall.webp', import.meta.url);
+  const bytes = readFileSync(assetUrl);
+  const css = readFileSync(new URL('../../styles.css', import.meta.url), 'utf8');
+  assert.equal(bytes.subarray(0, 4).toString('ascii'), 'RIFF');
+  assert.equal(bytes.subarray(8, 12).toString('ascii'), 'WEBP');
+  assert.ok(statSync(assetUrl).size < 300_000);
+  assert.match(css, /\.tournament-screen\s*\{[^}]*tournament-grand-hall\.webp/s);
+  assert.match(css, /\.tournament-screen > \.bracket-grid\s*\{[^}]*tournament-bracket-enter/s);
+  assert.match(css, /prefers-reduced-motion: reduce[\s\S]*\.tournament-screen/);
 });
 
 test('catalog uses two bounded thumbnail atlases and keeps full art for details', () => {

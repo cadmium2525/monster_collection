@@ -770,7 +770,18 @@ export class BattleScreen {
         { transform: `translate(${dx}px,${dy}px) scale(1.1)`, offset: .52 },
         { transform: 'translate(0,0)' },
       ], { duration, easing: 'cubic-bezier(.25,.8,.3,1)' });
-      await animation.finished.catch(() => {});
+      let impact = null;
+      const showImpact = (async () => {
+        await delay(Math.round(duration * .46));
+        if (!target?.isConnected) return;
+        impact = el('span', {
+          className: `combat-impact${action.targetPlayerId ? ' direct' : ''}`,
+          attrs: { 'aria-hidden': 'true' },
+        });
+        target.append(impact);
+      })();
+      await Promise.all([animation.finished.catch(() => {}), showImpact]);
+      impact?.remove();
       return;
     }
     if (['training', 'shugyo'].includes(action.type)) {
