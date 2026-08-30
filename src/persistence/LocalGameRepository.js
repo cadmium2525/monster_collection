@@ -112,7 +112,7 @@ export class LocalGameRepository {
   }
 
   async getAccountStatus() {
-    return { mode: 'local', available: false, recoveryEnabled: false, isAnonymous: true, email: null };
+    return { mode: 'local', available: false, recoveryEnabled: false, isAnonymous: true, playerId: null };
   }
 
   async getPlayerStats() {

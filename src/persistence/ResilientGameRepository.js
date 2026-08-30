@@ -60,11 +60,6 @@ export class ResilientGameRepository {
     return profile;
   }
 
-  async sendRecoveryPasswordReset(email) {
-    if (!this.activeCloud?.sendRecoveryPasswordReset) throw new RepositoryUnavailableError('Firebaseへ接続してからお試しください');
-    return this.activeCloud.sendRecoveryPasswordReset(email);
-  }
-
   async getPlayerStats() {
     const localStats = await this.local.getPlayerStats();
     if (!this.activeCloud?.getPlayerStats) return localStats;

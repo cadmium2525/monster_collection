@@ -21,16 +21,16 @@ function accountCopy(account) {
   };
   if (account.recoveryEnabled) return {
     tone: 'safe', title: 'アカウント保護済み',
-    copy: `${account.email} で別の端末から復旧できます。`,
+    copy: `復旧ID「${account.playerId ?? '登録済み'}」とパスワードで別の端末から復旧できます。`,
   };
   return {
     tone: 'warning', title: 'アカウント復旧が未設定です',
-    copy: '端末の紛失やアプリ削除に備えて、メールアドレスとパスワードを登録してください。データのUIDは変わりません。',
+    copy: '端末の紛失やアプリ削除に備えて、任意の復旧IDとパスワードを登録してください。メールアドレスは不要です。',
   };
 }
 
 export class ProfileScreen {
-  constructor({ root, user, account, stats, catalogProgress, qualification, champion, hasActiveRun = false, onBack, onRename, onRegisterRecovery, onSignIn, onResetPassword }) {
+  constructor({ root, user, account, stats, catalogProgress, qualification, champion, hasActiveRun = false, onBack, onRename, onRegisterRecovery, onSignIn }) {
     this.root = root;
     this.user = user;
     this.account = account;
@@ -43,7 +43,6 @@ export class ProfileScreen {
     this.onRename = onRename;
     this.onRegisterRecovery = onRegisterRecovery;
     this.onSignIn = onSignIn;
-    this.onResetPassword = onResetPassword;
     this.render();
   }
 
@@ -80,9 +79,9 @@ export class ProfileScreen {
               ? el('button', { className: 'primary-button', text: 'このデータに復旧設定を登録', onclick: this.onRegisterRecovery }) : null,
             this.account.mode === 'firebase' && !this.account.recoveryEnabled
               ? el('button', { className: 'utility-button', disabled: this.hasActiveRun, text: '既存アカウントで復旧', onclick: this.onSignIn }) : null,
-            this.account.recoveryEnabled
-              ? el('button', { className: 'utility-button', text: 'パスワード再設定メール', onclick: this.onResetPassword }) : null,
           ]),
+          this.account.recoveryEnabled
+            ? el('small', { className: 'profile-recovery-warning', text: '復旧IDとパスワードは忘れないよう端末外にも控えてください。現在、忘れた場合の再発行はできません。' }) : null,
           this.hasActiveRun && !this.account.recoveryEnabled
             ? el('small', { className: 'invalid-copy', text: '大会中は別アカウントへの切替ができません。復旧設定の新規登録は可能です。' }) : null,
         ]),

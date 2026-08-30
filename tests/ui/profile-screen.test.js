@@ -19,10 +19,20 @@ test('my page exposes recovery, records and catalog progress', () => {
   assert.match(source, /王座獲得/);
   assert.match(source, /カード図鑑/);
   assert.match(source, /既存アカウントで復旧/);
+  assert.match(source, /復旧ID/);
+  assert.doesNotMatch(source, /パスワード再設定メール/);
 });
 
 test('home replaces the direct rename action with a my-page entry', () => {
   const source = fs.readFileSync(new URL('../../src/ui/home-screen.js', import.meta.url), 'utf8');
   assert.match(source, /text: 'マイページ'/);
   assert.doesNotMatch(source, /text: '名前変更'/);
+});
+
+test('recovery forms request a player ID instead of an email address', () => {
+  const source = fs.readFileSync(new URL('../../src/app.js', import.meta.url), 'utf8');
+  assert.match(source, /aria-label': '復旧ID'/);
+  assert.match(source, /signInRecoveryAccount\(\{ playerId:/);
+  assert.doesNotMatch(source, /type: 'email'/);
+  assert.doesNotMatch(source, /sendRecoveryPasswordReset/);
 });

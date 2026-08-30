@@ -180,7 +180,7 @@ function fakeFirebaseSdk() {
     },
     languageCode: null,
   };
-  const resetEmails = [];
+  const signInEmails = [];
   const sdk = {
     initializeApp: () => ({}),
     getAuth: () => auth,
@@ -194,14 +194,13 @@ function fakeFirebaseSdk() {
       return { user: auth.currentUser };
     },
     signInWithEmailAndPassword: async (_auth, email) => {
+      signInEmails.push(email);
       auth.currentUser = {
         uid: 'firebase-user', isAnonymous: false, email, emailVerified: true,
         providerData: [{ providerId: 'password', email }],
       };
       return { user: auth.currentUser };
     },
-    sendEmailVerification: async () => {},
-    sendPasswordResetEmail: async (_auth, email) => { resetEmails.push(email); },
     getFirestore: () => ({}),
     doc: (...parts) => ({ path: pathOf(...parts) }),
     collection: (...parts) => ({ path: pathOf(...parts) }),
@@ -249,20 +248,23 @@ function fakeFirebaseSdk() {
       return result;
     },
   };
-  return { sdk, auth, docs, resetEmails, get transactionCount() { return transactionCount; } };
+  return { sdk, auth, docs, signInEmails, get transactionCount() { return transactionCount; } };
 }
 
-test('Firebase links recovery credentials without changing the user id and sends password reset mail', async () => {
+test('Firebase links a player ID without changing the user id and restores it through the synthetic address', async () => {
   const fake = fakeFirebaseSdk();
   const repository = new FirebaseGameRepository({ config: { projectId: 'test' }, sdkLoader: async () => fake.sdk });
   const before = await repository.initialize();
-  const account = await repository.linkRecoveryAccount({ email: 'player@example.com', password: 'secret12' });
+  const account = await repository.linkRecoveryAccount({ playerId: 'Player_2525', password: 'secret12' });
   assert.equal(account.userId, before.id);
   assert.equal(account.recoveryEnabled, true);
-  assert.equal(account.email, 'player@example.com');
+  assert.equal(account.playerId, 'player_2525');
+  assert.equal(fake.auth.currentUser.email, 'mc.player_2525@accounts.monster-construction.invalid');
   assert.equal((await repository.getProfile()).recoveryEnabled, true);
-  await repository.sendRecoveryPasswordReset();
-  assert.deepEqual(fake.resetEmails, ['player@example.com']);
+  assert.equal((await repository.getProfile()).recoveryPlayerId, 'player_2525');
+
+  await repository.signInRecoveryAccount({ playerId: 'PLAYER_2525', password: 'secret12' });
+  assert.deepEqual(fake.signInEmails, ['mc.player_2525@accounts.monster-construction.invalid']);
 });
 
 test('player statistics are transactionally idempotent in local and Firebase repositories', async () => {

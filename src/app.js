@@ -23,6 +23,7 @@ import { japanDateKey } from './gacha/economy-state.js';
 import { diamondIcon } from './ui/currency-icon.js';
 import { ProfileScreen, catalogProgress } from './ui/profile-screen.js';
 import { accountErrorMessage } from './persistence/auth-errors.js';
+import { PLAYER_ID_RULE_COPY, normalizePlayerId } from './persistence/player-id.js';
 
 const AI_BUDGET = Object.freeze({ bronze: 4, silver: 8, gold: 22, legend: 85, champion: 240 });
 
@@ -209,7 +210,6 @@ class MonsterConstructionApp {
         onRename: () => this.renameProfile('profile'),
         onRegisterRecovery: () => this.openRecoveryRegistration(),
         onSignIn: () => this.openRecoverySignIn(),
-        onResetPassword: () => this.sendRecoveryPasswordReset(account.email),
       });
     } catch (error) {
       this.showError(error, 'マイページを読み込めません');
@@ -218,7 +218,7 @@ class MonsterConstructionApp {
   }
 
   openRecoveryRegistration() {
-    const email = el('input', { attrs: { type: 'email', inputmode: 'email', autocomplete: 'email', placeholder: 'mail@example.com', 'aria-label': '復旧用メールアドレス' } });
+    const playerId = el('input', { attrs: { type: 'text', inputmode: 'text', autocomplete: 'username', autocapitalize: 'none', spellcheck: 'false', minlength: '4', maxlength: '20', placeholder: '例: kado2525', 'aria-label': '復旧ID' } });
     const password = el('input', { attrs: { type: 'password', autocomplete: 'new-password', minlength: '6', placeholder: '6文字以上', 'aria-label': '復旧用パスワード' } });
     const confirmation = el('input', { attrs: { type: 'password', autocomplete: 'new-password', minlength: '6', placeholder: 'もう一度入力', 'aria-label': '復旧用パスワード確認' } });
     let modal = null;
@@ -226,33 +226,38 @@ class MonsterConstructionApp {
       if (password.value !== confirmation.value) return this.showError(new Error('確認用パスワードが一致しません'), '登録できません');
       submit.disabled = true;
       try {
-        await this.repository.linkRecoveryAccount({ email: email.value, password: password.value });
+        const normalizedId = normalizePlayerId(playerId.value);
+        await this.repository.linkRecoveryAccount({ playerId: normalizedId, password: password.value });
         this.user = { ...this.user, isAnonymous: false };
         modal.close();
-        openModal({ title: 'アカウントを保護しました', content: el('p', { text: 'このメールアドレスとパスワードで、機種変更後や再インストール後にデータを復旧できます。確認メールも送信しました。' }) });
+        openModal({ title: 'アカウントを保護しました', content: el('div', { className: 'account-complete-copy' }, [
+          el('p', { text: `復旧ID「${normalizedId}」とパスワードで、機種変更後や再インストール後にデータを復旧できます。` }),
+          el('p', { className: 'account-switch-warning', text: '復旧IDとパスワードを忘れた場合は再発行できません。必ず端末外にも控えてください。' }),
+        ]) });
         await this.showProfile();
       } catch (error) {
         this.showError(new Error(accountErrorMessage(error)), '復旧設定を登録できません');
       } finally { submit.disabled = false; }
     } });
     modal = openModal({ title: 'アカウント復旧を設定', className: 'account-modal', content: el('div', { className: 'account-form' }, [
-      el('p', { text: '現在のデッキ・ダイヤ・図鑑を同じアカウントのまま保護します。登録した情報は復旧時に必要です。' }),
-      el('label', {}, [el('span', { text: 'メールアドレス' }), email]),
+      el('p', { text: '現在のデッキ・ダイヤ・図鑑を同じアカウントのまま保護します。メールアドレスは必要ありません。' }),
+      el('label', {}, [el('span', { text: '復旧ID' }), playerId, el('small', { text: PLAYER_ID_RULE_COPY })]),
       el('label', {}, [el('span', { text: 'パスワード' }), password]),
       el('label', {}, [el('span', { text: 'パスワード確認' }), confirmation]),
+      el('p', { className: 'account-switch-warning', text: 'IDとパスワードを忘れた場合は復旧できません。必ず安全な場所へ控えてください。' }),
       submit,
     ]) });
   }
 
   openRecoverySignIn() {
     if (this.activeRun) return this.showError(new Error('大会を終了してから別のアカウントを復旧してください'), '復旧できません');
-    const email = el('input', { attrs: { type: 'email', inputmode: 'email', autocomplete: 'email', placeholder: 'mail@example.com', 'aria-label': '登録メールアドレス' } });
+    const playerId = el('input', { attrs: { type: 'text', inputmode: 'text', autocomplete: 'username', autocapitalize: 'none', spellcheck: 'false', maxlength: '20', placeholder: '復旧ID', 'aria-label': '登録済み復旧ID' } });
     const password = el('input', { attrs: { type: 'password', autocomplete: 'current-password', placeholder: 'パスワード', 'aria-label': '登録パスワード' } });
     let modal = null;
     const submit = el('button', { className: 'primary-button', text: 'このアカウントを復旧', onclick: async () => {
       submit.disabled = true;
       try {
-        await this.repository.signInRecoveryAccount({ email: email.value, password: password.value });
+        await this.repository.signInRecoveryAccount({ playerId: playerId.value, password: password.value });
         modal.close();
         location.reload();
       } catch (error) {
@@ -262,23 +267,11 @@ class MonsterConstructionApp {
     } });
     modal = openModal({ title: '既存アカウントで復旧', className: 'account-modal', content: el('div', { className: 'account-form' }, [
       el('p', { className: 'account-switch-warning', text: '登録済みアカウントのクラウドデータへ切り替えます。現在の未保護データは自動統合されず、この操作後は戻せません。機種変更先など、新しく開始した端末で使用してください。' }),
-      el('label', {}, [el('span', { text: 'メールアドレス' }), email]),
+      el('label', {}, [el('span', { text: '復旧ID' }), playerId]),
       el('label', {}, [el('span', { text: 'パスワード' }), password]),
       submit,
-      el('button', { className: 'text-button', text: 'パスワードを忘れた', onclick: async () => {
-        try {
-          await this.repository.sendRecoveryPasswordReset(email.value);
-          openModal({ title: '再設定メールを送信しました', content: el('p', { text: '入力したメールアドレス宛てにパスワード再設定メールを送信しました。' }) });
-        } catch (error) { this.showError(new Error(accountErrorMessage(error)), 'メールを送信できません'); }
-      } }),
+      el('small', { className: 'profile-recovery-warning', text: '復旧IDまたはパスワードを忘れた場合、現在は再発行できません。' }),
     ]) });
-  }
-
-  async sendRecoveryPasswordReset(email) {
-    try {
-      await this.repository.sendRecoveryPasswordReset(email);
-      openModal({ title: '再設定メールを送信しました', content: el('p', { text: `${email} 宛てにパスワード再設定メールを送信しました。` }) });
-    } catch (error) { this.showError(new Error(accountErrorMessage(error)), 'メールを送信できません'); }
   }
 
   showDeckList() {

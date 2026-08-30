@@ -10,6 +10,11 @@ import {
   normalizeEconomyState,
 } from '../gacha/economy-state.js';
 import { applyPlayerStatsEvent, normalizePlayerStats } from '../profile/player-stats.js';
+import {
+  playerIdToRecoveryEmail,
+  recoveryEmailToPlayerId,
+  validatePlayerId,
+} from './player-id.js';
 
 function clone(value) { return value == null ? value : structuredClone(value); }
 
@@ -96,47 +101,44 @@ export class FirebaseGameRepository {
     this._requireUser();
     const recoveryEnabled = !this.user.isAnonymous
       && (this.user.providerData ?? []).some((provider) => provider?.providerId === 'password');
+    const playerId = this.profile?.recoveryPlayerId
+      ?? recoveryEmailToPlayerId(this.user.email);
     return {
       mode: 'firebase', available: true, recoveryEnabled,
-      isAnonymous: Boolean(this.user.isAnonymous), email: this.user.email ?? null,
-      emailVerified: Boolean(this.user.emailVerified), userId: this.user.uid,
+      isAnonymous: Boolean(this.user.isAnonymous), playerId,
+      userId: this.user.uid,
     };
   }
 
-  async linkRecoveryAccount({ email, password }) {
+  async linkRecoveryAccount({ playerId, password }) {
     this._requireUser();
-    const normalizedEmail = String(email ?? '').trim();
-    if (!normalizedEmail) throw new Error('メールアドレスを入力してください');
+    const normalizedPlayerId = validatePlayerId(playerId);
     if (String(password ?? '').length < 6) throw new Error('パスワードは6文字以上で設定してください');
-    const credential = this.sdk.EmailAuthProvider.credential(normalizedEmail, String(password));
+    const credential = this.sdk.EmailAuthProvider.credential(playerIdToRecoveryEmail(normalizedPlayerId), String(password));
     const result = await this.sdk.linkWithCredential(this.user, credential);
     this.user = result.user;
-    this.auth.languageCode = 'ja';
-    try { await this.sdk.sendEmailVerification?.(this.user); } catch { /* Recovery remains valid even if mail delivery is delayed. */ }
     await this.sdk.setDoc(this._profileRef(), {
       isAnonymous: false,
       recoveryEnabled: true,
-      recoveryEmail: normalizedEmail,
+      recoveryPlayerId: normalizedPlayerId,
+      recoverySchemeVersion: 1,
       updatedAt: this.sdk.serverTimestamp(),
     }, { merge: true });
     this.profile = await this.getProfile();
     return this.getAccountStatus();
   }
 
-  async signInRecoveryAccount({ email, password }) {
-    const result = await this.sdk.signInWithEmailAndPassword(this.auth, String(email ?? '').trim(), String(password ?? ''));
+  async signInRecoveryAccount({ playerId, password }) {
+    const normalizedPlayerId = validatePlayerId(playerId);
+    const result = await this.sdk.signInWithEmailAndPassword(
+      this.auth,
+      playerIdToRecoveryEmail(normalizedPlayerId),
+      String(password ?? ''),
+    );
     this.user = result.user;
     await this._ensureProfile();
     this.profile = await this.getProfile();
     return { id: this.user.uid, ...this.profile, mode: 'firebase', account: await this.getAccountStatus() };
-  }
-
-  async sendRecoveryPasswordReset(email = this.user?.email) {
-    const normalizedEmail = String(email ?? '').trim();
-    if (!normalizedEmail) throw new Error('復旧用メールアドレスが登録されていません');
-    this.auth.languageCode = 'ja';
-    await this.sdk.sendPasswordResetEmail(this.auth, normalizedEmail);
-    return normalizedEmail;
   }
 
   async getPlayerStats() {
