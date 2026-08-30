@@ -23,7 +23,7 @@ export function applyAtkDebuff(unit, amount) {
 }
 
 export function applyDefDebuff(unit, amount) {
-  const mitigated = hasNormalTrait(unit, 'ヘンガー') ? Math.max(0, amount - 5) : Math.max(0, amount);
+  const mitigated = hasNormalTrait(unit, 'ギアセンチネル') ? Math.max(0, amount - 5) : Math.max(0, amount);
   const before = effectiveDef(unit);
   unit.defMod -= mitigated;
   return Math.max(0, before - effectiveDef(unit));
@@ -37,8 +37,8 @@ export function resolvedMoveTp(player, unit, target, move) {
   if (move.name === 'ゴッドストライク' && unit.life >= unit.maxLife) cost -= 1;
   if (move.name === 'デスファイナル' && target && lifeRatio(target) <= 0.5) cost -= 1;
 
-  if (hasNormalTrait(unit, 'メタルナー') && firstMove && move.rank <= 3) cost -= 1;
-  if (hasNormalTrait(unit, 'ライガー') && firstMove) cost -= 1;
+  if (hasNormalTrait(unit, 'アストラノイド') && firstMove && move.rank <= 3) cost -= 1;
+  if (hasNormalTrait(unit, 'ボルトウルフ') && firstMove) cost -= 1;
   if (!unit.specialForm && firstMove) cost -= Math.max(0, Number(unit.traitEngine?.firstMoveDiscount) || 0);
   cost -= player.effects.factionMoveDiscount[unit.faction] ?? 0;
 

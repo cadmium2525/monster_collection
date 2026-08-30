@@ -1,8 +1,25 @@
 import { normalizeDeckCards, validateDeck } from '../battle/deck.js';
 import { SeededRng } from '../core/rng.js';
-import { normalStealVariant } from '../gacha/acquisition.js';
+import { acquisitionOrigin, normalStealVariant } from '../gacha/acquisition.js';
 
 function clone(value) { return structuredClone(value); }
+
+export const TROPHY_OFFER_WEIGHT = 5;
+
+export function captureOfferWeight(card, masterIndex) {
+  return acquisitionOrigin(masterIndex.cards.get(card.masterId)) === 'trophy' ? TROPHY_OFFER_WEIGHT : 1;
+}
+
+function weightedOffers(cards, count, rng, masterIndex) {
+  const pool = [...cards];
+  const selected = [];
+  while (selected.length < count && pool.length) {
+    const card = rng.weightedChoice(pool, (candidate) => captureOfferWeight(candidate, masterIndex));
+    selected.push(card);
+    pool.splice(pool.indexOf(card), 1);
+  }
+  return selected;
+}
 
 export class CardStealSession {
   static fromCheckpoint({ masterIndex, checkpoint }) {
@@ -29,7 +46,7 @@ export class CardStealSession {
     this.state = {
       seed: String(seed),
       status: 'selecting',
-      offered: this.rng.shuffle(normalizeDeckCards(defeatedCards, 'defeated')).slice(0, 5).map((card, index) => ({
+      offered: weightedOffers(normalizeDeckCards(defeatedCards, 'defeated'), 5, this.rng, this.masterIndex).map((card, index) => ({
         offerId: `offer-${index + 1}`,
         sourceInstanceId: card.instanceId,
         ...normalStealVariant(card),

@@ -53,8 +53,8 @@ test('high-tier capture breeders give every faction a strong but constrained pay
   assert.equal(fiend.statuses.nextDamageBonus, 0.5);
 
   const beast = engine();
-  const alpha = placeUnit(beast, 'p1', 'ライガー', 0);
-  const packmate = placeUnit(beast, 'p1', 'ディノ', 1);
+  const alpha = placeUnit(beast, 'p1', 'ボルトウルフ', 0);
+  const packmate = placeUnit(beast, 'p1', 'フェザーレックス', 1);
   const alphaAtk = effectiveAtk(alpha);
   setHand(beast, 'p1', [card('breeder-051', 'king-roar')]);
   beast.applyAction(breederAction(beast, 'breeder-051'));
@@ -85,7 +85,7 @@ test('counter command cards dispel buffs, cleanse debuffs and build a conditiona
   assert.equal(enhanced.statuses.nextDamageReduction, 0);
 
   const cleanse = engine();
-  const weakened = placeUnit(cleanse, 'p1', 'ヘンガー', 0);
+  const weakened = placeUnit(cleanse, 'p1', 'ギアセンチネル', 0);
   weakened.atkMod = -10;
   weakened.statuses.stunOnNextTurn = 1;
   weakened.statuses.incomingFlatDamage = { amount: 5, remaining: 2 };
@@ -108,7 +108,7 @@ test('disruption and retreat cards delay fusion, surcharge one move and safely r
   const fusionLock = engine({ firstPlayerId: 'p1' });
   placeUnit(fusionLock, 'p2', 'ピクシー', 0);
   fusionLock.player('p2').turnNumber = 4;
-  setHand(fusionLock, 'p2', [card(monsterByName('メタルナー').id, 'locked-material')]);
+  setHand(fusionLock, 'p2', [card(monsterByName('アストラノイド').id, 'locked-material')]);
   setHand(fusionLock, 'p1', [card('breeder-042', 'fusion-lock')]);
   fusionLock.applyAction(breederAction(fusionLock, 'breeder-042'));
   fusionLock.applyAction(fusionLock.getLegalActions().find((action) => action.type === 'end-turn'));
@@ -137,8 +137,8 @@ test('disruption and retreat cards delay fusion, surcharge one move and safely r
 
 test('frontline reorganization redraws selected hand cards and material search chooses from the top five', () => {
   const reorganize = engine({ seed: 'reorganize' });
-  const first = card(monsterByName('モッチー').id, 'return-one');
-  const second = card(monsterByName('ハム').id, 'return-two');
+  const first = card(monsterByName('ルミラビ').id, 'return-one');
+  const second = card(monsterByName('コンゴウ').id, 'return-two');
   setHand(reorganize, 'p1', [card('breeder-021', 'organize'), first, second]);
   const organizeAction = breederAction(reorganize, 'breeder-021', (action) => action.returnCardInstanceIds.length === 2);
   reorganize.applyAction(organizeAction);
@@ -156,7 +156,7 @@ test('frontline reorganization redraws selected hand cards and material search c
 test('fusion order, first aid, sacrifice, defense, TP loan and adversity execute their full effects', () => {
   const fusion = engine({ seed: 'fusion-order' });
   const main = placeUnit(fusion, 'p1', 'ピクシー', 0);
-  const material = card(monsterByName('メタルナー').id, 'fusion-buff-material');
+  const material = card(monsterByName('アストラノイド').id, 'fusion-buff-material');
   setHand(fusion, 'p1', [card('breeder-023', 'fusion-order-card'), material]);
   fusion.player('p1').turnNumber = 6;
   fusion.applyAction(breederAction(fusion, 'breeder-023'));
@@ -183,7 +183,7 @@ test('fusion order, first aid, sacrifice, defense, TP loan and adversity execute
 
   const defense = engine();
   const guardA = placeUnit(defense, 'p1', 'モノリス', 0);
-  const guardB = placeUnit(defense, 'p1', 'ヘンガー', 1);
+  const guardB = placeUnit(defense, 'p1', 'ギアセンチネル', 1);
   setHand(defense, 'p1', [card('breeder-026', 'all-defense')]);
   defense.applyAction(breederAction(defense, 'breeder-026'));
   assert.equal(guardA.statuses.nextDamageReduction, 0.25);
@@ -220,7 +220,7 @@ test('inorganic and creation breeder cards apply temporary offense, repair, rede
   assert.equal(effectiveDef(machine), defBefore - 5);
 
   const repair = engine();
-  const repairTarget = placeUnit(repair, 'p1', 'ヘンガー', 0, { life: 10 });
+  const repairTarget = placeUnit(repair, 'p1', 'ギアセンチネル', 0, { life: 10 });
   useOnUnit(repair, 'breeder-030', repairTarget);
   repair.applyAction(repair.getLegalActions().find((action) => action.type === 'end-turn'));
   assert.equal(repairTarget.life, 15);
@@ -238,7 +238,7 @@ test('inorganic and creation breeder cards apply temporary offense, repair, rede
   assert.equal(effectiveAtk(creation), originalAtk);
 
   const spare = engine();
-  const creationTarget = placeUnit(spare, 'p1', 'メタルナー', 0, { life: 5 });
+  const creationTarget = placeUnit(spare, 'p1', 'アストラノイド', 0, { life: 5 });
   useOnUnit(spare, 'breeder-032', creationTarget);
   const result = spare._damageUnit(spare.player('p1'), creationTarget, 99, null);
   assert.equal(result.defeated, false);
@@ -287,10 +287,10 @@ test('spirit and demon breeder cards echo, return, trade LIFE for TP and mark in
 
 test('beast and monster breeder cards reward hunting, packs, gluttony and predation', () => {
   const hunt = engine();
-  const hunter = placeUnit(hunt, 'p1', 'ハム', 0);
+  const hunter = placeUnit(hunt, 'p1', 'コンゴウ', 0);
   const prey = placeUnit(hunt, 'p2', 'モノリス', 0, { life: 1 });
   hunter.atkBase = 100;
-  hunter.equippedMoveIds = [moveByName('ハム', '正拳').id];
+  hunter.equippedMoveIds = [moveByName('コンゴウ', '正拳').id];
   useOnUnit(hunt, 'breeder-037', hunter);
   const huntMove = hunt.getLegalActions().find((action) => action.type === 'move' && action.targetUnitId === prey.id);
   const tpBeforeMove = hunt.player('p1').tp;
@@ -298,8 +298,8 @@ test('beast and monster breeder cards reward hunting, packs, gluttony and predat
   assert.equal(hunt.player('p1').tp, Math.min(hunt.player('p1').maxTp, tpBeforeMove - huntMove.cost + 1));
 
   const pack = engine();
-  const beastA = placeUnit(pack, 'p1', 'ライガー', 0);
-  const beastB = placeUnit(pack, 'p1', 'ディノ', 1);
+  const beastA = placeUnit(pack, 'p1', 'ボルトウルフ', 0);
+  const beastB = placeUnit(pack, 'p1', 'フェザーレックス', 1);
   setHand(pack, 'p1', [card('breeder-038', 'pack-guard')]);
   pack.applyAction(breederAction(pack, 'breeder-038'));
   assert.equal(beastA.statuses.nextDamageReduction, 0.25);

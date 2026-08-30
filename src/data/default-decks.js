@@ -3,10 +3,10 @@ const BASELINE_MASTER_IDS = Object.freeze([
   // The defensive bodies prevent a new player from losing every summoned
   // monster before its first actionable turn.
   'monster-001', 'monster-001', 'monster-001', // モノリス
-  'monster-002', 'monster-002', 'monster-002', // ヘンガー
+  'monster-002', 'monster-002', 'monster-002', // ギアセンチネル
   'monster-003', 'monster-003',                 // ゴーレム
   'monster-010', 'monster-010',                 // ピクシー
-  'monster-005', 'monster-005',                 // メタルナー
+  'monster-005', 'monster-005',                 // アストラノイド
   'monster-017', 'monster-017',                 // ワーム
   'monster-011', 'monster-011',                 // デュラハン
   'monster-004', 'monster-004',                 // ヒノトリ

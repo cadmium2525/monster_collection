@@ -1,4 +1,5 @@
 import { SeededRng } from '../core/rng.js';
+import { automaticMulliganIds } from './mulligan.js';
 
 const TYPE_PRIORITY = Object.freeze({
   'resolve-shugyo-move': 8,
@@ -27,6 +28,12 @@ export function runAutomatedBattle(engine, options = {}) {
   const rng = new SeededRng(options.seed ?? `${engine.state.seed}:simulation`);
   const chooseAction = options.chooseAction ?? defaultSimulationPolicy;
   const maxActions = options.maxActions ?? 5000;
+  if (engine.state.mulligan?.status === 'selecting') {
+    for (const playerId of engine.state.playerOrder) {
+      if (engine.state.mulligan.submitted[playerId]) continue;
+      engine.submitMulligan(playerId, automaticMulliganIds(engine.player(playerId), engine.masterIndex));
+    }
+  }
   let actions = 0;
   while (engine.state.status === 'active' && actions < maxActions) {
     const playerId = engine.state.currentPlayerId;

@@ -175,7 +175,7 @@ test('champion portraits retain standalone and showcase artwork instead of falli
 });
 
 test('every showcase special fusion is Foil even when its main asset has a normal finish', () => {
-  const monster = monsterByName('メタルナー');
+  const monster = monsterByName('アストラノイド');
   assert.equal(isFoilAppearance(monster, {
     specialFusionId: 'fusion-027',
     specialForm: 'ラブラブセイジン',

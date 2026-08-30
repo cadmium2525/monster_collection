@@ -98,7 +98,7 @@ test('a fifth learned technique pauses play until the actual four are replaced o
 test('fusion is unavailable before first 6 / second 5 and costs 1 or 2 afterward', () => {
   const battle = engine();
   const main = placeUnit(battle, 'p1', 'ピクシー', 0);
-  const material = monsterByName('メタルナー');
+  const material = monsterByName('アストラノイド');
   setHand(battle, 'p1', [card(material.id, 'fusion-material')]);
   assert.equal(battle.getLegalActions().some((action) => action.type.startsWith('fusion')), false);
   battle.player('p1').turnNumber = 6;
@@ -122,7 +122,7 @@ test('fusion never weakens a trained main monster and exposes the guaranteed gai
   main.maxLife += 20;
   main.life += 20;
   main.atkBase += 20;
-  const material = monsterByName('モッチー');
+  const material = monsterByName('ルミラビ');
   setHand(battle, 'p1', [card(material.id, 'weak-material')]);
   battle.player('p1').turnNumber = 6;
   const beforeSp = currentSp(main);
@@ -187,9 +187,9 @@ test('recoil damage does not count as being attacked for special traits', () => 
 
 test('move TP and actual four-move data stay inside the monster card', () => {
   const battle = engine();
-  const unit = placeUnit(battle, 'p1', 'ライガー', 0);
+  const unit = placeUnit(battle, 'p1', 'ボルトウルフ', 0);
   const target = placeUnit(battle, 'p2', 'ゴースト', 0);
-  const move = moveByName('ライガー', 'かみつき');
+  const move = moveByName('ボルトウルフ', 'かみつき');
   unit.equippedMoveIds = [move.id];
   const action = battle.getLegalActions().find((candidate) => candidate.type === 'move' && candidate.targetUnitId === target.id);
   assert.equal(action.cost, 1, 'Liger first move discount should apply');

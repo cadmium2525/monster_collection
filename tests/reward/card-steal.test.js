@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { CardStealSession } from '../../src/reward/index.js';
+import { captureOfferWeight, TROPHY_OFFER_WEIGHT } from '../../src/reward/CardStealSession.js';
 import { legalDeck, masterIndex } from '../helpers.js';
 
 test('five cards are offered and zero selection skips without changing the original deck', () => {
@@ -9,6 +10,27 @@ test('five cards are offered and zero selection skips without changing the origi
   assert.equal(session.state.offered.length, 5);
   assert.deepEqual(session.skip(), original);
   assert.deepEqual(original, legalDeck('mine'));
+});
+
+test('capture-only breeders receive five times the normal offer weight', () => {
+  assert.equal(TROPHY_OFFER_WEIGHT, 5);
+  assert.equal(captureOfferWeight({ masterId: 'breeder-047' }, masterIndex), 5);
+  assert.equal(captureOfferWeight({ masterId: 'monster-001' }, masterIndex), 1);
+
+  const enemy = legalDeck('weighted-enemy');
+  enemy[0] = { ...enemy[0], masterId: 'breeder-047' };
+  let offeredCount = 0;
+  for (let seed = 0; seed < 300; seed += 1) {
+    const session = new CardStealSession({
+      playerCards: legalDeck(`weighted-player-${seed}`),
+      defeatedCards: enemy,
+      masterIndex,
+      deckId: `weighted-player-${seed}`,
+      seed: `weighted-${seed}`,
+    });
+    if (session.state.offered.some((offer) => offer.masterId === 'breeder-047')) offeredCount += 1;
+  }
+  assert.ok(offeredCount > 100, `five-times weight should materially increase offers, got ${offeredCount}/300`);
 });
 
 test('one or two acquisitions require the same release count and commit exactly 40 legal cards', () => {

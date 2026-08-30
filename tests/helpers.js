@@ -16,7 +16,7 @@ export function legalDeck(id = 'deck') {
 
 export function engine(options = {}) {
   const firstPlayerId = options.firstPlayerId ?? 'p1';
-  return new BattleEngine({
+  const battle = new BattleEngine({
     masterData,
     seed: options.seed ?? 'test-seed',
     firstPlayerId,
@@ -25,6 +25,9 @@ export function engine(options = {}) {
       { id: 'p2', displayName: 'Player 2', cards: options.deck2 ?? legalDeck('p2'), tournamentGrowth: options.growth2 },
     ],
   });
+  battle.submitMulligan('p1', options.mulligan1 ?? []);
+  battle.submitMulligan('p2', options.mulligan2 ?? []);
+  return battle;
 }
 
 export function card(masterId, instanceId = `card-${masterId}`) {

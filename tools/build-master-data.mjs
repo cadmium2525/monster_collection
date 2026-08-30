@@ -27,14 +27,29 @@ const moveRows = records(2);
 const breederRows = records(3);
 const fusionRows = records(5);
 
+const MONSTER_RENAMES = Object.freeze({
+  'ヘンガー': 'ギアセンチネル',
+  'メタルナー': 'アストラノイド',
+  'ガリ': 'アルカナロード',
+  'モッチー': 'ルミラビ',
+  'ライガー': 'ボルトウルフ',
+  'ハム': 'コンゴウ',
+  'ディノ': 'フェザーレックス',
+});
+
+function monsterName(value) {
+  return MONSTER_RENAMES[value] ?? value;
+}
+
 const moveIdsByMonster = new Map();
 const moves = moveRows.map((row, index) => {
   const id = `move-${pad(index + 1)}`;
-  if (!moveIdsByMonster.has(row['モンスター'])) moveIdsByMonster.set(row['モンスター'], []);
-  moveIdsByMonster.get(row['モンスター']).push(id);
+  const ownerName = monsterName(row['モンスター']);
+  if (!moveIdsByMonster.has(ownerName)) moveIdsByMonster.set(ownerName, []);
+  moveIdsByMonster.get(ownerName).push(id);
   return {
     id,
-    monsterName: row['モンスター'],
+    monsterName: ownerName,
     name: row['技名'],
     rank: number(row['Rank']),
     power: row['威力'] === '―' ? null : number(row['威力']),
@@ -49,7 +64,7 @@ const monsters = monsterRows.map((row, index) => ({
   id: `monster-${pad(index + 1)}`,
   kind: 'monster',
   faction: row['モン類'],
-  name: row['モンスター'],
+  name: monsterName(row['モンスター']),
   summonTp: number(row['召喚TP']),
   base: {
     life: number(row['LIFE']),
@@ -61,7 +76,7 @@ const monsters = monsterRows.map((row, index) => ({
     name: row['特性名'],
     effect: row['特性効果'],
   },
-  moveIds: moveIdsByMonster.get(row['モンスター']) ?? [],
+  moveIds: moveIdsByMonster.get(monsterName(row['モンスター'])) ?? [],
   legacyPreferredDistance: row['得意距離'],
 }));
 
@@ -77,8 +92,8 @@ const breeders = breederRows.map((row, index) => ({
 
 const fusions = fusionRows.map((row, index) => ({
   id: `fusion-${pad(index + 1)}`,
-  main: row['メイン'],
-  material: row['サブ'],
+  main: monsterName(row['メイン']),
+  material: monsterName(row['サブ']),
   name: row['特殊個体'],
   trait: row['固有特性'],
   archetype: row['設計タイプ'],
@@ -97,23 +112,23 @@ const growthCards = [
 
 const shugyoPools = {
   'プラント': { attack: ['ドレイン', '根縛り', 'エナジードレイン'], defense: ['フラワービーム', '毒花粉', '花粉'] },
-  'モッチー': { attack: ['もっさん', 'ローリンモッチ', 'もっさまん'], defense: ['超モッチ砲', 'モッチ砲', 'ガッチャー'] },
+  'ルミラビ': { attack: ['もっさん', 'ローリンモッチ', 'もっさまん'], defense: ['超モッチ砲', 'モッチ砲', 'ガッチャー'] },
   'ウンディーネ': { attack: ['メイルストローム', 'アクアウェイブ', 'フリーズランス'], defense: ['アイスストーム', 'アクアスピア', 'アイスクラッシュ'] },
   'ピクシー': { attack: ['ギガレイ', 'デスキッス', 'ビッグバン'], defense: ['レイ', 'キック', 'ライトニング'] },
   'デュラハン': { attack: ['連続斬り', '冥王剣', '真空斬'], defense: ['真・風神剣', '最終奥義', '大車輪'] },
   'ドラゴン': { attack: ['ルインクロス', 'インフェルノ', 'しっぽアタック'], defense: ['ドラゴンラッシュ', 'ドラゴンパンチ', 'ウイングアタック'] },
-  'ライガー': { attack: ['雷牙', 'サンダー', 'ワンツー'], defense: ['雷撃', '空中回転アタック', '超雷撃'] },
-  'ハム': { attack: ['連続パンチ', '超飛び蹴り', '超ドラゴンパンチ'], defense: ['ドラゴンパンチ', '大砲屁', 'バックナックル'] },
-  'ディノ': { attack: ['暴れまわり', '火炎連砲', '突進'], defense: ['しっぽビンタ', '連続かみつき', '火炎'] },
+  'ボルトウルフ': { attack: ['雷牙', 'サンダー', 'ワンツー'], defense: ['雷撃', '空中回転アタック', '超雷撃'] },
+  'コンゴウ': { attack: ['連続パンチ', '超飛び蹴り', '超ドラゴンパンチ'], defense: ['ドラゴンパンチ', '大砲屁', 'バックナックル'] },
+  'フェザーレックス': { attack: ['暴れまわり', '火炎連砲', '突進'], defense: ['しっぽビンタ', '連続かみつき', '火炎'] },
   'ジョーカー': { attack: ['デススラッシュ', 'デスエナジー', 'デスナックル'], defense: ['デスファイナル', 'デスゲート', 'デスウェーブ'] },
   'ワーム': { attack: ['大毒液', '毒牙', '毒液'], defense: ['連続突き', '牙斬り', 'くし刺し'] },
   'ゴースト': { attack: ['ソウルビーム', 'ナイトメア', 'コンビネーション'], defense: ['ソウルショット', '大きなおとしもの', '大パンチ'] },
   'モノリス': { attack: ['ひっかき', 'フォームアルファ', 'デルタアタック'], defense: ['怪光線', 'トリオビームX', 'トリオビームY'] },
-  'ヘンガー': { attack: ['アイショット', 'ドリルアタック', 'ロケットパンチ'], defense: ['ギガレーザー', 'ダブルアタック', 'アームキャノン'] },
+  'ギアセンチネル': { attack: ['アイショット', 'ドリルアタック', 'ロケットパンチ'], defense: ['ギガレーザー', 'ダブルアタック', 'アームキャノン'] },
   'ゴーレム': { attack: ['大地震', '地震', '竜巻アタック'], defense: ['大パンチ', 'ハンマーナックル', 'ロケットパンチ'] },
   'ヒノトリ': { attack: ['フレイムタイフーン', 'フレイムライン', 'かぎづめ'], defense: ['エタニティフレア', 'ファイアウェーブ', 'ファイアビーム'] },
-  'メタルナー': { attack: ['超メタビーム', 'テツざんこう', 'ツイン掌打'], defense: ['宙ポン拳', '閃光掌', '右たん脚'] },
-  'ガリ': { attack: ['ホーリーサンダー', 'ゴッドファイナル', '神の怒り'], defense: ['プレス', 'ゴッドストライク', 'ゴッドアタック'] },
+  'アストラノイド': { attack: ['超メタビーム', 'テツざんこう', 'ツイン掌打'], defense: ['宙ポン拳', '閃光掌', '右たん脚'] },
+  'アルカナロード': { attack: ['ホーリーサンダー', 'ゴッドファイナル', '神の怒り'], defense: ['プレス', 'ゴッドストライク', 'ゴッドアタック'] },
 };
 
 const master = {

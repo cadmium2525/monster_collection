@@ -29,7 +29,7 @@ test('each second-generation monster has exactly two special recipes using under
   const originalMaterialsInExpansion = masterData.fusions.slice(36)
     .map((fusion) => fusion.material)
     .filter((name) => !secondGeneration.has(name));
-  assert.deepEqual(originalMaterialsInExpansion, ['ゴースト', 'ヒノトリ', 'メタルナー', 'ガリ', 'ゴーレム', 'モノリス']);
+  assert.deepEqual(originalMaterialsInExpansion, ['ゴースト', 'ヒノトリ', 'アストラノイド', 'アルカナロード', 'ゴーレム', 'モノリス']);
   assert.equal(originalMaterialsInExpansion.every((name) => originalMaterialCount.get(name) <= 2), true);
 });
 

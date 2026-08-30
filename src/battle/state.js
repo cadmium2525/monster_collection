@@ -169,7 +169,7 @@ export function effectiveAtk(unit) {
     : unit.atkBase + unit.atkMod + unit.temporaryAtk
       + (unit.timedAtkBuffs ?? []).reduce((sum, buff) => sum + buff.amount, 0)
       + (unit.statuses.hamKillBonus ?? 0);
-  if (!unit.specialForm && unit.baseMonsterName === 'モッチー' && unit.life * 2 <= unit.maxLife) value += 20;
+  if (!unit.specialForm && unit.baseMonsterName === 'ルミラビ' && unit.life * 2 <= unit.maxLife) value += 20;
   if (!unit.specialForm && unit.baseMonsterName === 'デュラハン' && unit.statuses.knightWill) value += 5;
   if (!unit.specialForm && unit.life * 2 <= unit.maxLife) value += Math.max(0, Number(unit.traitEngine?.lowLifeAtkBonus) || 0);
   return Math.max(1, value);

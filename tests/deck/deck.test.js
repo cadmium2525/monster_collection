@@ -15,6 +15,12 @@ test('master data contains all canonical records', () => {
     assert.equal(moves.length, 9, monster.name);
     assert.equal(moves.filter((move) => move.initial).length, 3, monster.name);
   }
+  assert.deepEqual(masterData.monsters.slice(0, 24).map((monster) => monster.name), [
+    'モノリス', 'ギアセンチネル', 'ゴーレム', 'ヒノトリ', 'アストラノイド', 'アルカナロード',
+    'プラント', 'ルミラビ', 'ウンディーネ', 'ピクシー', 'デュラハン', 'ドラゴン',
+    'ボルトウルフ', 'コンゴウ', 'フェザーレックス', 'ジョーカー', 'ワーム', 'ゴースト',
+    'クロノギア', 'アルケミア', 'ミストレイ', 'ノクティス', 'ヴォルファング', 'グラトン',
+  ]);
 });
 
 test('deck is fixed at 40 and enforces monster copy limit', () => {

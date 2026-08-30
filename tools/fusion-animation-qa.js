@@ -36,7 +36,7 @@ const masterIndex = createMasterIndex(masterData);
 
 function model(special) {
   const mainDefinition = masterIndex.monstersByName.get(special ? 'ピクシー' : 'ドラゴン');
-  const materialDefinition = masterIndex.monstersByName.get(special ? 'メタルナー' : 'ライガー');
+  const materialDefinition = masterIndex.monstersByName.get(special ? 'アストラノイド' : 'ボルトウルフ');
   const beforeUnit = qaUnit(mainDefinition);
   const afterUnit = qaUnit(mainDefinition, {
     specialForm: special ? 'フューチャー' : null,

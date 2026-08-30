@@ -2,10 +2,10 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { engine } from '../helpers.js';
 
-test('both players start with 3 cards and first player skips turn-1 normal draw', () => {
+test('first starts with 3 and second with 5 while both skip their turn-1 normal draw', () => {
   const battle = engine();
   assert.equal(battle.player('p1').hand.length, 3);
-  assert.equal(battle.player('p2').hand.length, 3);
+  assert.equal(battle.player('p2').hand.length, 5);
   battle.applyAction({ type: 'end-turn' });
   assert.equal(battle.player('p2').hand.length, 5);
 });

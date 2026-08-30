@@ -82,3 +82,13 @@ test('moves create a short target impact while Training and shugyo keep distinct
   assert.match(styles, /\.combat-impact\.direct\s*\{/);
   assert.match(styles, /\.effect-burst::before,\.effect-burst::after/);
 });
+
+test('mulligan UI exposes 3/5-card limits and fits five opening cards in landscape', () => {
+  const battleSource = fs.readFileSync(new URL('../../src/ui/battle-screen.js', import.meta.url), 'utf8');
+  const styles = fs.readFileSync(new URL('../../styles.css', import.meta.url), 'utf8');
+  assert.match(battleSource, /最大\$\{maxExchange\}枚まで選択/);
+  assert.match(battleSource, /aria-pressed/);
+  assert.match(battleSource, /\$\{count\}枚を交換して開始/);
+  assert.match(styles, /\.mulligan-dialog\s*\{[^}]*height:min\(92dvh,560px\)/);
+  assert.match(styles, /\.mulligan-card-row\s*\{[^}]*overflow-x:auto/);
+});

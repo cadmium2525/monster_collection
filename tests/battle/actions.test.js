@@ -5,9 +5,9 @@ import { card, engine, monsterByName, moveByName, placeUnit, setHand } from '../
 
 test('distance system is absent and any equipped attack can target any opposing slot', () => {
   const battle = engine();
-  const attacker = placeUnit(battle, 'p1', 'ヘンガー', 0);
+  const attacker = placeUnit(battle, 'p1', 'ギアセンチネル', 0);
   const target = placeUnit(battle, 'p2', 'モノリス', 2);
-  attacker.equippedMoveIds = [moveByName('ヘンガー', 'パンチ').id];
+  attacker.equippedMoveIds = [moveByName('ギアセンチネル', 'パンチ').id];
   const actions = battle.getLegalActions('p1');
   assert.equal(actions.some((action) => action.type === 'move' && action.targetUnitId === target.id), true);
   assert.equal(actions.some((action) => action.type === 'movement'), false);
@@ -15,7 +15,7 @@ test('distance system is absent and any equipped attack can target any opposing 
 
 test('summoning costs TP and summoned monster cannot act that turn', () => {
   const battle = engine();
-  const monster = monsterByName('モッチー');
+  const monster = monsterByName('ルミラビ');
   setHand(battle, 'p1', [card(monster.id, 'summon-card')]);
   const action = battle.getLegalActions().find((candidate) => candidate.type === 'summon' && candidate.slot === 0);
   battle.applyAction(action);
@@ -28,7 +28,7 @@ test('summoning costs TP and summoned monster cannot act that turn', () => {
 test('attack consumes one action point and applies faction advantage damage', () => {
   const battle = engine();
   const attacker = placeUnit(battle, 'p1', 'ゴーレム', 0);
-  const target = placeUnit(battle, 'p2', 'メタルナー', 0);
+  const target = placeUnit(battle, 'p2', 'アストラノイド', 0);
   const move = moveByName('ゴーレム', 'パンチ');
   attacker.equippedMoveIds = [move.id];
   const before = target.life;

@@ -79,7 +79,7 @@ test('Champion reply search considers a sequence of public board attacks', () =>
   const battle = engine({ seed: 'champion-public-reply', firstPlayerId: 'p1' });
   battle.state.currentPlayerId = 'p2';
   battle.player('p2').tp = 10;
-  for (const [slot, name] of ['ヒノトリ', 'ヘンガー'].entries()) {
+  for (const [slot, name] of ['ヒノトリ', 'ギアセンチネル'].entries()) {
     const attacker = placeUnit(battle, 'p2', name, slot);
     attacker.equippedMoveIds = [attacker.equippedMoveIds.find((moveId) => masterIndex.moves.get(moveId)?.power != null)];
   }

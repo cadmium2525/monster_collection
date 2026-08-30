@@ -5,7 +5,7 @@ import { createBaselineDeck } from '../../src/data/default-decks.js';
 import { DeckCollection } from '../../src/decks/DeckCollection.js';
 import { GameSession } from '../../src/game/GameSession.js';
 import { CardStealSession } from '../../src/reward/CardStealSession.js';
-import { legalDeck, masterData, masterIndex } from '../helpers.js';
+import { engine, legalDeck, masterData, masterIndex, placeUnit } from '../helpers.js';
 
 test('battle checkpoint restores exact state, RNG, and deterministic continuation', () => {
   const original = new BattleEngine({
@@ -17,6 +17,8 @@ test('battle checkpoint restores exact state, RNG, and deterministic continuatio
       { id: 'p2', displayName: 'Player 2', cards: legalDeck('resume-p2') },
     ],
   });
+  original.submitMulligan('p1', []);
+  original.submitMulligan('p2', []);
   original.applyAction({ type: 'end-turn' });
 
   const restored = BattleEngine.fromCheckpoint({ masterData, checkpoint: original.toCheckpoint() });
@@ -25,6 +27,24 @@ test('battle checkpoint restores exact state, RNG, and deterministic continuatio
   original.applyAction({ type: 'end-turn' });
   restored.applyAction({ type: 'end-turn' });
   assert.deepEqual(restored.toCheckpoint(), original.toCheckpoint());
+});
+
+test('legacy battle checkpoints refresh renamed monsters from their stable master ids', () => {
+  const original = engine({ seed: 'legacy-monster-name' });
+  const unit = placeUnit(original, 'p1', 'ギアセンチネル', 0);
+  unit.name = 'ヘンガー';
+  unit.baseMonsterName = 'ヘンガー';
+  const special = placeUnit(original, 'p1', 'ギアセンチネル', 1);
+  special.name = 'フューチャー';
+  special.specialForm = 'フューチャー';
+  special.baseMonsterName = 'ヘンガー';
+  special.traitName = '未来予測';
+  const restored = BattleEngine.fromCheckpoint({ masterData, checkpoint: original.toCheckpoint() });
+  assert.equal(restored.player('p1').board[0].name, 'ギアセンチネル');
+  assert.equal(restored.player('p1').board[0].baseMonsterName, 'ギアセンチネル');
+  assert.equal(restored.player('p1').board[1].name, 'フューチャー');
+  assert.equal(restored.player('p1').board[1].baseMonsterName, 'ギアセンチネル');
+  assert.equal(restored.player('p1').board[1].traitName, '未来予測');
 });
 
 test('card-steal checkpoint preserves offers and unfinished selections', () => {

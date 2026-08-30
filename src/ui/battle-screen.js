@@ -7,6 +7,7 @@ import { playFusionUnlockAnimation } from './fusion-unlock-animation.js';
 import { playTurnTransition } from './turn-transition-animation.js';
 import { openModal } from './modal.js';
 import { lowLifeTargetEffects, unitLifePresentation } from './status-presentation.js';
+import { automaticMulliganIds } from '../battle/mulligan.js';
 
 function delay(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 
@@ -27,6 +28,7 @@ export class BattleScreen {
     this.speed = speed;
     this.selection = null;
     this.pendingMove = null;
+    this.mulliganSelection = new Set();
     this.busy = engine.state.status === 'active' && !engine.state.pendingMoveChoice;
     this.turnAnnouncementKey = null;
     this.queuedCardSelectionId = null;
@@ -44,11 +46,36 @@ export class BattleScreen {
   }
 
   async startInitialTurnFlow() {
+    if (this.engine.state.mulligan?.status === 'selecting') {
+      await this.startMulliganFlow();
+      return;
+    }
     try {
       await this.showCurrentTurnTransition();
     } finally {
       this.busy = false;
       this.applyQueuedCardSelection();
+    }
+    await this.runCpuIfNeeded();
+  }
+
+  async startMulliganFlow() {
+    const opponentId = this.engine.state.playerOrder.find((id) => id !== this.humanPlayerId);
+    if (opponentId && !this.engine.state.mulligan.submitted[opponentId]) {
+      const opponent = this.engine.player(opponentId);
+      this.engine.submitMulligan(opponentId, automaticMulliganIds(opponent, this.engine.masterIndex));
+      this.emitCheckpoint();
+    }
+    if (this.engine.state.mulligan?.status === 'selecting'
+      && !this.engine.state.mulligan.submitted[this.humanPlayerId]) {
+      this.busy = true;
+      this.render();
+      return;
+    }
+    try {
+      await this.showCurrentTurnTransition();
+    } finally {
+      this.busy = false;
     }
     await this.runCpuIfNeeded();
   }
@@ -86,7 +113,9 @@ export class BattleScreen {
   }
 
   isHumanTurn() {
-    return this.engine.state.status === 'active' && this.engine.state.currentPlayerId === this.humanPlayerId;
+    return this.engine.state.status === 'active'
+      && this.engine.state.mulligan?.status !== 'selecting'
+      && this.engine.state.currentPlayerId === this.humanPlayerId;
   }
 
   render() {
@@ -138,6 +167,7 @@ export class BattleScreen {
         ]),
         this.renderTurnControls(humanTurn),
       ]),
+      this.renderMulliganOverlay(own),
     ]);
     replace(this.root, screen);
     this._renderLegalActions = null;
@@ -146,6 +176,74 @@ export class BattleScreen {
     if (state.status === 'finished' && !this.resultShown) {
       this.resultShown = true;
       this.showResult(state);
+    }
+  }
+
+  renderMulliganOverlay(player) {
+    const mulligan = this.engine.state.mulligan;
+    if (mulligan?.status !== 'selecting' || mulligan.submitted[this.humanPlayerId]) return null;
+    const maxExchange = mulligan.maxByPlayer[this.humanPlayerId];
+    const count = this.mulliganSelection.size;
+    const cards = player.hand.map((card) => {
+      const definition = this.definitionForCard(card);
+      const selected = this.mulliganSelection.has(card.instanceId);
+      const node = renderCard({
+        definition,
+        growth: player.tournamentGrowth[card.instanceId],
+        cardAsset: card,
+        selected,
+        showMonsterEffect: definition.kind !== 'monster',
+        label: `${definition.name}${selected ? ' 交換対象' : ' 手札に残す'}`,
+        onClick: () => this.toggleMulliganCard(card.instanceId, maxExchange),
+      });
+      node.setAttribute('aria-pressed', String(selected));
+      return node;
+    });
+    return el('section', { className: 'mulligan-overlay', attrs: { 'aria-label': '開始手札の交換' } }, [
+      el('div', { className: 'mulligan-dialog' }, [
+        el('header', { className: 'mulligan-heading' }, [
+          el('small', { text: 'OPENING HAND' }),
+          el('h2', { text: '手札交換' }),
+          el('p', { text: `交換するカードを最大${maxExchange}枚まで選択してください。選ばなかったカードは手札に残ります。` }),
+        ]),
+        el('div', { className: 'mulligan-card-row' }, cards),
+        el('footer', { className: 'mulligan-actions' }, [
+          el('span', { text: `${count} / ${maxExchange}枚選択` }),
+          el('button', {
+            className: 'primary-button',
+            text: count ? `${count}枚を交換して開始` : '交換せず開始',
+            onclick: () => { void this.confirmMulligan(); },
+          }),
+        ]),
+      ]),
+    ]);
+  }
+
+  toggleMulliganCard(instanceId, maxExchange) {
+    if (this.mulliganSelection.has(instanceId)) this.mulliganSelection.delete(instanceId);
+    else if (this.mulliganSelection.size < maxExchange) this.mulliganSelection.add(instanceId);
+    else {
+      openModal({ title: '交換枚数の上限', content: el('p', { text: `交換できるカードは最大${maxExchange}枚です。` }) });
+      return;
+    }
+    this.render();
+  }
+
+  async confirmMulligan() {
+    if (this.engine.state.mulligan?.status !== 'selecting'
+      || this.engine.state.mulligan.submitted[this.humanPlayerId]) return;
+    try {
+      this.engine.submitMulligan(this.humanPlayerId, [...this.mulliganSelection]);
+      this.mulliganSelection.clear();
+      this.emitCheckpoint();
+      this.render();
+      await this.showCurrentTurnTransition();
+      this.busy = false;
+      await this.runCpuIfNeeded();
+    } catch (error) {
+      this.busy = true;
+      openModal({ title: '手札を交換できません', content: el('p', { text: error.message }) });
+      this.render();
     }
   }
 

@@ -30,7 +30,7 @@ function unit(definition, overrides = {}) {
 
 test('fusion cinematic model preserves both source cards and the special result', () => {
   const main = monsterByName('ピクシー');
-  const material = monsterByName('メタルナー');
+  const material = monsterByName('アストラノイド');
   const beforeUnit = unit(main);
   const afterUnit = unit(main, {
     specialForm: 'フューチャー',
@@ -53,7 +53,7 @@ test('fusion cinematic model preserves both source cards and the special result'
 
   assert.equal(model.special, true);
   assert.equal(model.mainName, 'ピクシー');
-  assert.equal(model.materialName, 'メタルナー');
+  assert.equal(model.materialName, 'アストラノイド');
   assert.equal(model.resultName, 'フューチャー');
   assert.equal(model.deltaSp, 9);
   assert.equal(model.materialGrowth.life, 5);

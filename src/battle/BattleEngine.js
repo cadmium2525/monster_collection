@@ -33,6 +33,7 @@ import {
 } from './effects.js';
 import { RULES } from './rules.js';
 import { chooseShugyoMove, learnableShugyoMoves } from './shugyo.js';
+import { canonicalMonsterName } from '../data/monster-name-migration.js';
 
 function opposingId(state, playerId) {
   return state.playerOrder.find((id) => id !== playerId);
@@ -73,9 +74,35 @@ export class BattleEngine {
     engine.unitSequence = Math.max(0, Number(checkpoint.unitSequence) || 0);
     engine.eventSequence = Math.max(0, Number(checkpoint.eventSequence) || 0);
     engine.state = clone(checkpoint.state);
+    engine.state.mulligan ??= {
+      status: 'complete',
+      submitted: Object.fromEntries(Object.keys(engine.state.players).map((id) => [id, true])),
+      exchanged: Object.fromEntries(Object.keys(engine.state.players).map((id) => [id, 0])),
+      maxByPlayer: Object.fromEntries(Object.values(engine.state.players).map((player) => [
+        player.id,
+        player.isFirst ? RULES.firstMulliganMax : RULES.secondMulliganMax,
+      ])),
+    };
     for (const player of Object.values(engine.state.players)) {
       player.effects.nextTurnFusionLocks ??= [];
       player.effects.nextTurnMoveSurcharges ??= [];
+      for (const unit of player.board.filter(Boolean)) {
+        const monster = engine.masterIndex.monsters.get(unit.sourceMasterId);
+        if (!monster) {
+          unit.baseMonsterName = canonicalMonsterName(unit.baseMonsterName);
+          if (!unit.specialForm) unit.name = unit.baseMonsterName;
+          continue;
+        }
+        unit.baseMonsterName = monster.name;
+        if (!unit.specialForm) {
+          unit.name = monster.name;
+          unit.faction = monster.faction;
+          unit.role = monster.role;
+          unit.traitName = monster.trait.name;
+          unit.traitEffect = monster.trait.effect;
+          unit.traitEngine = clone(monster.trait.engine ?? {});
+        }
+      }
     }
     return engine;
   }
@@ -121,6 +148,7 @@ export class BattleEngine {
       halfTurn: 0,
       round: 1,
       pendingMoveChoice: null,
+      mulligan: null,
       players: {},
       log: [],
     };
@@ -136,13 +164,24 @@ export class BattleEngine {
       this.state.players[player.id] = player;
     }
 
-    for (const playerId of this.state.playerOrder) this._drawCards(this.player(playerId), RULES.initialHand, 'initial');
+    this.state.mulligan = {
+      status: 'selecting',
+      submitted: Object.fromEntries(this.state.playerOrder.map((id) => [id, false])),
+      exchanged: Object.fromEntries(this.state.playerOrder.map((id) => [id, 0])),
+      maxByPlayer: Object.fromEntries(this.state.playerOrder.map((id) => {
+        const player = this.player(id);
+        return [id, player.isFirst ? RULES.firstMulliganMax : RULES.secondMulliganMax];
+      })),
+    };
+    for (const playerId of this.state.playerOrder) {
+      const player = this.player(playerId);
+      this._drawCards(player, player.isFirst ? RULES.firstInitialHand : RULES.secondInitialHand, 'initial');
+    }
     this._log('battle-start', `${this.player(firstResult.firstPlayerId).displayName}が先攻`, {
       firstPlayerId: firstResult.firstPlayerId,
       deckCosts: firstResult.costs,
       tied: firstResult.tied,
     });
-    this._startTurn(firstResult.firstPlayerId);
   }
 
   player(playerId) {
@@ -174,6 +213,12 @@ export class BattleEngine {
       pendingMoveChoice: this.state.pendingMoveChoice?.playerId === playerId
         ? clone(this.state.pendingMoveChoice)
         : null,
+      mulligan: {
+        status: this.state.mulligan?.status ?? 'complete',
+        maxExchange: this.state.mulligan?.maxByPlayer?.[playerId] ?? 0,
+        ownSubmitted: Boolean(this.state.mulligan?.submitted?.[playerId]),
+        opponentSubmitted: Boolean(this.state.mulligan?.submitted?.[opponent.id]),
+      },
       own,
       opponent: {
         id: opponent.id,
@@ -220,6 +265,7 @@ export class BattleEngine {
   }
 
   getLegalActions(playerId = this.state.currentPlayerId) {
+    if (this.state.mulligan?.status === 'selecting') return [];
     if (this.state.status !== 'active' || playerId !== this.state.currentPlayerId) return [];
     const player = this.player(playerId);
     const pendingChoice = this.state.pendingMoveChoice;
@@ -416,6 +462,41 @@ export class BattleEngine {
     return this.getState();
   }
 
+  submitMulligan(playerId, instanceIds = []) {
+    if (this.state.status !== 'active' || this.state.mulligan?.status !== 'selecting') {
+      throw new Error('手札交換は終了しています');
+    }
+    if (this.state.mulligan.submitted[playerId]) throw new Error('手札交換は確定済みです');
+    const player = this.player(playerId);
+    const selectedIds = [...new Set(instanceIds)];
+    const maxExchange = this.state.mulligan.maxByPlayer[playerId];
+    if (selectedIds.length > maxExchange) throw new Error(`交換できるカードは最大${maxExchange}枚です`);
+    if (selectedIds.some((id) => !player.hand.some((card) => card.instanceId === id))) {
+      throw new Error('手札にないカードは交換できません');
+    }
+
+    const selectedSet = new Set(selectedIds);
+    const setAside = player.hand.filter((card) => selectedSet.has(card.instanceId));
+    player.hand = player.hand.filter((card) => !selectedSet.has(card.instanceId));
+    for (let index = 0; index < setAside.length; index += 1) {
+      const replacement = player.deck.pop();
+      if (replacement) player.hand.push(replacement);
+    }
+    player.deck = this.rng.shuffle([...player.deck, ...setAside]);
+    this.state.mulligan.submitted[playerId] = true;
+    this.state.mulligan.exchanged[playerId] = setAside.length;
+    this._log('mulligan', `${player.displayName}は${setAside.length}枚交換`, {
+      playerId,
+      exchanged: setAside.length,
+    });
+
+    if (this.state.playerOrder.every((id) => this.state.mulligan.submitted[id])) {
+      this.state.mulligan.status = 'complete';
+      this._startTurn(this.state.firstPlayerId);
+    }
+    return this.getState();
+  }
+
   _startTurn(playerId) {
     if (this.state.status !== 'active') return;
     const player = this.player(playerId);
@@ -457,7 +538,7 @@ export class BattleEngine {
       }
     }
 
-    const skipDraw = player.isFirst && player.turnNumber === 1;
+    const skipDraw = player.turnNumber === 1;
     if (!skipDraw) this._normalDraw(player);
     this._applyTurnStartEffects(player);
     this._log('turn-start', `${player.displayName} ターン${player.turnNumber}`, {
@@ -977,11 +1058,11 @@ export class BattleEngine {
         this._heal(unit, 10);
         applyAtkBuff(unit, 5);
       }
-      if (hasNormalTrait(unit, 'ハム')) {
+      if (hasNormalTrait(unit, 'コンゴウ')) {
         const gain = Math.min(5, 15 - unit.statuses.hamKillBonus);
         unit.statuses.hamKillBonus += Math.max(0, gain);
       }
-      if (hasNormalTrait(unit, 'ディノ')) this._heal(unit, 10);
+      if (hasNormalTrait(unit, 'フェザーレックス')) this._heal(unit, 10);
       if (!unit.specialForm && (Number(unit.traitEngine?.tpOnKill) || 0) > 0) {
         player.tp = Math.min(player.maxTp, player.tp + Math.max(0, Number(unit.traitEngine.tpOnKill) || 0));
       }
@@ -1119,7 +1200,7 @@ export class BattleEngine {
         if (!unit.stunnedThisTurn) unit.actionPoints += 1;
         unit.statuses.phantomExtraActionPending = false;
       }
-      if (hasNormalTrait(unit, 'ガリ') && unit.life >= unit.maxLife) {
+      if (hasNormalTrait(unit, 'アルカナロード') && unit.life >= unit.maxLife) {
         const current = unit.statuses.specialCounters.gariBlessing ?? 0;
         const amount = Math.min(5, 10 - current);
         if (amount > 0) {
