@@ -4,6 +4,7 @@ import { el, replace } from './dom.js';
 import { renderCard, openCardDetails } from './card-renderer.js';
 import { createFusionAnimationModel, playFusionAnimation } from './fusion-animation.js';
 import { playFusionUnlockAnimation } from './fusion-unlock-animation.js';
+import { playTurnTransition } from './turn-transition-animation.js';
 import { openModal } from './modal.js';
 import { lowLifeTargetEffects, unitLifePresentation } from './status-presentation.js';
 
@@ -26,7 +27,8 @@ export class BattleScreen {
     this.speed = speed;
     this.selection = null;
     this.pendingMove = null;
-    this.busy = false;
+    this.busy = engine.state.status === 'active' && !engine.state.pendingMoveChoice;
+    this.turnAnnouncementKey = null;
     this.queuedCardSelectionId = null;
     this.suppressCardClickUntil = 0;
     this.cpuRng = cpuRngState?.seed
@@ -34,8 +36,35 @@ export class BattleScreen {
       : new SeededRng(`${engine.state.seed}:ui-cpu`);
     this.render();
     if (engine.state.pendingMoveChoice?.playerId === humanPlayerId) {
+      this.busy = false;
       setTimeout(() => { void this.resumePendingHumanChoice(); }, 0);
-    } else this.runCpuIfNeeded();
+    } else {
+      setTimeout(() => { void this.startInitialTurnFlow(); }, 0);
+    }
+  }
+
+  async startInitialTurnFlow() {
+    try {
+      await this.showCurrentTurnTransition();
+    } finally {
+      this.busy = false;
+      this.applyQueuedCardSelection();
+    }
+    await this.runCpuIfNeeded();
+  }
+
+  async showCurrentTurnTransition() {
+    const state = this.engine.state;
+    if (state.status !== 'active') return;
+    const current = this.engine.player(state.currentPlayerId);
+    const key = `${current.id}:${current.turnNumber}`;
+    if (this.turnAnnouncementKey === key) return;
+    this.turnAnnouncementKey = key;
+    await playTurnTransition({
+      humanTurn: current.id === this.humanPlayerId,
+      turnNumber: current.turnNumber,
+      speed: this.speed,
+    });
   }
 
   checkpointRuntime() { return { cpuRng: this.cpuRng.toJSON(), speed: this.speed }; }
@@ -219,7 +248,7 @@ export class BattleScreen {
     return el('header', { className: `turn-hud ${humanTurn ? 'player-turn' : 'enemy-turn'}` }, [
       el('span', { text: 'TURN' }),
       el('strong', { text: `${state.round}` }),
-      el('small', { text: state.status === 'active' ? (humanTurn ? 'PLAYER TURN' : 'ENEMY TURN') : 'BATTLE END' }),
+      el('small', { text: state.status === 'active' ? (humanTurn ? 'YOUR TURN' : 'ENEMY TURN') : 'BATTLE END' }),
       el('em', { text: state.status === 'active' ? `${current.displayName}のターン` : '決着' }),
     ]);
   }
@@ -839,6 +868,7 @@ export class BattleScreen {
     if (fusionModel) await playFusionAnimation({ model: fusionModel, speed: this.speed, onReveal: commitNumbers });
     await this.showStatDirections(before, commitNumbers);
     commitNumbers();
+    await this.showCurrentTurnTransition();
     await this.showLatestEvent();
   }
 
@@ -906,7 +936,9 @@ export class BattleScreen {
 
   async showLatestEvent() {
     const event = this.engine.state.log.at(-1);
-    if (!event || this.speed === 'fast' && ['draw', 'turn-start', 'turn-end'].includes(event.type)) return;
+    if (!event) return;
+    if (event.type === 'turn-start') return;
+    if (this.speed === 'fast' && ['draw', 'turn-end'].includes(event.type)) return;
     if (event.type === 'fusion-unlocked') {
       await playFusionUnlockAnimation({
         playerName: this.engine.player(event.playerId).displayName,
