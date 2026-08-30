@@ -289,9 +289,9 @@ test('atlas artwork renders exactly once while standalone details preserve the f
   assert.match(css, /\.card-art\.monster-art\.special-fusion-art,[^{]+\{[^}]*var\(--monster-art\)[^}]*background-size: 100% 100%, cover/s);
   assert.match(css, /background-position: center, var\(--fusion-art-x, 50%\) top/);
   assert.doesNotMatch(css, /special-fusion-art[^}]+special-fusion-atlas-v1\.webp/s);
-  assert.match(css, /\.detail-summary > \.card-art,[^{]+\.detail-summary > \.detail-art-frame\s*\{[^}]*aspect-ratio: \.75/s);
+  assert.match(css, /\.detail-summary > \.card-art,[^{]+\.detail-summary > \.detail-art-frame\s*\{[^}]*height:clamp\(200px,56dvh,320px\);[^}]*aspect-ratio:auto/s);
   assert.match(css, /\.detail-art-image\s*\{[^}]*object-fit:contain/s);
-  assert.match(css, /\.detail-summary > \.detail-atlas-art\.support-card-art,[^{]+\.detail-summary > \.detail-art-frame\.support-card-art\s*\{[^}]*aspect-ratio:1/s);
+  assert.match(css, /\.detail-summary > \.detail-atlas-art\.support-card-art,[^{]+\.detail-summary > \.detail-art-frame\.support-card-art\s*\{[^}]*height:clamp\(150px,42dvh,240px\);[^}]*aspect-ratio:auto/s);
   assert.match(css, /\.card-cost\s*\{[^}]*width: clamp\(21px,25%,31px\)/s);
 });
 

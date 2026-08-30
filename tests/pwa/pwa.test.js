@@ -55,9 +55,11 @@ test('release version cache-busts the page shell and service worker together', (
   const version = JSON.parse(text('package.json')).version;
   const html = text('index.html');
   const worker = text('sw.js');
+  const appVersion = text('src/config/app-version.js');
   assert.match(html, new RegExp(`styles\\.css\\?v=${version.replaceAll('.', '\\.')}`));
   assert.match(html, new RegExp(`src/app\\.js\\?v=${version.replaceAll('.', '\\.')}`));
   assert.match(worker, new RegExp(`CACHE_VERSION = '${version.replaceAll('.', '\\.')}';`));
+  assert.match(appVersion, new RegExp(`APP_VERSION = '${version.replaceAll('.', '\\.')}';`));
 });
 
 test('growing and on-demand catalog art is excluded from install-time precache and source atlases stay out of deploy', () => {

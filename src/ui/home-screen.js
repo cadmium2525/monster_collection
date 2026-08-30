@@ -7,6 +7,7 @@ import { el, formatDate, replace } from './dom.js';
 import { renderMonsterPortrait } from './card-renderer.js';
 import { openModal } from './modal.js';
 import { diamondIcon } from './currency-icon.js';
+import { APP_VERSION } from '../config/app-version.js';
 
 export const TUTORIAL_STEPS = Object.freeze([
   {
@@ -226,6 +227,7 @@ export class HomeScreen {
         this.debugMode ? el('span', { text: `Debug seed: ${this.seed}` }) : null,
         this.debugMode ? el('span', { text: 'Sim8.7 / PWA' }) : null,
       ]) : null,
+      el('small', { className: 'home-app-version', text: `v${APP_VERSION}` }),
     ]));
   }
 }

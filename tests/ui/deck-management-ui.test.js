@@ -99,8 +99,10 @@ test('large card collections use catalog atlases and defer other standalone artw
 });
 
 test('catalog grid gives every card a definite iPhone-safe row height', () => {
-  assert.match(css, /\.catalog-card-grid\s*\{[^}]*grid-auto-rows:max-content/s);
-  assert.match(css, /\.catalog-entry\s*\{[^}]*aspect-ratio:\.72/s);
+  assert.match(css, /\.catalog-card-grid\s*\{[^}]*--catalog-row-height:clamp\(100px,10\.4vw,150px\);[^}]*grid-auto-rows:var\(--catalog-row-height\)/s);
+  assert.match(css, /@media \(max-width: 900px\)[\s\S]*\.catalog-card-grid\s*\{[^}]*--catalog-row-height:clamp\(84px,12\.4vw,126px\)/s);
+  assert.match(css, /\.catalog-entry\s*\{[^}]*height:100%;[^}]*aspect-ratio:auto/s);
+  assert.match(css, /\.fusion-catalog-card\s*\{[^}]*height:100%;[^}]*aspect-ratio:auto/s);
   assert.match(css, /\.catalog-entry \.game-card\s*\{[^}]*position:absolute;[^}]*height:100%;[^}]*aspect-ratio:auto/s);
   assert.doesNotMatch(css, /\.catalog-entry[^\n{]*\{[^}]*contain:/s);
   assert.doesNotMatch(css, /\.catalog-entry,\.fusion-catalog-card\s*\{[^}]*contain:/s);

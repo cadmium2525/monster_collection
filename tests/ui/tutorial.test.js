@@ -21,6 +21,17 @@ test('technical home footer stays hidden for players but preserves debug and syn
   assert.equal(homeFooterMode({ syncError: 'offline' }), 'warning');
 });
 
+test('home keeps the release version visible and separates tournament title lines', () => {
+  const homeSource = fs.readFileSync(new URL('../../src/ui/home-screen.js', import.meta.url), 'utf8');
+  const css = fs.readFileSync(new URL('../../styles.css', import.meta.url), 'utf8');
+  assert.match(homeSource, /className: 'home-app-version'/);
+  assert.match(homeSource, /`v\$\{APP_VERSION\}`/);
+  assert.match(css, /\.home-app-version\s*\{[^}]*position:absolute;[^}]*bottom:2px/s);
+  assert.match(css, /\.home-primary-action\s*\{[^}]*gap:2px/s);
+  assert.match(css, /\.home-primary-action strong\s*\{[^}]*line-height:1\.05/s);
+  assert.match(css, /\.home-primary-action small\s*\{[^}]*line-height:1\.2/s);
+});
+
 test('active tournament checkpoint is summarized as a player-facing continue action', () => {
   const base = {
     phase: 'battle',
