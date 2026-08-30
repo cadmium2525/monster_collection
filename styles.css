@@ -1061,6 +1061,7 @@ button:disabled { opacity: .38; cursor: not-allowed; }
 .catalog-entry .game-card { position:absolute; inset:0; width:100%; height:100%; aspect-ratio:auto; }
 .catalog-thumbnail-art,
 .game-card .card-art.catalog-thumbnail-art { background-image:linear-gradient(180deg,rgba(2,7,13,.08),transparent 72%,rgba(2,7,13,.72)),url("./assets/images/catalog-thumbnails/cards.webp"); background-repeat:no-repeat; background-size:100% 100%,900% 900%; background-position:center,var(--art-x) var(--art-y); }
+.catalog-entry .game-card > .card-art.catalog-thumbnail-art { top:clamp(22px,16.5%,25px); border-radius:0 0 7px 7px; background-size:100% 100%,900% auto; }
 .catalog-entry.catalog-locked .game-card,
 .fusion-catalog-card.catalog-locked { filter:grayscale(1) brightness(.42); cursor:default; }
 .catalog-lock-label { position:absolute; z-index:12; right:5%; bottom:8%; left:5%; padding:3px 4px; border:1px solid rgba(255,255,255,.32); border-radius:7px; color:#f1f4f5; background:rgba(4,9,15,.88); font-size:7px; font-weight:900; text-align:center; }
@@ -1117,7 +1118,7 @@ button:disabled { opacity: .38; cursor: not-allowed; }
   grid-template-rows: auto minmax(0,1fr) auto;
   gap: 8px;
 }
-.home-screen.no-technical-footer { grid-template-rows: auto minmax(0,1fr); }
+.home-screen.no-technical-footer { grid-template-rows:auto minmax(0,1fr) auto; }
 .home-header { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 8px 12px; border: 1px solid var(--line); border-radius: var(--radius); background: var(--panel); }
 .game-title { min-width: 0; display: flex; align-items: center; gap: 12px; }
 .game-title .brand-mark { width: 54px; border-radius: 17px 6px; font-size: 20px; }
@@ -1161,7 +1162,7 @@ button:disabled { opacity: .38; cursor: not-allowed; }
 .home-actions button:hover { border-color: var(--gold); filter: brightness(1.08); }
 .home-footer { min-width: 0; display: flex; justify-content: space-between; gap: 12px; padding: 5px 9px; border: 1px solid var(--line); border-radius: 8px; color: var(--muted); background: var(--panel); font-size: 8px; }
 .home-footer.sync-warning { justify-content: center; border-color: rgba(239,106,112,.42); background: rgba(55,12,20,.86); }
-.home-app-version { position:absolute; z-index:3; right:7px; bottom:2px; color:rgba(181,198,207,.52); font:700 7px/1 system-ui,sans-serif; letter-spacing:.08em; pointer-events:none; }
+.home-app-version { position:static; z-index:3; justify-self:end; padding-right:3px; color:rgba(181,198,207,.52); font:700 7px/1 system-ui,sans-serif; letter-spacing:.08em; pointer-events:none; }
 .how-to-play { line-height: 1.55; font-size: 13px; }
 .how-to-play li { margin: 5px 0; }
 .tutorial-start { width: 100%; margin-top: 10px; }

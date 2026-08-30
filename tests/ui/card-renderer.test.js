@@ -282,6 +282,7 @@ test('atlas artwork renders exactly once while standalone details preserve the f
   assert.match(css, /\.game-card \.card-art\.monster-art::after,[^{]+\{\s*content: none;\s*display: none;/s);
   assert.doesNotMatch(css, /\.game-card \.card-art\.(?:monster-art|support-card-art)::after\s*\{[^}]*(?:background-image|top: 18%)/s);
   assert.match(css, /\.card-art\.monster-art\s*\{[^}]*background-size: 100% 100%, 600% 300%/s);
+  assert.match(css, /\.catalog-entry \.game-card > \.card-art\.catalog-thumbnail-art\s*\{[^}]*top:clamp\(22px,16\.5%,25px\);[^}]*background-size:100% 100%,900% auto/s);
   assert.match(css, /\.game-card > \.card-art\.legacy-name-safe-art\s*\{[^}]*top: clamp\(18px, 14%, 21px\)/s);
   assert.match(css, /\.board-slot \.game-card > \.card-art\.legacy-name-safe-art\s*\{[^}]*top: 0/s);
   assert.match(css, /\.game-card > \.card-art\.special-fusion-art\s*\{[^}]*top: clamp\(18px, 14%, 21px\)/s);
