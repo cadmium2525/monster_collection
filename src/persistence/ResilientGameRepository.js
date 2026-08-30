@@ -24,6 +24,8 @@ export class ResilientGameRepository {
     }
     try {
       const cloudUser = await this.cloud.initialize();
+      await this.local.useAccountScope?.(cloudUser.id, { copyCurrent: !localUser.activeScopeId });
+      await this.local.replaceProfile?.(cloudUser);
       this.activeCloud = this.cloud;
       this.user = cloudUser;
       return cloudUser;
@@ -35,6 +37,55 @@ export class ResilientGameRepository {
   }
 
   async getProfile() { return this.activeCloud ? this.activeCloud.getProfile() : this.local.getProfile(); }
+
+  async getAccountStatus() {
+    return this.activeCloud?.getAccountStatus ? this.activeCloud.getAccountStatus() : this.local.getAccountStatus();
+  }
+
+  async linkRecoveryAccount(credentials) {
+    if (!this.activeCloud?.linkRecoveryAccount) throw new RepositoryUnavailableError('Firebaseへ接続してから復旧設定を登録してください');
+    const account = await this.activeCloud.linkRecoveryAccount(credentials);
+    this.user = { ...this.user, id: account.userId ?? this.user.id, isAnonymous: false };
+    await this.local.replaceProfile?.(this.user);
+    return account;
+  }
+
+  async signInRecoveryAccount(credentials) {
+    if (!this.activeCloud?.signInRecoveryAccount) throw new RepositoryUnavailableError('Firebaseへ接続してからアカウントを復旧してください');
+    const profile = await this.activeCloud.signInRecoveryAccount(credentials);
+    await this.local.useAccountScope?.(profile.id, { copyCurrent: false });
+    await this.local.replaceProfile?.(profile);
+    this.user = profile;
+    this.lastError = null;
+    return profile;
+  }
+
+  async sendRecoveryPasswordReset(email) {
+    if (!this.activeCloud?.sendRecoveryPasswordReset) throw new RepositoryUnavailableError('Firebaseへ接続してからお試しください');
+    return this.activeCloud.sendRecoveryPasswordReset(email);
+  }
+
+  async getPlayerStats() {
+    const localStats = await this.local.getPlayerStats();
+    if (!this.activeCloud?.getPlayerStats) return localStats;
+    try {
+      const cloudStats = await this.activeCloud.getPlayerStats();
+      await this.local.replacePlayerStats?.(cloudStats);
+      return cloudStats;
+    }
+    catch (error) { this.lastError = error; return localStats; }
+  }
+
+  async recordPlayerStats(event) {
+    const localStats = await this.local.recordPlayerStats(event);
+    if (!this.activeCloud?.recordPlayerStats) return localStats;
+    try {
+      const cloudStats = await this.activeCloud.recordPlayerStats(event);
+      await this.local.replacePlayerStats?.(cloudStats);
+      return cloudStats;
+    }
+    catch (error) { this.lastError = error; return localStats; }
+  }
 
   async setDisplayName(name) {
     const local = await this.local.setDisplayName(name);

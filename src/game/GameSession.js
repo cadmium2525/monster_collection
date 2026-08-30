@@ -114,6 +114,11 @@ export class GameSession {
   async startTournament(deckId, rank) {
     const deck = this.deckCollection.recordTournamentEntry(deckId, rank);
     await this.repository.saveDeck(deck);
+    await this.repository.recordPlayerStats?.({
+      type: 'tournament-entry',
+      operationId: `stats:${this.runId}:entry`,
+      rank,
+    });
     const legendDecks = rank === 'legend' && this.repository.listLegendDecks
       ? await this.repository.listLegendDecks(60)
       : [];
@@ -164,9 +169,19 @@ export class GameSession {
       await this.repository.recordCardCatalog?.({ discoveredFusionIds });
     }
     this.tournament.updateGrowth(RULES.tournamentGrowthLifetime === 'tournament' ? engine.getGrowthSnapshot('player') : {});
+    const roundNumber = this.tournament.state.roundIndex + 1;
     const won = engine.state.winnerId === 'player';
     const draw = engine.state.winnerId == null;
     const tournamentResult = this.tournament.recordPlayerResult({ won, draw });
+    const tournamentFinished = ['eliminated', 'won', 'champion'].includes(tournamentResult.status);
+    await this.repository.recordPlayerStats?.({
+      type: 'battle-result',
+      operationId: `stats:${this.runId}:battle:${roundNumber}`,
+      result: won ? 'win' : draw ? 'draw' : 'loss',
+      rank: this.tournament.state.rank,
+      tournamentFinished,
+      tournamentWon: ['won', 'champion'].includes(tournamentResult.status),
+    });
     this.activeBattle = null;
 
     if (!won) {
@@ -215,6 +230,11 @@ export class GameSession {
       await this.repository.unlockTournamentRank(playerQualification);
     }
     await this.repository.saveDeck(saved);
+    await this.repository.recordPlayerStats?.({
+      type: 'cards-stolen',
+      operationId: `stats:${this.runId}:reward:${this.tournament.state.wins}`,
+      count: this.pendingReward.state.selectedOfferIds.length,
+    });
 
     const rewardConfig = DIAMOND_REWARDS[this.tournament.state.rank];
     if (completedTournament && rewardConfig?.champion && this.repository.creditDiamonds) {
@@ -251,6 +271,10 @@ export class GameSession {
             ?? null,
         });
         this.champion = crowned;
+        await this.repository.recordPlayerStats?.({
+          type: 'championship',
+          operationId: `stats:${this.runId}:championship`,
+        });
       } finally {
         this.pendingReward = null;
         this.pendingRewardOpponent = null;

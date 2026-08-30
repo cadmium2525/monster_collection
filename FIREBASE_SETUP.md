@@ -10,8 +10,9 @@ Firebaseが設定されていない場合、ゲームはローカル専用モー
 
 1. Firebaseプロジェクトを作成し、Webアプリを登録します。
 2. **Authentication → Sign-in method → Anonymous（匿名）**を有効にします。
-3. Cloud Firestoreデータベースを作成します。
-4. Authenticationの設定で、本番GitHub Pagesのホスト名（例：`YOUR_NAME.github.io`）を承認済みドメインへ追加します。
+3. 同じ画面で**Email/Password（メール/パスワード）**も有効にします。メールリンク方式は有効にしなくて構いません。
+4. Cloud Firestoreデータベースを作成します。
+5. Authenticationの設定で、本番GitHub Pagesのホスト名（例：`YOUR_NAME.github.io`）を承認済みドメインへ追加します。
 
 現在のFirebaseブラウザーモジュールの設定方法は、公式ドキュメントの[Firebaseを追加する別の方法](https://firebase.google.com/docs/web/alt-setup)を参照してください。本プロジェクトでは、`src/persistence/firebase-sdk.js`でCDNモジュールのバージョンを`12.17.1`に固定しています。
 
@@ -51,7 +52,7 @@ legendDecks/{uid--deckId}
 gameState/champion
 ```
 
-`users/{uid}`にはプロフィール名に加えて、カード図鑑用の`ownedCardMasterIds`、`discoveredFusionIds`、`catalogSchemaVersion`、`catalogUpdatedAt`を保存します。これらは追加専用の履歴としてRepositoryのtransactionで集合統合し、カードをデッキから放出した後も削除しません。
+`users/{uid}`にはプロフィール名に加えて、カード図鑑用の`ownedCardMasterIds`、`discoveredFusionIds`、`catalogSchemaVersion`、`catalogUpdatedAt`を保存します。これらは追加専用の履歴としてRepositoryのtransactionで集合統合し、カードをデッキから放出した後も削除しません。v1.20.0以降は、通算試合・勝敗・大会参加／優勝・王座獲得・奪取枚数を`stats`へ保存します。各更新は一意のoperation IDを持ち、大会再開時にも二重計上しません。
 
 v1.14.0以降は同じ`users/{uid}`に`economy`も保存します。ここには所持ダイヤ、初回無料回数、未所属カード資産、モン類別パック回数、処理済みoperation ID、演出前に確定した未確認パックが入ります。v1.17.0以降はさらにプレイヤー共通の`tournamentQualification`、デイリー報酬の`lastDailyLoginDate`、一回性報酬の`claimedCampaignIds`を保存します。パック購入・大会報酬・ログイン報酬・大会解禁はFirestore transactionで更新し、再送時の二重消費・二重受取を防ぎます。`savedDecks/{deckId}`には使用中40枚に加えて、その保存デッキだけで使える`pool`が保存されます。外観違いは`artVariantId`と`finish`で区別します。
 
@@ -99,4 +100,12 @@ Firestore transactionは、仕様上オフラインでは失敗します。そ�
 
 不正耐性のある本番王座データとして運用する前に、最終勝利の検証と王座更新を信頼できるサーバー側処理へ移してください。例えば、署名付きリプレイを検証するCallable Cloud Functionsを利用し、App Checkの導入も検討します。現在のtransaction実装は同時更新に対して安全ですが、サーバー権威型のチート対策ではありません。
 
-長期的なデッキ所有権を維持する場合、正式公開前に匿名アカウントを永続的なログイン方法へアップグレードまたは連携できるようにしてください。Firebaseには古い匿名アカウントを自動削除する設定がありますが、これを有効にすると、長期間利用していないユーザーの永続IDも削除されます。
+## 7. マイページのアカウント復旧
+
+新規プレイヤーは従来どおり匿名認証で直ちに開始します。ホーム右上の**マイページ**から「このデータに復旧設定を登録」を選ぶと、現在の匿名Firebase UIDへメールアドレス／パスワード資格情報をリンクします。リンク時にUIDは変わらないため、既存の保存デッキ、ダイヤ、未所属資産、図鑑、大会再開データ、王座データの所有者IDを移行する必要はありません。
+
+機種変更後またはPWAを削除した後は、新しい端末でマイページを開き「既存アカウントで復旧」から同じメールアドレス／パスワードでログインします。ログイン成功後にアプリを再読込し、そのUIDのFirestoreデータを読み込みます。仮の匿名端末キャッシュと復旧したアカウントのローカルバックアップは別スコープへ保存され、図鑑やデッキが混ざらない構造です。進行中大会がある端末では、別アカウントへの切替を禁止します。
+
+パスワードを忘れた場合は、マイページまたは復旧ログイン画面からFirebase Authenticationの再設定メールを送信します。Authentication → Templatesで、送信者名、件名、本文、アクションURLの表示を本番公開前に確認してください。登録時にも確認メールを送りますが、現版では未確認メールでもログイン自体は可能です。
+
+Firebase Authentication with Identity Platformの「匿名アカウントの自動クリーンアップ」を使う場合、復旧設定を登録していない匿名ユーザーは削除対象になり得ます。メール／パスワードをリンクしたユーザーは匿名アカウントではなくなるため対象外です。

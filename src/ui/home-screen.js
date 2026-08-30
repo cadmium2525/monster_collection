@@ -128,7 +128,7 @@ export function activeRunSummary(activeRun) {
 }
 
 export class HomeScreen {
-  constructor({ root, masterIndex, user, champion, repositoryStatus, decks, economy, seed, debugMode = false, adminMode = false, activeRun = null, onResume = null, onTournament, onDecks, onBoosters, onAdmin = null, onRename, installAvailable = false, onInstall = null }) {
+  constructor({ root, masterIndex, user, champion, repositoryStatus, decks, economy, seed, debugMode = false, adminMode = false, activeRun = null, onResume = null, onTournament, onDecks, onBoosters, onAdmin = null, onProfile, installAvailable = false, onInstall = null }) {
     this.root = root;
     this.masterIndex = masterIndex;
     this.user = user;
@@ -145,7 +145,7 @@ export class HomeScreen {
     this.onDecks = onDecks;
     this.onBoosters = onBoosters;
     this.onAdmin = onAdmin;
-    this.onRename = onRename;
+    this.onProfile = onProfile;
     this.installAvailable = installAvailable;
     this.onInstall = onInstall;
     this.render();
@@ -188,7 +188,7 @@ export class HomeScreen {
           el('strong', { text: this.user.displayName }),
           el('div', { className: 'profile-actions' }, [
             this.adminMode ? el('button', { className: 'utility-button admin-entry-button', text: '管理者ツール', onclick: this.onAdmin }) : null,
-            el('button', { className: 'utility-button', text: '名前変更', onclick: this.onRename }),
+            el('button', { className: 'utility-button profile-entry-button', text: 'マイページ', onclick: this.onProfile }),
             this.installAvailable ? el('button', { className: 'utility-button install-button', text: 'アプリに追加', onclick: this.onInstall }) : null,
           ]),
         ]),

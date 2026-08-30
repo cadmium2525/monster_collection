@@ -21,6 +21,8 @@ import { AdminToolScreen } from './ui/admin-screen.js';
 import { generateBoosterPack } from './gacha/pack-generator.js';
 import { japanDateKey } from './gacha/economy-state.js';
 import { diamondIcon } from './ui/currency-icon.js';
+import { ProfileScreen, catalogProgress } from './ui/profile-screen.js';
+import { accountErrorMessage } from './persistence/auth-errors.js';
 
 const AI_BUDGET = Object.freeze({ bronze: 4, silver: 8, gold: 22, legend: 85, champion: 240 });
 
@@ -147,7 +149,7 @@ class MonsterConstructionApp {
       onDecks: () => this.showDeckList(),
       onBoosters: () => this.showBoosterShop(),
       onAdmin: () => this.showAdminTools(),
-      onRename: () => this.renameProfile(),
+      onProfile: () => this.showProfile(),
       installAvailable: Boolean(this.installPromptEvent),
       onInstall: () => this.installApp(),
     });
@@ -167,7 +169,7 @@ class MonsterConstructionApp {
     }
   }
 
-  renameProfile() {
+  renameProfile(returnTo = 'home') {
     const input = el('input', { value: this.user.displayName, attrs: { maxlength: '24', 'aria-label': 'プレイヤー名' } });
     const content = el('div', { className: 'name-editor' }, [
       el('label', {}, [el('span', { text: 'プレイヤー名（1〜24文字）' }), input]),
@@ -176,11 +178,107 @@ class MonsterConstructionApp {
           const profile = await this.repository.setDisplayName(input.value);
           this.user = { ...this.user, ...profile, displayName: input.value.trim() };
           modal.close();
-          this.showHome();
+          if (returnTo === 'profile') await this.showProfile();
+          else this.showHome();
         } catch (error) { this.showError(error, '名前を保存できません'); }
       } }),
     ]);
     const modal = openModal({ title: 'プレイヤー名', content });
+  }
+
+  async showProfile() {
+    this.showLoading('マイページを読み込んでいます…');
+    try {
+      const [account, stats, catalog] = await Promise.all([
+        this.repository.getAccountStatus(),
+        this.repository.getPlayerStats(),
+        this.repository.getCardCatalog(),
+      ]);
+      this.catalog = catalog;
+      this.currentScreen = 'profile';
+      new ProfileScreen({
+        root: this.root,
+        user: this.user,
+        account,
+        stats,
+        catalogProgress: catalogProgress(catalog, this.masterIndex),
+        qualification: this.economy.tournamentQualification,
+        champion: this.champion,
+        hasActiveRun: Boolean(this.activeRun),
+        onBack: () => this.showHome(),
+        onRename: () => this.renameProfile('profile'),
+        onRegisterRecovery: () => this.openRecoveryRegistration(),
+        onSignIn: () => this.openRecoverySignIn(),
+        onResetPassword: () => this.sendRecoveryPasswordReset(account.email),
+      });
+    } catch (error) {
+      this.showError(error, 'マイページを読み込めません');
+      this.showHome();
+    }
+  }
+
+  openRecoveryRegistration() {
+    const email = el('input', { attrs: { type: 'email', inputmode: 'email', autocomplete: 'email', placeholder: 'mail@example.com', 'aria-label': '復旧用メールアドレス' } });
+    const password = el('input', { attrs: { type: 'password', autocomplete: 'new-password', minlength: '6', placeholder: '6文字以上', 'aria-label': '復旧用パスワード' } });
+    const confirmation = el('input', { attrs: { type: 'password', autocomplete: 'new-password', minlength: '6', placeholder: 'もう一度入力', 'aria-label': '復旧用パスワード確認' } });
+    let modal = null;
+    const submit = el('button', { className: 'primary-button', text: '復旧設定を登録', onclick: async () => {
+      if (password.value !== confirmation.value) return this.showError(new Error('確認用パスワードが一致しません'), '登録できません');
+      submit.disabled = true;
+      try {
+        await this.repository.linkRecoveryAccount({ email: email.value, password: password.value });
+        this.user = { ...this.user, isAnonymous: false };
+        modal.close();
+        openModal({ title: 'アカウントを保護しました', content: el('p', { text: 'このメールアドレスとパスワードで、機種変更後や再インストール後にデータを復旧できます。確認メールも送信しました。' }) });
+        await this.showProfile();
+      } catch (error) {
+        this.showError(new Error(accountErrorMessage(error)), '復旧設定を登録できません');
+      } finally { submit.disabled = false; }
+    } });
+    modal = openModal({ title: 'アカウント復旧を設定', className: 'account-modal', content: el('div', { className: 'account-form' }, [
+      el('p', { text: '現在のデッキ・ダイヤ・図鑑を同じアカウントのまま保護します。登録した情報は復旧時に必要です。' }),
+      el('label', {}, [el('span', { text: 'メールアドレス' }), email]),
+      el('label', {}, [el('span', { text: 'パスワード' }), password]),
+      el('label', {}, [el('span', { text: 'パスワード確認' }), confirmation]),
+      submit,
+    ]) });
+  }
+
+  openRecoverySignIn() {
+    if (this.activeRun) return this.showError(new Error('大会を終了してから別のアカウントを復旧してください'), '復旧できません');
+    const email = el('input', { attrs: { type: 'email', inputmode: 'email', autocomplete: 'email', placeholder: 'mail@example.com', 'aria-label': '登録メールアドレス' } });
+    const password = el('input', { attrs: { type: 'password', autocomplete: 'current-password', placeholder: 'パスワード', 'aria-label': '登録パスワード' } });
+    let modal = null;
+    const submit = el('button', { className: 'primary-button', text: 'このアカウントを復旧', onclick: async () => {
+      submit.disabled = true;
+      try {
+        await this.repository.signInRecoveryAccount({ email: email.value, password: password.value });
+        modal.close();
+        location.reload();
+      } catch (error) {
+        this.showError(new Error(accountErrorMessage(error)), 'アカウントを復旧できません');
+        submit.disabled = false;
+      }
+    } });
+    modal = openModal({ title: '既存アカウントで復旧', className: 'account-modal', content: el('div', { className: 'account-form' }, [
+      el('p', { className: 'account-switch-warning', text: '登録済みアカウントのクラウドデータへ切り替えます。現在の未保護データは自動統合されず、この操作後は戻せません。機種変更先など、新しく開始した端末で使用してください。' }),
+      el('label', {}, [el('span', { text: 'メールアドレス' }), email]),
+      el('label', {}, [el('span', { text: 'パスワード' }), password]),
+      submit,
+      el('button', { className: 'text-button', text: 'パスワードを忘れた', onclick: async () => {
+        try {
+          await this.repository.sendRecoveryPasswordReset(email.value);
+          openModal({ title: '再設定メールを送信しました', content: el('p', { text: '入力したメールアドレス宛てにパスワード再設定メールを送信しました。' }) });
+        } catch (error) { this.showError(new Error(accountErrorMessage(error)), 'メールを送信できません'); }
+      } }),
+    ]) });
+  }
+
+  async sendRecoveryPasswordReset(email) {
+    try {
+      await this.repository.sendRecoveryPasswordReset(email);
+      openModal({ title: '再設定メールを送信しました', content: el('p', { text: `${email} 宛てにパスワード再設定メールを送信しました。` }) });
+    } catch (error) { this.showError(new Error(accountErrorMessage(error)), 'メールを送信できません'); }
   }
 
   showDeckList() {

@@ -9,11 +9,13 @@ function setup(champion = null) {
   const saves = [];
   const catalogUpdates = [];
   const unlocks = [];
+  const statEvents = [];
   const repository = {
     async saveDeck(deck) { saves.push(structuredClone(deck)); return deck; },
     async recordCardCatalog(update) { catalogUpdates.push(structuredClone(update)); return update; },
     async unlockTournamentRank(rank) { unlocks.push(rank); return { tournamentQualification: rank }; },
     async claimChampionship(payload) { return { ...payload, championVersion: payload.expectedVersion + 1, crownedAt: '2026-08-24T00:00:00Z' }; },
+    async recordPlayerStats(event) { statEvents.push(structuredClone(event)); return event; },
   };
   let id = 0;
   const decks = new DeckCollection({ masterIndex, idFactory: () => `deck-${++id}`, now: () => '2026-08-24T00:00:00Z' });
@@ -21,7 +23,7 @@ function setup(champion = null) {
   const session = new GameSession({
     masterData, masterIndex, deckCollection: decks, repository, user: { id: 'u1', displayName: '通しテスター' }, champion, seed: 'full-flow',
   });
-  return { session, decks, deck, saves, repository, catalogUpdates, unlocks };
+  return { session, decks, deck, saves, repository, catalogUpdates, unlocks, statEvents };
 }
 
 function fakeFinishedBattle(winnerId = 'player', growth = {}, log = []) {
@@ -96,7 +98,7 @@ test('a later-round opponent enters the shared BattleEngine with its accumulated
 });
 
 test('home-equivalent deck selection -> four wins -> rewards -> next rank qualification', async () => {
-  const { session, decks, deck, saves, unlocks } = setup();
+  const { session, decks, deck, saves, unlocks, statEvents } = setup();
   const otherDeck = decks.create({ deckName: '別の40枚', cards: createBaselineDeck(masterData, 'other-source') });
   await session.startTournament(deck.deckId, 'bronze');
   for (let round = 0; round < 4; round += 1) {
@@ -112,6 +114,10 @@ test('home-equivalent deck selection -> four wins -> rewards -> next rank qualif
   assert.deepEqual(unlocks, ['silver']);
   assert.equal(session.tournament.state.wins, 4);
   assert.ok(saves.length >= 5);
+  assert.equal(statEvents.filter((event) => event.type === 'tournament-entry').length, 1);
+  assert.equal(statEvents.filter((event) => event.type === 'battle-result').length, 4);
+  assert.equal(statEvents.filter((event) => event.type === 'cards-stolen').length, 4);
+  assert.equal(statEvents.find((event) => event.tournamentWon)?.rank, 'bronze');
 });
 
 test('elimination preserves the latest 40 cards but grants no next qualification', async () => {
@@ -128,7 +134,7 @@ test('Legend fourth win crowns the final-start 40 and growth with captured champ
   const champion = {
     displayName: '旧王者', deckName: '旧王者40', championVersion: 7, cards: createBaselineDeck(masterData, 'old-king'),
   };
-  const { session, decks, deck } = setup(champion);
+  const { session, decks, deck, statEvents } = setup(champion);
   decks.grantTournamentWin(deck.deckId, 'bronze');
   decks.grantTournamentWin(deck.deckId, 'silver');
   decks.grantTournamentWin(deck.deckId, 'gold');
@@ -157,6 +163,7 @@ test('Legend fourth win crowns the final-start 40 and growth with captured champ
     assert.equal(final.crowned.championGrowthSnapshot[instanceId].atk, growth.atk);
   }
   assert.equal(final.crowned.championSnapshotVersion, 2);
+  assert.equal(statEvents.filter((event) => event.type === 'championship').length, 1);
 });
 
 test('the next Legend challenger enters the final against the saved champion growth snapshot', async () => {

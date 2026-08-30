@@ -9,6 +9,7 @@ import {
   applyTournamentUnlock,
   normalizeEconomyState,
 } from '../gacha/economy-state.js';
+import { applyPlayerStatsEvent, normalizePlayerStats } from '../profile/player-stats.js';
 
 function clone(value) { return value == null ? value : structuredClone(value); }
 
@@ -51,6 +52,12 @@ export class FirebaseGameRepository {
     this.db = this.sdk.getFirestore(this.app);
     const credential = this.auth.currentUser ? { user: this.auth.currentUser } : await this.sdk.signInAnonymously(this.auth);
     this.user = credential.user;
+    await this._ensureProfile();
+    this.profile = await this.getProfile();
+    return { id: this.user.uid, ...this.profile, mode: 'firebase' };
+  }
+
+  async _ensureProfile() {
     const profileRef = this.sdk.doc(this.db, 'users', this.user.uid);
     const existing = await this.sdk.getDoc(profileRef);
     if (!existing.exists()) {
@@ -58,11 +65,10 @@ export class FirebaseGameRepository {
         displayName: '名無しブリーダー', isAnonymous: this.user.isAnonymous,
         ownedCardMasterIds: [], discoveredFusionIds: [], catalogSchemaVersion: 1,
         economy: normalizeEconomyState(null),
+        stats: normalizePlayerStats(null),
         createdAt: this.sdk.serverTimestamp(), updatedAt: this.sdk.serverTimestamp(),
       });
     }
-    this.profile = await this.getProfile();
-    return { id: this.user.uid, ...this.profile, mode: 'firebase' };
   }
 
   _requireUser() { if (!this.user) throw new Error('Firebase repository is not initialized'); }
@@ -84,6 +90,72 @@ export class FirebaseGameRepository {
     await this.sdk.setDoc(this._profileRef(), { displayName: value, updatedAt: this.sdk.serverTimestamp() }, { merge: true });
     this.profile = await this.getProfile();
     return { ...this.profile, id: this.user.uid };
+  }
+
+  async getAccountStatus() {
+    this._requireUser();
+    const recoveryEnabled = !this.user.isAnonymous
+      && (this.user.providerData ?? []).some((provider) => provider?.providerId === 'password');
+    return {
+      mode: 'firebase', available: true, recoveryEnabled,
+      isAnonymous: Boolean(this.user.isAnonymous), email: this.user.email ?? null,
+      emailVerified: Boolean(this.user.emailVerified), userId: this.user.uid,
+    };
+  }
+
+  async linkRecoveryAccount({ email, password }) {
+    this._requireUser();
+    const normalizedEmail = String(email ?? '').trim();
+    if (!normalizedEmail) throw new Error('メールアドレスを入力してください');
+    if (String(password ?? '').length < 6) throw new Error('パスワードは6文字以上で設定してください');
+    const credential = this.sdk.EmailAuthProvider.credential(normalizedEmail, String(password));
+    const result = await this.sdk.linkWithCredential(this.user, credential);
+    this.user = result.user;
+    this.auth.languageCode = 'ja';
+    try { await this.sdk.sendEmailVerification?.(this.user); } catch { /* Recovery remains valid even if mail delivery is delayed. */ }
+    await this.sdk.setDoc(this._profileRef(), {
+      isAnonymous: false,
+      recoveryEnabled: true,
+      recoveryEmail: normalizedEmail,
+      updatedAt: this.sdk.serverTimestamp(),
+    }, { merge: true });
+    this.profile = await this.getProfile();
+    return this.getAccountStatus();
+  }
+
+  async signInRecoveryAccount({ email, password }) {
+    const result = await this.sdk.signInWithEmailAndPassword(this.auth, String(email ?? '').trim(), String(password ?? ''));
+    this.user = result.user;
+    await this._ensureProfile();
+    this.profile = await this.getProfile();
+    return { id: this.user.uid, ...this.profile, mode: 'firebase', account: await this.getAccountStatus() };
+  }
+
+  async sendRecoveryPasswordReset(email = this.user?.email) {
+    const normalizedEmail = String(email ?? '').trim();
+    if (!normalizedEmail) throw new Error('復旧用メールアドレスが登録されていません');
+    this.auth.languageCode = 'ja';
+    await this.sdk.sendPasswordResetEmail(this.auth, normalizedEmail);
+    return normalizedEmail;
+  }
+
+  async getPlayerStats() {
+    const profile = await this.getProfile();
+    return normalizePlayerStats(profile?.stats);
+  }
+
+  async recordPlayerStats(event) {
+    const reference = this._profileRef();
+    let result = null;
+    await this.sdk.runTransaction(this.db, async (transaction) => {
+      const snapshot = await transaction.get(reference);
+      result = applyPlayerStatsEvent(snapshot.exists() ? snapshot.data().stats : null, event);
+      transaction.set(reference, {
+        stats: clone(result),
+        updatedAt: this.sdk.serverTimestamp(),
+      }, { merge: true });
+    });
+    return clone(result);
   }
 
   async getEconomy() {

@@ -9,6 +9,7 @@ import {
   applyTournamentUnlock,
   normalizeEconomyState,
 } from '../gacha/economy-state.js';
+import { applyPlayerStatsEvent, normalizePlayerStats } from '../profile/player-stats.js';
 
 const USER_KEY = 'mc:v1:user';
 const CHAMPION_KEY = 'mc:v1:champion';
@@ -35,17 +36,71 @@ export class LocalGameRepository {
       this.user = { id: `local-${this.idFactory()}`, displayName: '名無しブリーダー', isAnonymous: true, mode: 'local' };
       this.storage.setItem(USER_KEY, JSON.stringify(this.user));
     }
+    this._scopeId = this.user.activeScopeId ?? this.user.id;
+    if (!this.storage.getItem(this._profileKey())) {
+      this.storage.setItem(this._profileKey(), JSON.stringify({
+        id: this._scopeId,
+        displayName: this.user.displayName ?? '名無しブリーダー',
+        isAnonymous: this.user.isAnonymous ?? true,
+        mode: 'local',
+      }));
+    }
     globalThis.addEventListener?.('storage', this.storageHandler);
-    return clone(this.user);
+    return this.getProfile();
   }
 
   _requireUser() { if (!this.user) throw new Error('Repository is not initialized'); }
-  _decksKey() { this._requireUser(); return `mc:v1:decks:${this.user.id}`; }
-  _catalogKey() { this._requireUser(); return `mc:v1:catalog:${this.user.id}`; }
-  _activeRunKey() { this._requireUser(); return `mc:v1:active-run:${this.user.id}`; }
-  _economyKey() { this._requireUser(); return `mc:v1:economy:${this.user.id}`; }
+  _scope() { this._requireUser(); return this._scopeId ?? this.user.id; }
+  _decksKey(scope = this._scope()) { return `mc:v1:decks:${scope}`; }
+  _profileKey(scope = this._scope()) { return `mc:v1:profile:${scope}`; }
+  _catalogKey(scope = this._scope()) { return `mc:v1:catalog:${scope}`; }
+  _activeRunKey(scope = this._scope()) { return `mc:v1:active-run:${scope}`; }
+  _economyKey(scope = this._scope()) { return `mc:v1:economy:${scope}`; }
+  _statsKey(scope = this._scope()) { return `mc:v1:stats:${scope}`; }
 
-  async getProfile() { this._requireUser(); return clone(this.user); }
+  async useAccountScope(userId, { copyCurrent = false } = {}) {
+    this._requireUser();
+    const next = String(userId ?? '').trim();
+    if (!next) throw new Error('ローカル保存のアカウントIDが不正です');
+    const current = this._scope();
+    if (copyCurrent && current !== next) {
+      const keyPairs = [
+        [this._profileKey(current), this._profileKey(next)],
+        [this._decksKey(current), this._decksKey(next)],
+        [this._catalogKey(current), this._catalogKey(next)],
+        [this._activeRunKey(current), this._activeRunKey(next)],
+        [this._economyKey(current), this._economyKey(next)],
+        [this._statsKey(current), this._statsKey(next)],
+      ];
+      for (const [source, destination] of keyPairs) {
+        const value = this.storage.getItem(source);
+        if (value != null && this.storage.getItem(destination) == null) this.storage.setItem(destination, value);
+      }
+    }
+    this._scopeId = next;
+    this.user.activeScopeId = next;
+    this.storage.setItem(USER_KEY, JSON.stringify(this.user));
+    return next;
+  }
+
+  async getProfile() {
+    this._requireUser();
+    const profile = parse(this.storage.getItem(this._profileKey()), {
+      id: this._scope(), displayName: '名無しブリーダー', isAnonymous: true, mode: 'local',
+    });
+    return clone({ ...profile, activeScopeId: this.user.activeScopeId ?? null });
+  }
+
+  async replaceProfile(profile = {}) {
+    const normalized = {
+      id: this._scope(),
+      displayName: String(profile.displayName ?? '名無しブリーダー').trim().slice(0, 24) || '名無しブリーダー',
+      isAnonymous: Boolean(profile.isAnonymous),
+      mode: 'local',
+    };
+    this.storage.setItem(this._profileKey(), JSON.stringify(normalized));
+    return clone(normalized);
+  }
 
   async setDisplayName(displayName) {
     this._requireUser();
@@ -53,7 +108,26 @@ export class LocalGameRepository {
     if (!value || [...value].length > 24) throw new Error('表示名は1〜24文字です');
     this.user.displayName = value;
     this.storage.setItem(USER_KEY, JSON.stringify(this.user));
-    return clone(this.user);
+    return this.replaceProfile({ ...(await this.getProfile()), displayName: value });
+  }
+
+  async getAccountStatus() {
+    return { mode: 'local', available: false, recoveryEnabled: false, isAnonymous: true, email: null };
+  }
+
+  async getPlayerStats() {
+    return clone(normalizePlayerStats(parse(this.storage.getItem(this._statsKey()), {})));
+  }
+
+  async replacePlayerStats(stats) {
+    const normalized = normalizePlayerStats(stats);
+    this.storage.setItem(this._statsKey(), JSON.stringify(normalized));
+    return clone(normalized);
+  }
+
+  async recordPlayerStats(event) {
+    const next = applyPlayerStatsEvent(await this.getPlayerStats(), event, this.now());
+    return this.replacePlayerStats(next);
   }
 
   async listDecks() { return clone(parse(this.storage.getItem(this._decksKey()), [])); }

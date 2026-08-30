@@ -174,10 +174,34 @@ function fakeFirebaseSdk() {
     return value;
   };
   const notify = (path) => { for (const callback of listeners.get(path) ?? []) callback(snapshot(path)); };
+  const auth = {
+    currentUser: {
+      uid: 'firebase-user', isAnonymous: true, email: null, emailVerified: false, providerData: [],
+    },
+    languageCode: null,
+  };
+  const resetEmails = [];
   const sdk = {
     initializeApp: () => ({}),
-    getAuth: () => ({ currentUser: { uid: 'firebase-user', isAnonymous: true } }),
-    signInAnonymously: async () => ({ user: { uid: 'firebase-user', isAnonymous: true } }),
+    getAuth: () => auth,
+    signInAnonymously: async () => ({ user: auth.currentUser }),
+    EmailAuthProvider: { credential: (email, password) => ({ email, password, providerId: 'password' }) },
+    linkWithCredential: async (user, credential) => {
+      auth.currentUser = {
+        ...user, isAnonymous: false, email: credential.email, emailVerified: false,
+        providerData: [{ providerId: 'password', email: credential.email }],
+      };
+      return { user: auth.currentUser };
+    },
+    signInWithEmailAndPassword: async (_auth, email) => {
+      auth.currentUser = {
+        uid: 'firebase-user', isAnonymous: false, email, emailVerified: true,
+        providerData: [{ providerId: 'password', email }],
+      };
+      return { user: auth.currentUser };
+    },
+    sendEmailVerification: async () => {},
+    sendPasswordResetEmail: async (_auth, email) => { resetEmails.push(email); },
     getFirestore: () => ({}),
     doc: (...parts) => ({ path: pathOf(...parts) }),
     collection: (...parts) => ({ path: pathOf(...parts) }),
@@ -225,8 +249,68 @@ function fakeFirebaseSdk() {
       return result;
     },
   };
-  return { sdk, docs, get transactionCount() { return transactionCount; } };
+  return { sdk, auth, docs, resetEmails, get transactionCount() { return transactionCount; } };
 }
+
+test('Firebase links recovery credentials without changing the user id and sends password reset mail', async () => {
+  const fake = fakeFirebaseSdk();
+  const repository = new FirebaseGameRepository({ config: { projectId: 'test' }, sdkLoader: async () => fake.sdk });
+  const before = await repository.initialize();
+  const account = await repository.linkRecoveryAccount({ email: 'player@example.com', password: 'secret12' });
+  assert.equal(account.userId, before.id);
+  assert.equal(account.recoveryEnabled, true);
+  assert.equal(account.email, 'player@example.com');
+  assert.equal((await repository.getProfile()).recoveryEnabled, true);
+  await repository.sendRecoveryPasswordReset();
+  assert.deepEqual(fake.resetEmails, ['player@example.com']);
+});
+
+test('player statistics are transactionally idempotent in local and Firebase repositories', async () => {
+  const event = { type: 'battle-result', operationId: 'stats:battle:1', result: 'win', rank: 'bronze' };
+  const local = new LocalGameRepository({ storage: new MemoryStorage(), idFactory: () => 'stats-local' });
+  await local.initialize();
+  await local.recordPlayerStats(event);
+  await local.recordPlayerStats(event);
+  assert.equal((await local.getPlayerStats()).battleWins, 1);
+
+  const fake = fakeFirebaseSdk();
+  const firebase = new FirebaseGameRepository({ config: { projectId: 'test' }, sdkLoader: async () => fake.sdk });
+  await firebase.initialize();
+  await firebase.recordPlayerStats(event);
+  await firebase.recordPlayerStats(event);
+  assert.equal((await firebase.getPlayerStats()).battleWins, 1);
+});
+
+test('local backup scopes isolate a recovered account from the temporary anonymous account', async () => {
+  const storage = new MemoryStorage();
+  const repository = new LocalGameRepository({ storage, idFactory: () => 'temporary' });
+  await repository.initialize();
+  await repository.saveDeck(savedDeck('temporary-deck'));
+  await repository.useAccountScope('recovered-user', { copyCurrent: false });
+  assert.deepEqual(await repository.listDecks(), []);
+  await repository.saveDeck(savedDeck('recovered-deck'));
+  await repository.useAccountScope('local-temporary', { copyCurrent: false });
+  assert.deepEqual((await repository.listDecks()).map((deck) => deck.deckId), ['temporary-deck']);
+});
+
+test('resilient startup never copies an existing account cache into a different signed-in uid', async () => {
+  const storage = new MemoryStorage();
+  const initial = new LocalGameRepository({ storage, idFactory: () => 'device' });
+  await initial.initialize();
+  await initial.useAccountScope('account-a', { copyCurrent: true });
+  await initial.saveDeck(savedDeck('account-a-deck'));
+
+  const local = new LocalGameRepository({ storage, idFactory: () => 'unused' });
+  const cloud = {
+    async initialize() { return { id: 'account-b', displayName: 'B', isAnonymous: false, mode: 'firebase' }; },
+    async listDecks() { return []; },
+  };
+  const resilient = new ResilientGameRepository({ local, cloud });
+  await resilient.initialize();
+  assert.deepEqual(await resilient.listDecks(), []);
+  await local.useAccountScope('account-a', { copyCurrent: false });
+  assert.deepEqual((await local.listDecks()).map((deck) => deck.deckId), ['account-a-deck']);
+});
 
 test('Firebase repository uses a transaction and rejects stale championVersion', async () => {
   const fake = fakeFirebaseSdk();
