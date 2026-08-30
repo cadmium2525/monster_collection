@@ -45,10 +45,13 @@ test('page metadata and service worker cover install, activation, navigation and
   assert.match(worker, /addEventListener\('fetch'/);
   assert.match(worker, /networkFirstNavigation/);
   assert.match(worker, /PWA_PRECACHE_START/);
+  assert.match(worker, /const versioned = url\.searchParams\.has\('v'\)/);
+  assert.match(worker, /cache\.match\(request, \{ ignoreSearch: !versioned \}\)/);
   const registration = text('src/pwa/register-service-worker.js');
   assert.match(registration, /dataset\.pwaStatus = 'ready'/);
   assert.match(registration, /addEventListener\('controllerchange'/);
   assert.match(registration, /location\.reload\(\)/);
+  assert.match(registration, /`sw\.js\?v=\$\{APP_VERSION\}`/);
 });
 
 test('release version cache-busts the page shell and service worker together', () => {
@@ -60,6 +63,7 @@ test('release version cache-busts the page shell and service worker together', (
   assert.match(html, new RegExp(`src/app\\.js\\?v=${version.replaceAll('.', '\\.')}`));
   assert.match(worker, new RegExp(`CACHE_VERSION = '${version.replaceAll('.', '\\.')}';`));
   assert.match(appVersion, new RegExp(`APP_VERSION = '${version.replaceAll('.', '\\.')}';`));
+  assert.ok(html.includes(`serviceWorker.register('./sw.js?v=${version}'`));
 });
 
 test('growing and on-demand catalog art is excluded from install-time precache and source atlases stay out of deploy', () => {

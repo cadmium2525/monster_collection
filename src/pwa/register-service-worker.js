@@ -1,10 +1,12 @@
+import { APP_VERSION } from '../config/app-version.js';
+
 export function registerServiceWorker() {
   if (!('serviceWorker' in navigator)) {
     document.documentElement.dataset.pwaStatus = 'unsupported';
     return Promise.resolve(null);
   }
   const appRoot = new URL('../../', import.meta.url);
-  const workerUrl = new URL('sw.js', appRoot);
+  const workerUrl = new URL(`sw.js?v=${APP_VERSION}`, appRoot);
   const hadController = Boolean(navigator.serviceWorker.controller);
   let reloadingForUpdate = false;
   navigator.serviceWorker.addEventListener('controllerchange', () => {
