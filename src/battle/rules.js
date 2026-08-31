@@ -11,6 +11,7 @@ export const RULES = Object.freeze({
   boardSlots: 3,
   firstFusionTurn: 6,
   secondFusionTurn: 5,
+  secondAwakeningTurn: 10,
   normalFusionTp: 1,
   specialFusionTp: 2,
   fusionMultiplier: 1.2,

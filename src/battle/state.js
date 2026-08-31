@@ -22,6 +22,7 @@ export function createPlayerState(definition, cards, rng, growth = {}) {
     maxTp: RULES.baseMaxTp,
     tp: RULES.initialTp,
     turnNumber: 0,
+    awakeningUsed: false,
     deck: rng.shuffle(cards),
     hand: [],
     graveyard: [],
@@ -50,6 +51,7 @@ export function createPlayerState(definition, cards, rng, growth = {}) {
       breederUses: 0,
       fusions: 0,
       specialFusions: 0,
+      awakenings: 0,
     },
   };
 }
@@ -107,6 +109,11 @@ export function createUnit({ unitId, card, monster, growth, masterIndex, slot })
     specialFusionId: null,
     specialTrait: null,
     fusionStage: 0,
+    awakened: false,
+    awakeningAbilityId: null,
+    awakeningAbilityName: null,
+    awakeningAbilityEffect: null,
+    awakeningAbilityLimit: null,
     absorbedCardInstanceIds: [],
     maxLife: monster.base.life + normalizedGrowth.life,
     life: monster.base.life + normalizedGrowth.life,
@@ -159,6 +166,19 @@ export function createUnit({ unitId, card, monster, growth, masterIndex, slot })
       incomingFlatDamage: null,
       tpOnNextKill: 0,
       predationEvolution: false,
+      awakening: {
+        battleUsed: false,
+        turnUsed: false,
+        charge: 0,
+        stacks: 0,
+        pending: false,
+        deferred: false,
+        maxLifeGain: 0,
+        atkGain: 0,
+        defGain: 0,
+        targetStacks: {},
+        turnFlags: {},
+      },
     },
   };
 }

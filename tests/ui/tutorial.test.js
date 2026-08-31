@@ -4,7 +4,7 @@ import fs from 'node:fs';
 import { activeRunSummary, homeFooterMode, TUTORIAL_STEPS } from '../../src/ui/home-screen.js';
 
 test('beginner tutorial covers the complete first tournament interaction loop', () => {
-  assert.equal(TUTORIAL_STEPS.length, 7);
+  assert.equal(TUTORIAL_STEPS.length, 8);
   const copy = TUTORIAL_STEPS.flatMap((step) => [step.title, step.copy, step.tip]).join('\n');
   for (const required of ['40枚', 'スワイプ', '実戦技', '大会終了時', '特殊合体', 'TP', '最大2枚']) {
     assert.match(copy, new RegExp(required));

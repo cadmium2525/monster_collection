@@ -21,7 +21,8 @@ function unitValue(unit) {
   const growth = Math.max(0, currentSp(unit) - (unit.maxLife + effectiveAtk(unit) + effectiveDef(unit))) * 0.15;
   const readiness = unit.actionPoints > 0 && !unit.summonedThisTurn && !unit.stunnedThisTurn ? 7 : 0;
   const fusion = unit.fusionStage * 18 + (unit.specialForm ? 20 : 0);
-  return durability + offense + growth + readiness + fusion + statusValue(unit);
+  const awakening = unit.awakened ? 32 : 0;
+  return durability + offense + growth + readiness + fusion + awakening + statusValue(unit);
 }
 
 export function visibleThreat(engine, player) {
@@ -113,6 +114,7 @@ export function actionEventDelta(beforeLogLength, engine, perspectiveId) {
     if (event.type === 'direct-attack') score += mine ? (event.damage ?? 0) * 4.2 : -(event.damage ?? 0) * 4.2;
     if (event.type === 'fusion-special') score += mine ? 55 : 0;
     if (event.type === 'fusion-normal') score += mine ? 28 : 0;
+    if (event.type === 'awakening') score += mine ? 70 : 0;
     if (event.type === 'summon') score += mine ? 18 : 0;
     if (event.type === 'training' || event.type === 'shugyo') score += mine ? 15 : 0;
     if (event.type === 'breeder') score += mine ? 12 : 0;

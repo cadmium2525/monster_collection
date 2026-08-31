@@ -9,6 +9,7 @@ import {
 const ACTION_PRIOR = Object.freeze({
   'resolve-shugyo-move': 30,
   move: 38,
+  awaken: 46,
   'fusion-special': 22,
   'fusion-normal': 10,
   summon: 21,
@@ -68,6 +69,7 @@ function cheapActionOrder(engine, action) {
     value += (move?.power ?? 0) * .12;
   }
   if (action.type === 'fusion-special') value += 30;
+  if (action.type === 'awaken') value += 24;
   if (action.type === 'resolve-shugyo-move') {
     value += action.replaceMoveId
       ? moveValue(engine.masterIndex, action.learnedMoveId) - moveValue(engine.masterIndex, action.replaceMoveId)

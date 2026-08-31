@@ -257,6 +257,7 @@ export function renderCard({
     dragReady ? 'drag-ready' : '',
     unit && (unit.actionPoints <= 0 || unit.summonedThisTurn || unit.stunnedThisTurn) ? 'exhausted' : '',
     life?.low ? 'life-critical' : '',
+    unit?.awakened ? 'awakened' : '',
     interactive ? '' : 'static',
     isFoilAppearance(definition, unit, cardAsset) ? 'finish-foil' : '',
     definition.kind === 'monster' && (cardAsset?.artVariantId ?? unit?.artVariantId ?? 'base') !== 'base' ? 'variant-showcase' : '',
@@ -302,9 +303,10 @@ export function renderDetailArtwork({ definition, unit = null, cardAsset = null,
   const art = cardArtPlacement(definition, unit, cardAsset);
   const standaloneUrl = art.style?.match(/--(?:monster|support)-art:url\("([^"]+)"\)/)?.[1] ?? null;
   const foilClass = isFoilAppearance(definition, unit, cardAsset) ? ' finish-foil-art' : '';
+  const awakeningClass = unit?.awakened ? ' awakened-art' : '';
   if (standaloneUrl) {
     return el('div', {
-      className: `detail-art-frame ${art.className}${foilClass}`.trim(),
+      className: `detail-art-frame ${art.className}${foilClass}${awakeningClass}`.trim(),
       attrs: { role: 'img', 'aria-label': label },
     }, el('img', {
       className: 'detail-art-image',
@@ -312,7 +314,7 @@ export function renderDetailArtwork({ definition, unit = null, cardAsset = null,
     }));
   }
   return el('div', {
-    className: `card-art detail-atlas-art ${art.className} ${FACTION_CLASS[unit?.faction ?? definition.faction] ?? ''}${foilClass}`.trim(),
+    className: `card-art detail-atlas-art ${art.className} ${FACTION_CLASS[unit?.faction ?? definition.faction] ?? ''}${foilClass}${awakeningClass}`.trim(),
     attrs: art.style ? { style: art.style, role: 'img', 'aria-label': label } : { role: 'img', 'aria-label': label },
   });
 }
@@ -396,6 +398,8 @@ export function openCardDetails({
   onMoveSelect = null,
   cardAsset = null,
   moveView = 'catalog',
+  awakeningPreview = null,
+  onAwaken = null,
 }) {
   const isMonster = definition.kind === 'monster';
   const name = unit?.specialForm ?? definition.name;
@@ -421,6 +425,12 @@ export function openCardDetails({
       el('br'),
       trait.effect,
     ]),
+    unit?.awakened ? el('div', { className: 'awakening-ability-box' }, [
+      el('small', { text: 'AWAKENING ABILITY' }),
+      el('strong', { text: unit.awakeningAbilityName ?? '覚醒能力' }),
+      el('span', { text: unit.awakeningAbilityEffect ?? '' }),
+      el('em', { text: unit.awakeningAbilityLimit ?? '常時' }),
+    ]) : null,
     unit && life.low ? el('div', { className: 'life-condition-active' }, [
       el('strong', { text: 'LIFE50%以下' }),
       el('span', { text: '割合条件が発動中です' }),
@@ -464,6 +474,21 @@ export function openCardDetails({
         closeDetails: () => modalController?.close(),
       })),
     ]),
+    onAwaken && awakeningPreview ? el('section', { className: 'awakening-action-panel' }, [
+      el('small', { text: 'TURN 10 / SECOND PLAYER' }),
+      el('strong', { text: `覚醒：${awakeningPreview.abilityName}` }),
+      el('span', { text: awakeningPreview.abilityEffect }),
+      el('em', { text: `${awakeningPreview.abilityLimit} / LIFE・ATK・DEF +15` }),
+      el('button', {
+        className: 'awakening-button',
+        text: '覚醒する',
+        attrs: { type: 'button' },
+        onclick: () => {
+          modalController?.close();
+          onAwaken();
+        },
+      }),
+    ]) : null,
   ]) : el('section');
 
   modalController = openModal({

@@ -4,6 +4,7 @@ import { el, replace } from './dom.js';
 import { renderCard, openCardDetails } from './card-renderer.js';
 import { createFusionAnimationModel, playFusionAnimation } from './fusion-animation.js';
 import { playFusionUnlockAnimation } from './fusion-unlock-animation.js';
+import { playAwakeningUnlockAnimation } from './awakening-unlock-animation.js';
 import { playTurnTransition } from './turn-transition-animation.js';
 import { openModal } from './modal.js';
 import { lowLifeTargetEffects, unitLifePresentation } from './status-presentation.js';
@@ -679,6 +680,9 @@ export class BattleScreen {
       ? this.legalActions().filter((action) => action.type === 'move' && action.unitId === unit.id)
       : [];
     const selectableMoveIds = unique(moveActions.map((action) => action.moveId));
+    const awakeningActions = !isOpponent && this.isHumanTurn()
+      ? this.legalActions().filter((action) => action.type === 'awaken' && action.unitId === unit.id)
+      : [];
     openCardDetails({
       definition,
       unit,
@@ -686,7 +690,42 @@ export class BattleScreen {
       selectableMoveIds,
       onMoveSelect: selectableMoveIds.length ? (move) => this.selectMove(unit.id, move.id) : null,
       moveView: 'battle',
+      awakeningPreview: awakeningActions[0]?.preview ?? null,
+      onAwaken: awakeningActions.length ? () => this.openAwakeningChoice(awakeningActions) : null,
     });
+  }
+
+  openAwakeningChoice(actions) {
+    if (!actions.length || this.busy) return;
+    const player = this.engine.player(this.humanPlayerId);
+    const target = player.board.find((unit) => unit?.id === actions[0].unitId);
+    let modal = null;
+    const content = el('div', { className: 'awakening-choice' }, [
+      el('section', { className: 'awakening-choice-intro' }, [
+        el('small', { text: 'AWAKENING RITE' }),
+        el('strong', { text: actions[0].preview.abilityName }),
+        el('span', { text: actions[0].preview.abilityEffect }),
+        el('em', { text: `${actions[0].preview.abilityLimit} / ${target?.name ?? 'モンスター'}のLIFE・ATK・DEF +15` }),
+      ]),
+      el('p', { text: '墓地へ送る味方を選んでください。召喚酔い中のモンスターは素材にできません。' }),
+      el('div', { className: 'awakening-material-options' }, actions.map((action) => {
+        const material = player.board.find((unit) => unit?.id === action.materialUnitId);
+        return el('button', {
+          className: 'awakening-material-button',
+          attrs: { type: 'button' },
+          onclick: () => {
+            modal.close();
+            this.performHumanAction(action);
+          },
+        }, [
+          el('strong', { text: material?.name ?? '素材モンスター' }),
+          el('span', { text: material ? `LIFE ${material.life}/${material.maxLife}・ATK ${effectiveAtk(material)}・DEF ${effectiveDef(material)}` : '' }),
+          el('small', { text: '撃破扱いにせず墓地へ送る' }),
+        ]);
+      })),
+      el('button', { className: 'text-button', text: 'キャンセル', onclick: () => modal.close() }),
+    ]);
+    modal = openModal({ title: `${target?.name ?? 'モンスター'}を覚醒`, content });
   }
 
   selectMove(unitId, moveId) {
@@ -1038,6 +1077,27 @@ export class BattleScreen {
       else await delay(duration);
       burst.remove();
     }
+    if (action.type === 'awaken') {
+      const target = this.findUnitSlotNode(action.unitId);
+      const material = this.findUnitSlotNode(action.materialUnitId);
+      if (!target) return;
+      const burst = el('span', { className: 'awakening-burst', text: '覚醒' });
+      target.append(burst);
+      const targetAnimation = target.animate?.([
+        { filter: 'brightness(1) saturate(1)', transform: 'scale(1)' },
+        { filter: 'brightness(2.2) saturate(1.7) hue-rotate(24deg)', transform: 'scale(1.13)', offset: .5 },
+        { filter: 'brightness(1.1) saturate(1.2)', transform: 'scale(1)' },
+      ], { duration: this.speed === 'fast' ? 260 : 820, easing: 'cubic-bezier(.2,.8,.25,1)' });
+      const materialAnimation = material?.animate?.([
+        { opacity: 1, transform: 'scale(1)' },
+        { opacity: .15, transform: 'scale(.65) rotate(5deg)', filter: 'blur(3px) hue-rotate(50deg)' },
+      ], { duration: this.speed === 'fast' ? 180 : 620, easing: 'ease-in', fill: 'forwards' });
+      await Promise.all([
+        targetAnimation?.finished?.catch(() => {}) ?? Promise.resolve(),
+        materialAnimation?.finished?.catch(() => {}) ?? Promise.resolve(),
+      ]);
+      burst.remove();
+    }
   }
 
   statChanges(before) {
@@ -1192,6 +1252,13 @@ export class BattleScreen {
     if (this.speed === 'fast' && ['draw', 'turn-end'].includes(event.type)) return;
     if (event.type === 'fusion-unlocked') {
       await playFusionUnlockAnimation({
+        playerName: this.engine.player(event.playerId).displayName,
+        speed: this.speed,
+      });
+      return;
+    }
+    if (event.type === 'awakening-unlocked') {
+      await playAwakeningUnlockAnimation({
         playerName: this.engine.player(event.playerId).displayName,
         speed: this.speed,
       });

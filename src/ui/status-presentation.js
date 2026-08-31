@@ -34,6 +34,8 @@ export function unitStatusEntries(unit) {
     add(key, value > 0 ? 'positive' : 'negative', value > 0 ? '▲' : '▼', `${stat} ${signed(value)}`, detail);
   };
 
+  if (unit.awakened) add('awakened', 'special', '醒', unit.awakeningAbilityName ?? '覚醒', unit.awakeningAbilityEffect ?? '覚醒能力が開花');
+
   addStat('atk-mod', 'ATK', unit.atkMod, 'この試合中');
   addStat('def-mod', 'DEF', unit.defMod, 'この試合中');
   addStat('temporary-atk', 'ATK', unit.temporaryAtk, 'このターン中');
@@ -84,6 +86,14 @@ export function unitStatusEntries(unit) {
   if (number(statuses.specialCounters?.obeliskCharge) > 0) {
     add('obelisk-charge', 'positive', '碑', `反射蓄積 +${number(statuses.specialCounters.obeliskCharge)}`, '次の技ダメージへ加算');
   }
+  if (number(statuses.awakening?.barrier) > 0) {
+    add('awakening-barrier', 'special', '醒', `覚醒障壁 ${number(statuses.awakening.barrier)}`, '固定値ぶん被ダメージを防ぐ');
+  }
+  if (number(statuses.awakening?.charge) > 0) {
+    const charge = number(statuses.awakening.charge);
+    add('awakening-charge', 'special', '醒', charge < 1 ? `覚醒充填 +${percent(charge)}` : `覚醒充填 +${charge}`, '次の技で消費');
+  }
+  if (statuses.awakening?.pending) add('awakening-pending', 'special', '醒', '覚醒能力 充填済み', '次の技で消費');
 
   return entries;
 }
@@ -108,7 +118,11 @@ export function lowLifeTargetEffects(source, target, move) {
     effects.push('技威力+20');
     if (move.id === 'move-084') effects.push('消費TP-1');
     if (move.id === 'move-090') effects.push('DEFを5低く扱う');
+    if (source.awakened) effects.push('追加でDEF10無視');
   }
-  if (source.specialForm === 'インフェルノジャッジ') effects.push('与ダメージ+40%');
+  if (source.specialForm === 'インフェルノジャッジ') {
+    effects.push('与ダメージ+40%');
+    if (source.awakened && unitLifePresentation(target).ratio <= 0.25) effects.push('LIFE25%以下：さらに与ダメージ+20%');
+  }
   return effects;
 }

@@ -24,6 +24,7 @@ import {
   combatStats,
   consumeMoveSurcharge,
   defenseIgnore,
+  hasAwakening,
   hasNormalTrait,
   outgoingDamageMultiplier,
   specialFlatDamageBonus,
@@ -35,6 +36,7 @@ import { RULES } from './rules.js';
 import { chooseShugyoMove, learnableShugyoMoves } from './shugyo.js';
 import { canonicalMonsterName } from '../data/monster-name-migration.js';
 import { canonicalSpecialFusionName } from '../data/special-fusion-name-migration.js';
+import { awakeningForUnit, awakeningById } from './awakening-data.js';
 
 function opposingId(state, playerId) {
   return state.playerOrder.find((id) => id !== playerId);
@@ -85,9 +87,31 @@ export class BattleEngine {
       ])),
     };
     for (const player of Object.values(engine.state.players)) {
+      player.awakeningUsed ??= false;
+      player.metrics.awakenings ??= 0;
       player.effects.nextTurnFusionLocks ??= [];
       player.effects.nextTurnMoveSurcharges ??= [];
       for (const unit of player.board.filter(Boolean)) {
+        unit.awakened ??= false;
+        unit.awakeningAbilityId ??= null;
+        unit.awakeningAbilityName ??= null;
+        unit.awakeningAbilityEffect ??= null;
+        unit.awakeningAbilityLimit ??= null;
+        unit.statuses.awakening ??= {
+          battleUsed: false,
+          turnUsed: false,
+          charge: 0,
+          stacks: 0,
+          pending: false,
+          deferred: false,
+          maxLifeGain: 0,
+          atkGain: 0,
+          defGain: 0,
+          targetStacks: {},
+          turnFlags: {},
+        };
+        unit.statuses.awakening.turnFlags ??= {};
+        unit.statuses.awakening.targetStacks ??= {};
         if (unit.specialForm) {
           const fusion = unit.specialFusionId
             ? engine.masterIndex.data.fusions.find((candidate) => candidate.id === unit.specialFusionId)
@@ -357,7 +381,7 @@ export class BattleEngine {
         const move = this.masterIndex.moves.get(moveId);
         if (!move) continue;
         if (move.power == null) {
-          const cost = resolvedMoveTp(player, unit, null, move);
+          const cost = resolvedMoveTp(player, unit, null, move, opponent);
           if (player.tp >= cost && !(move.id === 'move-111' && unit.statuses.formAlphaUsed)) {
             actions.push({ type: 'move', unitId: unit.id, moveId, targetUnitId: null, cost, label: move.name });
           }
@@ -365,7 +389,7 @@ export class BattleEngine {
         }
         if (opponentUnits.length) {
           for (const target of opponentUnits) {
-            const cost = resolvedMoveTp(player, unit, target, move);
+            const cost = resolvedMoveTp(player, unit, target, move, opponent);
             if (player.tp >= cost) {
               actions.push({
                 type: 'move',
@@ -378,7 +402,7 @@ export class BattleEngine {
             }
           }
         } else {
-          const cost = resolvedMoveTp(player, unit, null, move);
+          const cost = resolvedMoveTp(player, unit, null, move, opponent);
           if (player.tp >= cost) {
             actions.push({
               type: 'move',
@@ -401,7 +425,7 @@ export class BattleEngine {
       const materials = player.hand
         .map((card) => ({ card, definition: cardDefinition(this.masterIndex, card) }))
         .filter(({ definition }) => definition.kind === 'monster');
-      for (const main of livingUnits(player).filter((unit) => unit.fusionStage < RULES.maxFusionStage)) {
+      for (const main of livingUnits(player).filter((unit) => !unit.awakened && unit.fusionStage < RULES.maxFusionStage)) {
         for (const { card, definition } of materials) {
           const materialGrowth = normalizeGrowth(player.tournamentGrowth[card.instanceId], definition, this.masterIndex);
           const materialSp = definition.base.life + materialGrowth.life
@@ -445,6 +469,33 @@ export class BattleEngine {
       }
     }
 
+    if (!player.isFirst && player.turnNumber >= RULES.secondAwakeningTurn && !player.awakeningUsed) {
+      const materials = livingUnits(player).filter((unit) => !unit.summonedThisTurn);
+      const targets = livingUnits(player).filter((unit) => !unit.awakened
+        && unit.actionPoints > 0 && !unit.summonedThisTurn && !unit.stunnedThisTurn
+        && awakeningForUnit(unit));
+      for (const target of targets) {
+        for (const material of materials) {
+          if (material.id === target.id) continue;
+          const ability = awakeningForUnit(target);
+          actions.push({
+            type: 'awaken',
+            unitId: target.id,
+            materialUnitId: material.id,
+            cost: 0,
+            label: `${target.name}を覚醒（${material.name}を墓地へ）`,
+            preview: {
+              abilityId: ability.id,
+              abilityName: ability.name,
+              abilityEffect: ability.effect,
+              abilityLimit: ability.limit,
+              stats: { life: 15, atk: 15, def: 15 },
+            },
+          });
+        }
+      }
+    }
+
     actions.push({ type: 'end-turn', label: 'ターン終了' });
     return actions;
   }
@@ -464,6 +515,7 @@ export class BattleEngine {
       case 'move': this._move(selected); break;
       case 'fusion-normal': this._fusion(selected, false); break;
       case 'fusion-special': this._fusion(selected, true); break;
+      case 'awaken': this._awaken(selected); break;
       case 'end-turn': this._endTurn(); break;
       default: throw new Error(`Unknown action: ${selected.type}`);
     }
@@ -514,7 +566,13 @@ export class BattleEngine {
     this.state.round = Math.max(...this.state.playerOrder.map((id) => this.player(id).turnNumber));
 
     for (const id of this.state.playerOrder) {
-      for (const unit of livingUnits(this.player(id))) unit.statuses.firstIncomingUsed = false;
+      for (const unit of livingUnits(this.player(id))) {
+        unit.statuses.firstIncomingUsed = false;
+        if (unit.statuses.awakening) {
+          unit.statuses.awakening.turnUsed = false;
+          unit.statuses.awakening.turnFlags = {};
+        }
+      }
     }
 
     const activeBonuses = player.effects.nextOwnMaxTpBonuses.filter((effect) => effect.activeFromTurn <= player.turnNumber && effect.remaining > 0);
@@ -556,6 +614,12 @@ export class BattleEngine {
     });
     if (!player.isFirst && player.turnNumber === RULES.secondFusionTurn) {
       this._log('fusion-unlocked', `${player.displayName}の合体が解禁された`, {
+        playerId,
+        turnNumber: player.turnNumber,
+      });
+    }
+    if (!player.isFirst && player.turnNumber === RULES.secondAwakeningTurn) {
+      this._log('awakening-unlocked', `${player.displayName}の覚醒が解禁された`, {
         playerId,
         turnNumber: player.turnNumber,
       });
@@ -812,14 +876,78 @@ export class BattleEngine {
     });
   }
 
+  _awaken(action) {
+    const player = this.player(this.state.currentPlayerId);
+    const unit = findUnit(player, action.unitId);
+    const material = findUnit(player, action.materialUnitId);
+    if (!unit || !material || unit.id === material.id) throw new Error('覚醒対象または素材が見つかりません');
+    if (material.summonedThisTurn) throw new Error('召喚酔い中のモンスターは覚醒素材にできません');
+    const ability = awakeningForUnit(unit) ?? awakeningById(action.preview?.abilityId);
+    if (!ability) throw new Error(`${unit.name}の覚醒能力が定義されていません`);
+
+    this._removeUnit(player, material, { allowReturn: false });
+    unit.maxLife += 15;
+    unit.life += 15;
+    unit.atkBase += 15;
+    unit.defBase += 15;
+    unit.awakened = true;
+    unit.awakeningAbilityId = ability.id;
+    unit.awakeningAbilityName = ability.name;
+    unit.awakeningAbilityEffect = ability.effect;
+    unit.awakeningAbilityLimit = ability.limit;
+    unit.statuses.awakening ??= {};
+    Object.assign(unit.statuses.awakening, {
+      battleUsed: false,
+      turnUsed: false,
+      charge: 0,
+      stacks: 0,
+      pending: false,
+      deferred: false,
+      maxLifeGain: 0,
+      atkGain: 0,
+      defGain: 0,
+      targetStacks: {},
+      turnFlags: {},
+    });
+    if (['base:ルミラビ', 'fusion:ルナモルフォ'].includes(ability.id) && lifeRatio(unit) <= 0.5) {
+      unit.actionPoints += 1;
+      unit.statuses.awakening.battleUsed = true;
+    }
+    if (ability.id === 'base:ゴースト') {
+      if (unit.statuses.evadeNext) unit.statuses.awakening.deferred = true;
+      else unit.statuses.evadeNext = true;
+    }
+    if (ability.id === 'fusion:ルミギア・オクト') {
+      const growth = player.tournamentGrowth[unit.sourceCardInstanceId] ?? {};
+      const total = Math.max(0, Number(growth.life) || 0)
+        + Math.max(0, Number(growth.atk) || 0)
+        + Math.max(0, Number(growth.def) || 0);
+      unit.statuses.awakening.charge = Math.min(0.25, Math.floor(total / 15) * 0.05);
+    }
+    player.awakeningUsed = true;
+    player.metrics.awakenings += 1;
+    this._log('awakening', `${unit.name}が覚醒。${material.name}を墓地へ送り「${ability.name}」が開花`, {
+      playerId: player.id,
+      unitId: unit.id,
+      materialUnitId: material.id,
+      abilityId: ability.id,
+      abilityName: ability.name,
+      stats: { life: 15, atk: 15, def: 15 },
+    });
+  }
+
   _move(action) {
     const player = this.player(this.state.currentPlayerId);
     const opponent = this.opponent(player.id);
     const unit = findUnit(player, action.unitId);
     const move = this.masterIndex.moves.get(action.moveId);
+    if (unit.statuses.awakening) {
+      unit.statuses.awakening.consumePending = Boolean(unit.statuses.awakening.pending);
+      unit.statuses.awakening.consumeCharge = Math.max(0, Number(unit.statuses.awakening.charge) || 0);
+    }
     let target = action.targetUnitId ? findUnit(opponent, action.targetUnitId) : null;
     if (target) target = this._redirectMonolith(opponent, target);
-    const cost = resolvedMoveTp(player, unit, target, move);
+    const cost = resolvedMoveTp(player, unit, target, move, opponent);
     player.tp -= cost;
     consumeMoveSurcharge(player);
     unit.actionPoints -= 1;
@@ -832,7 +960,7 @@ export class BattleEngine {
       unit.statuses.formAlphaUsed = true;
       unit.defMod += 10;
       unit.movesUsedThisTurn += 1;
-      this._afterMoveUse(unit, move, false);
+      this._afterMoveUse(player, unit, move, false);
       this._log('move', `${unit.name}の${move.name}。DEF+10`, { playerId: player.id, unitId: unit.id, moveId: move.id, cost });
       return;
     }
@@ -850,7 +978,7 @@ export class BattleEngine {
       this._applyPostMoveEffects(player, opponent, unit, null, move, { damage: totalDamage, defeated: false, actual: totalDamage });
       this._consumeDamageStatuses(unit);
       unit.movesUsedThisTurn += 1;
-      this._afterMoveUse(unit, move, opponent.life <= 0);
+      this._afterMoveUse(player, unit, move, opponent.life <= 0);
       if (recoilDamage > 0) this._selfDamage(player, unit, recoilDamage);
       this._log('direct-attack', `${unit.name}の${move.name}。${opponent.displayName}へ${totalDamage}ダメージ${echoDamage ? `（残響${echoDamage}）` : ''}`, {
         playerId: player.id,
@@ -865,7 +993,7 @@ export class BattleEngine {
     }
 
     const { attack, defense } = combatStats(unit, target);
-    const ignored = defenseIgnore(player, unit, target, move);
+    const ignored = defenseIgnore(player, unit, target, move, opponent);
     const effectiveDefense = Math.max(1, defense - ignored);
     const baseDamage = Math.max(0, Math.floor(attack * (power / 100) - effectiveDefense));
     const multiplier = outgoingDamageMultiplier(unit, target, move, opponent);
@@ -885,7 +1013,7 @@ export class BattleEngine {
     this._consumeDamageStatuses(unit);
     updateConsecutiveTarget(unit, target.id);
     unit.movesUsedThisTurn += 1;
-    this._afterMoveUse(unit, move, damageResult.defeated);
+    this._afterMoveUse(player, unit, move, damageResult.defeated);
     if (recoilDamage > 0) this._selfDamage(player, unit, recoilDamage);
     this._log('attack', `${unit.name}の${move.name}。${target.name}へ${damageResult.actual}ダメージ${echoDamage ? `（残響${echoDamage}）` : ''}${damageResult.overflow ? `、超過${damageResult.overflow}` : ''}`, {
       playerId: player.id,
@@ -910,6 +1038,14 @@ export class BattleEngine {
   _damageUnit(owner, unit, rawDamage, attacker, { triggerAttacked = true } = {}) {
     if (unit.statuses.evadeNext) {
       unit.statuses.evadeNext = false;
+      if (hasAwakening(unit, 'base:ゴースト') && unit.statuses.awakening.deferred) {
+        unit.statuses.awakening.deferred = false;
+        unit.statuses.awakening.regrantNextTurn = true;
+      }
+      if (hasAwakening(unit, 'base:カスミヨ') && !unit.statuses.awakening.battleUsed) {
+        unit.statuses.awakening.pending = true;
+        unit.statuses.awakening.battleUsed = true;
+      }
       if (triggerAttacked) this._onAttacked(unit, attacker, 0, false);
       return { actual: 0, overflow: 0, defeated: false, evaded: true, incomingTriggers: ['完全回避'] };
     }
@@ -924,6 +1060,7 @@ export class BattleEngine {
     const { damage, triggers } = applyIncomingModifiers(unit, adjustedRawDamage);
     if (markTriggered) triggers.push(`呪印+${flatMark.amount}`);
     const before = unit.life;
+    const beforeRatio = lifeRatio(unit);
     unit.life -= damage;
     let defeated = unit.life <= 0;
     let overflow = defeated ? Math.max(0, damage - before) : 0;
@@ -936,31 +1073,44 @@ export class BattleEngine {
       triggers.push('予備パーツ');
     } else if (defeated && hasNormalTrait(unit, 'ヒノトリ') && !unit.statuses.phoenixUsed) {
       unit.statuses.phoenixUsed = true;
-      unit.life = Math.min(unit.maxLife, 10);
+      unit.life = hasAwakening(unit, 'base:ヒノトリ') ? roundedPercent(unit.maxLife, 0.25) : Math.min(unit.maxLife, 10);
       defeated = false;
       overflow = 0;
       triggers.push('不死鳥');
     } else if (defeated && hasNormalTrait(unit, 'ワーム') && before === unit.maxLife && !unit.statuses.moltUsed) {
       unit.statuses.moltUsed = true;
       unit.life = 1;
+      if (hasAwakening(unit, 'base:ワーム')) {
+        this._heal(unit, 15);
+        unit.statuses.nextDamageReduction = Math.max(unit.statuses.nextDamageReduction, 0.25);
+      }
       defeated = false;
       overflow = 0;
       triggers.push('脱皮');
     } else if (defeated && unit.specialForm === 'ガルーダ' && !unit.statuses.specialReviveUsed) {
       unit.statuses.specialReviveUsed = true;
-      unit.life = roundedPercent(unit.maxLife, 0.3);
+      unit.life = roundedPercent(unit.maxLife, hasAwakening(unit, 'fusion:ガルーダ') ? 0.4 : 0.3);
+      if (hasAwakening(unit, 'fusion:ガルーダ')) unit.statuses.awakening.pending = true;
       defeated = false;
       overflow = 0;
       triggers.push('ガルーダ');
     } else if (defeated && unit.specialForm === 'ソルフェニキア' && !unit.statuses.specialReviveUsed) {
       unit.statuses.specialReviveUsed = true;
-      unit.life = roundedPercent(unit.maxLife, 0.2);
+      unit.life = roundedPercent(unit.maxLife, hasAwakening(unit, 'fusion:ソルフェニキア') ? 0.35 : 0.2);
+      if (hasAwakening(unit, 'fusion:ソルフェニキア')) unit.statuses.awakening.pending = true;
       defeated = false;
       overflow = 0;
       triggers.push('ソルフェニキア');
     }
 
     const actual = Math.min(before, damage);
+    if (!defeated && beforeRatio > 0.5 && lifeRatio(unit) <= 0.5
+      && ['base:ルミラビ', 'fusion:ルナモルフォ'].includes(unit.awakeningAbilityId)
+      && !unit.statuses.awakening.battleUsed) {
+      unit.actionPoints += 1;
+      unit.statuses.awakening.battleUsed = true;
+      triggers.push(unit.awakeningAbilityName);
+    }
     if (triggerAttacked) this._onAttacked(unit, attacker, actual, defeated);
     if (defeated) this._removeUnit(owner, unit);
     return { actual, overflow, defeated, evaded: false, incomingTriggers: triggers };
@@ -972,9 +1122,13 @@ export class BattleEngine {
       unit.statuses.phantomReducedThisHit = false;
     }
     if (hasNormalTrait(unit, 'デュラハン') && actualDamage > 0 && !defeated) unit.statuses.knightWill = true;
+    if (hasAwakening(unit, 'base:ゴーレム') && actualDamage >= 20 && !defeated) {
+      unit.statuses.awakening.charge = 10;
+    }
     if (unit.specialForm === 'オキクサン' && attacker && actualDamage > 0) {
       const applied = unit.statuses.specialCounters.okikuAtkLoss ?? 0;
-      const amount = Math.min(3, 15 - applied);
+      const cap = hasAwakening(unit, 'fusion:オキクサン') ? 20 : 15;
+      const amount = Math.min(hasAwakening(unit, 'fusion:オキクサン') ? 4 : 3, cap - applied);
       if (amount > 0) {
         applyAtkDebuff(attacker, amount);
         unit.statuses.specialCounters.okikuAtkLoss = applied + amount;
@@ -987,10 +1141,19 @@ export class BattleEngine {
         unit.defMod += amount;
         unit.statuses.specialCounters.tokageDef = applied + amount;
       }
+      if (hasAwakening(unit, 'fusion:ドラコワーム')) {
+        const atkApplied = unit.statuses.awakening.atkGain ?? 0;
+        const atkAmount = Math.min(2, 8 - atkApplied);
+        if (atkAmount > 0) {
+          unit.atkMod += atkAmount;
+          unit.statuses.awakening.atkGain = atkApplied + atkAmount;
+        }
+      }
     }
     if (unit.specialForm === 'ビーストバスティオン' && !defeated) {
       const applied = unit.statuses.specialCounters.wildAtk ?? 0;
-      const amount = Math.min(4, 16 - applied);
+      const cap = hasAwakening(unit, 'fusion:ビーストバスティオン') ? 24 : 16;
+      const amount = Math.min(4, cap - applied);
       if (amount > 0) {
         unit.atkMod += amount;
         unit.statuses.specialCounters.wildAtk = applied + amount;
@@ -1010,15 +1173,23 @@ export class BattleEngine {
         unit.defMod += amount;
         unit.statuses.specialCounters.usubaDef = applied + amount;
       }
+      if (hasAwakening(unit, 'fusion:シャドウリーフ') && actualDamage > 0) {
+        unit.statuses.awakening.charge = Math.min(0.2, (unit.statuses.awakening.charge ?? 0) + 0.05);
+      }
     }
     if (unit.specialForm === 'ガイアヴォルフ' && actualDamage > 0 && !defeated) {
-      unit.statuses.specialCounters.gaiaRetaliation = Math.min(0.3,
-        (unit.statuses.specialCounters.gaiaRetaliation ?? 0) + 0.1);
+      const awakened = hasAwakening(unit, 'fusion:ガイアヴォルフ');
+      unit.statuses.specialCounters.gaiaRetaliation = Math.min(awakened ? 0.4 : 0.3,
+        (unit.statuses.specialCounters.gaiaRetaliation ?? 0) + (awakened ? 0.15 : 0.1));
     }
     if (unit.specialForm === 'オチムシャ' && !defeated && lifeRatio(unit) <= 0.5 && !unit.statuses.ochimushaTriggered) {
       unit.statuses.ochimushaTriggered = true;
       unit.atkMod += 10;
       unit.defMod += 10;
+      if (hasAwakening(unit, 'fusion:オチムシャ') && !unit.statuses.awakening.battleUsed) {
+        this._heal(unit, 15);
+        unit.statuses.awakening.battleUsed = true;
+      }
     }
   }
 
@@ -1026,6 +1197,10 @@ export class BattleEngine {
     if (target && !result.defeated) {
       if (hasNormalTrait(unit, 'プラント')) {
         target.statuses.parasite = { sourceUnitId: unit.id, sourcePlayerId: player.id };
+        if (hasAwakening(unit, 'base:プラント') && !unit.statuses.awakening.targetStacks[target.id]) {
+          applyDefDebuff(target, 5);
+          unit.statuses.awakening.targetStacks[target.id] = 1;
+        }
       }
       if (move.effect.includes('対象ATK-5・DEF-5')) {
         applyAtkDebuff(target, 5);
@@ -1040,20 +1215,70 @@ export class BattleEngine {
         applyDefDebuff(target, 5);
       }
       if (unit.specialForm === 'アビスヴァルキア' && unit.movesUsedThisTurn === 0 && result.actual > 0) {
-        applyDefDebuff(target, 3);
+        const awakened = hasAwakening(unit, 'fusion:アビスヴァルキア');
+        const applied = unit.statuses.awakening.targetStacks[target.id] ?? 0;
+        const amount = awakened ? Math.min(5, 15 - applied) : 3;
+        if (amount > 0) {
+          applyDefDebuff(target, amount);
+          if (awakened) unit.statuses.awakening.targetStacks[target.id] = applied + amount;
+        }
+      }
+      if (hasAwakening(unit, 'fusion:アズールドリル') && result.actual > 0) {
+        const applied = unit.statuses.awakening.targetStacks[target.id] ?? 0;
+        const amount = Math.min(2, 6 - applied);
+        if (amount > 0) {
+          applyDefDebuff(target, amount);
+          unit.statuses.awakening.targetStacks[target.id] = applied + amount;
+        }
+      }
+      if (hasAwakening(unit, 'fusion:タイラント') && result.actual > 0 && effectiveAtk(unit) >= effectiveDef(target)) {
+        const applied = unit.statuses.awakening.targetStacks[target.id] ?? 0;
+        const amount = Math.min(3, 9 - applied);
+        if (amount > 0) {
+          applyDefDebuff(target, amount);
+          unit.statuses.awakening.targetStacks[target.id] = applied + amount;
+        }
       }
     } else if (target && hasNormalTrait(unit, 'プラント')) {
       target.statuses.parasite = { sourceUnitId: unit.id, sourcePlayerId: player.id };
     }
 
     if (move.effect.includes('自身LIFE5回復') && (!move.effect.includes('寄生中') || target?.statuses.parasite)) this._heal(unit, 5);
+    if (hasAwakening(unit, 'fusion:フェイグラップラー') && result.actual > 0) {
+      const applied = unit.statuses.awakening.atkGain ?? 0;
+      const amount = Math.min(2, 6 - applied);
+      if (amount > 0) {
+        unit.atkMod += amount;
+        unit.statuses.awakening.atkGain = applied + amount;
+      }
+    }
+    if (hasAwakening(unit, 'base:デュラハン') && unit.statuses.knightWill && result.actual > 0) this._heal(unit, 5);
+    if (hasAwakening(unit, 'fusion:イグニギア') && unit.movesUsedThisTurn === 0 && result.actual > 0) this._heal(unit, 5);
     if (unit.movesUsedThisTurn === 0 && result.actual > 0 && unit.specialForm === 'ネビュラミア') this._heal(unit, 5);
+    if (hasAwakening(unit, 'fusion:ネビュラミア') && unit.movesUsedThisTurn === 0 && result.actual > 0) {
+      unit.statuses.nextDamageReduction = Math.max(unit.statuses.nextDamageReduction, 0.15);
+    }
     if (unit.movesUsedThisTurn === 0 && result.actual > 0 && unit.specialForm === 'クロノヴォア') {
-      this._heal(unit, roundedPercent(unit.maxLife, 0.08));
+      this._heal(unit, roundedPercent(unit.maxLife, hasAwakening(unit, 'fusion:クロノヴォア') ? 0.1 : 0.08));
     }
     if (unit.movesUsedThisTurn === 0 && result.actual > 0 && unit.specialForm === '幽月カスミヨ') {
-      this._heal(unit, roundedPercent(unit.maxLife, 0.06));
+      this._heal(unit, roundedPercent(unit.maxLife, hasAwakening(unit, 'fusion:幽月カスミヨ') ? 0.1 : 0.06));
       if (result.defeated) player.tp = Math.min(player.maxTp, player.tp + 1);
+    }
+    if (hasAwakening(unit, 'base:リリヴェル') && lifeRatio(unit) <= 0.5 && result.actual > 0
+      && !unit.statuses.awakening.turnFlags.lilivelHeal) {
+      this._heal(unit, roundedPercent(unit.maxLife, 0.06));
+      unit.statuses.awakening.turnFlags.lilivelHeal = true;
+    }
+    if (hasAwakening(unit, 'fusion:ルナリリヴェル') && lifeRatio(unit) <= 0.5 && result.actual > 0
+      && !unit.statuses.awakening.turnFlags.lunaLilivelHeal) {
+      this._heal(unit, roundedPercent(unit.maxLife, 0.08));
+      unit.statuses.awakening.turnFlags.lunaLilivelHeal = true;
+    }
+    if (hasAwakening(unit, 'fusion:セイレーン') && target && lifeRatio(target) <= 0.5 && result.actual > 0
+      && !unit.statuses.awakening.turnFlags.sirenHeal) {
+      this._heal(unit, roundedPercent(unit.maxLife, 0.08));
+      unit.statuses.awakening.turnFlags.sirenHeal = true;
     }
     if (move.effect.includes('使用後、自身DEF-5')) applyDefDebuff(unit, 5);
     if (move.effect.includes('使用後、自身ATK-5')) applyAtkDebuff(unit, 5);
@@ -1077,40 +1302,97 @@ export class BattleEngine {
         const gain = Math.min(5, 15 - unit.statuses.hamKillBonus);
         unit.statuses.hamKillBonus += Math.max(0, gain);
       }
-      if (hasNormalTrait(unit, 'フェザーレックス')) this._heal(unit, 10);
+      if (hasAwakening(unit, 'base:コンゴウ') && !unit.statuses.awakening.battleUsed) {
+        unit.actionPoints += 1;
+        unit.statuses.awakening.battleUsed = true;
+      }
+      if (hasNormalTrait(unit, 'フェザーレックス')) {
+        this._heal(unit, hasAwakening(unit, 'base:フェザーレックス') ? 20 : 10);
+        if (hasAwakening(unit, 'base:フェザーレックス') && !unit.statuses.awakening.turnFlags.featherTp) {
+          player.tp = Math.min(player.maxTp, player.tp + 1);
+          unit.statuses.awakening.turnFlags.featherTp = true;
+        }
+      }
       if (!unit.specialForm && (Number(unit.traitEngine?.tpOnKill) || 0) > 0) {
         player.tp = Math.min(player.maxTp, player.tp + Math.max(0, Number(unit.traitEngine.tpOnKill) || 0));
       }
       if (!unit.specialForm && (Number(unit.traitEngine?.healOnKill) || 0) > 0) {
         this._heal(unit, Math.max(0, Number(unit.traitEngine.healOnKill) || 0));
       }
-      if (unit.specialForm === '花葬ラビリス') this._heal(unit, roundedPercent(unit.maxLife, 0.25));
+      if (hasAwakening(unit, 'base:ノクティス')) this._heal(unit, 8);
+      if (hasAwakening(unit, 'base:ヴォルファング')) unit.statuses.awakening.pending = true;
+      if (hasAwakening(unit, 'base:グラトン')) {
+        const gain = Math.min(5, 15 - (unit.statuses.awakening.maxLifeGain ?? 0));
+        if (gain > 0) {
+          unit.maxLife += gain;
+          unit.life += gain;
+          unit.statuses.awakening.maxLifeGain += gain;
+        }
+      }
+      if (hasAwakening(unit, 'base:ミメシア')) {
+        const atkGain = Math.min(2, 6 - (unit.statuses.awakening.atkGain ?? 0));
+        const defGain = Math.min(2, 6 - (unit.statuses.awakening.defGain ?? 0));
+        unit.atkMod += Math.max(0, atkGain);
+        unit.defMod += Math.max(0, defGain);
+        unit.statuses.awakening.atkGain += Math.max(0, atkGain);
+        unit.statuses.awakening.defGain += Math.max(0, defGain);
+      }
+      if (unit.specialForm === '花葬ラビリス') {
+        this._heal(unit, roundedPercent(unit.maxLife, 0.25));
+        if (hasAwakening(unit, 'fusion:花葬ラビリス')) {
+          if (!unit.statuses.awakening.turnFlags.flowerTp) {
+            player.tp = Math.min(player.maxTp, player.tp + 1);
+            unit.statuses.awakening.turnFlags.flowerTp = true;
+          }
+          if (unit.life >= unit.maxLife) unit.statuses.awakening.pending = true;
+        }
+      }
       if (unit.specialForm === 'デスギアリーパー') unit.atkMod += 8;
+      if (hasAwakening(unit, 'fusion:デスギアリーパー') && !unit.statuses.awakening.battleUsed) {
+        unit.actionPoints += 1;
+        unit.statuses.awakening.battleUsed = true;
+      }
+      if (hasAwakening(unit, 'fusion:フェンリルノクス') && lifeRatio(unit) <= 0.5
+        && !unit.statuses.awakening.battleUsed) {
+        unit.actionPoints += 1;
+        unit.statuses.awakening.battleUsed = true;
+      }
       if (['フェンリルノクス', 'ベヒモスファング', 'クロノヴォア'].includes(unit.specialForm)) {
         player.tp = Math.min(player.maxTp, player.tp + 1);
       }
       if (unit.specialForm === 'ベヒモスファング') {
-        this._heal(unit, 10);
+        this._heal(unit, hasAwakening(unit, 'fusion:ベヒモスファング') ? 15 : 10);
         const applied = unit.statuses.specialCounters.behemothAtk ?? 0;
-        const amount = Math.min(3, 9 - applied);
+        const amount = Math.min(3, (hasAwakening(unit, 'fusion:ベヒモスファング') ? 15 : 9) - applied);
         if (amount > 0) {
           unit.atkMod += amount;
           unit.statuses.specialCounters.behemothAtk = applied + amount;
         }
       }
       if (unit.specialForm === 'グラトニアリリス') {
-        this._heal(unit, 8);
+        this._heal(unit, hasAwakening(unit, 'fusion:グラトニアリリス') ? 12 : 8);
         const applied = unit.statuses.specialCounters.glatoniaAtk ?? 0;
-        const amount = Math.min(2, 6 - applied);
+        const amount = Math.min(2, (hasAwakening(unit, 'fusion:グラトニアリリス') ? 10 : 6) - applied);
         if (amount > 0) {
           unit.atkMod += amount;
           unit.statuses.specialCounters.glatoniaAtk = applied + amount;
         }
       }
+      if (hasAwakening(unit, 'fusion:クロノヴォア') && !unit.statuses.awakening.battleUsed) {
+        unit.statuses.awakening.extraActionNextTurn = true;
+        unit.statuses.awakening.battleUsed = true;
+      }
+      if (hasAwakening(unit, 'fusion:アストラカスミヨ') && unit.movesUsedThisTurn === 0) {
+        player.tp = Math.min(player.maxTp, player.tp + 1);
+      }
+      if (hasAwakening(unit, 'fusion:幽月カスミヨ') && !unit.statuses.awakening.battleUsed) {
+        unit.statuses.evadeNext = true;
+        unit.statuses.awakening.battleUsed = true;
+      }
     }
   }
 
-  _afterMoveUse(unit, move, defeatedTarget) {
+  _afterMoveUse(player, unit, move, defeatedTarget) {
     if (hasNormalTrait(unit, 'デュラハン')) unit.statuses.knightWill = false;
     if (unit.statuses.benihimeCharged) unit.statuses.benihimeCharged = false;
     if (unit.statuses.glaciaCharged) unit.statuses.glaciaCharged = false;
@@ -1130,6 +1412,9 @@ export class BattleEngine {
         unit.defMod += amount;
         unit.statuses.specialCounters.omegaDef = current + amount;
       }
+      if (hasAwakening(unit, 'fusion:アイギスラプトル')) {
+        unit.statuses.nextDamageReduction = Math.max(unit.statuses.nextDamageReduction, 0.1);
+      }
     }
     if (unit.specialForm === 'ユーマ') {
       const stacks = unit.statuses.specialCounters.yumaStacks ?? 0;
@@ -1138,13 +1423,35 @@ export class BattleEngine {
         unit.defMod += 3;
       }
     }
-    if (unit.specialForm === 'マスクドヴァジュラ' && unit.movesUsedThisTurn + 1 >= 2) unit.statuses.gallionGuard = true;
+    if (unit.specialForm === 'マスクドヴァジュラ' && unit.movesUsedThisTurn + 1 >= 2) {
+      unit.statuses.gallionGuard = true;
+      if (hasAwakening(unit, 'fusion:マスクドヴァジュラ') && !unit.statuses.awakening.turnFlags.maskTp) {
+        player.tp = Math.min(player.maxTp, player.tp + 1);
+        unit.statuses.awakening.turnFlags.maskTp = true;
+      }
+    }
     if (unit.specialForm === 'アルケノクロック' && move.tp >= 3) {
       unit.statuses.nextDamageReduction = Math.max(unit.statuses.nextDamageReduction, 0.25);
     }
     if (unit.specialForm === 'フェアリアーク' && unit.movesUsedThisTurn === 0) {
+      unit.statuses.nextDamageReduction = Math.max(unit.statuses.nextDamageReduction,
+        hasAwakening(unit, 'fusion:フェアリアーク') ? 0.3 : 0.2);
+    }
+    if (hasAwakening(unit, 'base:アルケミア') && unit.movesUsedThisTurn === 0 && move.tp >= 3) {
       unit.statuses.nextDamageReduction = Math.max(unit.statuses.nextDamageReduction, 0.2);
     }
+    if (hasAwakening(unit, 'fusion:オブシディアーク')) {
+      unit.statuses.awakening.turnFlags.obsidiark = true;
+    }
+    if (unit.statuses.awakening.consumeCharge > 0
+      && ['fusion:ルミギア・オクト', 'fusion:シャドウリーフ'].includes(unit.awakeningAbilityId)) {
+      unit.statuses.awakening.charge = 0;
+    }
+    if (unit.statuses.awakening.consumePending) {
+      unit.statuses.awakening.pending = false;
+    }
+    unit.statuses.awakening.consumePending = false;
+    unit.statuses.awakening.consumeCharge = 0;
     void defeatedTarget;
   }
 
@@ -1158,6 +1465,9 @@ export class BattleEngine {
     if (unit.specialForm === 'オベリスクグラトン') unit.statuses.specialCounters.obeliskCharge = 0;
     if (unit.specialForm === 'ボルトセラフィア') unit.statuses.specialCounters.boltSeraphCharge = false;
     if (unit.specialForm === 'ガイアミメシア') unit.statuses.specialCounters.gaiaMimesiaCharge = 0;
+    if (['base:ゴーレム', 'fusion:フューチャー', 'fusion:バスティオンレックス'].includes(unit.awakeningAbilityId)) {
+      unit.statuses.awakening.charge = 0;
+    }
   }
 
   _selfDamage(owner, unit, amount) {
@@ -1171,10 +1481,12 @@ export class BattleEngine {
     const units = livingUnits(owner);
     const minimumLife = Math.min(...units.map((unit) => unit.life));
     if (target.life !== minimumLife) return target;
-    return units.find((unit) => unit.id !== target.id && hasNormalTrait(unit, 'モノリス')) ?? target;
+    const redirect = units.find((unit) => unit.id !== target.id && hasNormalTrait(unit, 'モノリス')) ?? null;
+    if (redirect && hasAwakening(redirect, 'base:モノリス')) redirect.statuses.awakening.redirecting = true;
+    return redirect ?? target;
   }
 
-  _removeUnit(owner, unit) {
+  _removeUnit(owner, unit, { allowReturn = true } = {}) {
     const slot = findUnitSlot(owner, unit.id);
     if (slot >= 0) owner.board[slot] = null;
     const sourceCard = {
@@ -1184,7 +1496,7 @@ export class BattleEngine {
       finish: unit.finish ?? 'normal',
       origin: unit.origin ?? 'core',
     };
-    if (unit.statuses.returnToHandOnDefeat && owner.hand.length < RULES.handLimit) {
+    if (allowReturn && unit.statuses.returnToHandOnDefeat && owner.hand.length < RULES.handLimit) {
       owner.hand.push(sourceCard);
       unit.statuses.returnToHandOnDefeat = false;
       this._log('breeder-return', `${unit.name}は霊界から手札へ帰還`, { playerId: owner.id, unitId: unit.id });
@@ -1211,9 +1523,10 @@ export class BattleEngine {
         const source = sourcePlayer ? findUnit(sourcePlayer, parasite.sourceUnitId) : null;
         if (!source) unit.statuses.parasite = null;
         else {
-          unit.life -= 5;
-          this._heal(source, 5);
-          this._log('trait', `寄生根が${unit.name}へ5ダメージ`, {
+          const drain = hasAwakening(source, 'base:プラント') ? 8 : 5;
+          unit.life -= drain;
+          this._heal(source, drain);
+          this._log('trait', `寄生根が${unit.name}へ${drain}ダメージ`, {
             playerId: sourcePlayer.id,
             unitId: unit.id,
             sourceUnitId: source.id,
@@ -1225,11 +1538,28 @@ export class BattleEngine {
     }
 
     for (const unit of livingUnits(player)) {
+      if (hasAwakening(unit, 'base:ゴースト') && unit.statuses.awakening.regrantNextTurn) {
+        unit.statuses.evadeNext = true;
+        unit.statuses.awakening.regrantNextTurn = false;
+      }
+      if (hasAwakening(unit, 'fusion:アルケノクロック') && unit.statuses.awakening.tpNextTurn) {
+        player.tp = Math.min(player.maxTp, player.tp + 1);
+        unit.statuses.awakening.tpNextTurn = false;
+      }
+      if (hasAwakening(unit, 'fusion:クロノヴォア') && unit.statuses.awakening.extraActionNextTurn) {
+        if (!unit.stunnedThisTurn) unit.actionPoints += 1;
+        unit.statuses.awakening.extraActionNextTurn = false;
+      }
+      const beforeNormalHeal = unit.life;
       if (!unit.specialForm && (Number(unit.traitEngine?.turnStartHeal) || 0) > 0) {
         this._heal(unit, Math.max(0, Number(unit.traitEngine.turnStartHeal) || 0));
       }
+      if (hasAwakening(unit, 'base:セラフィノア') && beforeNormalHeal < unit.maxLife && unit.life >= unit.maxLife) {
+        unit.statuses.awakening.barrier = 8;
+      }
       if (unit.statuses.phantomExtraActionPending) {
         if (!unit.stunnedThisTurn) unit.actionPoints += 1;
+        if (hasAwakening(unit, 'fusion:ファントムギア')) this._heal(unit, roundedPercent(unit.maxLife, 0.1));
         unit.statuses.phantomExtraActionPending = false;
       }
       if (hasNormalTrait(unit, 'アルカナロード') && unit.life >= unit.maxLife) {
@@ -1240,30 +1570,57 @@ export class BattleEngine {
           unit.statuses.specialCounters.gariBlessing = current + amount;
         }
       }
+      if (hasAwakening(unit, 'base:アルカナロード')) {
+        if (unit.life >= unit.maxLife) unit.statuses.awakening.pending = true;
+        else this._heal(unit, 5);
+      }
       if (unit.specialForm === 'ヴェルデボルト') {
-        if (unit.life >= unit.maxLife) unit.temporaryAtk += 2;
+        if (unit.life >= unit.maxLife) {
+          unit.temporaryAtk += 2;
+          if (hasAwakening(unit, 'fusion:ヴェルデボルト')) unit.statuses.awakening.barrier = 8;
+        }
         else this._heal(unit, roundedPercent(unit.maxLife, 0.08));
       }
       if (unit.specialForm === 'アオサギビ') {
+        const before = unit.life;
         this._heal(unit, roundedPercent(unit.maxLife, 0.08));
+        if (hasAwakening(unit, 'fusion:アオサギビ') && before < unit.maxLife && unit.life >= unit.maxLife) {
+          unit.statuses.awakening.pending = true;
+        }
         if (lifeRatio(unit) <= 0.5) unit.statuses.temporaryTurnDamageBonus = 0.2;
       }
-      if (unit.specialForm === 'ヤオビクニ') this._heal(unit, roundedPercent(unit.maxLife, 0.08));
+      if (unit.specialForm === 'ヤオビクニ') {
+        this._heal(unit, roundedPercent(unit.maxLife, 0.08));
+        if (hasAwakening(unit, 'fusion:ヤオビクニ') && unit.life >= unit.maxLife) {
+          unit.statuses.nextDamageReduction = Math.max(unit.statuses.nextDamageReduction, 0.25);
+        }
+      }
       if (unit.specialForm === 'クリムゾンフローラ') {
         const healed = this._heal(unit, roundedPercent(unit.maxLife, 0.08));
         if (healed > 0) unit.statuses.benihimeCharged = true;
       }
       if (unit.specialForm === 'ノクスオラクル') {
-        if (lifeRatio(unit) > 0.5) unit.statuses.nextDamageBonus = Math.max(unit.statuses.nextDamageBonus, 0.2);
-        else this._heal(unit, roundedPercent(unit.maxLife, 0.1));
+        if (lifeRatio(unit) > 0.5) {
+          unit.statuses.nextDamageBonus = Math.max(unit.statuses.nextDamageBonus, 0.2);
+          if (hasAwakening(unit, 'fusion:ノクスオラクル')) unit.statuses.awakening.pending = true;
+        } else {
+          this._heal(unit, roundedPercent(unit.maxLife, 0.1));
+          if (hasAwakening(unit, 'fusion:ノクスオラクル')) unit.statuses.awakening.pending = true;
+        }
       }
       if (unit.specialForm === 'エクリシエル') {
-        if (lifeRatio(unit) > 0.5) unit.statuses.nextDamageBonus = Math.max(unit.statuses.nextDamageBonus, 0.2);
-        else this._heal(unit, roundedPercent(unit.maxLife, 0.08));
+        if (lifeRatio(unit) > 0.5) {
+          unit.statuses.nextDamageBonus = Math.max(unit.statuses.nextDamageBonus, 0.2);
+          if (hasAwakening(unit, 'fusion:エクリシエル')) unit.statuses.awakening.pending = true;
+        } else this._heal(unit, roundedPercent(unit.maxLife, hasAwakening(unit, 'fusion:エクリシエル') ? 0.12 : 0.08));
       }
       if (unit.specialForm === 'ヴェルデレオネア') {
-        const healed = this._heal(unit, roundedPercent(unit.maxLife, 0.05));
-        if (healed > 0) unit.statuses.nextDamageBonus = Math.max(unit.statuses.nextDamageBonus, 0.15);
+        const awakened = hasAwakening(unit, 'fusion:ヴェルデレオネア');
+        const healed = this._heal(unit, roundedPercent(unit.maxLife, awakened ? 0.08 : 0.05));
+        if (healed > 0) {
+          unit.statuses.nextDamageBonus = Math.max(unit.statuses.nextDamageBonus, awakened ? 0.2 : 0.15);
+          if (awakened) unit.statuses.awakening.pending = true;
+        }
       }
     }
   }
@@ -1276,9 +1633,10 @@ export class BattleEngine {
           { key: 'atk', ratio: effectiveAtk(unit) / 50 },
           { key: 'def', ratio: effectiveDef(unit) / 40 },
         ].sort((a, b) => a.ratio - b.ratio || a.key.localeCompare(b.key));
-        if (candidates[0].key === 'life') this._heal(unit, roundedPercent(unit.maxLife, 0.1));
-        else if (candidates[0].key === 'atk') unit.atkMod += 4;
-        else unit.defMod += 4;
+        const awakened = hasAwakening(unit, 'fusion:プリズムアルカナ');
+        if (candidates[0].key === 'life') this._heal(unit, roundedPercent(unit.maxLife, awakened ? 0.12 : 0.1));
+        else if (candidates[0].key === 'atk') unit.atkMod += awakened ? 5 : 4;
+        else unit.defMod += awakened ? 5 : 4;
       }
       if (unit.specialForm === 'アルカナミメシア') {
         const candidates = [
@@ -1286,9 +1644,10 @@ export class BattleEngine {
           { key: 'atk', ratio: effectiveAtk(unit) / 50 },
           { key: 'def', ratio: effectiveDef(unit) / 40 },
         ].sort((a, b) => a.ratio - b.ratio || a.key.localeCompare(b.key));
-        if (candidates[0].key === 'life') this._heal(unit, roundedPercent(unit.maxLife, 0.08));
-        else if (candidates[0].key === 'atk') unit.atkMod += 3;
-        else unit.defMod += 3;
+        const awakened = hasAwakening(unit, 'fusion:アルカナミメシア');
+        if (candidates[0].key === 'life') this._heal(unit, roundedPercent(unit.maxLife, awakened ? 0.1 : 0.08));
+        else if (candidates[0].key === 'atk') unit.atkMod += awakened ? 4 : 3;
+        else unit.defMod += awakened ? 4 : 3;
       }
       if (unit.specialForm === 'シャドウリーフ') this._heal(unit, roundedPercent(unit.maxLife, 0.05));
       if ((unit.statuses.autoRepairRemaining ?? 0) > 0) {
