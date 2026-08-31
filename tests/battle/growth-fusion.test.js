@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { currentSp } from '../../src/battle/state.js';
-import { card, engine, monsterByName, moveByName, placeUnit, setHand } from '../helpers.js';
+import { card, engine, masterData, monsterByName, moveByName, placeUnit, setHand } from '../helpers.js';
 
 test('Training costs 2 TP, grants +5, and records tournament growth', () => {
   const battle = engine();
@@ -152,6 +152,40 @@ test('all 48 special recipes are present and set their canonical form/trait', ()
   }
 });
 
+test('renamed special fusions keep stable ids and approved canonical names', () => {
+  const expected = {
+    'fusion-002': 'ルナモルフォ',
+    'fusion-004': 'フロストヴァンガード',
+    'fusion-005': 'ゴウライウルフ',
+    'fusion-006': 'ヴェルデボルト',
+    'fusion-007': 'フェイグラップラー',
+    'fusion-008': 'オブシディアンコング',
+    'fusion-009': 'バスティオンレックス',
+    'fusion-010': 'アルカノレックス',
+    'fusion-013': 'ドラコワーム',
+    'fusion-014': 'アズールドリル',
+    'fusion-015': 'インフェルノジャッジ',
+    'fusion-016': '花葬ラビリス',
+    'fusion-017': 'ビーストバスティオン',
+    'fusion-018': 'レックスメンヒル',
+    'fusion-021': 'アイギスラプトル',
+    'fusion-022': 'デスギアリーパー',
+    'fusion-023': 'イグニギア',
+    'fusion-025': 'マスクドヴァジュラ',
+    'fusion-026': 'プリズムアルカナ',
+    'fusion-027': 'コズミックミューズ',
+    'fusion-031': 'アイギスルミラビ',
+    'fusion-032': 'ルミギア・オクト',
+    'fusion-033': 'クリムゾンフローラ',
+    'fusion-034': 'シャドウリーフ',
+    'fusion-035': 'オブシディアーク',
+  };
+  for (const [id, name] of Object.entries(expected)) {
+    assert.equal(masterData.fusions.find((fusion) => fusion.id === id)?.name, name);
+  }
+  assert.equal(masterData.fusions.find((fusion) => fusion.id === 'fusion-012')?.name, 'オキクサン');
+});
+
 test('special fusion replaces base-trait statuses but preserves ordinary action state', () => {
   const battle = engine();
   const main = placeUnit(battle, 'p1', 'ゴースト', 0);
@@ -176,7 +210,7 @@ test('special fusion replaces base-trait statuses but preserves ordinary action 
 test('recoil damage does not count as being attacked for special traits', () => {
   const battle = engine();
   const unit = placeUnit(battle, 'p1', 'ワーム', 0);
-  unit.specialForm = 'トカゲムシ';
+  unit.specialForm = 'ドラコワーム';
   const beforeDef = unit.defMod;
 
   battle._selfDamage(battle.player('p1'), unit, 5);

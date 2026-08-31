@@ -34,17 +34,18 @@ test('legacy battle checkpoints refresh renamed monsters from their stable maste
   const unit = placeUnit(original, 'p1', 'ギアセンチネル', 0);
   unit.name = 'ヘンガー';
   unit.baseMonsterName = 'ヘンガー';
-  const special = placeUnit(original, 'p1', 'ギアセンチネル', 1);
-  special.name = 'フューチャー';
-  special.specialForm = 'フューチャー';
-  special.baseMonsterName = 'ヘンガー';
-  special.traitName = '未来予測';
+  const special = placeUnit(original, 'p1', 'ピクシー', 1);
+  special.name = 'ナハトファルター';
+  special.specialForm = 'ナハトファルター';
+  special.specialFusionId = 'fusion-002';
+  special.traitName = '窮地の夜蝶';
   const restored = BattleEngine.fromCheckpoint({ masterData, checkpoint: original.toCheckpoint() });
   assert.equal(restored.player('p1').board[0].name, 'ギアセンチネル');
   assert.equal(restored.player('p1').board[0].baseMonsterName, 'ギアセンチネル');
-  assert.equal(restored.player('p1').board[1].name, 'フューチャー');
-  assert.equal(restored.player('p1').board[1].baseMonsterName, 'ギアセンチネル');
-  assert.equal(restored.player('p1').board[1].traitName, '未来予測');
+  assert.equal(restored.player('p1').board[1].name, 'ルナモルフォ');
+  assert.equal(restored.player('p1').board[1].specialForm, 'ルナモルフォ');
+  assert.equal(restored.player('p1').board[1].baseMonsterName, 'ピクシー');
+  assert.equal(restored.player('p1').board[1].traitName, '窮地の夜蝶');
 });
 
 test('card-steal checkpoint preserves offers and unfinished selections', () => {

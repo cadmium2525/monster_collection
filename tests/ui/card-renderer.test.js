@@ -127,9 +127,9 @@ test('card art placement keeps legacy art below the name band and uses standalon
   const special = cardArtPlacement(monster, { specialFusionId: 'fusion-036', specialForm: 'クレバス' });
   assert.equal(special.className, 'monster-art special-fusion-art standalone-fusion-art');
   assert.equal(special.style, '--monster-art:url("./assets/images/special-fusions/fusion-036.webp")');
-  const blueDrill = cardArtPlacement(monster, { specialFusionId: 'fusion-014', specialForm: 'ブルードリル' });
-  assert.equal(blueDrill.className, 'monster-art special-fusion-art standalone-fusion-art');
-  assert.equal(blueDrill.style, '--monster-art:url("./assets/images/special-fusions/fusion-014.webp")');
+  const azureDrill = cardArtPlacement(monster, { specialFusionId: 'fusion-014', specialForm: 'アズールドリル' });
+  assert.equal(azureDrill.className, 'monster-art special-fusion-art standalone-fusion-art');
+  assert.equal(azureDrill.style, '--monster-art:url("./assets/images/special-fusions/fusion-014.webp")');
   const yuma = cardArtPlacement(monster, { specialFusionId: 'fusion-028', specialForm: 'ユーマ' });
   assert.equal(yuma.style, '--monster-art:url("./assets/images/special-fusions/fusion-028.webp");--fusion-art-x:8%');
   const premiumFusion = cardArtPlacement(monster, {
@@ -178,13 +178,13 @@ test('every showcase special fusion is Foil even when its main asset has a norma
   const monster = monsterByName('アストラノイド');
   assert.equal(isFoilAppearance(monster, {
     specialFusionId: 'fusion-027',
-    specialForm: 'ラブラブセイジン',
+    specialForm: 'コズミックミューズ',
     artVariantId: 'showcase-monster-005',
     finish: 'normal',
   }), true);
   assert.equal(isFoilAppearance(monster, {
     specialFusionId: 'fusion-027',
-    specialForm: 'ラブラブセイジン',
+    specialForm: 'コズミックミューズ',
     artVariantId: 'base',
     finish: 'normal',
   }), false);

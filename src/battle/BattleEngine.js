@@ -34,6 +34,7 @@ import {
 import { RULES } from './rules.js';
 import { chooseShugyoMove, learnableShugyoMoves } from './shugyo.js';
 import { canonicalMonsterName } from '../data/monster-name-migration.js';
+import { canonicalSpecialFusionName } from '../data/special-fusion-name-migration.js';
 
 function opposingId(state, playerId) {
   return state.playerOrder.find((id) => id !== playerId);
@@ -87,6 +88,13 @@ export class BattleEngine {
       player.effects.nextTurnFusionLocks ??= [];
       player.effects.nextTurnMoveSurcharges ??= [];
       for (const unit of player.board.filter(Boolean)) {
+        if (unit.specialForm) {
+          const fusion = unit.specialFusionId
+            ? engine.masterIndex.data.fusions.find((candidate) => candidate.id === unit.specialFusionId)
+            : null;
+          unit.specialForm = fusion?.name ?? canonicalSpecialFusionName(unit.specialForm);
+          unit.name = unit.specialForm;
+        }
         const monster = engine.masterIndex.monsters.get(unit.sourceMasterId);
         if (!monster) {
           unit.baseMonsterName = canonicalMonsterName(unit.baseMonsterName);
@@ -600,7 +608,7 @@ export class BattleEngine {
     const card = removeFrom(player.hand, (candidate) => candidate.instanceId === action.cardInstanceId);
     const definition = cardDefinition(this.masterIndex, card);
     const unit = findUnit(player, action.unitId);
-    const bonus = unit.specialForm === 'モチモチエイト' ? 2 : 0;
+    const bonus = unit.specialForm === 'ルミギア・オクト' ? 2 : 0;
     const amount = definition.amount + bonus;
     const growth = player.tournamentGrowth[unit.sourceCardInstanceId];
     let applied = amount;
@@ -634,7 +642,7 @@ export class BattleEngine {
     const card = removeFrom(player.hand, (candidate) => candidate.instanceId === action.cardInstanceId);
     const definition = cardDefinition(this.masterIndex, card);
     const unit = findUnit(player, action.unitId);
-    const extra = unit.specialForm === 'モチモチエイト' ? 2 : 0;
+    const extra = unit.specialForm === 'ルミギア・オクト' ? 2 : 0;
     const lifeGain = this.rng.int(RULES.shugyoGainMin, RULES.shugyoGainMax) + extra;
     const statGainBase = this.rng.int(RULES.shugyoGainMin, RULES.shugyoGainMax) + extra;
     const growth = player.tournamentGrowth[unit.sourceCardInstanceId];
@@ -769,7 +777,7 @@ export class BattleEngine {
       main.statuses.lastAttackTargetId = null;
       main.statuses.consecutiveAttackCount = 0;
       main.statuses.specialCounters = {};
-      if (fusion.name === 'ダークハム') {
+      if (fusion.name === 'オブシディアンコング') {
         main.defMod += 8;
         main.statuses.specialCounters.darkHamDef = 8;
       }
@@ -972,7 +980,7 @@ export class BattleEngine {
         unit.statuses.specialCounters.okikuAtkLoss = applied + amount;
       }
     }
-    if (unit.specialForm === 'トカゲムシ' && !defeated) {
+    if (unit.specialForm === 'ドラコワーム' && !defeated) {
       const applied = unit.statuses.specialCounters.tokageDef ?? 0;
       const amount = Math.min(3, 12 - applied);
       if (amount > 0) {
@@ -980,7 +988,7 @@ export class BattleEngine {
         unit.statuses.specialCounters.tokageDef = applied + amount;
       }
     }
-    if (unit.specialForm === 'ワイルドブロック' && !defeated) {
+    if (unit.specialForm === 'ビーストバスティオン' && !defeated) {
       const applied = unit.statuses.specialCounters.wildAtk ?? 0;
       const amount = Math.min(4, 16 - applied);
       if (amount > 0) {
@@ -995,7 +1003,7 @@ export class BattleEngine {
         unit.defMod -= 3;
       }
     }
-    if (unit.specialForm === 'ウスバカゲソウ' && !defeated) {
+    if (unit.specialForm === 'シャドウリーフ' && !defeated) {
       const applied = unit.statuses.specialCounters.usubaDef ?? 0;
       const amount = Math.min(2, 10 - applied);
       if (amount > 0) {
@@ -1069,8 +1077,8 @@ export class BattleEngine {
       if (!unit.specialForm && (Number(unit.traitEngine?.healOnKill) || 0) > 0) {
         this._heal(unit, Math.max(0, Number(unit.traitEngine.healOnKill) || 0));
       }
-      if (unit.specialForm === 'サクラチル') this._heal(unit, roundedPercent(unit.maxLife, 0.25));
-      if (unit.specialForm === 'エンドブリンガー') unit.atkMod += 8;
+      if (unit.specialForm === '花葬ラビリス') this._heal(unit, roundedPercent(unit.maxLife, 0.25));
+      if (unit.specialForm === 'デスギアリーパー') unit.atkMod += 8;
       if (['フェンリルノクス', 'ベヒモスファング', 'クロノヴォア'].includes(unit.specialForm)) {
         player.tp = Math.min(player.maxTp, player.tp + 1);
       }
@@ -1091,7 +1099,7 @@ export class BattleEngine {
     if (unit.statuses.benihimeCharged) unit.statuses.benihimeCharged = false;
     if (unit.statuses.glaciaCharged) unit.statuses.glaciaCharged = false;
 
-    if (unit.specialForm === 'ダークハム') {
+    if (unit.specialForm === 'オブシディアンコング') {
       const current = unit.statuses.specialCounters.darkHamMoveDef ?? 0;
       const amount = Math.min(2, 16 - current);
       if (amount > 0) {
@@ -1099,7 +1107,7 @@ export class BattleEngine {
         unit.statuses.specialCounters.darkHamMoveDef = current + amount;
       }
     }
-    if (unit.specialForm === 'オメガレックス' && move.tp >= 3) {
+    if (unit.specialForm === 'アイギスラプトル' && move.tp >= 3) {
       const current = unit.statuses.specialCounters.omegaDef ?? 0;
       const amount = Math.min(4, 16 - current);
       if (amount > 0) {
@@ -1114,7 +1122,7 @@ export class BattleEngine {
         unit.defMod += 3;
       }
     }
-    if (unit.specialForm === 'ガリオン' && unit.movesUsedThisTurn + 1 >= 2) unit.statuses.gallionGuard = true;
+    if (unit.specialForm === 'マスクドヴァジュラ' && unit.movesUsedThisTurn + 1 >= 2) unit.statuses.gallionGuard = true;
     if (unit.specialForm === 'アルケノクロック' && move.tp >= 3) {
       unit.statuses.nextDamageReduction = Math.max(unit.statuses.nextDamageReduction, 0.25);
     }
@@ -1133,7 +1141,7 @@ export class BattleEngine {
 
   _selfDamage(owner, unit, amount) {
     // Recoil is damage, but it is not an opponent attack and must not trigger
-    // "when attacked" special traits such as トカゲムシ or オキクサン.
+    // "when attacked" special traits such as ドラコワーム or オキクサン.
     const result = this._damageUnit(owner, unit, amount, null, { triggerAttacked: false });
     if (result.defeated) this._log('self-defeat', `${unit.name}は反動で撃破された`, { unitId: unit.id });
   }
@@ -1208,7 +1216,7 @@ export class BattleEngine {
           unit.statuses.specialCounters.gariBlessing = current + amount;
         }
       }
-      if (unit.specialForm === 'エコノキックス') {
+      if (unit.specialForm === 'ヴェルデボルト') {
         if (unit.life >= unit.maxLife) unit.temporaryAtk += 2;
         else this._heal(unit, roundedPercent(unit.maxLife, 0.08));
       }
@@ -1217,7 +1225,7 @@ export class BattleEngine {
         if (lifeRatio(unit) <= 0.5) unit.statuses.temporaryTurnDamageBonus = 0.2;
       }
       if (unit.specialForm === 'ヤオビクニ') this._heal(unit, roundedPercent(unit.maxLife, 0.08));
-      if (unit.specialForm === 'ベニヒメソウ') {
+      if (unit.specialForm === 'クリムゾンフローラ') {
         const healed = this._heal(unit, roundedPercent(unit.maxLife, 0.08));
         if (healed > 0) unit.statuses.benihimeCharged = true;
       }
@@ -1230,7 +1238,7 @@ export class BattleEngine {
 
   _applyTurnEndEffects(player) {
     for (const unit of livingUnits(player)) {
-      if (unit.specialForm === 'カラフルマスク') {
+      if (unit.specialForm === 'プリズムアルカナ') {
         const candidates = [
           { key: 'life', ratio: lifeRatio(unit) },
           { key: 'atk', ratio: effectiveAtk(unit) / 50 },
@@ -1240,7 +1248,7 @@ export class BattleEngine {
         else if (candidates[0].key === 'atk') unit.atkMod += 4;
         else unit.defMod += 4;
       }
-      if (unit.specialForm === 'ウスバカゲソウ') this._heal(unit, roundedPercent(unit.maxLife, 0.05));
+      if (unit.specialForm === 'シャドウリーフ') this._heal(unit, roundedPercent(unit.maxLife, 0.05));
       if ((unit.statuses.autoRepairRemaining ?? 0) > 0) {
         this._heal(unit, 5);
         unit.statuses.autoRepairRemaining -= 1;

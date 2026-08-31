@@ -37,8 +37,40 @@ const MONSTER_RENAMES = Object.freeze({
   'ディノ': 'フェザーレックス',
 });
 
+const SPECIAL_FUSION_RENAMES = Object.freeze({
+  'ナハトファルター': 'ルナモルフォ',
+  'グレイシア': 'フロストヴァンガード',
+  'ハムライガー': 'ゴウライウルフ',
+  'エコノキックス': 'ヴェルデボルト',
+  'ヴァージアハピ': 'フェイグラップラー',
+  'ダークハム': 'オブシディアンコング',
+  'アンキロックス': 'バスティオンレックス',
+  'ガリニクス': 'アルカノレックス',
+  'トカゲムシ': 'ドラコワーム',
+  'ブルードリル': 'アズールドリル',
+  'フレアデス': 'インフェルノジャッジ',
+  'サクラチル': '花葬ラビリス',
+  'ワイルドブロック': 'ビーストバスティオン',
+  'ジュラスウォール': 'レックスメンヒル',
+  'オメガレックス': 'アイギスラプトル',
+  'エンドブリンガー': 'デスギアリーパー',
+  'ラプタ': 'イグニギア',
+  'ガリオン': 'マスクドヴァジュラ',
+  'カラフルマスク': 'プリズムアルカナ',
+  'ラブラブセイジン': 'コズミックミューズ',
+  'ヨロイモッチー': 'アイギスルミラビ',
+  'モチモチエイト': 'ルミギア・オクト',
+  'ベニヒメソウ': 'クリムゾンフローラ',
+  'ウスバカゲソウ': 'シャドウリーフ',
+  'ラグナロックス': 'オブシディアーク',
+});
+
 function monsterName(value) {
   return MONSTER_RENAMES[value] ?? value;
+}
+
+function specialFusionName(value) {
+  return SPECIAL_FUSION_RENAMES[value] ?? value;
 }
 
 const moveIdsByMonster = new Map();
@@ -94,7 +126,7 @@ const fusions = fusionRows.map((row, index) => ({
   id: `fusion-${pad(index + 1)}`,
   main: monsterName(row['メイン']),
   material: monsterName(row['サブ']),
-  name: row['特殊個体'],
+  name: specialFusionName(row['特殊個体']),
   trait: row['固有特性'],
   archetype: row['設計タイプ'],
   powerIndex: number(row['Sim7.19 Power Index']),

@@ -63,7 +63,7 @@ def rebuild_legacy_fusions(root: Path, dry_run: bool) -> tuple[int, int]:
     changed = 0
     saved = 0
     for index in range(1, 37):
-        if index == 14:  # ブルードリルは専用の修正版を維持する。
+        if index == 14:  # アズールドリルは専用の修正版を維持する。
             continue
         column = (index - 1) % 6
         row = (index - 1) // 6

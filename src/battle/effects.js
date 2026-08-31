@@ -42,7 +42,7 @@ export function resolvedMoveTp(player, unit, target, move) {
   if (!unit.specialForm && firstMove) cost -= Math.max(0, Number(unit.traitEngine?.firstMoveDiscount) || 0);
   cost -= player.effects.factionMoveDiscount[unit.faction] ?? 0;
 
-  if (unit.specialForm === 'ラブラブセイジン' && firstMove) cost -= 1;
+  if (unit.specialForm === 'コズミックミューズ' && firstMove) cost -= 1;
   if (['アルケノクロック', 'ソルフェニキア', 'アストラレイ'].includes(unit.specialForm) && firstMove) cost -= 1;
   cost = Math.max(1, cost);
 
@@ -114,21 +114,21 @@ export function outgoingDamageMultiplier(unit, target, move, opponent) {
   if (unit.statuses.nextDamagePenalty) multiplier *= Math.max(0, 1 - unit.statuses.nextDamagePenalty);
   if (unit.statuses.temporaryTurnDamageBonus) multiplier *= 1 + unit.statuses.temporaryTurnDamageBonus;
 
-  if (special === 'ナハトファルター' && lowSelf) multiplier *= 1.3;
-  if (special === 'ハムライガー' && move.tp === 2) multiplier *= 1.25;
-  if (special === 'ヴァージアハピ') multiplier *= 1.2;
-  if (special === 'ガリニクス' && target && lifeRatio(target) > lifeRatio(unit)) multiplier *= 1.3;
-  if (special === 'ブルードリル' && target && unit.statuses.lastAttackTargetId === target.id) {
+  if (special === 'ルナモルフォ' && lowSelf) multiplier *= 1.3;
+  if (special === 'ゴウライウルフ' && move.tp === 2) multiplier *= 1.25;
+  if (special === 'フェイグラップラー') multiplier *= 1.2;
+  if (special === 'アルカノレックス' && target && lifeRatio(target) > lifeRatio(unit)) multiplier *= 1.3;
+  if (special === 'アズールドリル' && target && unit.statuses.lastAttackTargetId === target.id) {
     multiplier *= 1 + Math.min(3, unit.statuses.consecutiveAttackCount) * 0.15;
   }
-  if (special === 'フレアデス' && lowTarget) multiplier *= 1.4;
+  if (special === 'インフェルノジャッジ' && lowTarget) multiplier *= 1.4;
   if (special === 'アンゴルモア' && move.tp >= 4) multiplier *= 1.35;
   if (special === 'タイラント' && target && effectiveAtk(unit) >= effectiveDef(target)) multiplier *= 1.3;
-  if (special === 'ラプタ' && unit.movesUsedThisTurn === 0) multiplier *= 1.25;
+  if (special === 'イグニギア' && unit.movesUsedThisTurn === 0) multiplier *= 1.25;
   if (special === 'アオサギビ' && lowSelf) multiplier *= 1.2;
-  if (special === 'ベニヒメソウ' && unit.statuses.benihimeCharged) multiplier *= 1.2;
-  if (special === 'グレイシア' && unit.statuses.glaciaCharged) multiplier *= 1.2;
-  if (special === 'ラグナロックス' && target) {
+  if (special === 'クリムゾンフローラ' && unit.statuses.benihimeCharged) multiplier *= 1.2;
+  if (special === 'フロストヴァンガード' && unit.statuses.glaciaCharged) multiplier *= 1.2;
+  if (special === 'オブシディアーク' && target) {
     const minimum = Math.min(...livingUnits(opponent).map((candidate) => effectiveDef(candidate)));
     if (effectiveDef(target) === minimum) multiplier *= 1.5;
   }
@@ -162,33 +162,33 @@ export function applyIncomingModifiers(unit, rawDamage) {
     triggers.push(unit.traitName);
   }
 
-  if (unit.specialForm === 'ナハトファルター' && lifeRatio(unit) <= 0.5) {
+  if (unit.specialForm === 'ルナモルフォ' && lifeRatio(unit) <= 0.5) {
     damage = Math.floor(damage * 0.8);
-    triggers.push('ナハトファルター');
+    triggers.push('ルナモルフォ');
   }
   if (unit.specialForm === 'フューチャー' && !unit.statuses.firstIncomingUsed) {
     damage = Math.min(damage, Math.floor(unit.maxLife * 0.25));
     unit.statuses.firstIncomingUsed = true;
     triggers.push('フューチャー');
   }
-  if (unit.specialForm === 'グレイシア' && !unit.statuses.firstIncomingUsed) {
+  if (unit.specialForm === 'フロストヴァンガード' && !unit.statuses.firstIncomingUsed) {
     damage = Math.floor(damage * 0.7);
     unit.statuses.firstIncomingUsed = true;
     unit.statuses.glaciaCharged = true;
-    triggers.push('グレイシア');
+    triggers.push('フロストヴァンガード');
   }
-  if (unit.specialForm === 'ヨロイモッチー' && !unit.statuses.firstIncomingUsed) {
+  if (unit.specialForm === 'アイギスルミラビ' && !unit.statuses.firstIncomingUsed) {
     damage = Math.floor(damage * 0.6);
     unit.statuses.firstIncomingUsed = true;
-    triggers.push('ヨロイモッチー');
+    triggers.push('アイギスルミラビ');
   }
-  if (unit.specialForm === 'アンキロックス' && damage >= unit.maxLife * 0.2) {
+  if (unit.specialForm === 'バスティオンレックス' && damage >= unit.maxLife * 0.2) {
     damage = Math.floor(damage * 0.7);
-    triggers.push('アンキロックス');
+    triggers.push('バスティオンレックス');
   }
-  if (unit.specialForm === 'ジュラスウォール' && lifeRatio(unit) >= 0.7) {
+  if (unit.specialForm === 'レックスメンヒル' && lifeRatio(unit) >= 0.7) {
     damage = Math.floor(damage * 0.7);
-    triggers.push('ジュラスウォール');
+    triggers.push('レックスメンヒル');
   }
   if (unit.specialForm === 'ファントムギア' && !unit.statuses.firstIncomingUsed) {
     damage = Math.floor(damage * 0.75);
@@ -210,7 +210,7 @@ export function applyIncomingModifiers(unit, rawDamage) {
   }
   if (unit.statuses.gallionGuard) {
     damage = Math.floor(damage * 0.7);
-    triggers.push('ガリオン');
+    triggers.push('マスクドヴァジュラ');
   }
   return { damage, triggers };
 }

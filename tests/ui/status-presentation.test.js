@@ -68,8 +68,8 @@ test('Joker target guidance lists every effect that becomes active at fifty perc
   assert.deepEqual(lowLifeTargetEffects(joker, { ...target, life: 16 }, { name: 'デスゲート' }), []);
 });
 
-test('Flaredes target guidance exposes its low-LIFE damage bonus', () => {
-  const source = unit({ specialForm: 'フレアデス' });
+test('Inferno Judge target guidance exposes its low-LIFE damage bonus', () => {
+  const source = unit({ specialForm: 'インフェルノジャッジ' });
   const target = unit({ life: 10, maxLife: 30 });
   assert.deepEqual(lowLifeTargetEffects(source, target, { name: 'フレアブレス' }), ['与ダメージ+40%']);
 });

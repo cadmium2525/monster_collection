@@ -109,6 +109,6 @@ export function lowLifeTargetEffects(source, target, move) {
     if (move.name === 'デスファイナル') effects.push('消費TP-1');
     if (move.name === 'デスゲート') effects.push('DEFを5低く扱う');
   }
-  if (source.specialForm === 'フレアデス') effects.push('与ダメージ+40%');
+  if (source.specialForm === 'インフェルノジャッジ') effects.push('与ダメージ+40%');
   return effects;
 }
