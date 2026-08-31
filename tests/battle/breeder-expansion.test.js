@@ -316,7 +316,7 @@ test('beast and monster breeder cards reward hunting, packs, gluttony and predat
   const predator = placeUnit(evolve, 'p1', 'ジョーカー', 0, { life: 10 });
   const victim = placeUnit(evolve, 'p2', 'モノリス', 0, { life: 1 });
   predator.atkBase = 100;
-  predator.equippedMoveIds = [moveByName('ジョーカー', 'デスパンチ').id];
+  predator.equippedMoveIds = [moveByName('ジョーカー', '凶兆拳').id];
   const predationAtk = predator.atkMod;
   useOnUnit(evolve, 'breeder-040', predator);
   evolve.applyAction(evolve.getLegalActions().find((action) => action.type === 'move' && action.targetUnitId === victim.id));

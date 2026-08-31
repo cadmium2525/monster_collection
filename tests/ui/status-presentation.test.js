@@ -62,10 +62,10 @@ test('visible status entries describe meaningful effects and exclude consumed in
 test('Joker target guidance lists every effect that becomes active at fifty percent', () => {
   const joker = unit();
   const target = unit({ baseMonsterName: 'ゴーレム', life: 15, maxLife: 30 });
-  assert.deepEqual(lowLifeTargetEffects(joker, target, { name: 'デスファイナル' }), ['技威力+20', '消費TP-1']);
-  assert.deepEqual(lowLifeTargetEffects(joker, target, { name: 'デスゲート' }), ['技威力+20', 'DEFを5低く扱う']);
-  assert.deepEqual(lowLifeTargetEffects(joker, target, { name: 'デスカッター' }), ['技威力+20']);
-  assert.deepEqual(lowLifeTargetEffects(joker, { ...target, life: 16 }, { name: 'デスゲート' }), []);
+  assert.deepEqual(lowLifeTargetEffects(joker, target, { id: 'move-084', name: '終焉執行' }), ['技威力+20', '消費TP-1']);
+  assert.deepEqual(lowLifeTargetEffects(joker, target, { id: 'move-090', name: '冥界門' }), ['技威力+20', 'DEFを5低く扱う']);
+  assert.deepEqual(lowLifeTargetEffects(joker, target, { id: 'move-085', name: '断魂刃' }), ['技威力+20']);
+  assert.deepEqual(lowLifeTargetEffects(joker, { ...target, life: 16 }, { id: 'move-090', name: '冥界門' }), []);
 });
 
 test('Inferno Judge target guidance exposes its low-LIFE damage bonus', () => {

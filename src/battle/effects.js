@@ -33,9 +33,9 @@ export function resolvedMoveTp(player, unit, target, move) {
   let cost = move.tp;
   const firstMove = unit.movesUsedThisTurn === 0;
 
-  if (move.name === 'ガッチャー' && lifeRatio(unit) <= 0.5) cost -= 1;
-  if (move.name === 'ゴッドストライク' && unit.life >= unit.maxLife) cost -= 1;
-  if (move.name === 'デスファイナル' && target && lifeRatio(target) <= 0.5) cost -= 1;
+  if (move.id === 'move-011' && lifeRatio(unit) <= 0.5) cost -= 1;
+  if (move.id === 'move-158' && unit.life >= unit.maxLife) cost -= 1;
+  if (move.id === 'move-084' && target && lifeRatio(target) <= 0.5) cost -= 1;
 
   if (hasNormalTrait(unit, 'アストラノイド') && firstMove && move.rank <= 3) cost -= 1;
   if (hasNormalTrait(unit, 'ボルトウルフ') && firstMove) cost -= 1;
@@ -68,11 +68,11 @@ export function resolvedMovePower(unit, target, move) {
   const lowSelf = lifeRatio(unit) <= 0.5;
 
   if (move.name === 'フラワービーム' && target?.statuses.parasite) power = 150;
-  if (move.name === 'もっさん' && lowSelf) power = 130;
-  if (move.name === '超モッチ砲' && lowSelf) power = 150;
-  if (move.name === 'ゴッドアタック' && fullLife) power = 140;
-  if (move.name === '神の怒り' && fullLife) power = 150;
-  if (move.name === '冥王剣' && unit.statuses.knightWill) power = 150;
+  if (move.id === 'move-014' && lowSelf) power = 130;
+  if (move.id === 'move-018' && lowSelf) power = 150;
+  if (move.id === 'move-156' && fullLife) power = 140;
+  if (move.id === 'move-159' && fullLife) power = 150;
+  if (move.id === 'move-039' && unit.statuses.knightWill) power = 150;
 
   if (hasNormalTrait(unit, 'ジョーカー') && lowTarget) power += 20;
   return power;
@@ -84,7 +84,7 @@ export function defenseIgnore(player, unit, target, move) {
   if (!unit.specialForm) ignore += Math.max(0, Number(unit.traitEngine?.defenseIgnore) || 0);
   if (move.effect.includes('追加でDEF5無視')) ignore += 5;
   if (move.effect.includes('追加でDEF10無視')) ignore += 10;
-  if (move.name === 'デスゲート' && lifeRatio(target) <= 0.5) ignore += 5;
+  if (move.id === 'move-090' && lifeRatio(target) <= 0.5) ignore += 5;
   if (['ネビュラミア', 'アストラレイ'].includes(unit.specialForm) && unit.movesUsedThisTurn === 0) ignore += 10;
   const breederIgnore = unit.statuses.vsCreationDefIgnore;
   if (breederIgnore) {

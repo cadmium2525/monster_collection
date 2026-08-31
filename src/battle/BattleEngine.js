@@ -358,7 +358,7 @@ export class BattleEngine {
         if (!move) continue;
         if (move.power == null) {
           const cost = resolvedMoveTp(player, unit, null, move);
-          if (player.tp >= cost && !(move.name === 'フォームアルファ' && unit.statuses.formAlphaUsed)) {
+          if (player.tp >= cost && !(move.id === 'move-111' && unit.statuses.formAlphaUsed)) {
             actions.push({ type: 'move', unitId: unit.id, moveId, targetUnitId: null, cost, label: move.name });
           }
           continue;

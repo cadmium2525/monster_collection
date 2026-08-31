@@ -1,6 +1,7 @@
 import fs from 'node:fs';
 import path from 'node:path';
 import { readSheet } from './read-ooxml-sheet.mjs';
+import { MOVE_NAME_OVERRIDES } from '../src/data/move-name-overrides.js';
 
 const root = path.resolve(import.meta.dirname, '..');
 const workbook = path.join(root, '.tmp_master_main', 'xl', 'worksheets');
@@ -82,7 +83,7 @@ const moves = moveRows.map((row, index) => {
   return {
     id,
     monsterName: ownerName,
-    name: row['技名'],
+    name: MOVE_NAME_OVERRIDES[id] ?? row['技名'],
     rank: number(row['Rank']),
     power: row['威力'] === '―' ? null : number(row['威力']),
     tp: number(row['TP']),
@@ -144,30 +145,30 @@ const growthCards = [
 
 const shugyoPools = {
   'プラント': { attack: ['ドレイン', '根縛り', 'エナジードレイン'], defense: ['フラワービーム', '毒花粉', '花粉'] },
-  'ルミラビ': { attack: ['もっさん', 'ローリンモッチ', 'もっさまん'], defense: ['超モッチ砲', 'モッチ砲', 'ガッチャー'] },
+  'ルミラビ': { attack: ['ラビットラッシュ', 'ルミロール', 'ムーンスタンプ'], defense: ['ルミナ・ノヴァ', 'ルミナ弾', 'ラビキャッチ'] },
   'ウンディーネ': { attack: ['メイルストローム', 'アクアウェイブ', 'フリーズランス'], defense: ['アイスストーム', 'アクアスピア', 'アイスクラッシュ'] },
   'ピクシー': { attack: ['ギガレイ', 'デスキッス', 'ビッグバン'], defense: ['レイ', 'キック', 'ライトニング'] },
-  'デュラハン': { attack: ['連続斬り', '冥王剣', '真空斬'], defense: ['真・風神剣', '最終奥義', '大車輪'] },
+  'デュラハン': { attack: ['連続斬り', '冥府断ち', '真空斬'], defense: ['天翔蒼嵐', '最終奥義', '大車輪'] },
   'ドラゴン': { attack: ['ルインクロス', 'インフェルノ', 'しっぽアタック'], defense: ['ドラゴンラッシュ', 'ドラゴンパンチ', 'ウイングアタック'] },
   'ボルトウルフ': { attack: ['雷牙', 'サンダー', 'ワンツー'], defense: ['雷撃', '空中回転アタック', '超雷撃'] },
-  'コンゴウ': { attack: ['連続パンチ', '超飛び蹴り', '超ドラゴンパンチ'], defense: ['ドラゴンパンチ', '大砲屁', 'バックナックル'] },
+  'コンゴウ': { attack: ['連続パンチ', '超飛び蹴り', '金剛轟拳'], defense: ['金剛拳', '金剛爆風', 'バックナックル'] },
   'フェザーレックス': { attack: ['暴れまわり', '火炎連砲', '突進'], defense: ['しっぽビンタ', '連続かみつき', '火炎'] },
-  'ジョーカー': { attack: ['デススラッシュ', 'デスエナジー', 'デスナックル'], defense: ['デスファイナル', 'デスゲート', 'デスウェーブ'] },
+  'ジョーカー': { attack: ['冥府裂き', '禍力奔流', '葬送拳'], defense: ['終焉執行', '冥界門', '葬魂波'] },
   'ワーム': { attack: ['大毒液', '毒牙', '毒液'], defense: ['連続突き', '牙斬り', 'くし刺し'] },
-  'ゴースト': { attack: ['ソウルビーム', 'ナイトメア', 'コンビネーション'], defense: ['ソウルショット', '大きなおとしもの', '大パンチ'] },
-  'モノリス': { attack: ['ひっかき', 'フォームアルファ', 'デルタアタック'], defense: ['怪光線', 'トリオビームX', 'トリオビームY'] },
+  'ゴースト': { attack: ['ソウルビーム', 'ナイトメア', 'コンビネーション'], defense: ['ソウルショット', 'あの世の落とし物', '大パンチ'] },
+  'モノリス': { attack: ['ひっかき', '第一防衛形態', '三極殲光'], defense: ['怪光線', '三連収束光', '三連貫通光'] },
   'ギアセンチネル': { attack: ['アイショット', 'ドリルアタック', 'ロケットパンチ'], defense: ['ギガレーザー', 'ダブルアタック', 'アームキャノン'] },
   'ゴーレム': { attack: ['大地震', '地震', '竜巻アタック'], defense: ['大パンチ', 'ハンマーナックル', 'ロケットパンチ'] },
   'ヒノトリ': { attack: ['フレイムタイフーン', 'フレイムライン', 'かぎづめ'], defense: ['エタニティフレア', 'ファイアウェーブ', 'ファイアビーム'] },
-  'アストラノイド': { attack: ['超メタビーム', 'テツざんこう', 'ツイン掌打'], defense: ['宙ポン拳', '閃光掌', '右たん脚'] },
-  'アルカナロード': { attack: ['ホーリーサンダー', 'ゴッドファイナル', '神の怒り'], defense: ['プレス', 'ゴッドストライク', 'ゴッドアタック'] },
+  'アストラノイド': { attack: ['星核光砲', '隕鉄衝', '双星掌'], defense: ['無重力拳', '光子掌', '軌道蹴'] },
+  'アルカナロード': { attack: ['聖刻雷', '終極秘儀', '天罰降臨'], defense: ['プレス', '天秤の裁き', '聖紋突撃'] },
 };
 
 const master = {
   meta: {
     savepoint: 'Sim8.7_完全展開版',
     cardMaster: 'Ver5_Sim7.19',
-    moveMaster: 'Ver1_162技',
+    moveMaster: 'Ver2_独自技名162技',
     generatedAt: '2026-08-24',
     distanceSystem: 'removed-by-user-amendment-2026-08-24',
     legacyDistanceFieldsAreNonGameplay: true,
@@ -179,6 +180,18 @@ const master = {
   fusions,
   shugyoPools,
 };
+
+const existing = fs.existsSync(output) ? JSON.parse(fs.readFileSync(output, 'utf8')) : null;
+const wouldTruncateExpandedMaster = existing
+  && (existing.monsters.length > monsters.length
+    || existing.moves.length > moves.length
+    || existing.fusions.length > fusions.length);
+if (wouldTruncateExpandedMaster && !process.argv.includes('--allow-legacy-truncate')) {
+  throw new Error(
+    'Legacy workbook is missing expanded master records. '
+    + 'Refusing to overwrite master-data.json; pass --allow-legacy-truncate only for intentional legacy regeneration.',
+  );
+}
 
 fs.mkdirSync(path.dirname(output), { recursive: true });
 fs.writeFileSync(output, `${JSON.stringify(master, null, 2)}\n`, 'utf8');

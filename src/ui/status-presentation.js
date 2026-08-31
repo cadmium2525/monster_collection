@@ -106,8 +106,8 @@ export function lowLifeTargetEffects(source, target, move) {
   const effects = [];
   if (!source.specialForm && source.baseMonsterName === 'ジョーカー') {
     effects.push('技威力+20');
-    if (move.name === 'デスファイナル') effects.push('消費TP-1');
-    if (move.name === 'デスゲート') effects.push('DEFを5低く扱う');
+    if (move.id === 'move-084') effects.push('消費TP-1');
+    if (move.id === 'move-090') effects.push('DEFを5低く扱う');
   }
   if (source.specialForm === 'インフェルノジャッジ') effects.push('与ダメージ+40%');
   return effects;
