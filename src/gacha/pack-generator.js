@@ -5,8 +5,8 @@ import { boosterPack } from './pack-catalog.js';
 import { baseCardRarity } from '../cards/card-rarity.js';
 
 const FEATURED_VARIANTS = Object.freeze({
-  '無機': Object.freeze({ masterId: 'monster-019', artVariantId: 'showcase-inorganic-01' }),
-  '創造': Object.freeze({ masterId: 'monster-020', artVariantId: 'showcase-creation-01' }),
+  '機鋼': Object.freeze({ masterId: 'monster-019', artVariantId: 'showcase-inorganic-01' }),
+  '神造': Object.freeze({ masterId: 'monster-020', artVariantId: 'showcase-creation-01' }),
   '幻霊': Object.freeze({ masterId: 'monster-021', artVariantId: 'showcase-spirit-01' }),
   '魔族': Object.freeze({ masterId: 'monster-022', artVariantId: 'showcase-demon-01' }),
   '獣族': Object.freeze({ masterId: 'monster-023', artVariantId: 'showcase-beast-01' }),
@@ -14,13 +14,38 @@ const FEATURED_VARIANTS = Object.freeze({
 });
 
 const LEGACY_SHOWCASE_IDS = Object.freeze({
-  '無機': Object.freeze(['monster-001', 'monster-002', 'monster-003']),
-  '創造': Object.freeze(['monster-004', 'monster-005', 'monster-006']),
+  '機鋼': Object.freeze(['monster-001', 'monster-002', 'monster-003']),
+  '神造': Object.freeze(['monster-004', 'monster-005', 'monster-006']),
   '幻霊': Object.freeze(['monster-007', 'monster-008', 'monster-009']),
   '魔族': Object.freeze(['monster-010', 'monster-011', 'monster-012']),
   '獣族': Object.freeze(['monster-013', 'monster-014', 'monster-015']),
   '怪物': Object.freeze(['monster-016', 'monster-017', 'monster-018']),
 });
+
+const FEATURED_MONSTERS = Object.freeze({
+  '機鋼': Object.freeze({ masterId: 'monster-025' }),
+  '神造': Object.freeze({ masterId: 'monster-026' }),
+  '幻霊': Object.freeze({ masterId: 'monster-027' }),
+  '魔族': Object.freeze({ masterId: 'monster-028' }),
+  '獣族': Object.freeze({ masterId: 'monster-029' }),
+  '怪物': Object.freeze({ masterId: 'monster-030' }),
+});
+
+const GUARANTEED_MONSTER_IDS = Object.freeze({
+  '機鋼': Object.freeze(['monster-019', 'monster-025']),
+  '神造': Object.freeze(['monster-020', 'monster-026']),
+  '幻霊': Object.freeze(['monster-021', 'monster-027']),
+  '魔族': Object.freeze(['monster-022', 'monster-028']),
+  '獣族': Object.freeze(['monster-023', 'monster-029']),
+  '怪物': Object.freeze(['monster-024', 'monster-030']),
+});
+
+const NEW_SHOWCASE_VARIANTS = Object.freeze(Object.fromEntries(
+  Object.entries(FEATURED_MONSTERS).map(([faction, { masterId }]) => [faction, Object.freeze({
+    masterId,
+    artVariantId: `showcase-${masterId}`,
+  })]),
+));
 
 const SHOWCASE_VARIANTS = Object.freeze(Object.fromEntries(
   Object.entries(FEATURED_VARIANTS).map(([faction, featured]) => [faction, Object.freeze([
@@ -29,6 +54,7 @@ const SHOWCASE_VARIANTS = Object.freeze(Object.fromEntries(
       masterId,
       artVariantId: `showcase-${masterId}`,
     })),
+    NEW_SHOWCASE_VARIANTS[faction],
   ])]),
 ));
 
@@ -48,20 +74,23 @@ function uniqueDefinitions(masterIndex) {
 
 function factionFor(definition) {
   if (definition.kind === 'monster') return definition.faction;
-  if (definition.kind === 'breeder' && definition.category === 'モン類専用') {
-    return definition.name.split('・')[0];
+  if (definition.kind === 'breeder' && definition.category === '分類専用') {
+    return definition.faction ?? definition.name.split('・')[0];
   }
   return null;
 }
 
 export function boosterPools(masterIndex, faction) {
   const eligible = uniqueDefinitions(masterIndex);
+  const guaranteedMonsters = (GUARANTEED_MONSTER_IDS[faction] ?? [])
+    .map((masterId) => masterIndex.cards.get(masterId))
+    .filter(Boolean);
   return {
     eligible,
     themed: eligible.filter((definition) => factionFor(definition) === faction),
     monsters: eligible.filter((definition) => definition.kind === 'monster' && definition.faction === faction),
     generic: eligible.filter((definition) => !factionFor(definition)),
-    featured: FEATURED_VARIANTS[faction],
+    guaranteedMonsters,
     showcases: SHOWCASE_VARIANTS[faction] ?? [],
   };
 }
@@ -92,19 +121,17 @@ function mixedDistribution(parts) {
 }
 
 export function boosterPackDisclosure({ masterIndex, faction, openedCount = 0 }) {
-  const { eligible, themed, monsters, generic, featured, showcases } = boosterPools(masterIndex, faction);
+  const { eligible, themed, monsters, generic, guaranteedMonsters, showcases } = boosterPools(masterIndex, faction);
   const nextPackNumber = Math.max(0, Math.trunc(Number(openedCount) || 0)) + 1;
-  const featuredDefinition = featured ? masterIndex.cards.get(featured.masterId) : null;
   const availableShowcases = showcases.filter((variant) => masterIndex.cards.has(variant.masterId));
   const showcaseDefinitions = availableShowcases.map((variant) => masterIndex.cards.get(variant.masterId));
-  const newMonsterGuaranteed = openedCount === 0 || nextPackNumber % 5 === 0;
+  const boosterMonsterGuaranteed = openedCount === 0 || nextPackNumber % 5 === 0;
   const foilGuaranteed = nextPackNumber % 10 === 0;
   const showcaseGuaranteed = nextPackNumber % 20 === 0;
-  const hasFeatured = Boolean(featuredDefinition);
   const hasShowcases = availableShowcases.length > 0;
 
-  const firstMonster = newMonsterGuaranteed && hasFeatured
-    ? certainDistribution(featuredDefinition)
+  const firstMonster = boosterMonsterGuaranteed && guaranteedMonsters.length
+    ? weightedDistribution(guaranteedMonsters)
     : weightedDistribution(monsters, (definition) => acquisitionOrigin(definition) === 'booster'
       ? BOOSTER_DRAW_RATES.firstMonsterBoosterWeight : 1);
   const themedMonster = weightedDistribution(themed, (definition) => definition.kind === 'monster'
@@ -126,8 +153,8 @@ export function boosterPackDisclosure({ masterIndex, faction, openedCount = 0 })
     ]);
   const slots = [
     { label: 'モンスター枠', distribution: firstMonster },
-    { label: 'モン類枠A', distribution: themedMonster },
-    { label: 'モン類枠B', distribution: themedBreeder },
+    { label: '分類枠A', distribution: themedMonster },
+    { label: '分類枠B', distribution: themedBreeder },
     { label: '共通枠', distribution: common },
     { label: 'Rare以上枠', distribution: premium },
   ];
@@ -154,7 +181,12 @@ export function boosterPackDisclosure({ masterIndex, faction, openedCount = 0 })
     cards,
     showcaseCards,
     slots,
-    guarantees: { newMonsterGuaranteed, foilGuaranteed, showcaseGuaranteed },
+    guarantees: {
+      boosterMonsterGuaranteed,
+      newMonsterGuaranteed: boosterMonsterGuaranteed,
+      foilGuaranteed,
+      showcaseGuaranteed,
+    },
     appearanceRates: {
       rareOrBetter: 1,
       showcase: showcaseChance,
@@ -183,14 +215,13 @@ export function generateBoosterPack({ masterIndex, faction, seed, openedCount = 
   const pack = boosterPack(faction);
   if (!pack) throw new Error(`Unknown booster faction: ${faction}`);
   const rng = new SeededRng(seed);
-  const { eligible, themed, monsters, generic, showcases } = boosterPools(masterIndex, faction);
+  const { eligible, themed, monsters, generic, guaranteedMonsters, showcases } = boosterPools(masterIndex, faction);
   if (!monsters.length || !themed.length || !generic.length) throw new Error('パック候補マスターが不足しています');
 
   const cards = [];
-  const featured = FEATURED_VARIANTS[faction];
-  const newMonsterGuaranteed = openedCount === 0 || (openedCount + 1) % 5 === 0;
-  const firstMonster = newMonsterGuaranteed && featured && masterIndex.cards.has(featured.masterId)
-    ? masterIndex.cards.get(featured.masterId)
+  const boosterMonsterGuaranteed = openedCount === 0 || (openedCount + 1) % 5 === 0;
+  const firstMonster = boosterMonsterGuaranteed && guaranteedMonsters.length
+    ? rng.choice(guaranteedMonsters)
     : chooseDefinition(rng, monsters, (definition) => acquisitionOrigin(definition) === 'booster' ? BOOSTER_DRAW_RATES.firstMonsterBoosterWeight : 1);
   cards.push(asset(firstMonster));
   cards.push(asset(chooseDefinition(rng, themed, (definition) => definition.kind === 'monster' ? BOOSTER_DRAW_RATES.themedMonsterWeight : 1)));
@@ -222,4 +253,10 @@ export function generateBoosterPack({ masterIndex, faction, seed, openedCount = 
   };
 }
 
-export { FEATURED_VARIANTS, SHOWCASE_VARIANTS };
+export {
+  FEATURED_MONSTERS,
+  FEATURED_VARIANTS,
+  GUARANTEED_MONSTER_IDS,
+  NEW_SHOWCASE_VARIANTS,
+  SHOWCASE_VARIANTS,
+};

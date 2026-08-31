@@ -5,8 +5,8 @@ import { openModal } from './modal.js';
 import { unitLifePresentation, unitStatusEntries, unitStatusGroups } from './status-presentation.js';
 
 const FACTION_CLASS = Object.freeze({
-  '無機': 'faction-inorganic',
-  '創造': 'faction-creation',
+  '機鋼': 'faction-inorganic',
+  '神造': 'faction-creation',
   '幻霊': 'faction-spirit',
   '魔族': 'faction-demon',
   '獣族': 'faction-beast',
@@ -82,6 +82,12 @@ export function catalogCardThumbnailPlacement(definition) {
   let index = -1;
   if (definition.kind === 'monster') {
     index = Number(definition.id.match(/(\d+)$/)?.[1]) - 1;
+    if (index >= 24) {
+      return {
+        className: 'catalog-standalone-thumbnail-art',
+        style: `--thumbnail-art:url("./assets/images/catalog-thumbnails/${definition.id}.webp")`,
+      };
+    }
   } else if (definition.id.startsWith('breeder-')) {
     const number = Number(definition.id.match(/(\d+)$/)?.[1]);
     index = number <= 20 ? 28 + number : 49 + (number - 21);
@@ -391,7 +397,7 @@ export function openCardDetails({
   const summary = isMonster ? el('section', { className: 'detail-summary' }, [
     renderDetailArtwork({ definition, unit, cardAsset, label: name }),
     el('dl', {}, [
-      el('dt', { text: 'モン類' }), el('dd', { text: unit?.faction ?? definition.faction }),
+      el('dt', { text: '分類' }), el('dd', { text: unit?.faction ?? definition.faction }),
       el('dt', { text: '役割' }), el('dd', { text: definition.role }),
       el('dt', { text: '召喚TP' }), el('dd', { text: definition.summonTp }),
       el('dt', { text: 'LIFE' }), el('dd', {

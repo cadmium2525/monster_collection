@@ -128,7 +128,7 @@ export function createUnit({ unitId, card, monster, growth, masterIndex, slot })
       nextDamageBonus: 0,
       nextDamagePenalty: 0,
       nextDamageReduction: 0,
-      evadeNext: monster.name === 'ゴースト',
+      evadeNext: monster.name === 'ゴースト' || Boolean(monster.trait.engine?.evadeOnSummon),
       stunOnNextTurn: 0,
       parasite: null,
       knightWill: false,

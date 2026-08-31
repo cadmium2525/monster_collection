@@ -24,7 +24,7 @@ function percentage(value) {
 
 function cardTypeLabel(definition) {
   if (definition.kind === 'monster') return `${definition.faction}モンスター`;
-  if (definition.kind === 'breeder') return definition.category === 'モン類専用' ? 'モン類ブリーダー' : '汎用ブリーダー';
+  if (definition.kind === 'breeder') return definition.category === '分類専用' ? '分類ブリーダー' : '汎用ブリーダー';
   if (definition.kind === 'shugyo') return '修行';
   return 'Training';
 }
@@ -47,7 +47,7 @@ export class BoosterShopScreen {
       openedCount: this.economy.packCounters?.[pack.faction] ?? 0,
     });
     const guaranteeLabels = [
-      disclosure.guarantees.newMonsterGuaranteed ? '新モンスター保証' : null,
+      disclosure.guarantees.boosterMonsterGuaranteed ? 'ブースター限定保証' : null,
       disclosure.guarantees.foilGuaranteed ? 'Foil保証' : null,
       disclosure.guarantees.showcaseGuaranteed ? '特別イラスト保証' : null,
     ].filter(Boolean);
@@ -71,7 +71,7 @@ export class BoosterShopScreen {
         disclosure.showcaseCards.length ? el('section', { className: 'pack-showcase-rate-section' }, [
           el('div', { className: 'pack-showcase-rate-heading' }, [
             el('strong', { text: '特別イラスト候補' }),
-            el('span', { text: `${pack.faction}4種 / 奪取不可` }),
+            el('span', { text: `${pack.faction}${disclosure.showcaseCards.length}種 / 奪取不可` }),
           ]),
           el('div', { className: 'pack-card-rate-table-wrap' }, [
             el('table', { className: 'pack-card-rate-table pack-showcase-rate-table' }, [
@@ -121,7 +121,7 @@ export class BoosterShopScreen {
       el('header', { className: 'screen-header booster-header' }, [
         el('div', {}, [
           el('p', { className: 'eyebrow', text: 'FREE BOOSTER LAB' }),
-          el('h1', { text: 'モン類ブースター' }),
+          el('h1', { text: '分類ブースター' }),
           el('p', { text: '5枚入り。モンスター1枚以上・Rare以上1枚以上。奪取限定カードは排出されません。' }),
         ]),
         el('div', { className: 'booster-header-actions' }, [
@@ -165,7 +165,7 @@ export class BoosterShopScreen {
         ]);
       })),
       el('footer', { className: 'booster-notes' }, [
-        el('span', { text: 'ダイヤは大会報酬やログインボーナスで獲得できます。初回と5パックごとにそのモン類の新モンスター、20パックごとに各モン類4種から奪取不可の特別イラストを保証します。' }),
+        el('span', { text: 'ダイヤは大会報酬やログインボーナスで獲得できます。初回と5パックごとにその分類のブースター限定モンスター2種から1体、20パックごとに各分類5種から奪取不可の特別イラストを保証します。' }),
       ]),
     ]));
   }

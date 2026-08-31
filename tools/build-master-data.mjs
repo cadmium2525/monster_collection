@@ -23,6 +23,13 @@ function pad(value) {
   return String(value).padStart(3, '0');
 }
 
+function canonicalClassificationText(value) {
+  return String(value ?? '')
+    .replaceAll('モン類', '分類')
+    .replaceAll('無機', '機鋼')
+    .replaceAll('創造', '神造');
+}
+
 const monsterRows = records(1);
 const moveRows = records(2);
 const breederRows = records(3);
@@ -96,7 +103,7 @@ const moves = moveRows.map((row, index) => {
 const monsters = monsterRows.map((row, index) => ({
   id: `monster-${pad(index + 1)}`,
   kind: 'monster',
-  faction: row['モン類'],
+  faction: canonicalClassificationText(row['分類'] ?? row['モン類']),
   name: monsterName(row['モンスター']),
   summonTp: number(row['召喚TP']),
   base: {
@@ -107,21 +114,25 @@ const monsters = monsterRows.map((row, index) => ({
   role: row['役割'],
   trait: {
     name: row['特性名'],
-    effect: row['特性効果'],
+    effect: canonicalClassificationText(row['特性効果']),
   },
   moveIds: moveIdsByMonster.get(monsterName(row['モンスター'])) ?? [],
   legacyPreferredDistance: row['得意距離'],
 }));
 
-const breeders = breederRows.map((row, index) => ({
-  id: `breeder-${pad(index + 1)}`,
-  kind: 'breeder',
-  category: row['種別'],
-  faction: row['種別'] === 'モン類専用' ? row['カード'].replace(/[①②]/g, '') : null,
-  name: row['カード'],
-  tp: number(row['TP']),
-  effect: row['効果'],
-}));
+const breeders = breederRows.map((row, index) => {
+  const category = canonicalClassificationText(row['種別']);
+  const name = canonicalClassificationText(row['カード']);
+  return {
+    id: `breeder-${pad(index + 1)}`,
+    kind: 'breeder',
+    category,
+    faction: category === '分類専用' ? name.replace(/[①②]/g, '') : null,
+    name,
+    tp: number(row['TP']),
+    effect: canonicalClassificationText(row['効果']),
+  };
+});
 
 const fusions = fusionRows.map((row, index) => ({
   id: `fusion-${pad(index + 1)}`,

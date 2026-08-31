@@ -1,5 +1,5 @@
 const BASELINE_MASTER_IDS = Object.freeze([
-  // A forgiving 無機 core plus three intentional special-fusion routes.
+  // A forgiving 機鋼 core plus three intentional special-fusion routes.
   // The defensive bodies prevent a new player from losing every summoned
   // monster before its first actionable turn.
   'monster-001', 'monster-001', 'monster-001', // モノリス
@@ -29,8 +29,8 @@ const STARTER_GROWTH_IDS = Object.freeze([
 ]);
 
 export const STARTER_DECK_OPTIONS = Object.freeze([
-  Object.freeze({ faction: '無機', deckName: '鋼鉄要塞', representativeMonsterId: 'monster-003', description: '硬い盤面を築き、装甲強化と重量級の一撃で押し切る。' }),
-  Object.freeze({ faction: '創造', deckName: '創世の火', representativeMonsterId: 'monster-004', description: '軽い技と再設計を重ね、復活と連続攻撃で主導権を握る。' }),
+  Object.freeze({ faction: '機鋼', deckName: '鋼鉄要塞', representativeMonsterId: 'monster-003', description: '硬い盤面を築き、装甲強化と重量級の一撃で押し切る。' }),
+  Object.freeze({ faction: '神造', deckName: '創世の火', representativeMonsterId: 'monster-004', description: '軽い技と再設計を重ね、復活と連続攻撃で主導権を握る。' }),
   Object.freeze({ faction: '幻霊', deckName: '幽玄の庭', representativeMonsterId: 'monster-009', description: '回避・再行動・継続効果を操り、相手の計算を崩す。' }),
   Object.freeze({ faction: '魔族', deckName: '魔界の覇道', representativeMonsterId: 'monster-012', description: 'ATK強化を重ね、強力な実戦技で早期決着を狙う。' }),
   Object.freeze({ faction: '獣族', deckName: '野生の群れ', representativeMonsterId: 'monster-013', description: 'TP回復と生命力を活かし、途切れない攻勢を作る。' }),
@@ -38,12 +38,12 @@ export const STARTER_DECK_OPTIONS = Object.freeze([
 ]);
 
 const FACTION_STARTER_IDS = Object.freeze({
-  '無機': Object.freeze([
+  '機鋼': Object.freeze([
     'monster-001', 'monster-001', 'monster-001', 'monster-002', 'monster-002', 'monster-002', 'monster-003', 'monster-003', 'monster-003',
     'monster-014', 'monster-014', 'monster-015', 'monster-015', 'monster-016', 'monster-016', 'monster-012',
     'breeder-009', 'breeder-009', 'breeder-010', 'breeder-010', ...STARTER_GROWTH_IDS,
   ]),
-  '創造': Object.freeze([
+  '神造': Object.freeze([
     'monster-004', 'monster-004', 'monster-004', 'monster-005', 'monster-005', 'monster-005', 'monster-006', 'monster-006', 'monster-006',
     'monster-002', 'monster-002', 'monster-009', 'monster-014', 'monster-007', 'monster-010', 'monster-011',
     'breeder-011', 'breeder-011', 'breeder-012', 'breeder-012', ...STARTER_GROWTH_IDS,

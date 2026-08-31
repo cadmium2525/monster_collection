@@ -275,6 +275,7 @@ test('tournament bracket uses an optimized ceremonial WebP background and restra
 
 test('catalog uses two bounded thumbnail atlases and keeps full art for details', () => {
   assert.match(catalogCardThumbnailPlacement(masterIndex.cards.get('monster-001')).style, /--art-x:0%;--art-y:0%/);
+  assert.match(catalogCardThumbnailPlacement(masterIndex.cards.get('monster-025')).style, /catalog-thumbnails\/monster-025\.webp/);
   assert.match(catalogCardThumbnailPlacement(masterIndex.cards.get('breeder-052')).style, /--art-x:100%;--art-y:100%/);
   assert.match(catalogFusionThumbnailPlacement({ id: 'fusion-048' }).style, /--art-x:100%;--art-y:100%/);
   assert.ok(statSync(new URL('../../assets/images/catalog-thumbnails/cards.webp', import.meta.url)).size < 350_000);

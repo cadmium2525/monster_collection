@@ -25,7 +25,7 @@ function deckSortControl(value, onChange, className = '', label = 'デッキカ�
 export function openStarterDeckPicker({ masterIndex, options, onChoose }) {
   let modal = null;
   const content = el('div', { className: 'starter-picker' }, [
-    el('p', { className: 'starter-picker-intro', text: '好きなモン類の40枚から始めます。どのデッキもブロンズカップへすぐ出場でき、作成後に名前とリーダーを変更できます。' }),
+    el('p', { className: 'starter-picker-intro', text: '好きな分類の40枚から始めます。どのデッキもブロンズカップへすぐ出場でき、作成後に名前とリーダーを変更できます。' }),
     el('div', { className: 'starter-choice-grid' }, options.map((option) => {
       const representative = masterIndex.monsters.get(option.representativeMonsterId);
       const choose = () => { modal.close(); onChoose(option); };

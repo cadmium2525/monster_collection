@@ -1,4 +1,4 @@
-import { FACTIONS } from './acquisition.js';
+import { FACTIONS, canonicalFaction, legacyFactionFor } from './acquisition.js';
 import { normalizeCardAppearance } from '../cards/card-appearance.js';
 import { TOURNAMENTS } from '../battle/rules.js';
 
@@ -38,6 +38,7 @@ function normalizePendingPack(value) {
   if (!value) return null;
   return {
     ...clone(value),
+    faction: canonicalFaction(value.faction),
     cards: Array.isArray(value.cards) ? value.cards.map((card) => normalizeCardAppearance(clone(card))) : [],
   };
 }
@@ -85,7 +86,9 @@ export function normalizeEconomyState(value, now = null) {
     pendingPack: normalizePendingPack(value.pendingPack),
     packCounters: Object.fromEntries(FACTIONS.map((faction) => [
       faction,
-      Math.max(0, Math.trunc(Number(value.packCounters?.[faction]) || 0)),
+      Math.max(0, Math.trunc(Number(
+        value.packCounters?.[faction] ?? value.packCounters?.[legacyFactionFor(faction)],
+      ) || 0)),
     ])),
     processedOperationIds: [...new Set((value.processedOperationIds ?? []).map(String))].slice(-160),
     tournamentQualification: TOURNAMENTS.includes(value.tournamentQualification) ? value.tournamentQualification : 'bronze',

@@ -3,7 +3,7 @@ import { SeededRng } from '../core/rng.js';
 import { analyzeDeck, scoreGeneratedDeck } from './deck-analyzer.js';
 import { isNormalCpuEligible } from '../gacha/acquisition.js';
 
-export const DECK_THEMES = Object.freeze(['無機', '創造', '幻霊', '魔族', '獣族', '怪物', '混合']);
+export const DECK_THEMES = Object.freeze(['機鋼', '神造', '幻霊', '魔族', '獣族', '怪物', '混合']);
 
 export const GENERATOR_CONFIG = Object.freeze({
   bronze: { candidates: 1, monsters: 16, targetedRecipes: 1, recipeDensity: 1, themeTarget: 6, selectionNoise: 14 },

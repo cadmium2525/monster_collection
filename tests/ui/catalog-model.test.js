@@ -27,3 +27,14 @@ test('catalog state filters separate unowned cards and undiscovered fusions', ()
   assert.equal(undiscovered.fusions.length, masterIndex.data.fusions.length - 1);
   assert.equal(undiscovered.fusions.every((entry) => !entry.discovered), true);
 });
+
+test('catalog exposes capture-only and booster-only filters', () => {
+  const catalog = { ownedCardMasterIds: [], discoveredFusionIds: [] };
+  const trophy = buildCatalogModel(catalog, masterIndex, 'trophy');
+  const booster = buildCatalogModel(catalog, masterIndex, 'booster');
+  assert.equal(trophy.cards.length, 18);
+  assert.equal(trophy.cards.every(({ definition }) => definition.id.startsWith('breeder-')), true);
+  assert.equal(booster.cards.length, 12);
+  assert.equal(booster.cards.every(({ definition }) => definition.id.startsWith('monster-')), true);
+  assert.ok(booster.filters.some(([id, label, count]) => id === 'booster' && label === 'ブースター限定' && count === 12));
+});

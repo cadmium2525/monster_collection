@@ -1064,7 +1064,7 @@ button:disabled { opacity: .38; cursor: not-allowed; }
 .starter-choice::before { content: ""; position: absolute; z-index: -1; inset: 0; opacity: .18; background: radial-gradient(circle at 10% 15%,var(--starter-accent,#62e4dc),transparent 48%); transition: opacity .18s ease; }
 .starter-choice:hover,.starter-choice:focus-visible { outline: none; border-color: var(--starter-accent,#dfb867); box-shadow: 0 0 0 1px color-mix(in srgb,var(--starter-accent,#dfb867) 42%,transparent),0 0 22px color-mix(in srgb,var(--starter-accent,#62e4dc) 18%,transparent); }
 .starter-choice:hover::before,.starter-choice:focus-visible::before { opacity: .32; }
-.starter-無機 { --starter-accent:#9fc7dc; }.starter-創造 { --starter-accent:#ffac66; }.starter-幻霊 { --starter-accent:#8ee3bd; }.starter-魔族 { --starter-accent:#cf8dff; }.starter-獣族 { --starter-accent:#e8c46f; }.starter-怪物 { --starter-accent:#ed7995; }
+.starter-機鋼 { --starter-accent:#9fc7dc; }.starter-神造 { --starter-accent:#ffac66; }.starter-幻霊 { --starter-accent:#8ee3bd; }.starter-魔族 { --starter-accent:#cf8dff; }.starter-獣族 { --starter-accent:#e8c46f; }.starter-怪物 { --starter-accent:#ed7995; }
 .starter-choice-art { height: 110px; display: grid; place-items: center; }
 .starter-choice-art .game-card { height: 106px; width: 72px; pointer-events: none; }
 .starter-choice-copy { min-width: 0; display: grid; gap: 5px; align-content: center; }
@@ -1113,7 +1113,7 @@ button:disabled { opacity: .38; cursor: not-allowed; }
 .catalog-progress { display: flex; gap: 6px; }
 .catalog-progress span { padding: 5px 8px; border: 1px solid var(--line); border-radius: 18px; color: var(--muted); font-size: 9px; }
 .catalog-filters { display: flex; gap: 5px; overflow-x:auto; padding: 5px; border: 1px solid var(--line); border-radius: 9px; background: var(--panel); scrollbar-width:thin; }
-.catalog-filters button { min-height: 30px; padding: 4px 10px; border: 1px solid transparent; border-radius: 16px; color: var(--muted); background: rgba(255,255,255,.035); cursor: pointer; font-size: 10px; }
+.catalog-filters button { flex:0 0 auto; min-height: 30px; padding: 4px 10px; border: 1px solid transparent; border-radius: 16px; color: var(--muted); background: rgba(255,255,255,.035); cursor: pointer; font-size: 10px; white-space:nowrap; }
 .catalog-filters button.selected { border-color: rgba(232,186,98,.65); color: #fff1be; background: rgba(114,75,25,.52); }
 .catalog-card-grid { --catalog-row-height:clamp(100px,10.4vw,150px); min-height:0; overflow:auto; display:grid; grid-template-columns:repeat(10,minmax(54px,1fr)); grid-auto-rows:var(--catalog-row-height); align-content:start; gap:clamp(16px,1.7vw,22px); padding:18px; border:1px solid var(--line); border-radius:var(--radius); background:var(--panel); }
 .catalog-entry { position:relative; width:100%; height:100%; aspect-ratio:auto; }
@@ -1121,6 +1121,8 @@ button:disabled { opacity: .38; cursor: not-allowed; }
 .catalog-entry .game-card { position:absolute; inset:0; width:100%; height:100%; aspect-ratio:auto; }
 .catalog-thumbnail-art,
 .game-card .card-art.catalog-thumbnail-art { background-image:linear-gradient(180deg,rgba(2,7,13,.08),transparent 72%,rgba(2,7,13,.72)),url("./assets/images/catalog-thumbnails/cards.webp"); background-repeat:no-repeat; background-size:100% 100%,900% 900%; background-position:center,var(--art-x) var(--art-y); }
+.catalog-standalone-thumbnail-art,
+.game-card .card-art.catalog-standalone-thumbnail-art { background-image:linear-gradient(180deg,rgba(2,7,13,.08),transparent 72%,rgba(2,7,13,.72)),var(--thumbnail-art); background-repeat:no-repeat; background-size:100% 100%,cover; background-position:center,center 18%; }
 .catalog-entry .game-card > .card-art.catalog-thumbnail-art { top:clamp(22px,16.5%,25px); border-radius:0 0 7px 7px; background-size:100% 100%,900% auto; }
 .catalog-entry.catalog-locked .game-card,
 .fusion-catalog-card.catalog-locked { filter:grayscale(1) brightness(.42); cursor:default; }

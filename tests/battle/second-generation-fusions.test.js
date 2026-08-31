@@ -17,7 +17,7 @@ function asForm(unit, name) {
 }
 
 test('each second-generation monster has exactly two special recipes using underused materials first', () => {
-  const secondGeneration = new Set(masterData.monsters.slice(18).map((monster) => monster.name));
+  const secondGeneration = new Set(masterData.monsters.slice(18, 24).map((monster) => monster.name));
   for (const name of secondGeneration) {
     assert.equal(masterData.fusions.filter((fusion) => fusion.main === name).length, 2, name);
   }

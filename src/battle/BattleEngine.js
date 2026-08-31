@@ -102,9 +102,9 @@ export class BattleEngine {
           continue;
         }
         unit.baseMonsterName = monster.name;
+        unit.faction = monster.faction;
         if (!unit.specialForm) {
           unit.name = monster.name;
-          unit.faction = monster.faction;
           unit.role = monster.role;
           unit.traitName = monster.trait.name;
           unit.traitEffect = monster.trait.effect;
@@ -1204,6 +1204,9 @@ export class BattleEngine {
     }
 
     for (const unit of livingUnits(player)) {
+      if (!unit.specialForm && (Number(unit.traitEngine?.turnStartHeal) || 0) > 0) {
+        this._heal(unit, Math.max(0, Number(unit.traitEngine.turnStartHeal) || 0));
+      }
       if (unit.statuses.phantomExtraActionPending) {
         if (!unit.stunnedThisTurn) unit.actionPoints += 1;
         unit.statuses.phantomExtraActionPending = false;
@@ -1337,7 +1340,7 @@ export class BattleEngine {
         return targetActions(enemy);
       case 'breeder-009':
       case 'breeder-010':
-        return targetActions(own.filter((unit) => unit.faction === '無機'));
+        return targetActions(own.filter((unit) => unit.faction === '機鋼'));
       case 'breeder-012':
         return targetActions(enemy);
       case 'breeder-013':
@@ -1407,12 +1410,12 @@ export class BattleEngine {
       case '応急処置':
       case '捨て身命令':
         return targetActions(own);
-      case '無機・オーバークロック':
-      case '無機・自動修復':
-        return factionTargets('無機');
-      case '創造・再設計':
-      case '創造・予備パーツ':
-        return factionTargets('創造');
+      case '機鋼・オーバークロック':
+      case '機鋼・自動修復':
+        return factionTargets('機鋼');
+      case '神造・再設計':
+      case '神造・予備パーツ':
+        return factionTargets('神造');
       case '幻霊・残響詠唱':
       case '幻霊・霊界帰還':
         return factionTargets('幻霊');
@@ -1438,10 +1441,10 @@ export class BattleEngine {
       }
       case '怪物・捕食進化':
         return factionTargets('怪物');
-      case '無機・機神起動':
-        return factionTargets('無機');
-      case '創造・神造再演':
-        return targetActions(own.filter((unit) => unit.faction === '創造' && !unit.summonedThisTurn && !unit.stunnedThisTurn));
+      case '機鋼・機神起動':
+        return factionTargets('機鋼');
+      case '神造・神造再演':
+        return targetActions(own.filter((unit) => unit.faction === '神造' && !unit.summonedThisTurn && !unit.stunnedThisTurn));
       case '幻霊・黄泉の残唱':
         return factionTargets('幻霊');
       case '魔族・終末契約':
@@ -1492,7 +1495,7 @@ export class BattleEngine {
       case '妨害指示': enemyTarget.statuses.nextDamagePenalty += 0.2; break;
       case 'breeder-009': ownTarget.timedDefBuffs.push({ amount: 5, remaining: 3 }); break;
       case 'breeder-010': ownTarget.statuses.vsCreationDefIgnore = { base: 3, creation: 5 }; break;
-      case 'breeder-011': player.effects.factionMoveDiscount['創造'] = (player.effects.factionMoveDiscount['創造'] ?? 0) + 1; break;
+      case 'breeder-011': player.effects.factionMoveDiscount['神造'] = (player.effects.factionMoveDiscount['神造'] ?? 0) + 1; break;
       case 'breeder-012': enemyTarget.statuses.stunOnNextTurn += 1; break;
       case 'breeder-013': ownTarget.actionPoints += 1; break;
       case 'breeder-014': ownTarget.statuses.evadeNext = true; break;
@@ -1501,7 +1504,7 @@ export class BattleEngine {
       case 'breeder-017': player.tp = Math.min(player.maxTp, player.tp + livingUnits(player).filter((unit) => unit.faction === '獣族').length * 2); break;
       case 'breeder-018': this._heal(ownTarget, 15); break;
       case 'breeder-019':
-        if (enemyTarget.faction === '無機') enemyTarget.statuses.stunOnNextTurn += 1;
+        if (enemyTarget.faction === '機鋼') enemyTarget.statuses.stunOnNextTurn += 1;
         else enemyTarget.statuses.nextDamagePenalty += 0.2;
         break;
       case 'breeder-020':
@@ -1585,17 +1588,17 @@ export class BattleEngine {
         });
         break;
       }
-      case '無機・オーバークロック':
+      case '機鋼・オーバークロック':
         ownTarget.temporaryAtk += 10;
         ownTarget.statuses.overclockPendingDefPenalty = 5;
         break;
-      case '無機・自動修復':
+      case '機鋼・自動修復':
         ownTarget.statuses.autoRepairRemaining = (ownTarget.statuses.autoRepairRemaining ?? 0) + 3;
         break;
-      case '創造・再設計':
+      case '神造・再設計':
         ownTarget.statuses.swapAtkDef = true;
         break;
-      case '創造・予備パーツ':
+      case '神造・予備パーツ':
         ownTarget.statuses.spareParts = true;
         break;
       case '幻霊・残響詠唱':
@@ -1630,11 +1633,11 @@ export class BattleEngine {
       case '怪物・捕食進化':
         ownTarget.statuses.predationEvolution = true;
         break;
-      case '無機・機神起動':
+      case '機鋼・機神起動':
         ownTarget.timedAtkBuffs.push({ amount: 10, remaining: 2 });
         ownTarget.timedDefBuffs.push({ amount: 10, remaining: 2 });
         break;
-      case '創造・神造再演':
+      case '神造・神造再演':
         ownTarget.actionPoints += 1;
         ownTarget.statuses.nextDamageBonus += 0.3;
         break;

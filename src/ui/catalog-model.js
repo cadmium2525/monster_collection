@@ -1,3 +1,5 @@
+import { acquisitionOrigin } from '../gacha/acquisition.js';
+
 const KIND_ORDER = Object.freeze({ monster: 0, training: 1, shugyo: 2, breeder: 3 });
 
 function sortCards(cards) {
@@ -18,9 +20,11 @@ export function buildCatalogModel(catalog, masterIndex, filter = 'all') {
   const fusions = allFusions.map((fusion) => ({ fusion, discovered: discoveredIds.has(fusion.id) }));
 
   const visibleCards = filter === 'owned' ? cards.filter((entry) => entry.owned)
-    : filter === 'unowned' ? cards.filter((entry) => !entry.owned)
+      : filter === 'unowned' ? cards.filter((entry) => !entry.owned)
       : filter === 'monster' ? cards.filter((entry) => entry.definition.kind === 'monster')
         : filter === 'support' ? cards.filter((entry) => entry.definition.kind !== 'monster')
+          : filter === 'trophy' ? cards.filter((entry) => acquisitionOrigin(entry.definition) === 'trophy')
+            : filter === 'booster' ? cards.filter((entry) => acquisitionOrigin(entry.definition) === 'booster')
           : ['fusion', 'undiscovered'].includes(filter) ? [] : cards;
   const visibleFusions = filter === 'fusion' ? fusions
     : filter === 'undiscovered' ? fusions.filter((entry) => !entry.discovered)
@@ -41,6 +45,8 @@ export function buildCatalogModel(catalog, masterIndex, filter = 'all') {
       ['unowned', '未所持', cards.filter((entry) => !entry.owned).length],
       ['monster', 'モンスター', cards.filter((entry) => entry.definition.kind === 'monster').length],
       ['support', '育成・ブリーダー', cards.filter((entry) => entry.definition.kind !== 'monster').length],
+      ['trophy', '奪取限定', cards.filter((entry) => acquisitionOrigin(entry.definition) === 'trophy').length],
+      ['booster', 'ブースター限定', cards.filter((entry) => acquisitionOrigin(entry.definition) === 'booster').length],
       ['fusion', '特殊合体', fusions.length],
       ['undiscovered', '未発見', fusions.filter((entry) => !entry.discovered).length],
     ],

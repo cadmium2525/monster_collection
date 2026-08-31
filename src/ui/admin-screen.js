@@ -17,7 +17,7 @@ const KIND_LABELS = Object.freeze({
 
 export const ADMIN_GUARANTEE_PROFILES = Object.freeze([
   Object.freeze({ id: 'standard', name: '通常抽選', openedCount: 1, copy: '通常の抽選率。モンスター1枚以上・Rare以上1枚以上。' }),
-  Object.freeze({ id: 'featured', name: '新モンスター保証', openedCount: 0, copy: '各モン類のブースター限定モンスターを保証。' }),
+  Object.freeze({ id: 'featured', name: '限定モンスター保証', openedCount: 0, copy: '各分類のクロノギア世代以降2体から1体を保証。' }),
   Object.freeze({ id: 'foil', name: 'Foil保証', openedCount: 9, copy: '10パック目相当。Foilカードを保証。' }),
   Object.freeze({ id: 'showcase', name: '特別絵保証', openedCount: 19, copy: '20パック目相当。奪取不可の特別イラストを保証。' }),
 ]);
@@ -156,7 +156,7 @@ export class AdminToolScreen {
     ];
     const search = el('input', {
       value: this.query,
-      attrs: { type: 'search', placeholder: 'カード名・ID・モン類・効果で検索', 'aria-label': '管理者カード検索' },
+      attrs: { type: 'search', placeholder: 'カード名・ID・分類・効果で検索', 'aria-label': '管理者カード検索' },
     });
     const origin = el('select', {
       attrs: { 'aria-label': '入手経路で絞り込み' },

@@ -54,7 +54,7 @@ test('visible status entries describe meaningful effects and exclude consumed in
   assert.equal(entries.some((entry) => entry.label === '次の被ダメージ -50%'), true);
   assert.equal(entries.some((entry) => entry.label === '次ターン行動不能'), true);
   assert.equal(entries.some((entry) => entry.label === '予備パーツ'), true);
-  assert.equal(entries.some((entry) => entry.label === '相手DEFを3無視' && entry.detail.includes('創造には5無視')), true);
+  assert.equal(entries.some((entry) => entry.label === '相手DEFを3無視' && entry.detail.includes('神造には5無視')), true);
   assert.equal(entries.some((entry) => /復活済み|使用済み/.test(entry.label)), false);
   assert.deepEqual(unitStatusGroups(target).map((group) => group.tone), ['positive', 'negative']);
 });

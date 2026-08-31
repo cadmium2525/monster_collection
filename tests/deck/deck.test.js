@@ -6,8 +6,8 @@ import { createBaselineDeck, createFactionStarterDeck, STARTER_DECK_OPTIONS } fr
 import { legalDeck, masterData, masterIndex } from '../helpers.js';
 
 test('master data contains all canonical records', () => {
-  assert.equal(masterData.monsters.length, 24);
-  assert.equal(masterData.moves.length, 216);
+  assert.equal(masterData.monsters.length, 30);
+  assert.equal(masterData.moves.length, 270);
   assert.equal(masterData.breeders.length, 52);
   assert.equal(masterData.fusions.length, 48);
   for (const monster of masterData.monsters) {
@@ -15,11 +15,12 @@ test('master data contains all canonical records', () => {
     assert.equal(moves.length, 9, monster.name);
     assert.equal(moves.filter((move) => move.initial).length, 3, monster.name);
   }
-  assert.deepEqual(masterData.monsters.slice(0, 24).map((monster) => monster.name), [
+  assert.deepEqual(masterData.monsters.map((monster) => monster.name), [
     'モノリス', 'ギアセンチネル', 'ゴーレム', 'ヒノトリ', 'アストラノイド', 'アルカナロード',
     'プラント', 'ルミラビ', 'ウンディーネ', 'ピクシー', 'デュラハン', 'ドラゴン',
     'ボルトウルフ', 'コンゴウ', 'フェザーレックス', 'ジョーカー', 'ワーム', 'ゴースト',
     'クロノギア', 'アルケミア', 'ミストレイ', 'ノクティス', 'ヴォルファング', 'グラトン',
+    'アークヴァルキア', 'セラフィノア', 'カスミヨ', 'リリヴェル', 'レオネア', 'ミメシア',
   ]);
 });
 
@@ -65,7 +66,7 @@ test('starter 40 exposes every canonical card category and stays legal', () => {
 });
 
 test('all six faction starters are deterministic legal 40-card decks with a clear faction core', () => {
-  assert.deepEqual(STARTER_DECK_OPTIONS.map((starter) => starter.faction), ['無機', '創造', '幻霊', '魔族', '獣族', '怪物']);
+  assert.deepEqual(STARTER_DECK_OPTIONS.map((starter) => starter.faction), ['機鋼', '神造', '幻霊', '魔族', '獣族', '怪物']);
   const signatures = new Set();
   for (const starter of STARTER_DECK_OPTIONS) {
     const deck = createFactionStarterDeck(masterData, starter.faction, `starter-${starter.faction}`);
@@ -90,8 +91,8 @@ test('all six faction starters are deterministic legal 40-card decks with a clea
 
 test('the original twelve faction breeders have effect-specific names while keeping stable IDs', () => {
   const names = {
-    'breeder-009': '無機・硬化装甲', 'breeder-010': '無機・装甲解析',
-    'breeder-011': '創造・省力設計', 'breeder-012': '創造・機能停止',
+    'breeder-009': '機鋼・硬化装甲', 'breeder-010': '機鋼・装甲解析',
+    'breeder-011': '神造・省力設計', 'breeder-012': '神造・機能停止',
     'breeder-013': '幻霊・連続顕現', 'breeder-014': '幻霊・幽体回避',
     'breeder-015': '魔族・魔力注入', 'breeder-016': '魔族・群魔の共鳴',
     'breeder-017': '獣族・野生の活力', 'breeder-018': '獣族・生命の息吹',

@@ -51,7 +51,7 @@ export function unitStatusEntries(unit) {
   if (statuses.vsCreationDefIgnore) {
     const base = Math.max(0, number(statuses.vsCreationDefIgnore.base));
     const creation = Math.max(base, number(statuses.vsCreationDefIgnore.creation));
-    add('vs-creation-def-ignore', 'positive', '貫', `相手DEFを${base}無視`, `創造には${creation}無視・この試合中`);
+    add('vs-creation-def-ignore', 'positive', '貫', `相手DEFを${base}無視`, `神造には${creation}無視・この試合中`);
   }
   if (statuses.evadeNext) add('evade-next', 'positive', '避', '次の攻撃を回避', '攻撃を受けると解除');
   if (unit.stunnedThisTurn) add('stunned', 'negative', '止', '行動不能', 'このターン中');

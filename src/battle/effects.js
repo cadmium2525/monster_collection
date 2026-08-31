@@ -40,6 +40,9 @@ export function resolvedMoveTp(player, unit, target, move) {
   if (hasNormalTrait(unit, 'アストラノイド') && firstMove && move.rank <= 3) cost -= 1;
   if (hasNormalTrait(unit, 'ボルトウルフ') && firstMove) cost -= 1;
   if (!unit.specialForm && firstMove) cost -= Math.max(0, Number(unit.traitEngine?.firstMoveDiscount) || 0);
+  if (!unit.specialForm && lifeRatio(unit) <= 0.5) {
+    cost -= Math.max(0, Number(unit.traitEngine?.lowLifeMoveDiscount) || 0);
+  }
   cost -= player.effects.factionMoveDiscount[unit.faction] ?? 0;
 
   if (unit.specialForm === 'コズミックミューズ' && firstMove) cost -= 1;
@@ -89,8 +92,8 @@ export function defenseIgnore(player, unit, target, move) {
   const breederIgnore = unit.statuses.vsCreationDefIgnore;
   if (breederIgnore) {
     ignore += typeof breederIgnore === 'number'
-      ? (target.faction === '創造' ? breederIgnore : 0)
-      : (target.faction === '創造' ? breederIgnore.creation : breederIgnore.base);
+      ? (target.faction === '神造' ? breederIgnore : 0)
+      : (target.faction === '神造' ? breederIgnore.creation : breederIgnore.base);
   }
   return ignore;
 }
@@ -113,6 +116,9 @@ export function outgoingDamageMultiplier(unit, target, move, opponent) {
   if (unit.statuses.nextDamageBonus) multiplier *= 1 + unit.statuses.nextDamageBonus;
   if (unit.statuses.nextDamagePenalty) multiplier *= Math.max(0, 1 - unit.statuses.nextDamagePenalty);
   if (unit.statuses.temporaryTurnDamageBonus) multiplier *= 1 + unit.statuses.temporaryTurnDamageBonus;
+  if (!special && unit.movesUsedThisTurn === 0) {
+    multiplier *= 1 + Math.max(0, Number(unit.traitEngine?.firstMoveDamageBonus) || 0);
+  }
 
   if (special === 'ルナモルフォ' && lowSelf) multiplier *= 1.3;
   if (special === 'ゴウライウルフ' && move.tp === 2) multiplier *= 1.25;

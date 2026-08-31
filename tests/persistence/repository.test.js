@@ -73,7 +73,7 @@ test('local and Firebase repositories persist pack results before reveal without
     masterId: `monster-${String(index + 19).padStart(3, '0')}`,
     artVariantId: 'base', finish: 'normal', rarity: 'rare', origin: 'booster',
   }));
-  const purchase = { operationId: 'repo-pack-1', faction: '無機', packId: 'pack-inorganic', cards, cost: 300, useFreeCredit: false };
+  const purchase = { operationId: 'repo-pack-1', faction: '機鋼', packId: 'pack-inorganic', cards, cost: 300, useFreeCredit: false };
 
   const local = new LocalGameRepository({ storage: new MemoryStorage(), idFactory: () => 'pack-local' });
   await local.initialize();

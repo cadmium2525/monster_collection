@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
 import { CardStealSession } from '../../src/reward/CardStealSession.js';
-import { SHOWCASE_VARIANTS, boosterPackDisclosure, generateBoosterPack } from '../../src/gacha/pack-generator.js';
+import { GUARANTEED_MONSTER_IDS, SHOWCASE_VARIANTS, boosterPackDisclosure, generateBoosterPack } from '../../src/gacha/pack-generator.js';
 import { BOOSTER_MONSTER_IDS, TROPHY_BREEDER_IDS, acquisitionOrigin, isPackEligible } from '../../src/gacha/acquisition.js';
 import { applyDiamondReward, applyPackPurchase, defaultEconomyState, normalizeEconomyState } from '../../src/gacha/economy-state.js';
 import { SeededRng } from '../../src/core/rng.js';
@@ -16,7 +16,7 @@ test('all eighteen faction trophy breeders are capture-only and never enter boos
     ...Array.from({ length: 6 }, (_, index) => `breeder-${String(index + 47).padStart(3, '0')}`),
   ]);
   for (const id of TROPHY_BREEDER_IDS) assert.equal(acquisitionOrigin(masterIndex.cards.get(id)), 'trophy');
-  for (const faction of ['無機', '創造', '幻霊', '魔族', '獣族', '怪物']) {
+  for (const faction of ['機鋼', '神造', '幻霊', '魔族', '獣族', '怪物']) {
     for (let seed = 0; seed < 30; seed += 1) {
       const result = generateBoosterPack({ masterIndex, faction, seed: `${faction}:${seed}`, openedCount: seed });
       assert.equal(result.cards.length, 5);
@@ -25,13 +25,17 @@ test('all eighteen faction trophy breeders are capture-only and never enter boos
   }
 });
 
-test('tutorial booster guarantees its faction booster monster and every pack has a monster plus Rare or better', () => {
-  const expected = { '無機': 'monster-019', '創造': 'monster-020', '幻霊': 'monster-021', '魔族': 'monster-022', '獣族': 'monster-023', '怪物': 'monster-024' };
-  for (const [faction, monsterId] of Object.entries(expected)) {
-    const result = generateBoosterPack({ masterIndex, faction, seed: `tutorial:${faction}`, openedCount: 0 });
-    assert.ok(result.cards.some((card) => card.masterId === monsterId));
-    assert.ok(result.cards.some((card) => masterIndex.cards.get(card.masterId).kind === 'monster'));
-    assert.ok(result.cards.some((card) => ['rare', 'showcase'].includes(card.rarity)));
+test('tutorial booster guarantees one of its two Chronogear-or-later monsters and every pack has Rare or better', () => {
+  for (const [faction, guaranteedIds] of Object.entries(GUARANTEED_MONSTER_IDS)) {
+    const seen = new Set();
+    for (let seed = 0; seed < 40; seed += 1) {
+      const result = generateBoosterPack({ masterIndex, faction, seed: `tutorial:${faction}:${seed}`, openedCount: 0 });
+      const guaranteed = result.cards.find((card) => guaranteedIds.includes(card.masterId));
+      assert.ok(guaranteed);
+      seen.add(guaranteed.masterId);
+      assert.ok(result.cards.some((card) => ['rare', 'showcase'].includes(card.rarity)));
+    }
+    assert.deepEqual(seen, new Set(guaranteedIds));
   }
 });
 
@@ -40,7 +44,7 @@ test('base card rarity is stable per card instead of depending on the pack slot'
     assert.equal(baseCardRarity(definition), definition.kind === 'monster' ? 'rare' : 'common');
   }
   const observed = new Map();
-  for (const faction of ['無機', '創造', '幻霊', '魔族', '獣族', '怪物']) {
+  for (const faction of ['機鋼', '神造', '幻霊', '魔族', '獣族', '怪物']) {
     for (let seed = 0; seed < 180; seed += 1) {
       const pack = generateBoosterPack({ masterIndex, faction, seed: `canonical-rarity:${faction}:${seed}`, openedCount: seed % 20 });
       for (const card of pack.cards.filter((entry) => entry.artVariantId === 'base')) {
@@ -56,7 +60,7 @@ test('base card rarity is stable per card instead of depending on the pack slot'
 });
 
 test('five, ten and twenty-pack guarantees are deterministic per faction', () => {
-  for (const faction of ['無機', '創造', '幻霊', '魔族', '獣族', '怪物']) {
+  for (const faction of ['機鋼', '神造', '幻霊', '魔族', '獣族', '怪物']) {
     const fifth = generateBoosterPack({ masterIndex, faction, seed: `fifth:${faction}`, openedCount: 4 });
     const tenth = generateBoosterPack({ masterIndex, faction, seed: `tenth:${faction}`, openedCount: 9 });
     const twentieth = generateBoosterPack({ masterIndex, faction, seed: `twentieth:${faction}`, openedCount: 19 });
@@ -69,8 +73,7 @@ test('five, ten and twenty-pack guarantees are deterministic per faction', () =>
 });
 
 test('pack disclosures expose exact next-pack card and appearance rates for every faction', () => {
-  const expectedFeatured = { '無機': 'monster-019', '創造': 'monster-020', '幻霊': 'monster-021', '魔族': 'monster-022', '獣族': 'monster-023', '怪物': 'monster-024' };
-  for (const [faction, featuredId] of Object.entries(expectedFeatured)) {
+  for (const [faction, guaranteedIds] of Object.entries(GUARANTEED_MONSTER_IDS)) {
     const first = boosterPackDisclosure({ masterIndex, faction, openedCount: 0 });
     const normal = boosterPackDisclosure({ masterIndex, faction, openedCount: 1 });
     const fifth = boosterPackDisclosure({ masterIndex, faction, openedCount: 4 });
@@ -85,23 +88,27 @@ test('pack disclosures expose exact next-pack card and appearance rates for ever
         assert.ok(Math.abs(total - 1) < 1e-9, `${faction} ${slot.label} totals 100%`);
       }
     }
-    assert.equal(first.cards.find(({ definition }) => definition.id === featuredId).probability, 1);
-    assert.equal(fifth.cards.find(({ definition }) => definition.id === featuredId).probability, 1);
+    for (const disclosure of [first, fifth]) {
+      assert.equal(disclosure.guarantees.boosterMonsterGuaranteed, true);
+      const monsterSlot = disclosure.slots.find(({ label }) => label === 'モンスター枠');
+      assert.deepEqual([...monsterSlot.distribution.keys()], guaranteedIds);
+      assert.ok([...monsterSlot.distribution.values()].every((probability) => probability === 0.5));
+    }
     assert.equal(normal.appearanceRates.showcase, 0.04);
     assert.ok(Math.abs(normal.appearanceRates.foil - 0.014) < 1e-12);
     assert.equal(tenth.appearanceRates.foil, 1);
     assert.equal(twentieth.appearanceRates.showcase, 1);
     assert.equal(twentieth.appearanceRates.foil, 1);
-    assert.equal(normal.showcaseCards.length, 4);
-    assert.equal(twentieth.showcaseCards.length, 4);
-    assert.ok(normal.showcaseCards.every(({ probability }) => Math.abs(probability - 0.01) < 1e-12));
-    assert.ok(twentieth.showcaseCards.every(({ probability }) => Math.abs(probability - 0.25) < 1e-12));
+    assert.equal(normal.showcaseCards.length, 5);
+    assert.equal(twentieth.showcaseCards.length, 5);
+    assert.ok(normal.showcaseCards.every(({ probability }) => Math.abs(probability - 0.008) < 1e-12));
+    assert.ok(twentieth.showcaseCards.every(({ probability }) => Math.abs(probability - 0.2) < 1e-12));
   }
 });
 
-test('each faction booster can award all four steal-proof showcase illustrations', () => {
+test('each faction booster can award all five steal-proof showcase illustrations', () => {
   for (const [faction, variants] of Object.entries(SHOWCASE_VARIANTS)) {
-    assert.equal(variants.length, 4);
+    assert.equal(variants.length, 5);
     for (const variant of variants) {
       assert.equal(existsSync(new URL(`../../assets/images/showcase/${variant.artVariantId}.webp`, import.meta.url)), true);
     }
@@ -122,7 +129,7 @@ test('legacy premium support assets are migrated to normal appearance', () => {
     masterId: 'breeder-001', artVariantId: 'legacy-special', finish: 'foil', rarity: 'showcase', origin: 'core', quantity: 2,
   }];
   legacy.pendingPack = {
-    operationId: 'legacy-pack', faction: '無機', packId: 'pack-inorganic',
+    operationId: 'legacy-pack', faction: '機鋼', packId: 'pack-inorganic',
     cards: [{ masterId: 'training-life', artVariantId: 'legacy-special', finish: 'foil', rarity: 'showcase', origin: 'core' }],
   };
   const migrated = normalizeEconomyState(legacy);
@@ -134,8 +141,18 @@ test('legacy premium support assets are migrated to normal appearance', () => {
   assert.equal(migrated.pendingPack.cards[0].rarity, 'common');
 });
 
+test('legacy faction names keep pack counters and pending pack state after renaming', () => {
+  const legacy = defaultEconomyState();
+  legacy.packCounters = { '無機': 7, '創造': 4, '幻霊': 3, '魔族': 2, '獣族': 1, '怪物': 0 };
+  legacy.pendingPack = { operationId: 'legacy-faction-pack', faction: '無機', packId: 'pack-inorganic', cards: [] };
+  const migrated = normalizeEconomyState(legacy);
+  assert.equal(migrated.packCounters['機鋼'], 7);
+  assert.equal(migrated.packCounters['神造'], 4);
+  assert.equal(migrated.pendingPack.faction, '機鋼');
+});
+
 test('every generated Foil and special illustration belongs to a monster', () => {
-  for (const faction of ['無機', '創造', '幻霊', '魔族', '獣族', '怪物']) {
+  for (const faction of ['機鋼', '神造', '幻霊', '魔族', '獣族', '怪物']) {
     for (let openedCount = 0; openedCount < 40; openedCount += 1) {
       const pack = generateBoosterPack({ masterIndex, faction, openedCount, seed: `premium-rule:${faction}:${openedCount}` });
       const premium = pack.cards.filter((card) => card.finish === 'foil' || card.artVariantId !== 'base');
@@ -147,7 +164,7 @@ test('every generated Foil and special illustration belongs to a monster', () =>
 test('normal CPU decks keep trophy breeders obtainable but never generate booster-only monsters', () => {
   let trophySeen = false;
   for (const rank of ['bronze', 'silver', 'gold', 'legend']) {
-    for (const faction of ['無機', '創造', '幻霊', '魔族', '獣族', '怪物']) {
+    for (const faction of ['機鋼', '神造', '幻霊', '魔族', '獣族', '怪物']) {
       const generated = generateCpuDeck({ masterIndex, rank, theme: faction, rng: new SeededRng(`cpu:${rank}:${faction}`) });
       assert.equal(generated.cards.some((card) => BOOSTER_MONSTER_IDS.includes(card.masterId)), false);
       trophySeen ||= generated.cards.some((card) => TROPHY_BREEDER_IDS.includes(card.masterId));
@@ -158,7 +175,7 @@ test('normal CPU decks keep trophy breeders obtainable but never generate booste
 
 test('the six stronger trophy breeders are used by matching CPUs and can be captured after a win', () => {
   const newest = Array.from({ length: 6 }, (_, index) => `breeder-${String(index + 47).padStart(3, '0')}`);
-  const factions = ['無機', '創造', '幻霊', '魔族', '獣族', '怪物'];
+  const factions = ['機鋼', '神造', '幻霊', '魔族', '獣族', '怪物'];
   for (const [index, breederId] of newest.entries()) {
     let cpuSeen = false;
     for (let seed = 0; seed < 160 && !cpuSeen; seed += 1) {
@@ -192,7 +209,7 @@ test('the six stronger trophy breeders are used by matching CPUs and can be capt
 test('all six counter commands are available from boosters, normal CPUs and post-win capture', () => {
   const counterIds = Array.from({ length: 6 }, (_, index) => `breeder-${String(index + 41).padStart(3, '0')}`);
   assert.equal(counterIds.every((id) => isPackEligible(masterIndex.cards.get(id))), true);
-  const disclosure = boosterPackDisclosure({ masterIndex, faction: '無機', openedCount: 1 });
+  const disclosure = boosterPackDisclosure({ masterIndex, faction: '機鋼', openedCount: 1 });
   assert.equal(counterIds.every((id) => disclosure.cards.some(({ definition }) => definition.id === id)), true);
 
   const generated = generateCpuDeck({ masterIndex, rank: 'legend', theme: '混合', rng: new SeededRng('counter-command-cpu') });
@@ -215,8 +232,8 @@ test('all six counter commands are available from boosters, normal CPUs and post
 });
 
 test('pack purchase persists five assets before reveal and operation ids prevent double spending or rewards', () => {
-  const pack = generateBoosterPack({ masterIndex, faction: '無機', seed: 'atomic-pack', openedCount: 0 });
-  const purchase = { operationId: 'pack-op-1', faction: '無機', packId: pack.packId, cards: pack.cards, cost: 300, useFreeCredit: false };
+  const pack = generateBoosterPack({ masterIndex, faction: '機鋼', seed: 'atomic-pack', openedCount: 0 });
+  const purchase = { operationId: 'pack-op-1', faction: '機鋼', packId: pack.packId, cards: pack.cards, cost: 300, useFreeCredit: false };
   const once = applyPackPurchase(defaultEconomyState(), purchase, '2026-08-26T00:00:00.000Z');
   const twice = applyPackPurchase(once, purchase, '2026-08-26T00:00:01.000Z');
   assert.equal(once.diamonds, 300);

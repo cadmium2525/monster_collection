@@ -28,7 +28,7 @@ test('booster shop discloses next-pack card rates without the removed billing no
   assert.match(source, /text: '収録カード・提供割合'/);
   assert.match(source, /boosterPackDisclosure/);
   assert.match(source, /次の1パック（5枚）に同じカードが1枚以上含まれる確率/);
-  assert.match(source, /初回と5パックごとにそのモン類の新モンスター/);
+  assert.match(source, /初回と5パックごとにその分類のブースター限定モンスター2種から1体/);
   assert.doesNotMatch(source, /このゲームに課金要素はありません/);
   assert.match(css, /\.pack-card-rate-table/);
 });

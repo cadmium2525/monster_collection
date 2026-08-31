@@ -2,21 +2,21 @@
   "meta": {
     "savepoint": "Sim8.7_完全展開版",
     "cardMaster": "Ver5_Sim7.19",
-    "moveMaster": "Ver2_独自技名216技",
+    "moveMaster": "Ver3_独自技名270技",
     "generatedAt": "2026-08-24",
     "distanceSystem": "removed-by-user-amendment-2026-08-24",
     "legacyDistanceFieldsAreNonGameplay": true,
-    "expectedMonsterCount": 24,
-    "expectedMoveCount": 216,
+    "expectedMonsterCount": 30,
+    "expectedMoveCount": 270,
     "expectedBreederCount": 52,
     "expectedFusionCount": 48,
-    "boosterExpansion": "First Flight 2026-08-26"
+    "boosterExpansion": "Six Heroines 2026-08-31"
   },
   "monsters": [
     {
       "id": "monster-001",
       "kind": "monster",
-      "faction": "無機",
+      "faction": "機鋼",
       "name": "モノリス",
       "summonTp": 3,
       "base": {
@@ -45,7 +45,7 @@
     {
       "id": "monster-002",
       "kind": "monster",
-      "faction": "無機",
+      "faction": "機鋼",
       "name": "ギアセンチネル",
       "summonTp": 4,
       "base": {
@@ -74,7 +74,7 @@
     {
       "id": "monster-003",
       "kind": "monster",
-      "faction": "無機",
+      "faction": "機鋼",
       "name": "ゴーレム",
       "summonTp": 5,
       "base": {
@@ -103,7 +103,7 @@
     {
       "id": "monster-004",
       "kind": "monster",
-      "faction": "創造",
+      "faction": "神造",
       "name": "ヒノトリ",
       "summonTp": 4,
       "base": {
@@ -132,7 +132,7 @@
     {
       "id": "monster-005",
       "kind": "monster",
-      "faction": "創造",
+      "faction": "神造",
       "name": "アストラノイド",
       "summonTp": 3,
       "base": {
@@ -161,7 +161,7 @@
     {
       "id": "monster-006",
       "kind": "monster",
-      "faction": "創造",
+      "faction": "神造",
       "name": "アルカナロード",
       "summonTp": 2,
       "base": {
@@ -538,7 +538,7 @@
     {
       "id": "monster-019",
       "kind": "monster",
-      "faction": "無機",
+      "faction": "機鋼",
       "name": "クロノギア",
       "summonTp": 4,
       "base": {
@@ -570,7 +570,7 @@
     {
       "id": "monster-020",
       "kind": "monster",
-      "faction": "創造",
+      "faction": "神造",
       "name": "アルケミア",
       "summonTp": 3,
       "base": {
@@ -726,6 +726,198 @@
         "move-216"
       ],
       "legacyPreferredDistance": "近接"
+    },
+    {
+      "id": "monster-025",
+      "kind": "monster",
+      "faction": "機鋼",
+      "name": "アークヴァルキア",
+      "summonTp": 4,
+      "base": {
+        "life": 25,
+        "atk": 30,
+        "def": 25
+      },
+      "role": "バランス",
+      "trait": {
+        "name": "偏向機翼",
+        "effect": "各ターン、最初に受ける技ダメージを15%軽減する。",
+        "engine": {
+          "firstIncomingReduction": 0.15
+        }
+      },
+      "moveIds": [
+        "move-217",
+        "move-218",
+        "move-219",
+        "move-220",
+        "move-221",
+        "move-222",
+        "move-223",
+        "move-224",
+        "move-225"
+      ],
+      "legacyPreferredDistance": "中距離"
+    },
+    {
+      "id": "monster-026",
+      "kind": "monster",
+      "faction": "神造",
+      "name": "セラフィノア",
+      "summonTp": 4,
+      "base": {
+        "life": 30,
+        "atk": 25,
+        "def": 25
+      },
+      "role": "タンク",
+      "trait": {
+        "name": "聖晶再生",
+        "effect": "自分ターン開始時、自身のLIFEを5回復する。",
+        "engine": {
+          "turnStartHeal": 5
+        }
+      },
+      "moveIds": [
+        "move-226",
+        "move-227",
+        "move-228",
+        "move-229",
+        "move-230",
+        "move-231",
+        "move-232",
+        "move-233",
+        "move-234"
+      ],
+      "legacyPreferredDistance": "中距離"
+    },
+    {
+      "id": "monster-027",
+      "kind": "monster",
+      "faction": "幻霊",
+      "name": "カスミヨ",
+      "summonTp": 3,
+      "base": {
+        "life": 20,
+        "atk": 30,
+        "def": 15
+      },
+      "role": "アタッカー",
+      "trait": {
+        "name": "幽世渡り",
+        "effect": "召喚時、攻撃を1度だけ完全回避する状態を得る。",
+        "engine": {
+          "evadeOnSummon": true
+        }
+      },
+      "moveIds": [
+        "move-235",
+        "move-236",
+        "move-237",
+        "move-238",
+        "move-239",
+        "move-240",
+        "move-241",
+        "move-242",
+        "move-243"
+      ],
+      "legacyPreferredDistance": "中距離"
+    },
+    {
+      "id": "monster-028",
+      "kind": "monster",
+      "faction": "魔族",
+      "name": "リリヴェル",
+      "summonTp": 4,
+      "base": {
+        "life": 25,
+        "atk": 35,
+        "def": 15
+      },
+      "role": "アタッカー",
+      "trait": {
+        "name": "血月の契約",
+        "effect": "LIFE50%以下なら技TP-1（最低1）。",
+        "engine": {
+          "lowLifeMoveDiscount": 1
+        }
+      },
+      "moveIds": [
+        "move-244",
+        "move-245",
+        "move-246",
+        "move-247",
+        "move-248",
+        "move-249",
+        "move-250",
+        "move-251",
+        "move-252"
+      ],
+      "legacyPreferredDistance": "中距離"
+    },
+    {
+      "id": "monster-029",
+      "kind": "monster",
+      "faction": "獣族",
+      "name": "レオネア",
+      "summonTp": 3,
+      "base": {
+        "life": 25,
+        "atk": 30,
+        "def": 20
+      },
+      "role": "アタッカー",
+      "trait": {
+        "name": "先陣の咆哮",
+        "effect": "各ターン最初に使う技のダメージ+15%。",
+        "engine": {
+          "firstMoveDamageBonus": 0.15
+        }
+      },
+      "moveIds": [
+        "move-253",
+        "move-254",
+        "move-255",
+        "move-256",
+        "move-257",
+        "move-258",
+        "move-259",
+        "move-260",
+        "move-261"
+      ],
+      "legacyPreferredDistance": "中距離"
+    },
+    {
+      "id": "monster-030",
+      "kind": "monster",
+      "faction": "怪物",
+      "name": "ミメシア",
+      "summonTp": 4,
+      "base": {
+        "life": 35,
+        "atk": 25,
+        "def": 20
+      },
+      "role": "バランス",
+      "trait": {
+        "name": "貪欲擬態",
+        "effect": "敵を撃破するたび、自身のLIFEを8回復する。",
+        "engine": {
+          "healOnKill": 8
+        }
+      },
+      "moveIds": [
+        "move-262",
+        "move-263",
+        "move-264",
+        "move-265",
+        "move-266",
+        "move-267",
+        "move-268",
+        "move-269",
+        "move-270"
+      ],
+      "legacyPreferredDistance": "中距離"
     }
   ],
   "moves": [
@@ -3104,6 +3296,600 @@
       "effect": "自身LIFE5回復",
       "initial": false,
       "legacyDistance": "遠距離"
+    },
+    {
+      "id": "move-217",
+      "monsterName": "アークヴァルキア",
+      "name": "蒼雷突",
+      "rank": 1,
+      "power": 100,
+      "tp": 1,
+      "effect": "―",
+      "initial": true,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-218",
+      "monsterName": "アークヴァルキア",
+      "name": "翼輪斬",
+      "rank": 1,
+      "power": 105,
+      "tp": 2,
+      "effect": "対象DEF-5",
+      "initial": true,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-219",
+      "monsterName": "アークヴァルキア",
+      "name": "機装閃",
+      "rank": 2,
+      "power": 110,
+      "tp": 2,
+      "effect": "使用後、自身DEF+5",
+      "initial": true,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-220",
+      "monsterName": "アークヴァルキア",
+      "name": "空戦連刃",
+      "rank": 3,
+      "power": 120,
+      "tp": 3,
+      "effect": "対象ATK-5",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-221",
+      "monsterName": "アークヴァルキア",
+      "name": "天衝レール",
+      "rank": 4,
+      "power": 135,
+      "tp": 4,
+      "effect": "追加でDEF5無視",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-222",
+      "monsterName": "アークヴァルキア",
+      "name": "蒼穹終槍",
+      "rank": 5,
+      "power": 150,
+      "tp": 5,
+      "effect": "使用後、自身DEF-5",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-223",
+      "monsterName": "アークヴァルキア",
+      "name": "偏向羽盾",
+      "rank": 2,
+      "power": 105,
+      "tp": 2,
+      "effect": "対象ATK-5",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-224",
+      "monsterName": "アークヴァルキア",
+      "name": "機翼反転",
+      "rank": 3,
+      "power": 115,
+      "tp": 3,
+      "effect": "使用後、自身ATK+5",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-225",
+      "monsterName": "アークヴァルキア",
+      "name": "雷光包囲",
+      "rank": 4,
+      "power": 130,
+      "tp": 4,
+      "effect": "対象DEF-5",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-226",
+      "monsterName": "セラフィノア",
+      "name": "光紡ぎ",
+      "rank": 1,
+      "power": 100,
+      "tp": 1,
+      "effect": "―",
+      "initial": true,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-227",
+      "monsterName": "セラフィノア",
+      "name": "聖晶針",
+      "rank": 1,
+      "power": 105,
+      "tp": 2,
+      "effect": "対象DEF-5",
+      "initial": true,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-228",
+      "monsterName": "セラフィノア",
+      "name": "祝輪",
+      "rank": 2,
+      "power": 110,
+      "tp": 2,
+      "effect": "自身LIFE5回復",
+      "initial": true,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-229",
+      "monsterName": "セラフィノア",
+      "name": "天階裁断",
+      "rank": 3,
+      "power": 120,
+      "tp": 3,
+      "effect": "対象ATK-5",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-230",
+      "monsterName": "セラフィノア",
+      "name": "星冠照射",
+      "rank": 4,
+      "power": 135,
+      "tp": 4,
+      "effect": "追加でDEF5無視",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-231",
+      "monsterName": "セラフィノア",
+      "name": "神域再編",
+      "rank": 5,
+      "power": 145,
+      "tp": 5,
+      "effect": "使用後、自身ATK+5",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-232",
+      "monsterName": "セラフィノア",
+      "name": "琥珀守護",
+      "rank": 2,
+      "power": 105,
+      "tp": 2,
+      "effect": "使用後、自身DEF+5",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-233",
+      "monsterName": "セラフィノア",
+      "name": "光律共鳴",
+      "rank": 3,
+      "power": 115,
+      "tp": 3,
+      "effect": "対象ATK-5",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-234",
+      "monsterName": "セラフィノア",
+      "name": "創世黎明",
+      "rank": 4,
+      "power": 130,
+      "tp": 4,
+      "effect": "自身LIFE5回復",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-235",
+      "monsterName": "カスミヨ",
+      "name": "霧灯",
+      "rank": 1,
+      "power": 100,
+      "tp": 1,
+      "effect": "―",
+      "initial": true,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-236",
+      "monsterName": "カスミヨ",
+      "name": "鏡月刃",
+      "rank": 1,
+      "power": 105,
+      "tp": 2,
+      "effect": "対象DEF-5",
+      "initial": true,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-237",
+      "monsterName": "カスミヨ",
+      "name": "狐火送り",
+      "rank": 2,
+      "power": 110,
+      "tp": 2,
+      "effect": "対象ATK-5",
+      "initial": true,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-238",
+      "monsterName": "カスミヨ",
+      "name": "朧渡り",
+      "rank": 3,
+      "power": 120,
+      "tp": 3,
+      "effect": "使用後、自身ATK+5",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-239",
+      "monsterName": "カスミヨ",
+      "name": "六灯葬",
+      "rank": 4,
+      "power": 135,
+      "tp": 4,
+      "effect": "追加でDEF5無視",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-240",
+      "monsterName": "カスミヨ",
+      "name": "常夜水鏡",
+      "rank": 5,
+      "power": 150,
+      "tp": 5,
+      "effect": "使用後、自身DEF-5",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-241",
+      "monsterName": "カスミヨ",
+      "name": "霞衣",
+      "rank": 2,
+      "power": 105,
+      "tp": 2,
+      "effect": "使用後、自身DEF+5",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-242",
+      "monsterName": "カスミヨ",
+      "name": "月影返し",
+      "rank": 3,
+      "power": 115,
+      "tp": 3,
+      "effect": "対象ATK-5",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-243",
+      "monsterName": "カスミヨ",
+      "name": "幽明輪舞",
+      "rank": 4,
+      "power": 130,
+      "tp": 4,
+      "effect": "対象DEF-5",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-244",
+      "monsterName": "リリヴェル",
+      "name": "紅針",
+      "rank": 1,
+      "power": 100,
+      "tp": 1,
+      "effect": "―",
+      "initial": true,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-245",
+      "monsterName": "リリヴェル",
+      "name": "影踏み",
+      "rank": 1,
+      "power": 105,
+      "tp": 2,
+      "effect": "対象DEF-5",
+      "initial": true,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-246",
+      "monsterName": "リリヴェル",
+      "name": "夜会斬",
+      "rank": 2,
+      "power": 110,
+      "tp": 2,
+      "effect": "使用後、自身ATK+5",
+      "initial": true,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-247",
+      "monsterName": "リリヴェル",
+      "name": "黒蝶連舞",
+      "rank": 3,
+      "power": 125,
+      "tp": 3,
+      "effect": "対象ATK-5",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-248",
+      "monsterName": "リリヴェル",
+      "name": "深紅穿ち",
+      "rank": 4,
+      "power": 140,
+      "tp": 4,
+      "effect": "追加でDEF5無視",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-249",
+      "monsterName": "リリヴェル",
+      "name": "月蝕決闘",
+      "rank": 5,
+      "power": 155,
+      "tp": 5,
+      "effect": "使用後、自身LIFE-5",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-250",
+      "monsterName": "リリヴェル",
+      "name": "宵闇受け",
+      "rank": 2,
+      "power": 105,
+      "tp": 2,
+      "effect": "使用後、自身DEF+5",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-251",
+      "monsterName": "リリヴェル",
+      "name": "魔宴返し",
+      "rank": 3,
+      "power": 115,
+      "tp": 3,
+      "effect": "対象ATK-5",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-252",
+      "monsterName": "リリヴェル",
+      "name": "緋晶散華",
+      "rank": 4,
+      "power": 130,
+      "tp": 4,
+      "effect": "対象DEF-5",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-253",
+      "monsterName": "レオネア",
+      "name": "砂牙",
+      "rank": 1,
+      "power": 100,
+      "tp": 1,
+      "effect": "―",
+      "initial": true,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-254",
+      "monsterName": "レオネア",
+      "name": "双爪閃",
+      "rank": 1,
+      "power": 105,
+      "tp": 2,
+      "effect": "対象DEF-5",
+      "initial": true,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-255",
+      "monsterName": "レオネア",
+      "name": "獅子駆け",
+      "rank": 2,
+      "power": 110,
+      "tp": 2,
+      "effect": "使用後、自身ATK+5",
+      "initial": true,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-256",
+      "monsterName": "レオネア",
+      "name": "旋牙乱舞",
+      "rank": 3,
+      "power": 120,
+      "tp": 3,
+      "effect": "対象ATK-5",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-257",
+      "monsterName": "レオネア",
+      "name": "王獣跳撃",
+      "rank": 4,
+      "power": 135,
+      "tp": 4,
+      "effect": "追加でDEF5無視",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-258",
+      "monsterName": "レオネア",
+      "name": "金獅烈破",
+      "rank": 5,
+      "power": 150,
+      "tp": 5,
+      "effect": "使用後、自身DEF-5",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-259",
+      "monsterName": "レオネア",
+      "name": "砂塵受け",
+      "rank": 2,
+      "power": 105,
+      "tp": 2,
+      "effect": "使用後、自身DEF+5",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-260",
+      "monsterName": "レオネア",
+      "name": "獣王返し",
+      "rank": 3,
+      "power": 115,
+      "tp": 3,
+      "effect": "対象ATK-5",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-261",
+      "monsterName": "レオネア",
+      "name": "夕陽双月",
+      "rank": 4,
+      "power": 130,
+      "tp": 4,
+      "effect": "対象DEF-5",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-262",
+      "monsterName": "ミメシア",
+      "name": "金貨弾",
+      "rank": 1,
+      "power": 100,
+      "tp": 1,
+      "effect": "―",
+      "initial": true,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-263",
+      "monsterName": "ミメシア",
+      "name": "粘晶爪",
+      "rank": 1,
+      "power": 105,
+      "tp": 2,
+      "effect": "対象DEF-5",
+      "initial": true,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-264",
+      "monsterName": "ミメシア",
+      "name": "宝箱噛み",
+      "rank": 2,
+      "power": 110,
+      "tp": 2,
+      "effect": "自身LIFE5回復",
+      "initial": true,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-265",
+      "monsterName": "ミメシア",
+      "name": "逆重力財宝",
+      "rank": 3,
+      "power": 120,
+      "tp": 3,
+      "effect": "対象ATK-5",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-266",
+      "monsterName": "ミメシア",
+      "name": "万眼の蓋",
+      "rank": 4,
+      "power": 135,
+      "tp": 4,
+      "effect": "追加でDEF5無視",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-267",
+      "monsterName": "ミメシア",
+      "name": "深淵大収蔵",
+      "rank": 5,
+      "power": 145,
+      "tp": 5,
+      "effect": "LIFE5追加回復",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-268",
+      "monsterName": "ミメシア",
+      "name": "液鎧変成",
+      "rank": 2,
+      "power": 105,
+      "tp": 2,
+      "effect": "使用後、自身DEF+5",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-269",
+      "monsterName": "ミメシア",
+      "name": "偽宝反射",
+      "rank": 3,
+      "power": 115,
+      "tp": 3,
+      "effect": "対象ATK-5",
+      "initial": false,
+      "legacyDistance": "中距離"
+    },
+    {
+      "id": "move-270",
+      "monsterName": "ミメシア",
+      "name": "王庫雪崩",
+      "rank": 4,
+      "power": 130,
+      "tp": 4,
+      "effect": "対象DEF-5",
+      "initial": false,
+      "legacyDistance": "中距離"
     }
   ],
   "breeders": [
@@ -3182,43 +3968,43 @@
     {
       "id": "breeder-009",
       "kind": "breeder",
-      "category": "モン類専用",
-      "faction": "無機",
-      "name": "無機・硬化装甲",
+      "category": "分類専用",
+      "faction": "機鋼",
+      "name": "機鋼・硬化装甲",
       "tp": 2,
-      "effect": "対象無機DEF+5・3ターン"
+      "effect": "対象機鋼DEF+5・3ターン"
     },
     {
       "id": "breeder-010",
       "kind": "breeder",
-      "category": "モン類専用",
-      "faction": "無機",
-      "name": "無機・装甲解析",
+      "category": "分類専用",
+      "faction": "機鋼",
+      "name": "機鋼・装甲解析",
       "tp": 1,
-      "effect": "対象無機は常時DEF3無視。相手が創造なら合計DEF5無視"
+      "effect": "対象機鋼は常時DEF3無視。相手が神造なら合計DEF5無視"
     },
     {
       "id": "breeder-011",
       "kind": "breeder",
-      "category": "モン類専用",
-      "faction": "創造",
-      "name": "創造・省力設計",
+      "category": "分類専用",
+      "faction": "神造",
+      "name": "神造・省力設計",
       "tp": 3,
-      "effect": "自陣の創造モンスターの技TP-1"
+      "effect": "自陣の神造モンスターの技TP-1"
     },
     {
       "id": "breeder-012",
       "kind": "breeder",
-      "category": "モン類専用",
-      "faction": "創造",
-      "name": "創造・機能停止",
+      "category": "分類専用",
+      "faction": "神造",
+      "name": "神造・機能停止",
       "tp": 3,
       "effect": "次ターン、相手モンスター1体をスタン"
     },
     {
       "id": "breeder-013",
       "kind": "breeder",
-      "category": "モン類専用",
+      "category": "分類専用",
       "faction": "幻霊",
       "name": "幻霊・連続顕現",
       "tp": 3,
@@ -3227,7 +4013,7 @@
     {
       "id": "breeder-014",
       "kind": "breeder",
-      "category": "モン類専用",
+      "category": "分類専用",
       "faction": "幻霊",
       "name": "幻霊・幽体回避",
       "tp": 1,
@@ -3236,7 +4022,7 @@
     {
       "id": "breeder-015",
       "kind": "breeder",
-      "category": "モン類専用",
+      "category": "分類専用",
       "faction": "魔族",
       "name": "魔族・魔力注入",
       "tp": 2,
@@ -3245,7 +4031,7 @@
     {
       "id": "breeder-016",
       "kind": "breeder",
-      "category": "モン類専用",
+      "category": "分類専用",
       "faction": "魔族",
       "name": "魔族・群魔の共鳴",
       "tp": 2,
@@ -3254,7 +4040,7 @@
     {
       "id": "breeder-017",
       "kind": "breeder",
-      "category": "モン類専用",
+      "category": "分類専用",
       "faction": "獣族",
       "name": "獣族・野生の活力",
       "tp": 2,
@@ -3263,7 +4049,7 @@
     {
       "id": "breeder-018",
       "kind": "breeder",
-      "category": "モン類専用",
+      "category": "分類専用",
       "faction": "獣族",
       "name": "獣族・生命の息吹",
       "tp": 3,
@@ -3272,16 +4058,16 @@
     {
       "id": "breeder-019",
       "kind": "breeder",
-      "category": "モン類専用",
+      "category": "分類専用",
       "faction": "怪物",
       "name": "怪物・威嚇咆哮",
       "tp": 2,
-      "effect": "相手1体を対象。無機なら次ターンスタン、それ以外なら次の技ダメージ-20%"
+      "effect": "相手1体を対象。機鋼なら次ターンスタン、それ以外なら次の技ダメージ-20%"
     },
     {
       "id": "breeder-020",
       "kind": "breeder",
-      "category": "モン類専用",
+      "category": "分類専用",
       "faction": "怪物",
       "name": "怪物・群体進化",
       "tp": 4,
@@ -3362,43 +4148,43 @@
     {
       "id": "breeder-029",
       "kind": "breeder",
-      "category": "モン類専用",
-      "faction": "無機",
-      "name": "無機・オーバークロック",
+      "category": "分類専用",
+      "faction": "機鋼",
+      "name": "機鋼・オーバークロック",
       "tp": 2,
-      "effect": "無機1体のATK+10。このターン終了後、次の自分ターンまでDEF-5"
+      "effect": "機鋼1体のATK+10。このターン終了後、次の自分ターンまでDEF-5"
     },
     {
       "id": "breeder-030",
       "kind": "breeder",
-      "category": "モン類専用",
-      "faction": "無機",
-      "name": "無機・自動修復",
+      "category": "分類専用",
+      "faction": "機鋼",
+      "name": "機鋼・自動修復",
       "tp": 3,
-      "effect": "無機1体は自分ターン終了時にLIFE5回復。3回まで発動"
+      "effect": "機鋼1体は自分ターン終了時にLIFE5回復。3回まで発動"
     },
     {
       "id": "breeder-031",
       "kind": "breeder",
-      "category": "モン類専用",
-      "faction": "創造",
-      "name": "創造・再設計",
+      "category": "分類専用",
+      "faction": "神造",
+      "name": "神造・再設計",
       "tp": 2,
-      "effect": "創造1体のATKとDEFを次の自分ターン開始まで入れ替える"
+      "effect": "神造1体のATKとDEFを次の自分ターン開始まで入れ替える"
     },
     {
       "id": "breeder-032",
       "kind": "breeder",
-      "category": "モン類専用",
-      "faction": "創造",
-      "name": "創造・予備パーツ",
+      "category": "分類専用",
+      "faction": "神造",
+      "name": "神造・予備パーツ",
       "tp": 2,
-      "effect": "創造1体が次に撃破されるとき、一度だけLIFE1で耐える"
+      "effect": "神造1体が次に撃破されるとき、一度だけLIFE1で耐える"
     },
     {
       "id": "breeder-033",
       "kind": "breeder",
-      "category": "モン類専用",
+      "category": "分類専用",
       "faction": "幻霊",
       "name": "幻霊・残響詠唱",
       "tp": 3,
@@ -3407,7 +4193,7 @@
     {
       "id": "breeder-034",
       "kind": "breeder",
-      "category": "モン類専用",
+      "category": "分類専用",
       "faction": "幻霊",
       "name": "幻霊・霊界帰還",
       "tp": 2,
@@ -3416,7 +4202,7 @@
     {
       "id": "breeder-035",
       "kind": "breeder",
-      "category": "モン類専用",
+      "category": "分類専用",
       "faction": "魔族",
       "name": "魔族・血の契約",
       "tp": 1,
@@ -3425,7 +4211,7 @@
     {
       "id": "breeder-036",
       "kind": "breeder",
-      "category": "モン類専用",
+      "category": "分類専用",
       "faction": "魔族",
       "name": "魔族・呪印",
       "tp": 2,
@@ -3434,7 +4220,7 @@
     {
       "id": "breeder-037",
       "kind": "breeder",
-      "category": "モン類専用",
+      "category": "分類専用",
       "faction": "獣族",
       "name": "獣族・狩猟本能",
       "tp": 2,
@@ -3443,7 +4229,7 @@
     {
       "id": "breeder-038",
       "kind": "breeder",
-      "category": "モン類専用",
+      "category": "分類専用",
       "faction": "獣族",
       "name": "獣族・群れの守り",
       "tp": 2,
@@ -3452,7 +4238,7 @@
     {
       "id": "breeder-039",
       "kind": "breeder",
-      "category": "モン類専用",
+      "category": "分類専用",
       "faction": "怪物",
       "name": "怪物・暴食",
       "tp": 2,
@@ -3461,7 +4247,7 @@
     {
       "id": "breeder-040",
       "kind": "breeder",
-      "category": "モン類専用",
+      "category": "分類専用",
       "faction": "怪物",
       "name": "怪物・捕食進化",
       "tp": 3,
@@ -3524,25 +4310,25 @@
     {
       "id": "breeder-047",
       "kind": "breeder",
-      "category": "モン類専用",
-      "faction": "無機",
-      "name": "無機・機神起動",
+      "category": "分類専用",
+      "faction": "機鋼",
+      "name": "機鋼・機神起動",
       "tp": 4,
-      "effect": "無機1体のATK+10・DEF+10。次の自分ターン終了まで継続"
+      "effect": "機鋼1体のATK+10・DEF+10。次の自分ターン終了まで継続"
     },
     {
       "id": "breeder-048",
       "kind": "breeder",
-      "category": "モン類専用",
-      "faction": "創造",
-      "name": "創造・神造再演",
+      "category": "分類専用",
+      "faction": "神造",
+      "name": "神造・神造再演",
       "tp": 3,
-      "effect": "召喚ターンでない創造1体の行動権+1。さらに次の技ダメージ+30%"
+      "effect": "召喚ターンでない神造1体の行動権+1。さらに次の技ダメージ+30%"
     },
     {
       "id": "breeder-049",
       "kind": "breeder",
-      "category": "モン類専用",
+      "category": "分類専用",
       "faction": "幻霊",
       "name": "幻霊・黄泉の残唱",
       "tp": 3,
@@ -3551,7 +4337,7 @@
     {
       "id": "breeder-050",
       "kind": "breeder",
-      "category": "モン類専用",
+      "category": "分類専用",
       "faction": "魔族",
       "name": "魔族・終末契約",
       "tp": 2,
@@ -3560,7 +4346,7 @@
     {
       "id": "breeder-051",
       "kind": "breeder",
-      "category": "モン類専用",
+      "category": "分類専用",
       "faction": "獣族",
       "name": "獣族・王者の咆哮",
       "tp": 3,
@@ -3569,7 +4355,7 @@
     {
       "id": "breeder-052",
       "kind": "breeder",
-      "category": "モン類専用",
+      "category": "分類専用",
       "faction": "怪物",
       "name": "怪物・完全捕食",
       "tp": 3,
@@ -4446,6 +5232,78 @@
         "しっぽビンタ",
         "連続かみつき",
         "火炎"
+      ]
+    },
+    "アークヴァルキア": {
+      "attack": [
+        "空戦連刃",
+        "天衝レール",
+        "蒼穹終槍"
+      ],
+      "defense": [
+        "偏向羽盾",
+        "機翼反転",
+        "雷光包囲"
+      ]
+    },
+    "セラフィノア": {
+      "attack": [
+        "天階裁断",
+        "星冠照射",
+        "神域再編"
+      ],
+      "defense": [
+        "琥珀守護",
+        "光律共鳴",
+        "創世黎明"
+      ]
+    },
+    "カスミヨ": {
+      "attack": [
+        "朧渡り",
+        "六灯葬",
+        "常夜水鏡"
+      ],
+      "defense": [
+        "霞衣",
+        "月影返し",
+        "幽明輪舞"
+      ]
+    },
+    "リリヴェル": {
+      "attack": [
+        "黒蝶連舞",
+        "深紅穿ち",
+        "月蝕決闘"
+      ],
+      "defense": [
+        "宵闇受け",
+        "魔宴返し",
+        "緋晶散華"
+      ]
+    },
+    "レオネア": {
+      "attack": [
+        "旋牙乱舞",
+        "王獣跳撃",
+        "金獅烈破"
+      ],
+      "defense": [
+        "砂塵受け",
+        "獣王返し",
+        "夕陽双月"
+      ]
+    },
+    "ミメシア": {
+      "attack": [
+        "逆重力財宝",
+        "万眼の蓋",
+        "深淵大収蔵"
+      ],
+      "defense": [
+        "液鎧変成",
+        "偽宝反射",
+        "王庫雪崩"
       ]
     }
   }
