@@ -28,9 +28,9 @@ test('home keeps the release version visible and separates tournament title line
   assert.match(homeSource, /`v\$\{APP_VERSION\}`/);
   assert.match(css, /\.home-screen\.no-technical-footer\s*\{[^}]*grid-template-rows:auto minmax\(0,1fr\) auto/s);
   assert.match(css, /\.home-app-version\s*\{[^}]*position:static;[^}]*justify-self:end/s);
-  assert.match(css, /\.home-primary-action\s*\{[^}]*gap:2px/s);
-  assert.match(css, /\.home-primary-action strong\s*\{[^}]*line-height:1\.05/s);
-  assert.match(css, /\.home-primary-action small\s*\{[^}]*line-height:1\.2/s);
+  assert.match(css, /\.home-primary-action\s*\{[^}]*grid-template-rows:max-content max-content max-content;[^}]*gap:1px/s);
+  assert.match(css, /\.home-primary-action strong\s*\{[^}]*line-height:1\.12/s);
+  assert.match(css, /\.home-primary-action small\s*\{[^}]*line-height:1\.15/s);
 });
 
 test('active tournament checkpoint is summarized as a player-facing continue action', () => {
