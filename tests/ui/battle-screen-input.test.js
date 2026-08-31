@@ -92,3 +92,14 @@ test('mulligan UI exposes 3/5-card limits and fits five opening cards in landsca
   assert.match(styles, /\.mulligan-dialog\s*\{[^}]*height:min\(92dvh,560px\)/);
   assert.match(styles, /\.mulligan-card-row\s*\{[^}]*overflow-x:auto/);
 });
+
+test('mulligan is presented after the opening deal and animates return before redraw', () => {
+  const battleSource = fs.readFileSync(new URL('../../src/ui/battle-screen.js', import.meta.url), 'utf8');
+  const styles = fs.readFileSync(new URL('../../styles.css', import.meta.url), 'utf8');
+  assert.match(battleSource, /await this\.playInitialHandDeal\(\)/);
+  assert.match(battleSource, /mulliganPresentationPhase !== 'selecting'/);
+  assert.match(battleSource, /mulliganPresentationPhase = 'returning'[\s\S]*await delay\(timing\.return\)[\s\S]*submitMulligan/);
+  assert.match(battleSource, /mulliganPresentationPhase = 'redrawing'[\s\S]*for \(const card of replacementCards\)/);
+  assert.match(styles, /@keyframes mulligan-card-deal/);
+  assert.match(styles, /@keyframes mulligan-card-return/);
+});

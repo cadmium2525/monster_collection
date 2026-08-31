@@ -29,6 +29,22 @@ export class BattleScreen {
     this.selection = null;
     this.pendingMove = null;
     this.mulliganSelection = new Set();
+    const pendingHumanMulligan = engine.state.mulligan?.status === 'selecting'
+      && !engine.state.mulligan.submitted[humanPlayerId];
+    const resumedBattle = Boolean(cpuRngState?.seed);
+    this.mulliganPresentationPhase = pendingHumanMulligan
+      ? (resumedBattle ? 'selecting' : 'initial-deal')
+      : 'complete';
+    this.presentedMulliganHandIds = new Set(
+      pendingHumanMulligan && !resumedBattle
+        ? []
+        : engine.player(humanPlayerId).hand.map((card) => card.instanceId),
+    );
+    this.mulliganAnimatingCardId = null;
+    this.mulliganReturningIds = new Set();
+    this.mulliganMotionCount = pendingHumanMulligan
+      ? engine.player(humanPlayerId).hand.length
+      : 0;
     this.busy = engine.state.status === 'active' && !engine.state.pendingMoveChoice;
     this.turnAnnouncementKey = null;
     this.queuedCardSelectionId = null;
@@ -60,6 +76,10 @@ export class BattleScreen {
   }
 
   async startMulliganFlow() {
+    this.busy = true;
+    if (this.mulliganPresentationPhase === 'initial-deal') {
+      await this.playInitialHandDeal();
+    }
     const opponentId = this.engine.state.playerOrder.find((id) => id !== this.humanPlayerId);
     if (opponentId && !this.engine.state.mulligan.submitted[opponentId]) {
       const opponent = this.engine.player(opponentId);
@@ -68,7 +88,7 @@ export class BattleScreen {
     }
     if (this.engine.state.mulligan?.status === 'selecting'
       && !this.engine.state.mulligan.submitted[this.humanPlayerId]) {
-      this.busy = true;
+      this.mulliganPresentationPhase = 'selecting';
       this.render();
       return;
     }
@@ -78,6 +98,39 @@ export class BattleScreen {
       this.busy = false;
     }
     await this.runCpuIfNeeded();
+  }
+
+  prefersReducedMotion() {
+    return globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ?? false;
+  }
+
+  mulliganTimings() {
+    if (this.prefersReducedMotion()) {
+      return { lead: 40, deal: 80, settle: 40, return: 100, redrawLead: 40 };
+    }
+    if (this.speed === 'fast') {
+      return { lead: 55, deal: 115, settle: 65, return: 230, redrawLead: 55 };
+    }
+    return { lead: 120, deal: 235, settle: 130, return: 520, redrawLead: 110 };
+  }
+
+  async playInitialHandDeal() {
+    const cards = [...this.engine.player(this.humanPlayerId).hand];
+    const timing = this.mulliganTimings();
+    this.presentedMulliganHandIds.clear();
+    this.mulliganMotionCount = cards.length;
+    this.render();
+    await delay(timing.lead);
+    for (const card of cards) {
+      this.mulliganAnimatingCardId = card.instanceId;
+      this.presentedMulliganHandIds.add(card.instanceId);
+      this.render();
+      await delay(timing.deal);
+    }
+    this.mulliganAnimatingCardId = null;
+    await delay(timing.settle);
+    this.mulliganPresentationPhase = 'selecting';
+    this.render();
   }
 
   async showCurrentTurnTransition() {
@@ -142,7 +195,8 @@ export class BattleScreen {
           this.renderBoard(own, false),
         ]),
         el('section', { className: 'hand-panel', attrs: { 'aria-label': '自分の手札' } }, [
-          el('div', { className: 'card-strip' }, own.hand.map((card) => this.renderHandCard(card, own, humanTurn))),
+          el('div', { className: 'card-strip' }, this.presentedHandCards(own)
+            .map((card) => this.renderHandCard(card, own, humanTurn))),
         ]),
       ]),
       el('aside', { className: 'battle-command-rail' }, [
@@ -168,6 +222,7 @@ export class BattleScreen {
         this.renderTurnControls(humanTurn),
       ]),
       this.renderMulliganOverlay(own),
+      this.renderMulliganMotionCue(),
     ]);
     replace(this.root, screen);
     this._renderLegalActions = null;
@@ -179,9 +234,35 @@ export class BattleScreen {
     }
   }
 
+  presentedHandCards(player) {
+    if (!['initial-deal', 'redrawing'].includes(this.mulliganPresentationPhase)) return player.hand;
+    return player.hand.filter((card) => this.presentedMulliganHandIds.has(card.instanceId));
+  }
+
+  renderMulliganMotionCue() {
+    const phase = this.mulliganPresentationPhase;
+    const copy = {
+      'initial-deal': ['INITIAL HAND', `${this.mulliganMotionCount}枚の初期手札を引いています`],
+      returning: ['RETURN', `選択した${this.mulliganMotionCount}枚を山札へ戻しています`],
+      redrawing: ['REDRAW', `${this.mulliganMotionCount}枚を引き直しています`],
+    }[phase];
+    if (!copy) return null;
+    return el('div', {
+      className: `mulligan-motion-cue ${phase}`,
+      attrs: { role: 'status', 'aria-live': 'polite' },
+    }, [
+      el('span', { className: 'mulligan-motion-sigil', attrs: { 'aria-hidden': 'true' } }, [
+        el('i'), el('i'), el('b', { text: phase === 'returning' ? '↶' : '+' }),
+      ]),
+      el('span', {}, [el('strong', { text: copy[0] }), el('small', { text: copy[1] })]),
+    ]);
+  }
+
   renderMulliganOverlay(player) {
     const mulligan = this.engine.state.mulligan;
-    if (mulligan?.status !== 'selecting' || mulligan.submitted[this.humanPlayerId]) return null;
+    if (this.mulliganPresentationPhase !== 'selecting'
+      || mulligan?.status !== 'selecting'
+      || mulligan.submitted[this.humanPlayerId]) return null;
     const maxExchange = mulligan.maxByPlayer[this.humanPlayerId];
     const count = this.mulliganSelection.size;
     const cards = player.hand.map((card) => {
@@ -231,16 +312,60 @@ export class BattleScreen {
 
   async confirmMulligan() {
     if (this.engine.state.mulligan?.status !== 'selecting'
-      || this.engine.state.mulligan.submitted[this.humanPlayerId]) return;
+      || this.engine.state.mulligan.submitted[this.humanPlayerId]
+      || this.mulliganPresentationPhase !== 'selecting') return;
+    const selectedIds = [...this.mulliganSelection];
+    const selectedSet = new Set(selectedIds);
+    const openingHand = [...this.engine.player(this.humanPlayerId).hand];
+    const keptIds = new Set(openingHand
+      .filter((card) => !selectedSet.has(card.instanceId))
+      .map((card) => card.instanceId));
+    const timing = this.mulliganTimings();
     try {
-      this.engine.submitMulligan(this.humanPlayerId, [...this.mulliganSelection]);
+      this.busy = true;
+      if (selectedIds.length) {
+        this.mulliganPresentationPhase = 'returning';
+        this.mulliganReturningIds = selectedSet;
+        this.mulliganMotionCount = selectedIds.length;
+        this.render();
+        await delay(timing.return);
+      }
+
+      this.engine.submitMulligan(this.humanPlayerId, selectedIds);
       this.mulliganSelection.clear();
       this.emitCheckpoint();
+      const exchangedHand = [...this.engine.player(this.humanPlayerId).hand];
+      const replacementCards = exchangedHand.filter((card) => !keptIds.has(card.instanceId));
+      this.mulliganReturningIds.clear();
+
+      if (replacementCards.length) {
+        this.mulliganPresentationPhase = 'redrawing';
+        this.mulliganMotionCount = replacementCards.length;
+        this.presentedMulliganHandIds = new Set(keptIds);
+        this.render();
+        await delay(timing.redrawLead);
+        for (const card of replacementCards) {
+          this.mulliganAnimatingCardId = card.instanceId;
+          this.presentedMulliganHandIds.add(card.instanceId);
+          this.render();
+          await delay(timing.deal);
+        }
+        this.mulliganAnimatingCardId = null;
+        await delay(timing.settle);
+      }
+
+      this.mulliganPresentationPhase = 'complete';
+      this.presentedMulliganHandIds = new Set(exchangedHand.map((card) => card.instanceId));
+      this.mulliganMotionCount = 0;
       this.render();
       await this.showCurrentTurnTransition();
       this.busy = false;
+      this.applyQueuedCardSelection();
       await this.runCpuIfNeeded();
     } catch (error) {
+      this.mulliganPresentationPhase = 'selecting';
+      this.mulliganReturningIds.clear();
+      this.mulliganAnimatingCardId = null;
       this.busy = true;
       openModal({ title: '手札を交換できません', content: el('p', { text: error.message }) });
       this.render();
@@ -257,6 +382,10 @@ export class BattleScreen {
   }
 
   interactionHint() {
+    if (this.mulliganPresentationPhase === 'initial-deal') return '初期手札を引いています';
+    if (this.mulliganPresentationPhase === 'selecting') return '交換するカードを選択してください';
+    if (this.mulliganPresentationPhase === 'returning') return '選択したカードを山札へ戻しています';
+    if (this.mulliganPresentationPhase === 'redrawing') return '新しいカードを引いています';
     if (this.engine.state.pendingMoveChoice?.playerId === this.humanPlayerId) {
       return '新しく覚えた技の入替を選択';
     }
@@ -288,8 +417,12 @@ export class BattleScreen {
 
   renderStatusRail(own, opponent) {
     const fighter = (player, isOpponent) => {
-      const handCount = isOpponent ? player.handCount : player.hand.length;
-      const deckCount = isOpponent ? player.deckCount : player.deck.length;
+      let handCount = isOpponent ? player.handCount : player.hand.length;
+      let deckCount = isOpponent ? player.deckCount : player.deck.length;
+      if (!isOpponent && ['initial-deal', 'redrawing'].includes(this.mulliganPresentationPhase)) {
+        handCount = this.presentedHandCards(player).length;
+        deckCount += player.hand.length - handCount;
+      }
       const graveyardCount = player.graveyard.length;
       const playerTarget = isOpponent && this.pendingMove && this.legalActions().some((action) => action.type === 'move'
         && action.unitId === this.pendingMove.unitId
@@ -447,12 +580,21 @@ export class BattleScreen {
       },
     });
     node.dataset.cardInstanceId = card.instanceId;
+    if (this.mulliganAnimatingCardId === card.instanceId) {
+      node.classList.add('mulligan-draw-enter');
+      node.style.setProperty('--mulligan-card-duration', `${this.mulliganTimings().deal}ms`);
+    }
+    if (this.mulliganReturningIds.has(card.instanceId)) {
+      node.classList.add('mulligan-return-to-deck');
+      node.style.setProperty('--mulligan-return-duration', `${this.mulliganTimings().return}ms`);
+    }
     if (this.queuedCardSelectionId === card.instanceId) node.classList.add('tap-queued');
     return node;
   }
 
   queueHandCardSelection(cardInstanceId, sourceNode) {
-    if (this.engine.state.status !== 'active') return false;
+    if (this.engine.state.status !== 'active'
+      || this.engine.state.mulligan?.status === 'selecting') return false;
     const stillInHand = this.engine.player(this.humanPlayerId).hand
       .some((card) => card.instanceId === cardInstanceId);
     if (!stillInHand) return false;
