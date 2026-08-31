@@ -139,6 +139,17 @@ test('card art placement keeps legacy art below the name band and uses standalon
   });
   assert.equal(premiumFusion.className, 'monster-art special-fusion-art standalone-fusion-art showcase-fusion-art');
   assert.equal(premiumFusion.style, '--monster-art:url("./assets/images/showcase-fusions/showcase-fusion-001.webp")');
+  const thirdGenerationFusion = cardArtPlacement(monster, {
+    specialFusionId: 'fusion-060',
+    specialForm: 'アルカナミメシア',
+  });
+  assert.equal(thirdGenerationFusion.style, '--monster-art:url("./assets/images/special-fusions/fusion-060.webp")');
+  const thirdGenerationShowcase = cardArtPlacement(monster, {
+    specialFusionId: 'fusion-060',
+    specialForm: 'アルカナミメシア',
+    artVariantId: 'showcase-monster-030',
+  });
+  assert.equal(thirdGenerationShowcase.style, '--monster-art:url("./assets/images/showcase-fusions/showcase-fusion-060.webp")');
   const support = cardArtPlacement({ id: 'breeder-020', kind: 'breeder' });
   assert.equal(support.className, 'support-card-art legacy-name-safe-art');
   assert.match(support.style, /--art-x:100%;--art-y:100%/);
@@ -196,8 +207,8 @@ test('every showcase special fusion is Foil even when its main asset has a norma
   assert.equal(isFoilAppearance({ id: 'breeder-001', kind: 'breeder' }, null, { finish: 'foil' }), false);
 });
 
-test('all forty-eight special fusion cells are valid standalone WebP assets', () => {
-  for (let number = 1; number <= 48; number += 1) {
+test('all sixty special fusion cells are valid standalone WebP assets', () => {
+  for (let number = 1; number <= 60; number += 1) {
     const id = String(number).padStart(3, '0');
     const url = new URL(`../../assets/images/special-fusions/fusion-${id}.webp`, import.meta.url);
     const bytes = readFileSync(url);
@@ -207,8 +218,8 @@ test('all forty-eight special fusion cells are valid standalone WebP assets', ()
   }
 });
 
-test('all forty-eight premium special-fusion illustrations are optimized standalone WebP assets', () => {
-  for (let number = 1; number <= 48; number += 1) {
+test('all sixty premium special-fusion illustrations are optimized standalone WebP assets', () => {
+  for (let number = 1; number <= 60; number += 1) {
     const id = String(number).padStart(3, '0');
     const url = new URL(`../../assets/images/showcase-fusions/showcase-fusion-${id}.webp`, import.meta.url);
     const bytes = readFileSync(url);
@@ -278,6 +289,7 @@ test('catalog uses two bounded thumbnail atlases and keeps full art for details'
   assert.match(catalogCardThumbnailPlacement(masterIndex.cards.get('monster-025')).style, /catalog-thumbnails\/monster-025\.webp/);
   assert.match(catalogCardThumbnailPlacement(masterIndex.cards.get('breeder-052')).style, /--art-x:100%;--art-y:100%/);
   assert.match(catalogFusionThumbnailPlacement({ id: 'fusion-048' }).style, /--art-x:100%;--art-y:100%/);
+  assert.match(catalogFusionThumbnailPlacement({ id: 'fusion-049' }).style, /fusion-thumbnails\/fusion-049\.webp/);
   assert.ok(statSync(new URL('../../assets/images/catalog-thumbnails/cards.webp', import.meta.url)).size < 350_000);
   assert.ok(statSync(new URL('../../assets/images/catalog-thumbnails/fusions.webp', import.meta.url)).size < 300_000);
   const catalog = readFileSync(new URL('../../src/ui/catalog-screen.js', import.meta.url), 'utf8');

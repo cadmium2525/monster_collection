@@ -22,6 +22,8 @@ const SPECIAL_FUSION_NAMES = Object.freeze([
   'アイギスルミラビ', 'ルミギア・オクト', 'クリムゾンフローラ', 'シャドウリーフ', 'オブシディアーク', 'クレバス',
   'ファントムギア', 'アルケノクロック', 'ソルフェニキア', 'ネビュラミア', 'アストラレイ', 'エクリプスレイ',
   'ノクスオラクル', 'フェンリルノクス', 'ガイアヴォルフ', 'ベヒモスファング', 'オベリスクグラトン', 'クロノヴォア',
+  'アビスヴァルキア', 'フェアリアーク', 'エクリシエル', 'ボルトセラフィア', 'アストラカスミヨ', '幽月カスミヨ',
+  'グラトニアリリス', 'ルナリリヴェル', 'ノクスレオネア', 'ヴェルデレオネア', 'ガイアミメシア', 'アルカナミメシア',
 ]);
 
 const SUPPORT_CARD_IDS = Object.freeze([
@@ -103,6 +105,12 @@ export function catalogCardThumbnailPlacement(definition) {
 
 export function catalogFusionThumbnailPlacement(fusion) {
   const index = Number(fusion?.id?.match(/(\d+)$/)?.[1]) - 1;
+  if (index >= 48) {
+    return {
+      className: 'fusion-standalone-thumbnail-art',
+      style: `--thumbnail-art:url("./assets/images/fusion-thumbnails/${fusion.id}.webp")`,
+    };
+  }
   return {
     className: 'fusion-thumbnail-art',
     style: atlasPosition(index, 8, 6),

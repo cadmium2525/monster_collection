@@ -134,7 +134,7 @@ test('fusion never weakens a trained main monster and exposes the guaranteed gai
   assert.ok(currentSp(main) > beforeSp, 'fusion must always consume a monster without weakening the board');
 });
 
-test('all 48 special recipes are present and set their canonical form/trait', () => {
+test('all 60 special recipes are present and set their canonical form/trait', () => {
   for (const fusion of engine().masterData.fusions) {
     const battle = engine({ seed: fusion.id });
     const main = placeUnit(battle, 'p1', fusion.main, 0, { unitId: `main-${fusion.id}` });

@@ -1039,6 +1039,9 @@ export class BattleEngine {
         applyAtkDebuff(target, 5);
         applyDefDebuff(target, 5);
       }
+      if (unit.specialForm === 'アビスヴァルキア' && unit.movesUsedThisTurn === 0 && result.actual > 0) {
+        applyDefDebuff(target, 3);
+      }
     } else if (target && hasNormalTrait(unit, 'プラント')) {
       target.statuses.parasite = { sourceUnitId: unit.id, sourcePlayerId: player.id };
     }
@@ -1047,6 +1050,10 @@ export class BattleEngine {
     if (unit.movesUsedThisTurn === 0 && result.actual > 0 && unit.specialForm === 'ネビュラミア') this._heal(unit, 5);
     if (unit.movesUsedThisTurn === 0 && result.actual > 0 && unit.specialForm === 'クロノヴォア') {
       this._heal(unit, roundedPercent(unit.maxLife, 0.08));
+    }
+    if (unit.movesUsedThisTurn === 0 && result.actual > 0 && unit.specialForm === '幽月カスミヨ') {
+      this._heal(unit, roundedPercent(unit.maxLife, 0.06));
+      if (result.defeated) player.tp = Math.min(player.maxTp, player.tp + 1);
     }
     if (move.effect.includes('使用後、自身DEF-5')) applyDefDebuff(unit, 5);
     if (move.effect.includes('使用後、自身ATK-5')) applyAtkDebuff(unit, 5);
@@ -1091,6 +1098,15 @@ export class BattleEngine {
           unit.statuses.specialCounters.behemothAtk = applied + amount;
         }
       }
+      if (unit.specialForm === 'グラトニアリリス') {
+        this._heal(unit, 8);
+        const applied = unit.statuses.specialCounters.glatoniaAtk ?? 0;
+        const amount = Math.min(2, 6 - applied);
+        if (amount > 0) {
+          unit.atkMod += amount;
+          unit.statuses.specialCounters.glatoniaAtk = applied + amount;
+        }
+      }
     }
   }
 
@@ -1126,6 +1142,9 @@ export class BattleEngine {
     if (unit.specialForm === 'アルケノクロック' && move.tp >= 3) {
       unit.statuses.nextDamageReduction = Math.max(unit.statuses.nextDamageReduction, 0.25);
     }
+    if (unit.specialForm === 'フェアリアーク' && unit.movesUsedThisTurn === 0) {
+      unit.statuses.nextDamageReduction = Math.max(unit.statuses.nextDamageReduction, 0.2);
+    }
     void defeatedTarget;
   }
 
@@ -1137,6 +1156,8 @@ export class BattleEngine {
     unit.statuses.tpOnNextKill = 0;
     if (unit.specialForm === 'ガイアヴォルフ') unit.statuses.specialCounters.gaiaRetaliation = 0;
     if (unit.specialForm === 'オベリスクグラトン') unit.statuses.specialCounters.obeliskCharge = 0;
+    if (unit.specialForm === 'ボルトセラフィア') unit.statuses.specialCounters.boltSeraphCharge = false;
+    if (unit.specialForm === 'ガイアミメシア') unit.statuses.specialCounters.gaiaMimesiaCharge = 0;
   }
 
   _selfDamage(owner, unit, amount) {
@@ -1236,6 +1257,14 @@ export class BattleEngine {
         if (lifeRatio(unit) > 0.5) unit.statuses.nextDamageBonus = Math.max(unit.statuses.nextDamageBonus, 0.2);
         else this._heal(unit, roundedPercent(unit.maxLife, 0.1));
       }
+      if (unit.specialForm === 'エクリシエル') {
+        if (lifeRatio(unit) > 0.5) unit.statuses.nextDamageBonus = Math.max(unit.statuses.nextDamageBonus, 0.2);
+        else this._heal(unit, roundedPercent(unit.maxLife, 0.08));
+      }
+      if (unit.specialForm === 'ヴェルデレオネア') {
+        const healed = this._heal(unit, roundedPercent(unit.maxLife, 0.05));
+        if (healed > 0) unit.statuses.nextDamageBonus = Math.max(unit.statuses.nextDamageBonus, 0.15);
+      }
     }
   }
 
@@ -1250,6 +1279,16 @@ export class BattleEngine {
         if (candidates[0].key === 'life') this._heal(unit, roundedPercent(unit.maxLife, 0.1));
         else if (candidates[0].key === 'atk') unit.atkMod += 4;
         else unit.defMod += 4;
+      }
+      if (unit.specialForm === 'アルカナミメシア') {
+        const candidates = [
+          { key: 'life', ratio: lifeRatio(unit) },
+          { key: 'atk', ratio: effectiveAtk(unit) / 50 },
+          { key: 'def', ratio: effectiveDef(unit) / 40 },
+        ].sort((a, b) => a.ratio - b.ratio || a.key.localeCompare(b.key));
+        if (candidates[0].key === 'life') this._heal(unit, roundedPercent(unit.maxLife, 0.08));
+        else if (candidates[0].key === 'atk') unit.atkMod += 3;
+        else unit.defMod += 3;
       }
       if (unit.specialForm === 'シャドウリーフ') this._heal(unit, roundedPercent(unit.maxLife, 0.05));
       if ((unit.statuses.autoRepairRemaining ?? 0) > 0) {

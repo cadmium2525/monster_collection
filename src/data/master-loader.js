@@ -8,7 +8,7 @@ export function validateMasterData(master) {
   if (master?.moves?.length !== expectedMoves) errors.push(`技は${expectedMoves}件である必要があります`);
   const expectedBreeders = Number(master?.meta?.expectedBreederCount ?? 52);
   if (master?.breeders?.length !== expectedBreeders) errors.push(`ブリーダーは${expectedBreeders}枚である必要があります`);
-  const expectedFusions = Number(master?.meta?.expectedFusionCount ?? 48);
+  const expectedFusions = Number(master?.meta?.expectedFusionCount ?? 60);
   if (master?.fusions?.length !== expectedFusions) errors.push(`特殊合体は${expectedFusions}レシピである必要があります`);
 
   for (const monster of master?.monsters ?? []) {

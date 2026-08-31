@@ -46,7 +46,7 @@ export function resolvedMoveTp(player, unit, target, move) {
   cost -= player.effects.factionMoveDiscount[unit.faction] ?? 0;
 
   if (unit.specialForm === 'コズミックミューズ' && firstMove) cost -= 1;
-  if (['アルケノクロック', 'ソルフェニキア', 'アストラレイ'].includes(unit.specialForm) && firstMove) cost -= 1;
+  if (['アルケノクロック', 'ソルフェニキア', 'アストラレイ', 'フェアリアーク', 'アストラカスミヨ', 'ルナリリヴェル'].includes(unit.specialForm) && firstMove) cost -= 1;
   cost = Math.max(1, cost);
 
   if (target && hasNormalTrait(target, 'ドラゴン')) cost += 1;
@@ -89,6 +89,7 @@ export function defenseIgnore(player, unit, target, move) {
   if (move.effect.includes('追加でDEF10無視')) ignore += 10;
   if (move.id === 'move-090' && lifeRatio(target) <= 0.5) ignore += 5;
   if (['ネビュラミア', 'アストラレイ'].includes(unit.specialForm) && unit.movesUsedThisTurn === 0) ignore += 10;
+  if (['アビスヴァルキア', 'アストラカスミヨ'].includes(unit.specialForm) && unit.movesUsedThisTurn === 0) ignore += 8;
   const breederIgnore = unit.statuses.vsCreationDefIgnore;
   if (breederIgnore) {
     ignore += typeof breederIgnore === 'number'
@@ -141,13 +142,20 @@ export function outgoingDamageMultiplier(unit, target, move, opponent) {
   if (special === 'エクリプスレイ' && lowSelf) multiplier *= 1.25;
   if (special === 'フェンリルノクス' && lowSelf) multiplier *= 1.25;
   if (special === 'ガイアヴォルフ') multiplier *= 1 + Math.min(0.3, unit.statuses.specialCounters.gaiaRetaliation ?? 0);
+  if (special === 'ボルトセラフィア' && unit.statuses.specialCounters.boltSeraphCharge) multiplier *= 1.15;
+  if (special === 'ルナリリヴェル' && lowSelf) multiplier *= 1.2;
+  if (special === 'ノクスレオネア' && lowSelf) multiplier *= 1.2;
   return multiplier;
 }
 
 export function specialFlatDamageBonus(unit) {
-  return unit.specialForm === 'オベリスクグラトン'
-    ? Math.max(0, Math.min(15, Number(unit.statuses.specialCounters.obeliskCharge) || 0))
-    : 0;
+  if (unit.specialForm === 'オベリスクグラトン') {
+    return Math.max(0, Math.min(15, Number(unit.statuses.specialCounters.obeliskCharge) || 0));
+  }
+  if (unit.specialForm === 'ガイアミメシア') {
+    return Math.max(0, Math.min(10, Number(unit.statuses.specialCounters.gaiaMimesiaCharge) || 0));
+  }
+  return 0;
 }
 
 export function applyIncomingModifiers(unit, rawDamage) {
@@ -213,6 +221,25 @@ export function applyIncomingModifiers(unit, rawDamage) {
     unit.statuses.specialCounters.obeliskCharge = Math.min(15,
       (unit.statuses.specialCounters.obeliskCharge ?? 0) + prevented);
     triggers.push(`オベリスクグラトン（蓄積${prevented}）`);
+  }
+  if (unit.specialForm === 'ボルトセラフィア' && !unit.statuses.firstIncomingUsed) {
+    damage = Math.floor(damage * 0.75);
+    unit.statuses.firstIncomingUsed = true;
+    unit.statuses.specialCounters.boltSeraphCharge = true;
+    triggers.push('ボルトセラフィア');
+  }
+  if (unit.specialForm === 'ノクスレオネア' && lifeRatio(unit) > 0.5 && !unit.statuses.firstIncomingUsed) {
+    damage = Math.floor(damage * 0.8);
+    unit.statuses.firstIncomingUsed = true;
+    triggers.push('ノクスレオネア');
+  }
+  if (unit.specialForm === 'ガイアミメシア' && damage >= 20) {
+    const reduced = Math.floor(damage * 0.8);
+    const prevented = Math.max(0, damage - reduced);
+    damage = reduced;
+    unit.statuses.specialCounters.gaiaMimesiaCharge = Math.min(10,
+      (unit.statuses.specialCounters.gaiaMimesiaCharge ?? 0) + prevented);
+    triggers.push(`ガイアミメシア（蓄積${prevented}）`);
   }
   if (unit.statuses.gallionGuard) {
     damage = Math.floor(damage * 0.7);
