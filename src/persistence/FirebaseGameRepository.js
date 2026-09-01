@@ -7,6 +7,7 @@ import {
   applyDiamondReward,
   applyLoginRewards,
   applyPackPurchase,
+  applyProgressionOperation,
   applyTournamentUnlock,
   normalizeEconomyState,
 } from '../gacha/economy-state.js';
@@ -36,6 +37,8 @@ function normalizeRecord(data) {
     publishedAt: normalizedTimestamp(data.publishedAt),
     crownedAt: normalizedTimestamp(data.crownedAt),
     catalogUpdatedAt: normalizedTimestamp(data.catalogUpdatedAt),
+    registeredAt: normalizedTimestamp(data.registeredAt),
+    archivedAt: normalizedTimestamp(data.archivedAt),
   };
 }
 
@@ -88,6 +91,10 @@ export class FirebaseGameRepository {
   _deckRef(deckId) { this._requireUser(); return this.sdk.doc(this.db, 'users', this.user.uid, 'savedDecks', deckId); }
   _legendDecksRef() { this._requireUser(); return this.sdk.collection(this.db, 'legendDecks'); }
   _legendDeckRef(deckId) { this._requireUser(); return this.sdk.doc(this.db, 'legendDecks', publicDeckId(this.user.uid, deckId)); }
+  _arenaDecksRef() { this._requireUser(); return this.sdk.collection(this.db, 'arenaDecks'); }
+  _arenaDeckRef(deckId) { this._requireUser(); return this.sdk.doc(this.db, 'arenaDecks', publicDeckId(this.user.uid, deckId)); }
+  _legendArchivesRef() { return this.sdk.collection(this.db, 'legendArchives'); }
+  _legendArchiveRef(version) { return this.sdk.doc(this.db, 'legendArchives', `champion-${String(version).padStart(8, '0')}`); }
   _championRef() { return this.sdk.doc(this.db, 'gameState', 'champion'); }
 
   async getProfile() {
@@ -248,6 +255,10 @@ export class FirebaseGameRepository {
     return { state, reward: clone(reward) };
   }
 
+  async commitProgression(operation) {
+    return this._updateEconomy((current) => applyProgressionOperation(current, operation));
+  }
+
   async listDecks() {
     const snapshots = await this.sdk.getDocs(this._decksRef());
     return snapshots.docs.map((snapshot) => normalizeRecord({ ...snapshot.data(), deckId: snapshot.id }));
@@ -376,6 +387,44 @@ export class FirebaseGameRepository {
       .slice(0, requested);
   }
 
+  async publishArenaDeck(deck, arena = {}) {
+    const reference = this._arenaDeckRef(deck.deckId);
+    const existing = await this.sdk.getDoc(reference);
+    await this.sdk.setDoc(reference, {
+      publicDeckId: publicDeckId(this.user.uid, deck.deckId),
+      ownerUserId: this.user.uid,
+      ownerDisplayName: this.profile?.displayName ?? '名無しブリーダー',
+      sourceDeckId: deck.deckId,
+      deckName: deck.deckName,
+      cards: clone(deck.cards),
+      totalPlayTp: deck.totalPlayTp,
+      representativeMonsterId: deck.representativeMonsterId ?? null,
+      arenaRating: Math.max(900, Math.round(Number(arena.rating) || 1000)),
+      arenaRank: String(arena.rank ?? 'D'),
+      schemaVersion: 1,
+      registeredAt: existing.exists() ? existing.data().registeredAt : this.sdk.serverTimestamp(),
+      updatedAt: this.sdk.serverTimestamp(),
+    });
+    return normalizeRecord((await this.sdk.getDoc(reference)).data());
+  }
+
+  async listArenaDecks(maxResults = 60) {
+    const requested = Math.max(1, Math.min(100, Math.trunc(Number(maxResults) || 60)));
+    const source = this.sdk.query(this._arenaDecksRef(), this.sdk.orderBy('updatedAt', 'desc'), this.sdk.limit(requested + 10));
+    const snapshots = await this.sdk.getDocs(source);
+    return snapshots.docs
+      .map((snapshot) => normalizeRecord({ ...snapshot.data(), publicDeckId: snapshot.id }))
+      .filter((record) => record.ownerUserId !== this.user.uid)
+      .slice(0, requested);
+  }
+
+  async listLegendArchives(maxResults = 20) {
+    const requested = Math.max(1, Math.min(50, Math.trunc(Number(maxResults) || 20)));
+    const source = this.sdk.query(this._legendArchivesRef(), this.sdk.orderBy('championVersion', 'desc'), this.sdk.limit(requested));
+    const snapshots = await this.sdk.getDocs(source);
+    return snapshots.docs.map((snapshot) => normalizeRecord({ ...snapshot.data(), archiveId: snapshot.id }));
+  }
+
   async deleteDeck(deckId) {
     const publicReference = this._legendDeckRef(deckId);
     const publicSnapshot = await this.sdk.getDoc(publicReference);
@@ -404,7 +453,7 @@ export class FirebaseGameRepository {
       if (actualVersion !== payload.expectedVersion) {
         throw new ChampionConflictError({ expectedVersion: payload.expectedVersion, actualVersion });
       }
-      transaction.set(reference, {
+      const nextChampion = {
         championUserId: this.user.uid,
         championDisplayName: payload.championDisplayName,
         championDeckId: payload.championDeckId,
@@ -416,6 +465,13 @@ export class FirebaseGameRepository {
         crownedAt: this.sdk.serverTimestamp(),
         defenseCount: 0,
         championVersion: actualVersion + 1,
+      };
+      transaction.set(reference, nextChampion);
+      transaction.set(this._legendArchiveRef(actualVersion + 1), {
+        ...nextChampion,
+        archiveId: `champion-${String(actualVersion + 1).padStart(8, '0')}`,
+        schemaVersion: 1,
+        archivedAt: this.sdk.serverTimestamp(),
       });
     });
     return this.getChampion();

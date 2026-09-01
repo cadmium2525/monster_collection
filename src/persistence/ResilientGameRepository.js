@@ -191,6 +191,19 @@ export class ResilientGameRepository {
     }
   }
 
+  async commitProgression(operation) {
+    const localResult = await this.local.commitProgression(operation);
+    if (!this.activeCloud?.commitProgression) return localResult;
+    try {
+      const cloudResult = await this.activeCloud.commitProgression(operation);
+      await this.local.replaceEconomy(cloudResult);
+      return cloudResult;
+    } catch (error) {
+      this.lastError = error;
+      return localResult;
+    }
+  }
+
   async listDecks() {
     const localDecks = await this.local.listDecks();
     if (!this.activeCloud) return localDecks;
@@ -301,6 +314,26 @@ export class ResilientGameRepository {
     if (!this.activeCloud?.listLegendDecks) return [];
     try { return await this.activeCloud.listLegendDecks(maxResults); }
     catch (error) { this.lastError = error; return []; }
+  }
+
+  async publishArenaDeck(deck, arena) {
+    if (!this.activeCloud?.publishArenaDeck) return this.local.publishArenaDeck(deck, arena);
+    try { return await this.activeCloud.publishArenaDeck(deck, arena); }
+    catch (error) { this.lastError = error; return this.local.publishArenaDeck(deck, arena); }
+  }
+
+  async listArenaDecks(maxResults = 60) {
+    if (!this.activeCloud?.listArenaDecks) return [];
+    try { return await this.activeCloud.listArenaDecks(maxResults); }
+    catch (error) { this.lastError = error; return []; }
+  }
+
+  async listLegendArchives(maxResults = 20) {
+    if (!this.activeCloud?.listLegendArchives) return this.local.listLegendArchives(maxResults);
+    try {
+      const records = await this.activeCloud.listLegendArchives(maxResults);
+      return records.length ? records : this.local.listLegendArchives(maxResults);
+    } catch (error) { this.lastError = error; return this.local.listLegendArchives(maxResults); }
   }
 
   async getChampion() {

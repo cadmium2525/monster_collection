@@ -30,7 +30,7 @@ test('deck names are edited from a pencil control on the list, not the detail to
   assert.match(deckScreens, /openRenameDialog\(deck\)/);
   assert.doesNotMatch(deckScreens, /text: '名前を保存'/);
   assert.match(app, /onRename: async \(deck, nextName\)/);
-  assert.match(app, /大会参加中はデッキ名を変更できません/);
+  assert.match(app, /試合データが残っている間はデッキ名を変更できません/);
 });
 
 test('player-facing deck cost labels use deck total TP wording', () => {

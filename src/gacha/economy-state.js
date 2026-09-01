@@ -1,6 +1,20 @@
 import { FACTIONS, canonicalFaction, legacyFactionFor } from './acquisition.js';
 import { normalizeCardAppearance } from '../cards/card-appearance.js';
 import { TOURNAMENTS } from '../battle/rules.js';
+import {
+  claimMission,
+  japanDateKey,
+  japanWeekKey,
+  markMissionClaimed,
+  normalizeMissionProgress,
+  recordMissionEvent,
+} from '../progression/mission-state.js';
+import {
+  addArenaLoot,
+  claimArenaRankReward,
+  normalizeArenaProgress,
+  recordArenaResult,
+} from '../arena/arena-state.js';
 
 export const ECONOMY_SCHEMA_VERSION = 1;
 export const STARTER_DIAMONDS = 600;
@@ -88,6 +102,8 @@ export function defaultEconomyState(now = null) {
     lastDailyLoginDate: null,
     claimedCampaignIds: [],
     archivedDecks: [],
+    missionProgress: normalizeMissionProgress({}, { dateKey: now ? japanDateKey(now) : japanDateKey() }),
+    arenaProgress: normalizeArenaProgress({}, { weekKey: now ? japanWeekKey(japanDateKey(now)) : japanWeekKey() }),
     updatedAt: now,
   };
 }
@@ -114,17 +130,13 @@ export function normalizeEconomyState(value, now = null) {
       : null,
     claimedCampaignIds: [...new Set((value.claimedCampaignIds ?? []).map(String))].slice(-32),
     archivedDecks: Array.isArray(value.archivedDecks) ? clone(value.archivedDecks) : [],
+    missionProgress: normalizeMissionProgress(value.missionProgress, { dateKey: now ? japanDateKey(now) : japanDateKey() }),
+    arenaProgress: normalizeArenaProgress(value.arenaProgress, { weekKey: now ? japanWeekKey(japanDateKey(now)) : japanWeekKey() }),
     updatedAt: value.updatedAt ?? now,
   };
 }
 
-export function japanDateKey(value = new Date()) {
-  const parts = new Intl.DateTimeFormat('en', {
-    timeZone: 'Asia/Tokyo', year: 'numeric', month: '2-digit', day: '2-digit',
-  }).formatToParts(value instanceof Date ? value : new Date(value));
-  const part = (type) => parts.find((entry) => entry.type === type)?.value;
-  return `${part('year')}-${part('month')}-${part('day')}`;
-}
+export { japanDateKey };
 
 export function applyTournamentUnlock(current, rank, now = new Date().toISOString()) {
   const state = normalizeEconomyState(current, now);
@@ -148,6 +160,10 @@ export function applyLoginRewards(current, {
   if (!state.lastDailyLoginDate || loginDate > state.lastDailyLoginDate) {
     state.diamonds += DAILY_LOGIN_DIAMONDS;
     state.lastDailyLoginDate = loginDate;
+    state.missionProgress = recordMissionEvent(state.missionProgress, {
+      type: 'login', operationId: `mission:login:${loginDate}`,
+    }, { dateKey: loginDate });
+    state.missionProgress = markMissionClaimed(state.missionProgress, 'daily-login', { dateKey: loginDate });
     rewards.push({ type: 'daily', amount: DAILY_LOGIN_DIAMONDS, label: 'デイリーログインボーナス' });
   }
   if (loginDate >= campaignStart && loginDate <= campaignEnd && campaignId && !state.claimedCampaignIds.includes(campaignId)) {
@@ -239,6 +255,54 @@ export function applyDiamondReward(current, reward, now = new Date().toISOString
   if (state.processedOperationIds.includes(operationId)) return state;
   state.diamonds += amount;
   rememberOperation(state, operationId);
+  state.updatedAt = now;
+  return state;
+}
+
+export function applyProgressionOperation(current, operation, now = new Date().toISOString()) {
+  const state = normalizeEconomyState(current, now);
+  const dateKey = operation?.dateKey ?? japanDateKey(now);
+  const operationId = String(operation?.operationId ?? '').trim();
+  if (!operationId) throw new Error('進行更新IDがありません');
+
+  if (operation.type === 'mission-event') {
+    state.missionProgress = recordMissionEvent(state.missionProgress, { ...operation.event, operationId }, { dateKey });
+  } else if (operation.type === 'arena-result') {
+    state.arenaProgress = recordArenaResult(state.arenaProgress, { ...operation.result, operationId }, now);
+    state.missionProgress = recordMissionEvent(state.missionProgress, {
+      type: 'battle-result', mode: 'arena', won: Boolean(operation.result?.won), operationId: `mission:${operationId}`,
+    }, { dateKey });
+  } else if (operation.type === 'arena-loot') {
+    state.arenaProgress = addArenaLoot(state.arenaProgress, { ...operation.loot, operationId }, { weekKey: japanWeekKey(dateKey), now });
+  } else if (operation.type === 'arena-defense') {
+    if (!state.arenaProgress.processedOperationIds.includes(operationId)) {
+      state.arenaProgress.defenseDeckId = String(operation.deckId ?? '').trim() || null;
+      state.arenaProgress.processedOperationIds = [...state.arenaProgress.processedOperationIds, operationId].slice(-320);
+      state.arenaProgress.updatedAt = now;
+    }
+  } else if (operation.type === 'claim-mission') {
+    const claimed = claimMission(state.missionProgress, operation.missionId, { dateKey });
+    state.missionProgress = claimed.progress;
+    if (claimed.reward?.type === 'diamonds') state.diamonds += claimed.reward.amount;
+    if (claimed.reward?.type === 'arena-card') {
+      const weekKey = japanWeekKey(dateKey);
+      const loot = state.arenaProgress.lootStock.find((entry) => entry.lootId === operation.lootId && entry.weekKey === weekKey);
+      if (!loot) throw new Error('獲得する戦利品カードを選択してください');
+      state.unassignedAssets = mergeAssetStacks([...state.unassignedAssets, {
+        masterId: loot.masterId, artVariantId: 'base', finish: 'normal', origin: 'arena',
+        rarity: loot.rarity, quantity: 1, firstObtainedAt: now,
+      }]);
+      state.arenaProgress.lootStock = state.arenaProgress.lootStock.filter((entry) => entry.weekKey !== weekKey);
+    }
+  } else if (operation.type === 'claim-arena-rank') {
+    const claimed = claimArenaRankReward(state.arenaProgress, operation.rank, now);
+    state.arenaProgress = claimed.arena;
+    if (claimed.reward) {
+      state.diamonds += claimed.reward.diamonds ?? 0;
+      state.freePackCredits += claimed.reward.packs ?? 0;
+    }
+  } else throw new Error(`不明な進行更新です: ${operation.type}`);
+
   state.updatedAt = now;
   return state;
 }

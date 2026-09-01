@@ -10,6 +10,7 @@ import { diamondIcon } from './currency-icon.js';
 import { APP_VERSION } from '../config/app-version.js';
 import { availableCampaignGifts } from '../gacha/economy-state.js';
 import { playerIconContent } from './player-icon.js';
+import { claimableMissionCount } from '../progression/mission-state.js';
 
 export const TUTORIAL_STEPS = Object.freeze([
   {
@@ -156,11 +157,11 @@ const HOME_ICON_PATHS = Object.freeze({
   cards: ['M9 7h25v34H9z', 'm18 19 7-5 4 6 8-3 2 17H18V19ZM34 11l5 1v25l-5 1'],
   shop: ['M8 18h32l-3 23H11L8 18Z', 'M15 18a9 9 0 0 1 18 0M18 26v5M30 26v5'],
   gift: ['M7 19h34v23H7zM4 14h40v8H4zM24 14v28', 'M24 14H14c-5 0-6-8-1-9 5-1 11 9 11 9Zm0 0h10c5 0 6-8 1-9-5-1-11 9-11 9Z'],
+  mission: ['M14 7h20v35H14zM19 7V4h10v3M19 17l3 3 6-7M19 29l3 3 6-7M31 17h-1M31 29h-1'],
   notice: ['M11 34h26l-4-6V18a9 9 0 0 0-18 0v10l-4 6ZM20 39a4 4 0 0 0 8 0'],
   help: ['M8 8h13c4 0 6 2 6 6v26c0-4-2-6-6-6H8V8Zm32 0H27v32c0-4 2-6 6-6h7V8Z'],
   install: ['M24 5v25m0 0L14 20m10 10 10-10M8 35v7h32v-7'],
   admin: ['M9 12h30M9 24h30M9 36h30M17 8v8M31 20v8M22 32v8'],
-  mission: ['M11 8h26v32H11z', 'M17 16h14M17 24h14M17 32h9M7 15h4M7 24h4M7 33h4'],
 });
 
 function homeIcon(name, className = '') {
@@ -239,7 +240,7 @@ function openHomeNotices(champion) {
 }
 
 export class HomeScreen {
-  constructor({ root, masterIndex, user, champion, repositoryStatus, decks, catalog = null, economy, seed, debugMode = false, adminMode = false, activeRun = null, onResume = null, onTournament, onDecks, onBoosters, onMissions = null, onAdmin = null, onProfile, onClaimGift = null, installAvailable = false, onInstall = null }) {
+  constructor({ root, masterIndex, user, champion, repositoryStatus, decks, catalog = null, economy, seed, debugMode = false, adminMode = false, activeRun = null, onResume = null, onTournament, onArena, onMissions, onDecks, onBoosters, onAdmin = null, onProfile, onClaimGift = null, installAvailable = false, onInstall = null }) {
     this.root = root;
     this.masterIndex = masterIndex;
     this.user = user;
@@ -254,6 +255,7 @@ export class HomeScreen {
     this.activeRun = activeRun;
     this.onResume = onResume;
     this.onTournament = onTournament;
+    this.onArena = onArena;
     this.onDecks = onDecks;
     this.onBoosters = onBoosters;
     this.onMissions = onMissions;
@@ -299,6 +301,7 @@ export class HomeScreen {
     const gifts = availableCampaignGifts(this.economy);
     const online = this.repositoryStatus.mode === 'firebase';
     const tournamentAction = resume ? this.onResume : this.onTournament;
+    const missionCount = claimableMissionCount(this.economy?.missionProgress);
     const hero = el('img', {
       className: `home-lobby-hero-art${leaderAsset?.finish === 'foil' ? ' is-foil' : ''}`,
       src: homeLeaderArtworkPath(leader?.id, leaderAsset),
@@ -350,9 +353,11 @@ export class HomeScreen {
         ]),
       ]),
       el('aside', { className: 'home-lobby-utility-rail', attrs: { 'aria-label': 'サブメニュー' } }, [
-        el('button', { onclick: this.onMissions, attrs: { 'aria-label': 'ミッション' } }, [homeIcon('mission'), el('span', { text: 'ミッション' })]),
         el('button', { onclick: () => openGiftBox(this.economy, gifts, this.onClaimGift), attrs: { 'aria-label': `ギフトボックス${gifts.length ? ` 未受取${gifts.length}件` : ''}` } }, [
           homeIcon('gift'), el('span', { text: 'ギフト' }), gifts.length ? el('i', { className: 'home-lobby-notification', text: String(gifts.length) }) : null,
+        ]),
+        el('button', { onclick: this.onMissions, attrs: { 'aria-label': `ミッション${missionCount ? ` 達成済み未受取${missionCount}件` : ''}` } }, [
+          homeIcon('mission'), el('span', { text: 'ミッション' }), missionCount ? el('i', { className: 'home-lobby-notification', text: String(missionCount) }) : null,
         ]),
         el('button', { onclick: () => openHomeNotices(this.champion), attrs: { 'aria-label': 'お知らせ' } }, [homeIcon('notice'), el('span', { text: 'お知らせ' })]),
         el('button', { onclick: () => openHowToPlay(this.onTournament), attrs: { 'aria-label': '遊び方' } }, [homeIcon('help'), el('span', { text: '遊び方' })]),
@@ -361,7 +366,7 @@ export class HomeScreen {
       ]),
       el('nav', { className: 'home-lobby-bottom-nav', attrs: { 'aria-label': 'メインメニュー' } }, [
         homeNavButton({ icon: 'tournament', label: 'トーナメント', sublabel: resume ? '続きから再開' : 'TOURNAMENT', onclick: tournamentAction, className: resume ? 'has-resume' : '' }),
-        homeNavButton({ icon: 'arena', label: 'アリーナ', sublabel: 'COMING SOON', disabled: true, className: 'is-locked' }),
+        homeNavButton({ icon: 'arena', label: 'アリーナ', sublabel: ['arena-battle', 'arena-result'].includes(this.activeRun?.phase) ? '続きから再開' : `RANK ${this.economy?.arenaProgress?.rank ?? 'D'}`, onclick: this.onArena, className: ['arena-battle', 'arena-result'].includes(this.activeRun?.phase) ? 'has-resume' : '' }),
         homeNavButton({ icon: 'home', label: 'ホーム', sublabel: 'HOME', current: true, className: 'is-active' }),
         homeNavButton({ icon: 'cards', label: 'カード', sublabel: `${this.decks.length}/5 DECKS`, onclick: this.onDecks }),
         homeNavButton({ icon: 'shop', label: 'ショップ', sublabel: this.economy?.pendingPack ? '未確認パックあり' : 'BOOSTER', onclick: this.onBoosters, className: this.economy?.pendingPack ? 'has-notice' : '' }),

@@ -26,10 +26,18 @@ test('finished, cleared and malformed checkpoints never leave a deck locked', ()
   assert.equal(isDeckLockedByActiveRun(null, 'deck-in-run'), false);
 });
 
+test('an in-progress arena battle locks only its selected deck', () => {
+  const run = { phase: 'arena-battle', arena: { playerDeck: { deckId: 'arena-deck' } } };
+  assert.equal(activeRunDeckId(run), 'arena-deck');
+  assert.equal(isDeckLockedByActiveRun(run, 'arena-deck'), true);
+  assert.equal(isDeckLockedByActiveRun(run, 'another-deck'), false);
+  assert.equal(activeRunDeckId({ ...run, phase: 'arena-result' }), 'arena-deck');
+});
+
 test('deck management UI and app both enforce the tournament lock', () => {
   const screens = fs.readFileSync(new URL('../../src/ui/deck-screens.js', import.meta.url), 'utf8');
   const app = fs.readFileSync(new URL('../../src/app.js', import.meta.url), 'utf8');
-  assert.match(screens, /大会参加中のため編集できません/);
+  assert.match(screens, /試合中のため編集できません/);
   assert.match(screens, /this\.locked \? el\('section'/);
   assert.match(app, /showDeckBuilder\(deck\)[\s\S]*?this\.isDeckEditingLocked\(deck\.deckId\)/);
   assert.match(app, /confirmDeleteDeck\(deck\)[\s\S]*?this\.isDeckEditingLocked\(deck\.deckId\)/);

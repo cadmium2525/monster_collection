@@ -1,5 +1,20 @@
 # Changelog
 
+## 1.26.0 — 2026-09-01
+
+### Rating Arena
+- Added a one-match rating arena with D through MASTER ranks and resumable battles.
+- Added 36 honest official opponents across six classifications and six ranks.
+- Added player defense deck registration, recent-opponent avoidance, and deck-composition similarity weighting.
+- Added MASTER-only `LEGEND ARCHIVE` matchmaking backed by champion snapshots recorded from this release onward.
+- Added weekly arena loot stock and one-card acquisition after three wins.
+- Added claimable rank-up rewards, diamonds, pack credits, titles, and persistent arena records.
+
+### Missions
+- Added daily login, battle, and victory missions plus weekly arena and tournament missions.
+- Added the home mission button between Gift and Notices, with a red badge only for completed unclaimed missions.
+- Kept the existing automatic daily 300-diamond login award and marked that mission as received to prevent double rewards.
+
 ## 1.25.2 — 2026-09-01
 
 ### Home lobby alignment

@@ -22,9 +22,13 @@ import { generateBoosterPack } from './gacha/pack-generator.js';
 import { japanDateKey } from './gacha/economy-state.js';
 import { diamondIcon } from './ui/currency-icon.js';
 import { ProfileScreen, catalogProgress } from './ui/profile-screen.js';
-import { MissionScreen } from './ui/mission-screen.js';
 import { accountErrorMessage } from './persistence/auth-errors.js';
 import { PLAYER_ID_RULE_COPY, normalizePlayerId } from './persistence/player-id.js';
+import { ArenaSession } from './arena/ArenaSession.js';
+import { normalizeArenaProgress } from './arena/arena-state.js';
+import { deckSignature, selectArenaOpponent } from './arena/matchmaker.js';
+import { ArenaResultScreen, ArenaScreen } from './ui/arena-screen.js';
+import { MissionScreen } from './ui/mission-screen.js';
 
 const AI_BUDGET = Object.freeze({ bronze: 4, silver: 8, gold: 22, legend: 85, champion: 240 });
 
@@ -93,7 +97,7 @@ class MonsterConstructionApp {
     });
     this.champion = await this.repository.getChampion();
     const activeRun = await this.repository.getActiveRun?.();
-    this.activeRun = ['tournament', 'battle', 'reward'].includes(activeRun?.phase) ? activeRun : null;
+    this.activeRun = ['tournament', 'battle', 'reward', 'arena-battle', 'arena-result'].includes(activeRun?.phase) ? activeRun : null;
     this.unsubscribeChampion = this.repository.subscribeChampion((champion) => {
       this.champion = champion;
       if (this.currentScreen === 'home') this.showHome();
@@ -116,7 +120,7 @@ class MonsterConstructionApp {
         : '今日のログインプレゼントをお届けします。' }),
       el('div', { className: 'login-bonus-rewards' }, rewards.map((reward) => el('article', { className: `login-reward login-reward-${reward.type}` }, [
         el('span', {}, diamondIcon('login-reward-diamond')),
-        el('div', {}, [el('strong', { text: reward.label }), el('small', { text: reward.type === 'daily' ? '毎日1回' : reward.type === 'gift' ? `受取期限 ${reward.endsAt?.replaceAll('-', '/') ?? '期間限定'}` : '初回ログイン限定' })]),
+        el('div', {}, [el('strong', { text: reward.label }), el('small', { text: reward.type === 'daily' ? '毎日1回' : reward.type === 'gift' ? `受取期限 ${reward.endsAt?.replaceAll('-', '/') ?? '期間限定'}` : reward.type === 'mission' ? 'ミッション達成' : '初回ログイン限定' })]),
         el('b', { text: `+${reward.amount.toLocaleString('ja-JP')}` }),
       ]))),
       el('div', { className: 'login-bonus-total' }, [
@@ -152,6 +156,7 @@ class MonsterConstructionApp {
       activeRun: this.activeRun,
       onResume: () => this.resumeTournament(),
       onTournament: () => this.showTournamentSetup(),
+      onArena: () => ['arena-battle', 'arena-result'].includes(this.activeRun?.phase) ? this.resumeArena() : this.showArena(),
       onDecks: () => this.showDeckList(),
       onBoosters: () => this.showBoosterShop(),
       onMissions: () => this.showMissions(),
@@ -161,11 +166,6 @@ class MonsterConstructionApp {
       installAvailable: Boolean(this.installPromptEvent),
       onInstall: () => this.installApp(),
     });
-  }
-
-  showMissions() {
-    this.currentScreen = 'missions';
-    new MissionScreen({ root: this.root, onBack: () => this.showHome() });
   }
 
   async installApp() {
@@ -324,7 +324,7 @@ class MonsterConstructionApp {
       onCatalog: () => this.showCardCatalog(),
       onInventory: () => this.showAssetCollection({ returnTo: 'decks' }),
       onRename: async (deck, nextName) => {
-        if (this.isDeckEditingLocked(deck.deckId)) throw new Error('大会参加中はデッキ名を変更できません');
+        if (this.isDeckEditingLocked(deck.deckId)) throw new Error('試合データが残っている間はデッキ名を変更できません');
         const previousName = deck.deckName;
         const updated = this.decks.rename(deck.deckId, nextName);
         try {
@@ -490,7 +490,7 @@ class MonsterConstructionApp {
       onDelete: (deck) => this.confirmDeleteDeck(deck),
       onBuild: (deck) => this.showDeckBuilder(deck),
       onRecover: async (masterId) => {
-        if (this.isDeckEditingLocked(deckId)) throw new Error('大会参加中は消失カードを復元できません');
+        if (this.isDeckEditingLocked(deckId)) throw new Error('試合データが残っている間は消失カードを復元できません');
         const serial = globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`;
         const recovered = this.decks.recoverLegacyAsset(deckId, masterId, `${deckId}-legacy-recovery-${serial}`);
         await this.repository.saveDeck(recovered);
@@ -503,7 +503,7 @@ class MonsterConstructionApp {
   showDeckBuilder(deck) {
     if (this.isDeckEditingLocked(deck.deckId)) {
       this.showDeckDetail(deck.deckId);
-      this.showError(new Error('このデッキは進行中の大会で使用されています。大会終了後に編集できます。'), '大会参加中のデッキ');
+      this.showError(new Error('このデッキは進行中の試合で使用されています。試合終了後に編集できます。'), '試合中のデッキ');
       return;
     }
     this.currentScreen = 'deck-builder';
@@ -516,7 +516,7 @@ class MonsterConstructionApp {
       onSave: async (draft, economy) => {
         if (this.isDeckEditingLocked(deck.deckId)) {
           this.showDeckDetail(deck.deckId);
-          this.showError(new Error('大会データを保護するため、進行中デッキの変更は保存できません。'), '大会参加中のデッキ');
+          this.showError(new Error('試合データを保護するため、進行中デッキの変更は保存できません。'), '試合中のデッキ');
           return;
         }
         this.showLoading('40枚とデッキ専用プールを安全に保存しています…');
@@ -535,7 +535,7 @@ class MonsterConstructionApp {
 
   confirmDeleteDeck(deck) {
     if (this.isDeckEditingLocked(deck.deckId)) {
-      this.showError(new Error('このデッキは進行中の大会で使用されているため削除できません。'), '大会参加中のデッキ');
+      this.showError(new Error('このデッキは進行中の試合で使用されているため削除できません。'), '試合中のデッキ');
       return;
     }
     const content = el('div', {}, [
@@ -545,7 +545,7 @@ class MonsterConstructionApp {
         el('button', { className: 'text-button danger-button', text: '削除する', onclick: async () => {
           if (this.isDeckEditingLocked(deck.deckId)) {
             modal.close();
-            this.showError(new Error('大会データを保護するため、進行中デッキは削除できません。'), '大会参加中のデッキ');
+            this.showError(new Error('試合データを保護するため、進行中デッキは削除できません。'), '試合中のデッキ');
             return;
           }
           try {
@@ -562,6 +562,250 @@ class MonsterConstructionApp {
 
   isDeckEditingLocked(deckId) {
     return isDeckLockedByActiveRun(this.activeRun, deckId);
+  }
+
+  showMissions() {
+    this.currentScreen = 'missions';
+    new MissionScreen({
+      root: this.root,
+      economy: this.economy,
+      masterIndex: this.masterIndex,
+      onBack: () => this.showHome(),
+      onClaim: (mission, lootId) => this.claimMission(mission, lootId),
+    });
+  }
+
+  async claimMission(mission, lootId = null) {
+    try {
+      const selectedLoot = lootId ? this.economy.arenaProgress?.lootStock?.find((entry) => entry.lootId === lootId) : null;
+      this.economy = await this.repository.commitProgression({
+        type: 'claim-mission',
+        operationId: `mission-claim:${mission.id}:${mission.periodKey}`,
+        missionId: mission.id,
+        lootId,
+        dateKey: japanDateKey(),
+      });
+      if (selectedLoot) {
+        this.catalog = await this.repository.recordCardCatalog({ ownedCardMasterIds: [selectedLoot.masterId] });
+      }
+      this.showMissions();
+      if (mission.reward.type === 'diamonds') this.showLoginBonus([{ type: 'mission', amount: mission.reward.amount, label: mission.label }]);
+    } catch (error) {
+      this.showError(error, 'ミッション報酬を受け取れません');
+      this.showMissions();
+    }
+  }
+
+  showArena(match = this.arenaMatch ?? null) {
+    this.currentScreen = 'arena';
+    const arena = normalizeArenaProgress(this.economy.arenaProgress);
+    new ArenaScreen({
+      root: this.root,
+      collection: this.decks,
+      masterIndex: this.masterIndex,
+      arena,
+      match,
+      onBack: () => { this.arenaMatch = null; this.showHome(); },
+      onFindMatch: (deck) => this.findArenaOpponent(deck),
+      onStartMatch: (deck, opponent) => this.startArenaBattle(deck, opponent),
+      onRegisterDefense: (deck) => this.registerArenaDefense(deck),
+      onClaimRankReward: (rank) => this.claimArenaRankReward(rank),
+      onMissions: () => this.showMissions(),
+    });
+  }
+
+  async findArenaOpponent(deck) {
+    this.showLoading('対戦履歴とレートから相手を選出しています…');
+    try {
+      const arena = normalizeArenaProgress(this.economy.arenaProgress);
+      const [playerGhosts, archives] = await Promise.all([
+        this.repository.listArenaDecks?.(60) ?? [],
+        arena.rank === 'MASTER' ? (this.repository.listLegendArchives?.(24) ?? []) : [],
+      ]);
+      const archivePool = arena.rank === 'MASTER'
+        ? [...new Map([...archives, ...(this.champion ? [this.champion] : [])].map((record) => [
+          String(record.championVersion ?? `${record.championUserId}:${record.championDeckId}`), record,
+        ])).values()]
+        : [];
+      this.arenaMatch = selectArenaOpponent({
+        masterIndex: this.masterIndex,
+        arena,
+        playerGhosts,
+        legendArchives: archivePool,
+        seed: `${this.seedSource.next()}:arena:${deck.deckId}:${Date.now()}`,
+      });
+      this.showArena(this.arenaMatch);
+    } catch (error) {
+      this.showError(error, '対戦相手を選出できません');
+      this.arenaMatch = null;
+      this.showArena();
+    }
+  }
+
+  async registerArenaDefense(deck) {
+    this.showLoading('防衛デッキを登録しています…');
+    try {
+      const arena = normalizeArenaProgress(this.economy.arenaProgress);
+      await this.repository.publishArenaDeck?.(deck, arena);
+      this.economy = await this.repository.commitProgression({
+        type: 'arena-defense',
+        operationId: `arena-defense:${deck.deckId}:${Date.now()}`,
+        deckId: deck.deckId,
+      });
+      this.showArena();
+    } catch (error) {
+      this.showError(error, '防衛デッキを登録できません');
+      this.showArena();
+    }
+  }
+
+  async claimArenaRankReward(rank) {
+    try {
+      this.economy = await this.repository.commitProgression({
+        type: 'claim-arena-rank', operationId: `arena-rank:${rank}`, rank,
+      });
+      this.showArena();
+    } catch (error) {
+      this.showError(error, 'ランク到達報酬を受け取れません');
+      this.showArena();
+    }
+  }
+
+  async startArenaBattle(deck, opponent) {
+    this.showLoading('アリーナを準備しています…');
+    try {
+      this.session = new ArenaSession({
+        masterData: this.masterData,
+        repository: this.repository,
+        user: this.user,
+        playerDeck: deck,
+        opponent,
+        seed: `${this.seedSource.next()}:arena-battle:${deck.deckId}:${opponent.id}`,
+      });
+      this.arenaBefore = normalizeArenaProgress(this.economy.arenaProgress);
+      const engine = this.session.createBattle();
+      this.activeRun = await this.session.saveCheckpoint('arena-battle');
+      this.showArenaBattle(engine);
+    } catch (error) {
+      this.showError(error, 'アリーナ戦を開始できません');
+      this.showArena();
+    }
+  }
+
+  showArenaBattle(engine = this.session.activeBattle, runtime = {}) {
+    const level = this.session.opponent.aiLevel ?? 'gold';
+    this.currentScreen = 'arena-battle';
+    new BattleScreen({
+      root: this.root,
+      engine,
+      humanPlayerId: 'player',
+      chooseCpuAction: createAiPolicy(level, { timeBudgetMs: AI_BUDGET[level] ?? AI_BUDGET.gold }),
+      onComplete: (_result, completedEngine) => this.handleArenaBattleComplete(completedEngine),
+      onCheckpoint: (battleRuntime) => this.persistArenaCheckpoint(battleRuntime),
+      cpuRngState: runtime.cpuRng ?? null,
+      speed: runtime.speed ?? 'standard',
+    });
+  }
+
+  persistArenaCheckpoint(runtime) {
+    void this.session?.saveCheckpoint('arena-battle', runtime)
+      .then((checkpoint) => { if (checkpoint?.phase === 'arena-battle') this.activeRun = checkpoint; })
+      .catch((error) => console.error('Arena checkpoint failed', error));
+  }
+
+  async handleArenaBattleComplete(engine) {
+    this.showLoading('アリーナ結果を保存しています…');
+    try {
+      const result = this.session.completeBattle(engine);
+      const opponent = result.opponent;
+      const operationId = `arena:${this.session.runId}:result`;
+      if (result.discoveredFusionIds.length) {
+        this.catalog = await this.repository.recordCardCatalog({ discoveredFusionIds: result.discoveredFusionIds });
+      }
+      await this.repository.recordPlayerStats?.({
+        type: 'battle-result', operationId: `stats:${operationId}`,
+        result: result.won ? 'win' : result.draw ? 'draw' : 'loss',
+        tournamentFinished: false, tournamentWon: false,
+      });
+      this.arenaBefore = normalizeArenaProgress(this.economy.arenaProgress);
+      this.economy = await this.repository.commitProgression({
+        type: 'arena-result', operationId,
+        result: {
+          won: result.won,
+          opponentId: opponent.id,
+          ownerUserId: opponent.ownerUserId,
+          sourceType: opponent.sourceType,
+          opponentRating: opponent.rating,
+          deckSignature: opponent.deckSignature ?? deckSignature(opponent.cards),
+        },
+      });
+      await this.session.saveCheckpoint('arena-result');
+      this.activeRun = await this.repository.getActiveRun?.();
+      this.showArenaResult(result);
+    } catch (error) {
+      this.showError(error, 'アリーナ結果を保存できません');
+      this.showHome();
+    }
+  }
+
+  showArenaResult(result = this.session.result) {
+    this.currentScreen = 'arena-result';
+    const arenaAfter = normalizeArenaProgress(this.economy.arenaProgress);
+    const history = arenaAfter.battleHistory.at(-1);
+    const arenaBefore = this.arenaBefore ?? { ...arenaAfter, rating: arenaAfter.rating - Number(history?.ratingDelta ?? 0) };
+    new ArenaResultScreen({
+      root: this.root,
+      masterIndex: this.masterIndex,
+      result,
+      arenaBefore,
+      arenaAfter,
+      onFinish: (offer) => this.finishArenaResult(offer),
+    });
+  }
+
+  async finishArenaResult(offer) {
+    this.showLoading('戦利品と進行状況を保存しています…');
+    try {
+      if (offer) {
+        this.economy = await this.repository.commitProgression({
+          type: 'arena-loot',
+          operationId: `arena:${this.session.runId}:loot`,
+          loot: {
+            lootId: `${this.session.runId}:${offer.offerId}`,
+            card: offer,
+            opponentName: this.session.opponent.displayName,
+          },
+        });
+      }
+      await this.session.clearCheckpoint();
+      this.activeRun = null;
+      this.arenaMatch = null;
+      this.session = null;
+      this.showArena();
+    } catch (error) {
+      this.showError(error, '戦利品を保存できません');
+      this.showArenaResult();
+    }
+  }
+
+  async resumeArena() {
+    this.showLoading('中断したアリーナを復元しています…');
+    try {
+      const checkpoint = await this.repository.getActiveRun?.();
+      this.session = ArenaSession.restore({
+        masterData: this.masterData, repository: this.repository, user: this.user, checkpoint,
+      });
+      this.activeRun = checkpoint;
+      if (checkpoint.phase === 'arena-battle' && this.session.activeBattle.state.status === 'active') {
+        this.showArenaBattle(this.session.activeBattle, checkpoint.runtime);
+      } else if (checkpoint.phase === 'arena-battle') {
+        await this.handleArenaBattleComplete(this.session.activeBattle);
+      } else this.showArenaResult(this.session.result);
+    } catch (error) {
+      this.showError(error, 'アリーナを再開できません');
+      this.activeRun = null;
+      this.showHome();
+    }
   }
 
   showTournamentSetup() {
@@ -686,8 +930,21 @@ class MonsterConstructionApp {
   async handleBattleComplete(engine) {
     this.showLoading('試合結果を大会表へ反映しています…');
     try {
+      const roundNumber = this.session.tournament.state.roundIndex + 1;
+      const won = engine.state.winnerId === 'player';
       const outcome = await this.session.completeBattle(engine);
-      this.economy = await this.repository.getEconomy();
+      if (roundNumber === 1) {
+        this.economy = await this.repository.commitProgression({
+          type: 'mission-event',
+          operationId: `mission:${this.session.runId}:tournament-entry`,
+          event: { type: 'tournament-entry' },
+        });
+      }
+      this.economy = await this.repository.commitProgression({
+        type: 'mission-event',
+        operationId: `mission:${this.session.runId}:battle:${roundNumber}`,
+        event: { type: 'battle-result', mode: 'tournament', won },
+      });
       if (outcome.type === 'reward') {
         this.activeRun = await this.repository.getActiveRun?.();
         this.showReward(outcome);
