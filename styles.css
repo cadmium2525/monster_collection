@@ -2127,7 +2127,7 @@ body:has(.home-lobby) {
   position:absolute;
   z-index:8;
   top:clamp(100px,18dvh,148px);
-  right:max(20px,var(--safe-right));
+  right:max(18px,var(--safe-right));
   display:grid;
   gap:8px;
 }
@@ -2262,7 +2262,7 @@ body:has(.home-lobby) {
   .home-lobby-bottom-nav { left:50%; right:auto; width:min(760px,calc(100% - 44px)); grid-template-columns:repeat(5,minmax(0,1fr)); gap:8px; }
   .home-lobby-nav-button { grid-template-columns:31px minmax(0,1fr); gap:5px; padding-inline:7px; }
   .home-lobby-nav-icon svg { width:29px; height:29px; }
-  .home-lobby-utility-rail { right:12px; }
+  .home-lobby-utility-rail { right:max(18px,var(--safe-right)); }
   .home-lobby-utility-rail button { width:64px; min-height:59px; }
   .home-lobby-footer { left:50%; right:auto; width:min(760px,calc(100% - 44px)); }
 }

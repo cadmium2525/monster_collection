@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.25.2 — 2026-09-01
+
+### Home lobby alignment
+- Aligned the gift, notice, and help rail to the same right edge as the diamond wallet.
+- Preserved the iPhone landscape safe area instead of overriding it with a fixed 12px inset.
+
 ## 1.25.1 — 2026-09-01
 
 ### Added
