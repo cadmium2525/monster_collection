@@ -256,9 +256,9 @@ export class HomeScreen {
     this.onResume = onResume;
     this.onTournament = onTournament;
     this.onArena = onArena;
-    this.onMissions = onMissions;
     this.onDecks = onDecks;
     this.onBoosters = onBoosters;
+    this.onMissions = onMissions;
     this.onAdmin = onAdmin;
     this.onProfile = onProfile;
     this.onClaimGift = onClaimGift;
