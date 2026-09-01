@@ -135,14 +135,107 @@ export function activeRunSummary(activeRun) {
   };
 }
 
+const FEATURED_HOME_ART = Object.freeze({
+  'monster-019': 'showcase-inorganic-01',
+  'monster-020': 'showcase-creation-01',
+  'monster-021': 'showcase-spirit-01',
+  'monster-022': 'showcase-demon-01',
+  'monster-023': 'showcase-beast-01',
+  'monster-024': 'showcase-monster-01',
+});
+
+export function homeLeaderArtworkPath(monsterId, cardAsset = null) {
+  const variant = String(cardAsset?.artVariantId ?? '');
+  if (variant && variant !== 'base' && /^[a-z0-9-]+$/.test(variant)) {
+    return `./assets/images/showcase/${variant}.webp`;
+  }
+  if (FEATURED_HOME_ART[monsterId]) return `./assets/images/showcase/${FEATURED_HOME_ART[monsterId]}.webp`;
+  const number = Number(String(monsterId ?? '').match(/(\d+)$/)?.[1]);
+  if (!Number.isInteger(number) || number < 1 || number > 30) return './assets/images/showcase/showcase-inorganic-01.webp';
+  return `./assets/images/showcase/showcase-monster-${String(number).padStart(3, '0')}.webp`;
+}
+
+export function homeCollectionLevel(catalog, masterIndex) {
+  const owned = new Set(catalog?.ownedCardMasterIds ?? []).size;
+  const discovered = new Set(catalog?.discoveredFusionIds ?? []).size;
+  const total = (masterIndex?.cards?.size ?? 0) + (masterIndex?.data?.fusions?.length ?? 0);
+  return total ? Math.min(100, Math.round(((owned + discovered) / total) * 100)) : 0;
+}
+
+const HOME_ICON_PATHS = Object.freeze({
+  tournament: ['M15 7h18v8c0 7-3 13-9 13s-9-6-9-13V7Z', 'M15 12H8c0 8 3 12 10 13M33 12h7c0 8-3 12-10 13M24 28v7M16 42h16M19 35h10v7'],
+  arena: ['m11 8 26 32M37 8 11 40M8 8l8 2-6 6-2-8Zm32 0-8 2 6 6 2-8ZM8 40l8-2-6-6-2 8Zm32 0-8-2 6-6 2 8Z'],
+  home: ['m7 23 17-15 17 15M12 20v21h24V20M20 41V28h8v13'],
+  cards: ['M9 7h25v34H9z', 'm18 19 7-5 4 6 8-3 2 17H18V19ZM34 11l5 1v25l-5 1'],
+  shop: ['M8 18h32l-3 23H11L8 18Z', 'M15 18a9 9 0 0 1 18 0M18 26v5M30 26v5'],
+  gift: ['M7 19h34v23H7zM4 14h40v8H4zM24 14v28', 'M24 14H14c-5 0-6-8-1-9 5-1 11 9 11 9Zm0 0h10c5 0 6-8 1-9-5-1-11 9-11 9Z'],
+  notice: ['M11 34h26l-4-6V18a9 9 0 0 0-18 0v10l-4 6ZM20 39a4 4 0 0 0 8 0'],
+  help: ['M8 8h13c4 0 6 2 6 6v26c0-4-2-6-6-6H8V8Zm32 0H27v32c0-4 2-6 6-6h7V8Z'],
+  install: ['M24 5v25m0 0L14 20m10 10 10-10M8 35v7h32v-7'],
+  admin: ['M9 12h30M9 24h30M9 36h30M17 8v8M31 20v8M22 32v8'],
+});
+
+function homeIcon(name, className = '') {
+  const svg = document.createElementNS('http://www.w3.org/2000/svg', 'svg');
+  if (className) svg.setAttribute('class', className);
+  svg.setAttribute('viewBox', '0 0 48 48');
+  svg.setAttribute('aria-hidden', 'true');
+  svg.setAttribute('focusable', 'false');
+  for (const d of HOME_ICON_PATHS[name] ?? []) {
+    const path = document.createElementNS('http://www.w3.org/2000/svg', 'path');
+    path.setAttribute('d', d);
+    svg.append(path);
+  }
+  return svg;
+}
+
+function homeNavButton({ icon, label, sublabel, onclick, className = '', disabled = false, current = false }) {
+  return el('button', {
+    className: `home-lobby-nav-button ${className}`.trim(),
+    disabled,
+    onclick,
+    attrs: current ? { 'aria-current': 'page' } : {},
+  }, [
+    el('span', { className: 'home-lobby-nav-icon' }, homeIcon(icon)),
+    el('span', { className: 'home-lobby-nav-copy' }, [
+      el('strong', { text: label }),
+      el('small', { text: sublabel }),
+    ]),
+  ]);
+}
+
+function openGiftBox(economy) {
+  const pending = economy?.pendingPack;
+  openModal({
+    title: 'ギフトボックス',
+    content: el('div', { className: 'home-lobby-modal-copy' }, [
+      el('p', { text: pending ? '未確認のブースターパックがあります。ショップから開封できます。' : '現在、未受取のギフトはありません。' }),
+      el('small', { text: 'ログインボーナスと期間プレゼントは、その日の初回ログイン時に自動で受け取ります。' }),
+    ]),
+  });
+}
+
+function openHomeNotices(champion) {
+  openModal({
+    title: 'お知らせ',
+    content: el('div', { className: 'home-lobby-modal-copy' }, [
+      el('p', { className: 'eyebrow', text: `VERSION ${APP_VERSION}` }),
+      el('h3', { text: '王座とデッキを巡る、新しいホームへ' }),
+      el('p', { text: '選択中デッキのリーダーを中心に、王者情報・大会・カード・ショップへ直接移動できるホーム画面になりました。' }),
+      champion?.championDisplayName ? el('small', { text: `現在のレジェンド王者：${champion.championDisplayName}` }) : null,
+    ]),
+  });
+}
+
 export class HomeScreen {
-  constructor({ root, masterIndex, user, champion, repositoryStatus, decks, economy, seed, debugMode = false, adminMode = false, activeRun = null, onResume = null, onTournament, onDecks, onBoosters, onAdmin = null, onProfile, installAvailable = false, onInstall = null }) {
+  constructor({ root, masterIndex, user, champion, repositoryStatus, decks, catalog = null, economy, seed, debugMode = false, adminMode = false, activeRun = null, onResume = null, onTournament, onDecks, onBoosters, onAdmin = null, onProfile, installAvailable = false, onInstall = null }) {
     this.root = root;
     this.masterIndex = masterIndex;
     this.user = user;
     this.champion = champion;
     this.repositoryStatus = repositoryStatus;
     this.decks = decks;
+    this.catalog = catalog;
     this.economy = economy;
     this.seed = seed;
     this.debugMode = debugMode;
@@ -166,17 +259,16 @@ export class HomeScreen {
       ? this.masterIndex.monsters.get(champion.representativeMonsterId)
       : cards.length ? representativeMonster(cards, this.masterIndex) : this.masterIndex.monsters.get('monster-004');
     const representativeAsset = representative ? representativeCardAsset(cards, representative.id) : null;
-    return el('section', { className: 'champion-panel' }, [
-      el('div', { className: 'champion-crown', text: '♛', attrs: { 'aria-hidden': 'true' } }),
-      el('div', { className: 'champion-art' }, representative ? renderMonsterPortrait(representative, '現チャンピオンの代表モンスター', representativeAsset) : el('div', { className: 'champion-placeholder', text: '?' })),
-      el('div', { className: 'champion-copy' }, [
+    return el('section', { className: 'home-lobby-champion' }, [
+      el('div', { className: 'home-lobby-champion-art' }, representative ? renderMonsterPortrait(representative, '現チャンピオンの代表モンスター', representativeAsset) : el('div', { className: 'champion-placeholder', text: '?' })),
+      el('div', { className: 'home-lobby-champion-copy' }, [
         el('p', { className: 'eyebrow', text: 'CURRENT LEGEND CHAMPION' }),
         el('h2', { text: champion?.championDisplayName ?? champion?.displayName ?? '初代王者 アルカナ' }),
         el('strong', { text: champion?.championDeckName ?? champion?.deckName ?? '王座の原型' }),
         el('p', { text: representative ? `代表 ${representative.name}` : '代表モンスター未登録' }),
-        el('small', { text: champion?.crownedAt ? `戴冠 ${formatDate(champion.crownedAt)} / 防衛 ${champion.defenseCount ?? 0}` : '王座データ未登録・初期王者' }),
+        el('small', { text: champion?.crownedAt ? `戴冠 ${formatDate(champion.crownedAt)} ／ 防衛 ${champion.defenseCount ?? 0}回` : '王座データ未登録・初期王者' }),
       ]),
-      el('div', { className: 'champion-version', text: `VERSION ${champion?.championVersion ?? 0}` }),
+      el('span', { className: 'home-lobby-champion-crown', text: '♛', attrs: { 'aria-hidden': 'true' } }),
     ]);
   }
 
@@ -185,48 +277,81 @@ export class HomeScreen {
     const footerMode = homeFooterMode({ debugMode: this.debugMode, syncError: this.repositoryStatus.error });
     const showFooter = footerMode !== 'hidden';
     const resume = activeRunSummary(this.activeRun);
-    replace(this.root, el('main', { className: `home-screen${showFooter ? '' : ' no-technical-footer'}` }, [
-      el('header', { className: 'home-header' }, [
-        el('div', { className: 'game-title' }, [
-          el('div', { className: 'brand-mark', text: 'MC' }),
-          el('div', {}, [el('p', { className: 'eyebrow', text: 'BUILD YOUR ETERNAL FORTY' }), el('h1', { text: 'モンスターコンストラクション' }), el('p', { text: '戦い、奪い、自分だけの最強40枚へ。' })]),
-        ]),
-        el('div', { className: 'profile-chip' }, [
-          el('span', { text: this.repositoryStatus.mode === 'firebase' ? '● ONLINE' : '○ LOCAL' }),
-          el('strong', { text: this.user.displayName }),
-          el('div', { className: 'profile-actions' }, [
-            this.adminMode ? el('button', { className: 'utility-button admin-entry-button', text: '管理者ツール', onclick: this.onAdmin }) : null,
-            el('button', { className: 'utility-button profile-entry-button', text: 'マイページ', onclick: this.onProfile }),
-            this.installAvailable ? el('button', { className: 'utility-button install-button', text: 'アプリに追加', onclick: this.onInstall }) : null,
-          ]),
-        ]),
+    const selectedDeck = this.decks[0] ?? null;
+    const leader = selectedDeck?.representativeMonsterId
+      ? this.masterIndex.monsters.get(selectedDeck.representativeMonsterId)
+      : selectedDeck?.cards?.length ? representativeMonster(selectedDeck.cards, this.masterIndex) : this.masterIndex.monsters.get('monster-019');
+    const leaderAsset = leader && selectedDeck ? representativeCardAsset(selectedDeck.cards, leader.id) : null;
+    const collectionLevel = homeCollectionLevel(this.catalog, this.masterIndex);
+    const online = this.repositoryStatus.mode === 'firebase';
+    const tournamentAction = resume ? this.onResume : this.onTournament;
+    const hero = el('img', {
+      className: `home-lobby-hero-art${leaderAsset?.finish === 'foil' ? ' is-foil' : ''}`,
+      src: homeLeaderArtworkPath(leader?.id, leaderAsset),
+      alt: leader ? `${leader.name}のホーム画面イラスト` : 'ホーム画面のリーダーイラスト',
+      draggable: false,
+      attrs: { decoding: 'sync', fetchpriority: 'high' },
+    });
+
+    replace(this.root, el('main', { className: `home-screen home-lobby${showFooter ? '' : ' no-technical-footer'}` }, [
+      el('div', { className: 'home-lobby-artwork', attrs: { 'aria-hidden': 'true' } }, [
+        hero,
+        el('span', { className: 'home-lobby-art-shade' }),
+        leaderAsset?.finish === 'foil' ? el('span', { className: 'home-lobby-foil-shine' }) : null,
       ]),
-      el('section', { className: 'home-main' }, [
-        this.renderChampion(),
-        el('section', { className: 'home-actions' }, [
-          el('button', { className: `home-primary-action${resume ? ' resume-run' : ''}`, onclick: resume ? this.onResume : this.onTournament }, [
-            el('span', { className: 'eyebrow', text: resume ? 'CONTINUE TOURNAMENT' : 'TOURNAMENT' }),
-            el('strong', { text: resume?.title ?? '大会へ挑戦' }),
-            el('small', { text: resume?.detail ?? `${TOURNAMENT_LABELS[highest]}まで出場可能` }),
-          ]),
-          el('button', { className: 'home-action', onclick: this.onDecks }, [
-            el('span', { text: '40' }),
-            el('div', {}, [el('strong', { text: '保存デッキ' }), el('small', { text: `${this.decks.length}/5 デッキ` })]),
-          ]),
-          el('button', { className: `home-action booster-home-action${this.economy?.pendingPack ? ' has-pending' : ''}`, onclick: this.onBoosters }, [
-            el('span', { className: 'currency-diamond-home' }, diamondIcon('home-diamond-icon')),
-            el('div', {}, [
-              el('strong', { text: this.economy?.pendingPack ? '未確認パック' : 'ブースター' }),
-              el('small', { text: this.economy?.freePackCredits ? `初回無料 / ダイヤ ${this.economy.diamonds}` : `ダイヤ ${this.economy?.diamonds ?? 0}` }),
+      el('header', { className: 'home-lobby-topbar' }, [
+        el('button', { className: 'home-lobby-profile', onclick: this.onProfile, attrs: { 'aria-label': 'マイページを開く' } }, [
+          el('span', { className: 'home-lobby-avatar', text: this.user.displayName.slice(0, 1) || '?' }),
+          el('span', { className: 'home-lobby-profile-copy' }, [
+            el('small', { className: online ? 'is-online' : '', text: online ? '● ONLINE' : '○ LOCAL' }),
+            el('strong', { text: this.user.displayName }),
+            el('span', { className: 'home-lobby-level' }, [
+              el('span', { text: 'COLLECTION LEVEL' }),
+              el('b', { text: String(collectionLevel) }),
             ]),
+            el('span', { className: 'home-lobby-level-track' }, el('i', { style: `width:${collectionLevel}%` })),
+            el('span', { className: 'home-profile-link', text: 'マイページ' }),
           ]),
-          el('button', { className: 'home-action', onclick: () => openHowToPlay(this.onTournament) }, [
-            el('span', { text: '?' }),
-            el('div', {}, [el('strong', { text: '遊び方' }), el('small', { text: '基本操作とチュートリアル' })]),
-          ]),
+          el('i', { className: 'home-lobby-chevron', text: '›', attrs: { 'aria-hidden': 'true' } }),
+        ]),
+        el('div', { className: 'home-lobby-brand', attrs: { 'aria-label': 'モンスターコンストラクション' } }, [
+          el('span', { className: 'home-lobby-brand-mark' }, el('b', { text: 'MC' })),
+          el('span', {}, [el('strong', { text: 'MONSTER' }), el('small', { text: 'CONSTRUCTION' })]),
+        ]),
+        el('button', { className: 'home-lobby-wallet', onclick: this.onBoosters, attrs: { 'aria-label': `所持ダイヤ ${this.economy?.diamonds ?? 0}。ショップを開く` } }, [
+          diamondIcon('home-lobby-diamond'),
+          el('span', {}, [el('small', { text: 'DIAMOND' }), el('strong', { text: Number(this.economy?.diamonds ?? 0).toLocaleString('ja-JP') })]),
+          el('i', { text: '＋', attrs: { 'aria-hidden': 'true' } }),
         ]),
       ]),
-      showFooter ? el('footer', { className: `home-footer${this.repositoryStatus.error ? ' sync-warning' : ''}` }, [
+      el('aside', { className: 'home-lobby-left-rail' }, [
+        this.renderChampion(),
+        el('button', { className: `home-lobby-tournament-banner${resume ? ' has-resume' : ''}`, onclick: tournamentAction }, [
+          el('span', {}, [
+            el('small', { text: resume ? 'CONTINUE TOURNAMENT' : 'LEGEND CUP' }),
+            el('strong', { text: resume?.title ?? '王座への挑戦者、求む' }),
+            el('em', { text: resume?.detail ?? `${TOURNAMENT_LABELS[highest]}まで出場可能` }),
+          ]),
+          el('i', { text: '›', attrs: { 'aria-hidden': 'true' } }),
+        ]),
+      ]),
+      el('aside', { className: 'home-lobby-utility-rail', attrs: { 'aria-label': 'サブメニュー' } }, [
+        el('button', { onclick: () => openGiftBox(this.economy), attrs: { 'aria-label': 'ギフトボックス' } }, [
+          homeIcon('gift'), el('span', { text: 'ギフト' }), this.economy?.pendingPack ? el('i', { className: 'home-lobby-notification', text: '!' }) : null,
+        ]),
+        el('button', { onclick: () => openHomeNotices(this.champion), attrs: { 'aria-label': 'お知らせ' } }, [homeIcon('notice'), el('span', { text: 'お知らせ' })]),
+        el('button', { onclick: () => openHowToPlay(this.onTournament), attrs: { 'aria-label': '遊び方' } }, [homeIcon('help'), el('span', { text: '遊び方' })]),
+        this.installAvailable ? el('button', { className: 'home-lobby-install', onclick: this.onInstall, attrs: { 'aria-label': 'アプリに追加' } }, [homeIcon('install'), el('span', { text: 'アプリ' })]) : null,
+        this.adminMode ? el('button', { className: 'home-lobby-admin admin-entry-button', onclick: this.onAdmin, attrs: { 'aria-label': '管理者ツール' } }, [homeIcon('admin'), el('span', { text: '管理' }), el('span', { className: 'sr-only', text: '管理者ツール' })]) : null,
+      ]),
+      el('nav', { className: 'home-lobby-bottom-nav', attrs: { 'aria-label': 'メインメニュー' } }, [
+        homeNavButton({ icon: 'tournament', label: 'トーナメント', sublabel: resume ? '続きから再開' : 'TOURNAMENT', onclick: tournamentAction, className: resume ? 'has-resume' : '' }),
+        homeNavButton({ icon: 'arena', label: 'アリーナ', sublabel: 'COMING SOON', disabled: true, className: 'is-locked' }),
+        homeNavButton({ icon: 'home', label: 'ホーム', sublabel: 'HOME', current: true, className: 'is-active' }),
+        homeNavButton({ icon: 'cards', label: 'カード', sublabel: `${this.decks.length}/5 DECKS`, onclick: this.onDecks }),
+        homeNavButton({ icon: 'shop', label: 'ショップ', sublabel: this.economy?.pendingPack ? '未確認パックあり' : 'BOOSTER', onclick: this.onBoosters, className: this.economy?.pendingPack ? 'has-notice' : '' }),
+      ]),
+      showFooter ? el('footer', { className: `home-lobby-footer${this.repositoryStatus.error ? ' sync-warning' : ''}` }, [
         this.repositoryStatus.error
           ? el('span', { className: 'invalid-copy', text: 'クラウドと同期できないため、この端末に安全に保存しています。' })
           : null,
@@ -234,7 +359,7 @@ export class HomeScreen {
         this.debugMode ? el('span', { text: `Debug seed: ${this.seed}` }) : null,
         this.debugMode ? el('span', { text: 'Sim8.7 / PWA' }) : null,
       ]) : null,
-      el('small', { className: 'home-app-version', text: `v${APP_VERSION}` }),
+      el('small', { className: 'home-app-version home-lobby-version', text: `v${APP_VERSION}` }),
     ]));
   }
 }

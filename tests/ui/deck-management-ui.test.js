@@ -48,7 +48,7 @@ test('premium diamond artwork replaces CSS and text placeholders', () => {
   assert.ok(statSync(assetUrl).size < 100_000);
   assert.match(boosterScreen, /diamondIcon\('diamond-balance-icon'\)/);
   assert.match(boosterScreen, /diamondIcon\('booster-cost-icon'\)/);
-  assert.match(homeScreen, /diamondIcon\('home-diamond-icon'\)/);
+  assert.match(homeScreen, /diamondIcon\('home-lobby-diamond'\)/);
   assert.doesNotMatch(css, /\.diamond-balance i\s*\{/);
 });
 

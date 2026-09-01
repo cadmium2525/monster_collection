@@ -30,7 +30,9 @@ test('my page exposes recovery, records and catalog progress', () => {
 
 test('home replaces the direct rename action with a my-page entry', () => {
   const source = fs.readFileSync(new URL('../../src/ui/home-screen.js', import.meta.url), 'utf8');
+  const app = fs.readFileSync(new URL('../../src/app.js', import.meta.url), 'utf8');
   assert.match(source, /text: 'マイページ'/);
+  assert.match(app, /new HomeScreen\(\{[\s\S]*catalog: this\.catalog/);
   assert.doesNotMatch(source, /text: '名前変更'/);
 });
 

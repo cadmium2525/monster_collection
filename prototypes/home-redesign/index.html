@@ -1,0 +1,154 @@
+<!doctype html>
+<html lang="ja">
+<head>
+  <meta charset="utf-8">
+  <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
+  <meta name="theme-color" content="#06111c">
+  <title>ホーム画面刷新案 | Monster Construction</title>
+  <link rel="stylesheet" href="./styles.css?v=home-redesign-2">
+</head>
+<body>
+  <main class="home-preview" aria-label="ホーム画面刷新案">
+    <div class="world-backdrop" aria-hidden="true"></div>
+    <div class="world-light" aria-hidden="true"></div>
+    <div class="screen-vignette" aria-hidden="true"></div>
+
+    <header class="top-hud">
+      <button class="player-profile glass-panel" type="button" data-preview-action="マイページ">
+        <span class="player-emblem" aria-hidden="true">
+          <span>MC</span>
+        </span>
+        <span class="player-copy">
+          <span class="online-row"><i></i> ONLINE</span>
+          <strong>かど</strong>
+          <span class="collection-row">
+            <span>COLLECTION LEVEL</span>
+            <b>17</b>
+          </span>
+          <span class="level-track"><i></i></span>
+        </span>
+        <span class="profile-arrow" aria-hidden="true">›</span>
+      </button>
+
+      <div class="brand-mark" aria-label="Monster Construction">
+        <span class="brand-monogram">MC</span>
+        <span><b>MONSTER</b><small>CONSTRUCTION</small></span>
+      </div>
+
+      <button class="diamond-wallet glass-panel" type="button" data-preview-action="ダイヤ">
+        <img src="../../assets/ui/currency/diamond-premium.webp" alt="">
+        <span><small>DIAMOND</small><strong>440</strong></span>
+        <i aria-hidden="true">＋</i>
+      </button>
+    </header>
+
+    <section class="leader-stage" aria-label="選択中のデッキリーダー">
+      <div class="leader-aura aura-one" aria-hidden="true"></div>
+      <div class="leader-aura aura-two" aria-hidden="true"></div>
+      <img
+        class="leader-art"
+        src="../../assets/images/showcase/showcase-inorganic-01.webp"
+        alt="選択中のデッキリーダー クロノギア"
+      >
+      <div class="leader-plinth" aria-hidden="true"></div>
+      <div class="leader-identity">
+        <span class="leader-kicker">SELECTED DECK LEADER</span>
+        <div class="leader-meta">
+          <span>機鋼</span>
+          <i></i>
+          <span>時装甲</span>
+          <i></i>
+          <span>ちゃんぴょん</span>
+        </div>
+      </div>
+    </section>
+
+    <aside class="left-rail" aria-label="チャンピオン情報">
+      <button class="champion-card" type="button" data-preview-action="チャンピオン詳細">
+        <span class="champion-flare" aria-hidden="true"></span>
+        <span class="champion-portrait">
+          <img src="../../assets/images/showcase/showcase-inorganic-01.webp" alt="">
+          <i aria-hidden="true">♛</i>
+        </span>
+        <span class="champion-data">
+          <small>CURRENT LEGEND CHAMPION</small>
+          <strong>かど</strong>
+          <span>代表 クロノギア</span>
+          <em>防衛 0回</em>
+        </span>
+        <span class="champion-arrow" aria-hidden="true">›</span>
+      </button>
+      <button class="news-banner" type="button" data-preview-action="レジェンドカップ">
+        <span><small>LEGEND CUP</small><strong>王座への挑戦者、求む</strong></span>
+        <i aria-hidden="true">›</i>
+      </button>
+    </aside>
+
+    <aside class="utility-rail" aria-label="サブメニュー">
+      <button type="button" data-preview-action="ギフトボックス">
+        <span class="utility-icon" aria-hidden="true">
+          <svg viewBox="0 0 48 48"><path d="M7 19h34v23H7zM4 14h40v8H4zM24 14v28M24 14H14c-5 0-6-8-1-9 5-1 11 9 11 9Zm0 0h10c5 0 6-8 1-9-5-1-11 9-11 9Z"/></svg>
+        </span>
+        <span>ギフト</span>
+        <i class="notification-dot">3</i>
+      </button>
+      <button type="button" data-preview-action="お知らせ">
+        <span class="utility-icon" aria-hidden="true">
+          <svg viewBox="0 0 48 48"><path d="M11 34h26l-4-6V18a9 9 0 0 0-18 0v10l-4 6Zm9 5a4 4 0 0 0 8 0"/></svg>
+        </span>
+        <span>お知らせ</span>
+        <i class="notification-dot">!</i>
+      </button>
+      <button type="button" data-preview-action="遊び方">
+        <span class="utility-icon" aria-hidden="true">
+          <svg viewBox="0 0 48 48"><path d="M8 8h13c4 0 6 2 6 6v26c0-4-2-6-6-6H8V8Zm32 0H27v32c0-4 2-6 6-6h7V8Z"/></svg>
+        </span>
+        <span>遊び方</span>
+      </button>
+    </aside>
+
+    <nav class="bottom-navigation" aria-label="メインメニュー">
+      <button type="button" data-preview-action="トーナメント">
+        <span class="nav-icon" aria-hidden="true">
+          <svg viewBox="0 0 48 48"><path d="M15 7h18v8c0 7-3 13-9 13s-9-6-9-13V7Zm0 5H8c0 8 3 12 10 13M33 12h7c0 8-3 12-10 13M24 28v7M16 42h16M19 35h10v7"/></svg>
+        </span>
+        <span class="nav-copy"><strong>トーナメント</strong><small>TOURNAMENT</small></span>
+      </button>
+      <button class="is-locked" type="button" data-preview-action="アリーナ（未実装）">
+        <span class="nav-icon" aria-hidden="true">
+          <svg viewBox="0 0 48 48"><path d="m11 8 26 32M37 8 11 40M8 8l8 2-6 6-2-8Zm32 0-8 2 6 6 2-8ZM8 40l8-2-6-6-2 8Zm32 0-8-2 6-6 2 8Z"/></svg>
+        </span>
+        <span class="nav-copy"><strong>アリーナ</strong><small>COMING SOON</small></span>
+      </button>
+      <button class="is-active" type="button" data-preview-action="ホーム" aria-current="page">
+        <span class="nav-icon home-core" aria-hidden="true">
+          <svg viewBox="0 0 48 48"><path d="m7 23 17-15 17 15M12 20v21h24V20M20 41V28h8v13"/></svg>
+        </span>
+        <span class="nav-copy"><strong>ホーム</strong><small>HOME</small></span>
+      </button>
+      <button type="button" data-preview-action="カード">
+        <span class="nav-icon" aria-hidden="true">
+          <svg viewBox="0 0 48 48"><rect x="9" y="7" width="25" height="34" rx="3"/><path d="m18 19 7-5 4 6 8-3 2 17H18V19ZM34 11l5 1v25l-5 1"/></svg>
+        </span>
+        <span class="nav-copy"><strong>カード</strong><small>CARDS</small></span>
+      </button>
+      <button type="button" data-preview-action="ショップ">
+        <span class="nav-icon" aria-hidden="true">
+          <svg viewBox="0 0 48 48"><path d="M8 18h32l-3 23H11L8 18Zm7 0a9 9 0 0 1 18 0M18 26v5M30 26v5"/></svg>
+        </span>
+        <span class="nav-copy"><strong>ショップ</strong><small>BOOSTER</small></span>
+      </button>
+    </nav>
+
+    <div class="preview-label">HOME REDESIGN / CONCEPT 01</div>
+    <div class="interaction-toast" role="status" aria-live="polite"></div>
+  </main>
+
+  <div class="portrait-guard" aria-hidden="true">
+    <span>↻</span>
+    <strong>端末を横向きにしてください</strong>
+  </div>
+
+  <script src="./preview.js"></script>
+</body>
+</html>

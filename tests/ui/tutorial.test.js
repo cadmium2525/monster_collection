@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
-import { activeRunSummary, homeFooterMode, TUTORIAL_STEPS } from '../../src/ui/home-screen.js';
+import { activeRunSummary, homeCollectionLevel, homeFooterMode, homeLeaderArtworkPath, TUTORIAL_STEPS } from '../../src/ui/home-screen.js';
 
 test('beginner tutorial covers the complete first tournament interaction loop', () => {
   assert.equal(TUTORIAL_STEPS.length, 8);
@@ -21,16 +21,27 @@ test('technical home footer stays hidden for players but preserves debug and syn
   assert.equal(homeFooterMode({ syncError: 'offline' }), 'warning');
 });
 
-test('home keeps the release version visible and separates tournament title lines', () => {
+test('home lobby keeps the release version visible and separates its navigation labels', () => {
   const homeSource = fs.readFileSync(new URL('../../src/ui/home-screen.js', import.meta.url), 'utf8');
   const css = fs.readFileSync(new URL('../../styles.css', import.meta.url), 'utf8');
-  assert.match(homeSource, /className: 'home-app-version'/);
+  assert.match(homeSource, /className: 'home-app-version home-lobby-version'/);
   assert.match(homeSource, /`v\$\{APP_VERSION\}`/);
-  assert.match(css, /\.home-screen\.no-technical-footer\s*\{[^}]*grid-template-rows:auto minmax\(0,1fr\) auto/s);
-  assert.match(css, /\.home-app-version\s*\{[^}]*position:static;[^}]*justify-self:end/s);
-  assert.match(css, /\.home-primary-action\s*\{[^}]*grid-template-rows:max-content max-content max-content;[^}]*gap:1px/s);
-  assert.match(css, /\.home-primary-action strong\s*\{[^}]*line-height:1\.12/s);
-  assert.match(css, /\.home-primary-action small\s*\{[^}]*line-height:1\.15/s);
+  assert.match(css, /\.home-app-version\.home-lobby-version\s*\{[^}]*position:absolute/s);
+  assert.match(css, /\.home-lobby-bottom-nav\s*\{[^}]*grid-template-columns:repeat\(5,minmax\(94px,1fr\)\);[^}]*gap:clamp\(10px,1\.6vw,22px\)/s);
+  for (const label of ['トーナメント', 'アリーナ', 'ホーム', 'カード', 'ショップ']) assert.match(homeSource, new RegExp(`label: '${label}'`));
+  assert.doesNotMatch(homeSource, /home-lobby-leader-name/);
+  assert.match(homeSource, /document\.createElementNS\('http:\/\/www\.w3\.org\/2000\/svg', 'svg'\)/);
+  assert.match(homeSource, /attrs: \{ decoding: 'sync', fetchpriority: 'high' \}/);
+});
+
+test('home chooses one leader illustration and calculates collection progress safely', () => {
+  assert.equal(homeLeaderArtworkPath('monster-003'), './assets/images/showcase/showcase-monster-003.webp');
+  assert.equal(homeLeaderArtworkPath('monster-019'), './assets/images/showcase/showcase-inorganic-01.webp');
+  assert.equal(homeLeaderArtworkPath('monster-030', { artVariantId: 'showcase-monster-030' }), './assets/images/showcase/showcase-monster-030.webp');
+  assert.equal(homeLeaderArtworkPath('invalid'), './assets/images/showcase/showcase-inorganic-01.webp');
+  const masterIndex = { cards: new Map([['a', {}], ['b', {}]]), data: { fusions: [{}, {}] } };
+  assert.equal(homeCollectionLevel({ ownedCardMasterIds: ['a'], discoveredFusionIds: ['f1'] }, masterIndex), 50);
+  assert.equal(homeCollectionLevel({ ownedCardMasterIds: ['a', 'a'], discoveredFusionIds: [] }, masterIndex), 25);
 });
 
 test('active tournament checkpoint is summarized as a player-facing continue action', () => {

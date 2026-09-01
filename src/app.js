@@ -140,6 +140,7 @@ class MonsterConstructionApp {
       champion: this.champion,
       repositoryStatus: this.repository.getStatus(),
       decks: this.decks.list(),
+      catalog: this.catalog,
       economy: this.economy,
       seed: this.seed,
       debugMode: globalThis.__MC_DEBUG_MODE__,
