@@ -2,6 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { FirebaseGameRepository, LocalGameRepository, MemoryStorage, ResilientGameRepository } from '../../src/persistence/index.js';
+import { HOME_RENEWAL_GIFT_ID } from '../../src/gacha/economy-state.js';
 import { legalDeck } from '../helpers.js';
 
 function savedDeck(deckId = 'deck-1') {
@@ -112,6 +113,42 @@ test('local and Firebase login rewards are atomic and idempotent for the same Ja
   assert.deepEqual(cloudAgain.rewards, []);
   assert.equal(cloudAgain.state.diamonds, 3900);
   assert.ok(fake.transactionCount >= 2);
+});
+
+test('local and Firebase repositories claim the home renewal gift atomically once', async () => {
+  const config = { giftId: HOME_RENEWAL_GIFT_ID, claimDate: '2026-09-01' };
+  const local = new LocalGameRepository({ storage: new MemoryStorage(), idFactory: () => 'gift-local' });
+  await local.initialize();
+  const localFirst = await local.claimCampaignGift(config);
+  const localAgain = await local.claimCampaignGift(config);
+  assert.equal(localFirst.state.diamonds, 3600);
+  assert.equal(localFirst.reward.amount, 3000);
+  assert.equal(localAgain.state.diamonds, 3600);
+  assert.equal(localAgain.reward, null);
+
+  const fake = fakeFirebaseSdk();
+  const firebase = new FirebaseGameRepository({ config: { projectId: 'test' }, sdkLoader: async () => fake.sdk });
+  await firebase.initialize();
+  const cloudFirst = await firebase.claimCampaignGift(config);
+  const cloudAgain = await firebase.claimCampaignGift(config);
+  assert.equal(cloudFirst.state.diamonds, 3600);
+  assert.equal(cloudFirst.reward.amount, 3000);
+  assert.equal(cloudAgain.state.diamonds, 3600);
+  assert.equal(cloudAgain.reward, null);
+});
+
+test('player card icon persists in local and Firebase profiles', async () => {
+  const local = new LocalGameRepository({ storage: new MemoryStorage(), idFactory: () => 'icon-local' });
+  await local.initialize();
+  assert.equal((await local.setPlayerIcon('monster-003')).playerIconMasterId, 'monster-003');
+  assert.equal((await local.getProfile()).playerIconMasterId, 'monster-003');
+  assert.equal((await local.setPlayerIcon(null)).playerIconMasterId, null);
+
+  const fake = fakeFirebaseSdk();
+  const firebase = new FirebaseGameRepository({ config: { projectId: 'test' }, sdkLoader: async () => fake.sdk });
+  await firebase.initialize();
+  assert.equal((await firebase.setPlayerIcon('monster-019')).playerIconMasterId, 'monster-019');
+  assert.equal((await firebase.getProfile()).playerIconMasterId, 'monster-019');
 });
 
 test('repository stores player-wide tournament unlock without downgrading it', async () => {

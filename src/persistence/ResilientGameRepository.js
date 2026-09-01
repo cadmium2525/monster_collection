@@ -89,6 +89,17 @@ export class ResilientGameRepository {
     catch (error) { this.lastError = error; return local; }
   }
 
+  async setPlayerIcon(playerIconMasterId) {
+    const local = await this.local.setPlayerIcon(playerIconMasterId);
+    if (!this.activeCloud?.setPlayerIcon) return local;
+    try {
+      const cloud = await this.activeCloud.setPlayerIcon(playerIconMasterId);
+      await this.local.replaceProfile?.(cloud);
+      this.user = { ...this.user, ...cloud };
+      return cloud;
+    } catch (error) { this.lastError = error; return local; }
+  }
+
   async getEconomy() {
     const localEconomy = await this.local.getEconomy();
     if (!this.activeCloud?.getEconomy) return localEconomy;
@@ -159,6 +170,19 @@ export class ResilientGameRepository {
     if (!this.activeCloud?.claimLoginRewards) return localResult;
     try {
       const cloudResult = await this.activeCloud.claimLoginRewards(config);
+      await this.local.replaceEconomy(cloudResult.state);
+      return cloudResult;
+    } catch (error) {
+      this.lastError = error;
+      return localResult;
+    }
+  }
+
+  async claimCampaignGift(config = {}) {
+    const localResult = await this.local.claimCampaignGift(config);
+    if (!this.activeCloud?.claimCampaignGift) return localResult;
+    try {
+      const cloudResult = await this.activeCloud.claimCampaignGift(config);
       await this.local.replaceEconomy(cloudResult.state);
       return cloudResult;
     } catch (error) {

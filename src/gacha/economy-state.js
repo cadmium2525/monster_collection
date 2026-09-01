@@ -8,6 +8,23 @@ export const DAILY_LOGIN_DIAMONDS = 300;
 export const SUMMER_BONUS_DIAMONDS = 3000;
 export const SUMMER_BONUS_ID = 'summer-vacation-2026';
 export const SUMMER_BONUS_START = '2026-08-29';
+export const SUMMER_BONUS_END = '2026-08-31';
+export const HOME_RENEWAL_GIFT_ID = 'home-renewal-2026';
+export const HOME_RENEWAL_GIFT_DIAMONDS = 3000;
+export const HOME_RENEWAL_GIFT_START = '2026-09-01';
+export const HOME_RENEWAL_GIFT_END = '2026-09-04';
+
+const CAMPAIGN_GIFTS = Object.freeze([
+  Object.freeze({
+    id: HOME_RENEWAL_GIFT_ID,
+    type: 'gift',
+    amount: HOME_RENEWAL_GIFT_DIAMONDS,
+    label: 'ホーム画面刷新記念',
+    description: '新しいホーム画面の公開を記念した期間限定プレゼントです。',
+    startsAt: HOME_RENEWAL_GIFT_START,
+    endsAt: HOME_RENEWAL_GIFT_END,
+  }),
+]);
 
 function clone(value) { return value == null ? value : structuredClone(value); }
 
@@ -123,6 +140,7 @@ export function applyLoginRewards(current, {
   loginDate = japanDateKey(),
   campaignId = SUMMER_BONUS_ID,
   campaignStart = SUMMER_BONUS_START,
+  campaignEnd = SUMMER_BONUS_END,
 } = {}, now = new Date().toISOString()) {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(loginDate)) throw new Error('ログイン日が不正です');
   const state = normalizeEconomyState(current, now);
@@ -132,13 +150,39 @@ export function applyLoginRewards(current, {
     state.lastDailyLoginDate = loginDate;
     rewards.push({ type: 'daily', amount: DAILY_LOGIN_DIAMONDS, label: 'デイリーログインボーナス' });
   }
-  if (loginDate >= campaignStart && campaignId && !state.claimedCampaignIds.includes(campaignId)) {
+  if (loginDate >= campaignStart && loginDate <= campaignEnd && campaignId && !state.claimedCampaignIds.includes(campaignId)) {
     state.diamonds += SUMMER_BONUS_DIAMONDS;
     state.claimedCampaignIds = [...state.claimedCampaignIds, campaignId].slice(-32);
     rewards.push({ type: 'campaign', amount: SUMMER_BONUS_DIAMONDS, label: '夏休みボーナス' });
   }
   if (rewards.length) state.updatedAt = now;
   return { state, rewards };
+}
+
+export function availableCampaignGifts(current, { loginDate = japanDateKey() } = {}) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(loginDate)) throw new Error('ログイン日が不正です');
+  const state = normalizeEconomyState(current);
+  return CAMPAIGN_GIFTS
+    .filter((gift) => loginDate >= gift.startsAt
+      && loginDate <= gift.endsAt
+      && !state.claimedCampaignIds.includes(gift.id))
+    .map((gift) => clone(gift));
+}
+
+export function applyCampaignGiftClaim(current, {
+  giftId,
+  claimDate = japanDateKey(),
+} = {}, now = new Date().toISOString()) {
+  if (!/^\d{4}-\d{2}-\d{2}$/.test(claimDate)) throw new Error('受取日が不正です');
+  const state = normalizeEconomyState(current, now);
+  const gift = CAMPAIGN_GIFTS.find((entry) => entry.id === giftId);
+  if (!gift) throw new Error('ギフトが見つかりません');
+  if (state.claimedCampaignIds.includes(gift.id)) return { state, reward: null };
+  if (claimDate < gift.startsAt || claimDate > gift.endsAt) throw new Error('このギフトの受取期間は終了しました');
+  state.diamonds += gift.amount;
+  state.claimedCampaignIds = [...state.claimedCampaignIds, gift.id].slice(-32);
+  state.updatedAt = now;
+  return { state, reward: clone(gift) };
 }
 
 function rememberOperation(state, operationId) {

@@ -3,6 +3,7 @@ import { loadFirebaseSdk } from './firebase-sdk.js';
 import { mergeCardCatalogs, normalizeCardCatalog } from './card-catalog.js';
 import {
   acknowledgePendingPack,
+  applyCampaignGiftClaim,
   applyDiamondReward,
   applyLoginRewards,
   applyPackPurchase,
@@ -10,6 +11,7 @@ import {
   normalizeEconomyState,
 } from '../gacha/economy-state.js';
 import { applyPlayerStatsEvent, normalizePlayerStats } from '../profile/player-stats.js';
+import { normalizePlayerIconMasterId } from '../profile/player-icon.js';
 import {
   playerIdToRecoveryEmail,
   recoveryEmailToPlayerId,
@@ -71,7 +73,7 @@ export class FirebaseGameRepository {
     const existing = await this.sdk.getDoc(profileRef);
     if (!existing.exists()) {
       await this.sdk.setDoc(profileRef, {
-        displayName: '名無しブリーダー', isAnonymous: this.user.isAnonymous,
+        displayName: '名無しブリーダー', playerIconMasterId: null, isAnonymous: this.user.isAnonymous,
         ownedCardMasterIds: [], discoveredFusionIds: [], catalogSchemaVersion: 1,
         economy: normalizeEconomyState(null),
         stats: normalizePlayerStats(null),
@@ -97,6 +99,14 @@ export class FirebaseGameRepository {
     const value = String(displayName ?? '').trim();
     if (!value || [...value].length > 24) throw new Error('表示名は1〜24文字です');
     await this.sdk.setDoc(this._profileRef(), { displayName: value, updatedAt: this.sdk.serverTimestamp() }, { merge: true });
+    this.profile = await this.getProfile();
+    return { ...this.profile, id: this.user.uid };
+  }
+
+  async setPlayerIcon(playerIconMasterId) {
+    const value = normalizePlayerIconMasterId(playerIconMasterId);
+    if (playerIconMasterId != null && !value) throw new Error('プレイヤーアイコンが不正です');
+    await this.sdk.setDoc(this._profileRef(), { playerIconMasterId: value, updatedAt: this.sdk.serverTimestamp() }, { merge: true });
     this.profile = await this.getProfile();
     return { ...this.profile, id: this.user.uid };
   }
@@ -225,6 +235,17 @@ export class FirebaseGameRepository {
     });
     this.profile = { ...this.profile, economy: state };
     return { state, rewards: clone(rewards) };
+  }
+
+  async claimCampaignGift(config = {}) {
+    let reward = null;
+    const state = await this._updateEconomy((current) => {
+      const result = applyCampaignGiftClaim(current, config);
+      reward = result.reward;
+      return result.state;
+    });
+    this.profile = { ...this.profile, economy: state };
+    return { state, reward: clone(reward) };
   }
 
   async listDecks() {

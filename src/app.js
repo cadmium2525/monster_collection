@@ -104,15 +104,18 @@ class MonsterConstructionApp {
 
   showLoginBonus(rewards) {
     const total = rewards.reduce((sum, reward) => sum + reward.amount, 0);
+    const giftOnly = rewards.length > 0 && rewards.every((reward) => reward.type === 'gift');
     let modal = null;
     const content = el('div', { className: 'login-bonus-panel' }, [
       el('div', { className: 'login-bonus-diamond', attrs: { 'aria-hidden': 'true' } }, diamondIcon('login-bonus-diamond-art')),
-      el('p', { text: rewards.some((reward) => reward.type === 'campaign')
+      el('p', { text: giftOnly
+        ? 'ギフトボックスからプレゼントを受け取りました。'
+        : rewards.some((reward) => reward.type === 'campaign')
         ? 'いつものログインボーナスに加えて、期間プレゼントをお届けします。'
         : '今日のログインプレゼントをお届けします。' }),
       el('div', { className: 'login-bonus-rewards' }, rewards.map((reward) => el('article', { className: `login-reward login-reward-${reward.type}` }, [
         el('span', {}, diamondIcon('login-reward-diamond')),
-        el('div', {}, [el('strong', { text: reward.label }), el('small', { text: reward.type === 'daily' ? '毎日1回' : '初回ログイン限定' })]),
+        el('div', {}, [el('strong', { text: reward.label }), el('small', { text: reward.type === 'daily' ? '毎日1回' : reward.type === 'gift' ? `受取期限 ${reward.endsAt?.replaceAll('-', '/') ?? '期間限定'}` : '初回ログイン限定' })]),
         el('b', { text: `+${reward.amount.toLocaleString('ja-JP')}` }),
       ]))),
       el('div', { className: 'login-bonus-total' }, [
@@ -122,7 +125,7 @@ class MonsterConstructionApp {
       ]),
       el('button', { className: 'primary-button', text: '受け取りました', onclick: () => modal.close() }),
     ]);
-    modal = openModal({ title: 'ログインプレゼント', content, className: 'login-bonus-modal' });
+    modal = openModal({ title: giftOnly ? 'ギフト受取' : 'ログインプレゼント', content, className: 'login-bonus-modal' });
   }
 
   showLoading(message) {
@@ -152,6 +155,7 @@ class MonsterConstructionApp {
       onBoosters: () => this.showBoosterShop(),
       onAdmin: () => this.showAdminTools(),
       onProfile: () => this.showProfile(),
+      onClaimGift: (giftId) => this.claimCampaignGift(giftId),
       installAvailable: Boolean(this.installPromptEvent),
       onInstall: () => this.installApp(),
     });
@@ -188,6 +192,18 @@ class MonsterConstructionApp {
     const modal = openModal({ title: 'プレイヤー名', content });
   }
 
+  async claimCampaignGift(giftId) {
+    try {
+      const result = await this.repository.claimCampaignGift({ giftId, claimDate: japanDateKey() });
+      this.economy = result.state;
+      this.showHome();
+      if (result.reward) this.showLoginBonus([result.reward]);
+    } catch (error) {
+      this.showHome();
+      this.showError(error, 'ギフトを受け取れません');
+    }
+  }
+
   async showProfile() {
     this.showLoading('マイページを読み込んでいます…');
     try {
@@ -203,18 +219,32 @@ class MonsterConstructionApp {
         user: this.user,
         account,
         stats,
+        catalog,
+        masterIndex: this.masterIndex,
         catalogProgress: catalogProgress(catalog, this.masterIndex),
         qualification: this.economy.tournamentQualification,
         champion: this.champion,
         hasActiveRun: Boolean(this.activeRun),
         onBack: () => this.showHome(),
         onRename: () => this.renameProfile('profile'),
+        onSelectIcon: (masterId) => this.selectPlayerIcon(masterId),
         onRegisterRecovery: () => this.openRecoveryRegistration(),
         onSignIn: () => this.openRecoverySignIn(),
       });
     } catch (error) {
       this.showError(error, 'マイページを読み込めません');
       this.showHome();
+    }
+  }
+
+  async selectPlayerIcon(masterId) {
+    try {
+      if (masterId && !new Set(this.catalog?.ownedCardMasterIds ?? []).has(masterId)) throw new Error('所持していないカードはアイコンに設定できません');
+      const profile = await this.repository.setPlayerIcon(masterId);
+      this.user = { ...this.user, ...profile, playerIconMasterId: masterId ?? null };
+      await this.showProfile();
+    } catch (error) {
+      this.showError(error, 'プレイヤーアイコンを変更できません');
     }
   }
 

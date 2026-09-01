@@ -15,10 +15,10 @@ test('beginner tutorial covers the complete first tournament interaction loop', 
   assert.match(homeSource, /戴冠した大会の決勝開始時点の40枚と育成状態を再現/);
 });
 
-test('technical home footer stays hidden for players but preserves debug and sync warning modes', () => {
+test('technical home footer stays hidden for players and shows only in debug mode', () => {
   assert.equal(homeFooterMode(), 'hidden');
   assert.equal(homeFooterMode({ debugMode: true }), 'debug');
-  assert.equal(homeFooterMode({ syncError: 'offline' }), 'warning');
+  assert.equal(homeFooterMode({ syncError: 'offline' }), 'hidden');
 });
 
 test('home lobby keeps the release version visible and separates its navigation labels', () => {
@@ -27,11 +27,13 @@ test('home lobby keeps the release version visible and separates its navigation 
   assert.match(homeSource, /className: 'home-app-version home-lobby-version'/);
   assert.match(homeSource, /`v\$\{APP_VERSION\}`/);
   assert.match(css, /\.home-app-version\.home-lobby-version\s*\{[^}]*position:absolute/s);
-  assert.match(css, /\.home-lobby-bottom-nav\s*\{[^}]*grid-template-columns:repeat\(5,minmax\(94px,1fr\)\);[^}]*gap:clamp\(10px,1\.6vw,22px\)/s);
+  assert.match(css, /\.home-lobby-bottom-nav\s*\{[^}]*left:50%;[^}]*width:min\(760px,calc\(100% - 48px\)\);[^}]*grid-template-columns:repeat\(5,minmax\(0,1fr\)\);[^}]*transform:translateX\(-50%\)/s);
   for (const label of ['トーナメント', 'アリーナ', 'ホーム', 'カード', 'ショップ']) assert.match(homeSource, new RegExp(`label: '${label}'`));
   assert.doesNotMatch(homeSource, /home-lobby-leader-name/);
   assert.match(homeSource, /document\.createElementNS\('http:\/\/www\.w3\.org\/2000\/svg', 'svg'\)/);
   assert.match(homeSource, /attrs: \{ decoding: 'sync', fetchpriority: 'high' \}/);
+  assert.match(homeSource, /aria-label': 'コレクションレベル進捗'/);
+  assert.match(css, /\.home-lobby-level-track\s*\{[^}]*height:6px;[^}]*border:1px solid/s);
 });
 
 test('home chooses one leader illustration and calculates collection progress safely', () => {

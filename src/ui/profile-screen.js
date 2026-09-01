@@ -1,6 +1,8 @@
 import { TOURNAMENT_LABELS } from '../battle/rules.js';
 import { battleWinRate, normalizePlayerStats } from '../profile/player-stats.js';
 import { el, formatDate, replace } from './dom.js';
+import { openModal } from './modal.js';
+import { ownedPlayerIconDefinitions, playerIconContent, playerIconThumbnail } from './player-icon.js';
 
 function percent(value) {
   return `${Math.round(Number(value || 0) * 100)}%`;
@@ -55,18 +57,51 @@ function accountPanel(screen, account) {
   ]);
 }
 
+function openPlayerIconPicker(screen) {
+  const definitions = ownedPlayerIconDefinitions(screen.catalog, screen.masterIndex);
+  let modal = null;
+  const choose = (masterId) => {
+    modal.close();
+    void screen.onSelectIcon?.(masterId);
+  };
+  const defaultChoice = el('button', {
+    className: `player-icon-choice${screen.user.playerIconMasterId ? '' : ' selected'}`,
+    onclick: () => choose(null),
+    attrs: { 'aria-label': '文字アイコンを使用' },
+  }, [
+    el('span', { className: 'player-icon-thumbnail player-icon-letter', text: screen.user.displayName.slice(0, 1) || '?' }),
+    el('small', { text: '文字' }),
+  ]);
+  const choices = definitions.map((definition) => el('button', {
+    className: `player-icon-choice${screen.user.playerIconMasterId === definition.id ? ' selected' : ''}`,
+    onclick: () => choose(definition.id),
+    attrs: { 'aria-label': `${definition.name}をプレイヤーアイコンに設定` },
+  }, [playerIconThumbnail(definition), el('small', { text: definition.name })]));
+  modal = openModal({
+    title: 'プレイヤーアイコン',
+    content: el('div', { className: 'player-icon-picker' }, [
+      el('p', { text: '所持したことのあるカードからアイコンを選択できます。' }),
+      el('div', { className: 'player-icon-picker-grid' }, [defaultChoice, ...choices]),
+    ]),
+    className: 'player-icon-picker-modal',
+  });
+}
+
 export class ProfileScreen {
-  constructor({ root, user, account, stats, catalogProgress, qualification, champion, hasActiveRun = false, onBack, onRename, onRegisterRecovery, onSignIn }) {
+  constructor({ root, user, account, stats, catalog, masterIndex, catalogProgress, qualification, champion, hasActiveRun = false, onBack, onRename, onSelectIcon, onRegisterRecovery, onSignIn }) {
     this.root = root;
     this.user = user;
     this.account = account;
     this.stats = normalizePlayerStats(stats);
+    this.catalog = catalog;
+    this.masterIndex = masterIndex;
     this.catalogProgress = catalogProgress;
     this.qualification = qualification;
     this.champion = champion;
     this.hasActiveRun = hasActiveRun;
     this.onBack = onBack;
     this.onRename = onRename;
+    this.onSelectIcon = onSelectIcon;
     this.onRegisterRecovery = onRegisterRecovery;
     this.onSignIn = onSignIn;
     this.render();
@@ -86,7 +121,11 @@ export class ProfileScreen {
       ]),
       el('div', { className: 'profile-layout' }, [
         el('section', { className: 'profile-identity panel' }, [
-          el('div', { className: 'profile-avatar', text: this.user.displayName.slice(0, 1) || '?' }),
+          el('button', {
+            className: 'profile-avatar profile-avatar-button',
+            onclick: () => openPlayerIconPicker(this),
+            attrs: { 'aria-label': 'プレイヤーアイコンを変更', title: 'アイコンを変更' },
+          }, playerIconContent({ user: this.user, catalog: this.catalog, masterIndex: this.masterIndex })),
           el('div', { className: 'profile-name-copy' }, [
             el('p', { className: 'eyebrow', text: currentChampion ? 'CURRENT LEGEND CHAMPION' : 'MONSTER BREEDER' }),
             el('h2', { text: this.user.displayName }),

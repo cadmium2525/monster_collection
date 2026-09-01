@@ -8,6 +8,8 @@ import { renderMonsterPortrait } from './card-renderer.js';
 import { openModal } from './modal.js';
 import { diamondIcon } from './currency-icon.js';
 import { APP_VERSION } from '../config/app-version.js';
+import { availableCampaignGifts } from '../gacha/economy-state.js';
+import { playerIconContent } from './player-icon.js';
 
 export const TUTORIAL_STEPS = Object.freeze([
   {
@@ -118,7 +120,6 @@ function openHowToPlay(onTournament) {
 }
 
 export function homeFooterMode({ debugMode = false, syncError = null } = {}) {
-  if (syncError) return 'warning';
   return debugMode ? 'debug' : 'hidden';
 }
 
@@ -204,13 +205,36 @@ function homeNavButton({ icon, label, sublabel, onclick, className = '', disable
   ]);
 }
 
-function openGiftBox(economy) {
+function openGiftBox(economy, gifts, onClaimGift) {
   const pending = economy?.pendingPack;
-  openModal({
+  let modal = null;
+  const claim = (gift) => el('button', {
+    className: 'primary-button home-gift-claim',
+    text: 'ダイヤを受け取る',
+    onclick: async (event) => {
+      event.currentTarget.disabled = true;
+      event.currentTarget.textContent = '受取中…';
+      modal.close();
+      await onClaimGift?.(gift.id);
+    },
+  });
+  modal = openModal({
     title: 'ギフトボックス',
     content: el('div', { className: 'home-lobby-modal-copy' }, [
-      el('p', { text: pending ? '未確認のブースターパックがあります。ショップから開封できます。' : '現在、未受取のギフトはありません。' }),
-      el('small', { text: 'ログインボーナスと期間プレゼントは、その日の初回ログイン時に自動で受け取ります。' }),
+      gifts.length
+        ? el('div', { className: 'home-gift-list' }, gifts.map((gift) => el('article', { className: 'home-gift-entry' }, [
+          diamondIcon('home-gift-diamond'),
+          el('div', {}, [
+            el('small', { text: `受取期限 ${gift.endsAt.replaceAll('-', '/')}` }),
+            el('strong', { text: gift.label }),
+            el('p', { text: gift.description }),
+            el('b', { text: `ダイヤ ${gift.amount.toLocaleString('ja-JP')}` }),
+          ]),
+          claim(gift),
+        ])))
+        : el('p', { className: 'home-gift-empty', text: '現在、未受取のギフトはありません。' }),
+      pending ? el('p', { className: 'home-pending-pack-note', text: '未確認のブースターパックがあります。ショップから開封できます。' }) : null,
+      el('small', { text: 'デイリーログインボーナスはその日の初回ログイン時に自動で受け取ります。期間限定ギフトは受取期限までにここから受け取ってください。' }),
     ]),
   });
 }
@@ -228,7 +252,7 @@ function openHomeNotices(champion) {
 }
 
 export class HomeScreen {
-  constructor({ root, masterIndex, user, champion, repositoryStatus, decks, catalog = null, economy, seed, debugMode = false, adminMode = false, activeRun = null, onResume = null, onTournament, onDecks, onBoosters, onAdmin = null, onProfile, installAvailable = false, onInstall = null }) {
+  constructor({ root, masterIndex, user, champion, repositoryStatus, decks, catalog = null, economy, seed, debugMode = false, adminMode = false, activeRun = null, onResume = null, onTournament, onDecks, onBoosters, onAdmin = null, onProfile, onClaimGift = null, installAvailable = false, onInstall = null }) {
     this.root = root;
     this.masterIndex = masterIndex;
     this.user = user;
@@ -247,6 +271,7 @@ export class HomeScreen {
     this.onBoosters = onBoosters;
     this.onAdmin = onAdmin;
     this.onProfile = onProfile;
+    this.onClaimGift = onClaimGift;
     this.installAvailable = installAvailable;
     this.onInstall = onInstall;
     this.render();
@@ -283,6 +308,7 @@ export class HomeScreen {
       : selectedDeck?.cards?.length ? representativeMonster(selectedDeck.cards, this.masterIndex) : this.masterIndex.monsters.get('monster-019');
     const leaderAsset = leader && selectedDeck ? representativeCardAsset(selectedDeck.cards, leader.id) : null;
     const collectionLevel = homeCollectionLevel(this.catalog, this.masterIndex);
+    const gifts = availableCampaignGifts(this.economy);
     const online = this.repositoryStatus.mode === 'firebase';
     const tournamentAction = resume ? this.onResume : this.onTournament;
     const hero = el('img', {
@@ -301,7 +327,7 @@ export class HomeScreen {
       ]),
       el('header', { className: 'home-lobby-topbar' }, [
         el('button', { className: 'home-lobby-profile', onclick: this.onProfile, attrs: { 'aria-label': 'マイページを開く' } }, [
-          el('span', { className: 'home-lobby-avatar', text: this.user.displayName.slice(0, 1) || '?' }),
+          el('span', { className: 'home-lobby-avatar' }, playerIconContent({ user: this.user, catalog: this.catalog, masterIndex: this.masterIndex })),
           el('span', { className: 'home-lobby-profile-copy' }, [
             el('small', { className: online ? 'is-online' : '', text: online ? '● ONLINE' : '○ LOCAL' }),
             el('strong', { text: this.user.displayName }),
@@ -309,7 +335,7 @@ export class HomeScreen {
               el('span', { text: 'COLLECTION LEVEL' }),
               el('b', { text: String(collectionLevel) }),
             ]),
-            el('span', { className: 'home-lobby-level-track' }, el('i', { style: `width:${collectionLevel}%` })),
+            el('span', { className: 'home-lobby-level-track', attrs: { role: 'progressbar', 'aria-label': 'コレクションレベル進捗', 'aria-valuemin': '0', 'aria-valuemax': '100', 'aria-valuenow': String(collectionLevel) } }, el('i', { style: `width:${collectionLevel}%` })),
             el('span', { className: 'home-profile-link', text: 'マイページ' }),
           ]),
           el('i', { className: 'home-lobby-chevron', text: '›', attrs: { 'aria-hidden': 'true' } }),
@@ -336,8 +362,8 @@ export class HomeScreen {
         ]),
       ]),
       el('aside', { className: 'home-lobby-utility-rail', attrs: { 'aria-label': 'サブメニュー' } }, [
-        el('button', { onclick: () => openGiftBox(this.economy), attrs: { 'aria-label': 'ギフトボックス' } }, [
-          homeIcon('gift'), el('span', { text: 'ギフト' }), this.economy?.pendingPack ? el('i', { className: 'home-lobby-notification', text: '!' }) : null,
+        el('button', { onclick: () => openGiftBox(this.economy, gifts, this.onClaimGift), attrs: { 'aria-label': `ギフトボックス${gifts.length ? ` 未受取${gifts.length}件` : ''}` } }, [
+          homeIcon('gift'), el('span', { text: 'ギフト' }), gifts.length ? el('i', { className: 'home-lobby-notification', text: String(gifts.length) }) : null,
         ]),
         el('button', { onclick: () => openHomeNotices(this.champion), attrs: { 'aria-label': 'お知らせ' } }, [homeIcon('notice'), el('span', { text: 'お知らせ' })]),
         el('button', { onclick: () => openHowToPlay(this.onTournament), attrs: { 'aria-label': '遊び方' } }, [homeIcon('help'), el('span', { text: '遊び方' })]),
@@ -351,10 +377,7 @@ export class HomeScreen {
         homeNavButton({ icon: 'cards', label: 'カード', sublabel: `${this.decks.length}/5 DECKS`, onclick: this.onDecks }),
         homeNavButton({ icon: 'shop', label: 'ショップ', sublabel: this.economy?.pendingPack ? '未確認パックあり' : 'BOOSTER', onclick: this.onBoosters, className: this.economy?.pendingPack ? 'has-notice' : '' }),
       ]),
-      showFooter ? el('footer', { className: `home-lobby-footer${this.repositoryStatus.error ? ' sync-warning' : ''}` }, [
-        this.repositoryStatus.error
-          ? el('span', { className: 'invalid-copy', text: 'クラウドと同期できないため、この端末に安全に保存しています。' })
-          : null,
+      showFooter ? el('footer', { className: 'home-lobby-footer' }, [
         this.debugMode ? el('span', { text: `保存: ${this.repositoryStatus.mode === 'firebase' ? 'Firebase + local backup' : 'このブラウザ'}` }) : null,
         this.debugMode ? el('span', { text: `Debug seed: ${this.seed}` }) : null,
         this.debugMode ? el('span', { text: 'Sim8.7 / PWA' }) : null,

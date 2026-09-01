@@ -3,6 +3,7 @@ import { MemoryStorage } from './memory-storage.js';
 import { mergeCardCatalogs, normalizeCardCatalog } from './card-catalog.js';
 import {
   acknowledgePendingPack,
+  applyCampaignGiftClaim,
   applyDiamondReward,
   applyLoginRewards,
   applyPackPurchase,
@@ -10,6 +11,7 @@ import {
   normalizeEconomyState,
 } from '../gacha/economy-state.js';
 import { applyPlayerStatsEvent, normalizePlayerStats } from '../profile/player-stats.js';
+import { normalizePlayerIconMasterId } from '../profile/player-icon.js';
 
 const USER_KEY = 'mc:v1:user';
 const CHAMPION_KEY = 'mc:v1:champion';
@@ -41,6 +43,7 @@ export class LocalGameRepository {
       this.storage.setItem(this._profileKey(), JSON.stringify({
         id: this._scopeId,
         displayName: this.user.displayName ?? '名無しブリーダー',
+        playerIconMasterId: normalizePlayerIconMasterId(this.user.playerIconMasterId),
         isAnonymous: this.user.isAnonymous ?? true,
         mode: 'local',
       }));
@@ -95,9 +98,13 @@ export class LocalGameRepository {
     const normalized = {
       id: this._scope(),
       displayName: String(profile.displayName ?? '名無しブリーダー').trim().slice(0, 24) || '名無しブリーダー',
+      playerIconMasterId: normalizePlayerIconMasterId(profile.playerIconMasterId),
       isAnonymous: Boolean(profile.isAnonymous),
       mode: 'local',
     };
+    this.user.displayName = normalized.displayName;
+    this.user.playerIconMasterId = normalized.playerIconMasterId;
+    this.storage.setItem(USER_KEY, JSON.stringify(this.user));
     this.storage.setItem(this._profileKey(), JSON.stringify(normalized));
     return clone(normalized);
   }
@@ -109,6 +116,13 @@ export class LocalGameRepository {
     this.user.displayName = value;
     this.storage.setItem(USER_KEY, JSON.stringify(this.user));
     return this.replaceProfile({ ...(await this.getProfile()), displayName: value });
+  }
+
+  async setPlayerIcon(playerIconMasterId) {
+    this._requireUser();
+    const value = normalizePlayerIconMasterId(playerIconMasterId);
+    if (playerIconMasterId != null && !value) throw new Error('プレイヤーアイコンが不正です');
+    return this.replaceProfile({ ...(await this.getProfile()), playerIconMasterId: value });
   }
 
   async getAccountStatus() {
@@ -167,6 +181,12 @@ export class LocalGameRepository {
 
   async claimLoginRewards(config = {}) {
     const result = applyLoginRewards(await this.getEconomy(), config, this.now());
+    await this.replaceEconomy(result.state);
+    return clone(result);
+  }
+
+  async claimCampaignGift(config = {}) {
+    const result = applyCampaignGiftClaim(await this.getEconomy(), config, this.now());
     await this.replaceEconomy(result.state);
     return clone(result);
   }

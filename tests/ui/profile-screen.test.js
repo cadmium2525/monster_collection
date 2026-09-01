@@ -25,6 +25,9 @@ test('my page exposes recovery, records and catalog progress', () => {
   assert.doesNotMatch(source, /このデータに復旧設定を登録/);
   assert.doesNotMatch(source, /既存アカウントで復旧/);
   assert.match(source, /復旧ID/);
+  assert.match(source, /aria-label': 'プレイヤーアイコンを変更'/);
+  assert.match(source, /所持したことのあるカードからアイコンを選択できます/);
+  assert.match(source, /ownedPlayerIconDefinitions/);
   assert.doesNotMatch(source, /パスワード再設定メール/);
 });
 
