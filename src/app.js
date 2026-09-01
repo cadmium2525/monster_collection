@@ -22,6 +22,7 @@ import { generateBoosterPack } from './gacha/pack-generator.js';
 import { japanDateKey } from './gacha/economy-state.js';
 import { diamondIcon } from './ui/currency-icon.js';
 import { ProfileScreen, catalogProgress } from './ui/profile-screen.js';
+import { MissionScreen } from './ui/mission-screen.js';
 import { accountErrorMessage } from './persistence/auth-errors.js';
 import { PLAYER_ID_RULE_COPY, normalizePlayerId } from './persistence/player-id.js';
 
@@ -153,12 +154,18 @@ class MonsterConstructionApp {
       onTournament: () => this.showTournamentSetup(),
       onDecks: () => this.showDeckList(),
       onBoosters: () => this.showBoosterShop(),
+      onMissions: () => this.showMissions(),
       onAdmin: () => this.showAdminTools(),
       onProfile: () => this.showProfile(),
       onClaimGift: (giftId) => this.claimCampaignGift(giftId),
       installAvailable: Boolean(this.installPromptEvent),
       onInstall: () => this.installApp(),
     });
+  }
+
+  showMissions() {
+    this.currentScreen = 'missions';
+    new MissionScreen({ root: this.root, onBack: () => this.showHome() });
   }
 
   async installApp() {

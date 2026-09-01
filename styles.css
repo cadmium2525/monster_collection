@@ -1305,6 +1305,53 @@ button:disabled { opacity: .38; cursor: not-allowed; }
 .name-editor input { width: 100%; padding: 9px; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); background: #081421; }
 
 .profile-screen { height:calc(100dvh - max(16px,var(--safe-top)) - max(16px,var(--safe-bottom))); min-height:350px; display:grid; grid-template-rows:auto minmax(0,1fr); gap:7px; }
+.mission-screen { height:calc(100dvh - max(16px,var(--safe-top)) - max(16px,var(--safe-bottom))); min-height:350px; display:grid; grid-template-rows:auto auto minmax(0,1fr) auto; gap:8px; background:linear-gradient(rgba(2,9,17,.78),rgba(2,9,17,.9)),url('./assets/images/tournament-grand-hall.webp') center/cover fixed; }
+.mission-header { min-height:64px; }
+.mission-header h1 { margin:2px 0 0; color:var(--gold); font-size:clamp(20px,3vw,30px); }
+.mission-header button { min-width:120px; }
+.mission-tabs { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; padding:5px; border:1px solid var(--line); border-radius:12px; background:rgba(3,12,21,.91); }
+.mission-tabs button { min-height:46px; display:flex; align-items:center; justify-content:center; gap:12px; border:1px solid transparent; border-radius:9px; color:#8fa3ad; background:transparent; font-size:16px; font-weight:900; cursor:pointer; }
+.mission-tabs button.is-active { color:#fff0bd; border-color:rgba(232,186,98,.58); background:linear-gradient(180deg,rgba(105,73,28,.56),rgba(35,27,17,.72)); box-shadow:inset 0 -3px var(--gold); }
+.mission-tabs small { color:#9de4df; font-size:9px; font-weight:700; }
+.mission-list { min-height:0; overflow:auto; display:grid; align-content:start; gap:8px; padding:12px 14px; border:1px solid rgba(74,143,174,.55); border-radius:13px; background:rgba(4,17,29,.94); }
+.mission-list-heading { display:flex; align-items:end; justify-content:space-between; gap:12px; padding:0 2px 5px; }
+.mission-list-heading h2 { margin:2px 0 0; color:#f2d18b; font-size:20px; }
+.mission-list-heading > span { color:#88d8d4; font-size:10px; }
+.mission-entry { min-width:0; display:grid; grid-template-columns:minmax(260px,1.5fr) 72px minmax(145px,.65fr) 116px; grid-template-rows:auto 7px; grid-template-areas:'copy count reward state' 'progress progress reward state'; align-items:center; gap:7px 14px; padding:12px 13px; border:1px solid rgba(95,137,159,.34); border-radius:11px; background:linear-gradient(100deg,rgba(14,32,48,.96),rgba(6,20,33,.96)); }
+.mission-copy { grid-area:copy; min-width:0; }
+.mission-copy h3 { margin:0 0 4px; color:#f4f7f8; font-size:15px; }
+.mission-copy p { margin:0; color:#b8c8cf; font-size:10px; line-height:1.45; }
+.mission-progress-copy { grid-area:count; text-align:center; }
+.mission-progress-copy strong,.mission-progress-copy span { display:block; }
+.mission-progress-copy strong { color:#eaf2f4; font-size:14px; }
+.mission-progress-copy span { margin-top:3px; color:#8da5b0; font-size:8px; }
+.mission-progress { grid-area:progress; height:7px; overflow:hidden; border-radius:99px; background:#06131e; }
+.mission-progress i { display:block; height:100%; border-radius:inherit; background:linear-gradient(90deg,#168b99,#68d9d4); }
+.mission-reward { grid-area:reward; min-width:0; display:grid; gap:5px; padding-left:13px; border-left:1px solid rgba(133,164,178,.2); }
+.mission-reward > small { color:#8fa3ad; font-size:8px; }
+.mission-reward > span { min-width:0; display:flex; align-items:center; gap:8px; color:#efd493; }
+.mission-reward strong { overflow:hidden; font-size:11px; text-overflow:ellipsis; white-space:nowrap; }
+.mission-diamond { width:27px; height:27px; flex:none; }
+.mission-card-reward { flex:none; padding:6px; border:1px solid var(--gold); border-radius:5px; color:#f1d99d; font:900 8px/1 Georgia,serif; }
+.mission-state { grid-area:state; min-height:52px; border:1px solid rgba(95,137,159,.25); border-radius:11px; color:#72858f; background:#0a1b2a; font-weight:800; }
+.mission-entry.is-complete { border-color:rgba(95,212,206,.42); }
+.mission-entry.is-complete .mission-state { color:#82969c; }
+.mission-stock-note { display:flex; align-items:center; gap:18px; padding:10px 14px; border:1px solid rgba(74,143,174,.55); border-radius:12px; background:rgba(4,17,29,.95); }
+.mission-stock-note strong { flex:0 0 130px; color:#f2d18b; font-size:16px; }
+.mission-stock-note p { margin:0; color:#aebdc5; font-size:10px; line-height:1.45; }
+@media (max-height:430px) {
+  .mission-screen { gap:4px; }
+  .mission-header { min-height:47px; }
+  .mission-tabs { padding:3px; }
+  .mission-tabs button { min-height:34px; }
+  .mission-list { gap:5px; padding:7px 9px; }
+  .mission-list-heading { padding-bottom:1px; }
+  .mission-entry { grid-template-columns:minmax(240px,1.5fr) 60px minmax(130px,.65fr) 100px; gap:4px 9px; padding:7px 9px; }
+  .mission-copy h3 { font-size:13px; }
+  .mission-copy p { font-size:8px; }
+  .mission-state { min-height:42px; }
+  .mission-stock-note { padding:6px 10px; }
+}
 .profile-header h1 { margin:1px 0 0; color:var(--gold); font-size:clamp(18px,2.6vw,28px); }
 .profile-layout { min-height:0; overflow:auto; display:grid; grid-template-columns:minmax(260px,.78fr) minmax(400px,1.22fr); grid-template-areas:"identity record" "account record" "catalog record"; grid-template-rows:auto auto auto; align-content:start; gap:7px; overscroll-behavior:contain; }
 .profile-layout .panel { min-width:0; padding:10px 12px; border:1px solid var(--line); border-radius:var(--radius); background:linear-gradient(145deg,rgba(12,29,46,.96),rgba(5,14,24,.96)); }

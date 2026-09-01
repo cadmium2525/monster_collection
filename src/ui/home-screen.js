@@ -160,6 +160,7 @@ const HOME_ICON_PATHS = Object.freeze({
   help: ['M8 8h13c4 0 6 2 6 6v26c0-4-2-6-6-6H8V8Zm32 0H27v32c0-4 2-6 6-6h7V8Z'],
   install: ['M24 5v25m0 0L14 20m10 10 10-10M8 35v7h32v-7'],
   admin: ['M9 12h30M9 24h30M9 36h30M17 8v8M31 20v8M22 32v8'],
+  mission: ['M11 8h26v32H11z', 'M17 16h14M17 24h14M17 32h9M7 15h4M7 24h4M7 33h4'],
 });
 
 function homeIcon(name, className = '') {
@@ -238,7 +239,7 @@ function openHomeNotices(champion) {
 }
 
 export class HomeScreen {
-  constructor({ root, masterIndex, user, champion, repositoryStatus, decks, catalog = null, economy, seed, debugMode = false, adminMode = false, activeRun = null, onResume = null, onTournament, onDecks, onBoosters, onAdmin = null, onProfile, onClaimGift = null, installAvailable = false, onInstall = null }) {
+  constructor({ root, masterIndex, user, champion, repositoryStatus, decks, catalog = null, economy, seed, debugMode = false, adminMode = false, activeRun = null, onResume = null, onTournament, onDecks, onBoosters, onMissions = null, onAdmin = null, onProfile, onClaimGift = null, installAvailable = false, onInstall = null }) {
     this.root = root;
     this.masterIndex = masterIndex;
     this.user = user;
@@ -255,6 +256,7 @@ export class HomeScreen {
     this.onTournament = onTournament;
     this.onDecks = onDecks;
     this.onBoosters = onBoosters;
+    this.onMissions = onMissions;
     this.onAdmin = onAdmin;
     this.onProfile = onProfile;
     this.onClaimGift = onClaimGift;
@@ -348,6 +350,7 @@ export class HomeScreen {
         ]),
       ]),
       el('aside', { className: 'home-lobby-utility-rail', attrs: { 'aria-label': 'サブメニュー' } }, [
+        el('button', { onclick: this.onMissions, attrs: { 'aria-label': 'ミッション' } }, [homeIcon('mission'), el('span', { text: 'ミッション' })]),
         el('button', { onclick: () => openGiftBox(this.economy, gifts, this.onClaimGift), attrs: { 'aria-label': `ギフトボックス${gifts.length ? ` 未受取${gifts.length}件` : ''}` } }, [
           homeIcon('gift'), el('span', { text: 'ギフト' }), gifts.length ? el('i', { className: 'home-lobby-notification', text: String(gifts.length) }) : null,
         ]),
