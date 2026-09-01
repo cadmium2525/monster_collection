@@ -34,13 +34,15 @@ test('home lobby keeps the release version visible and separates its navigation 
   assert.match(homeSource, /attrs: \{ decoding: 'sync', fetchpriority: 'high' \}/);
   assert.match(homeSource, /aria-label': 'コレクションレベル進捗'/);
   assert.match(css, /\.home-lobby-level-track\s*\{[^}]*height:6px;[^}]*border:1px solid/s);
+  assert.match(css, /\.home-lobby-hero-art\s*\{[^}]*width:100%;[^}]*object-fit:cover;[^}]*object-position:center;/s);
+  assert.doesNotMatch(css, /@keyframes home-lobby-arrive[^}]*scale:/s);
 });
 
 test('home chooses one leader illustration and calculates collection progress safely', () => {
-  assert.equal(homeLeaderArtworkPath('monster-003'), './assets/images/showcase/showcase-monster-003.webp');
-  assert.equal(homeLeaderArtworkPath('monster-019'), './assets/images/showcase/showcase-inorganic-01.webp');
-  assert.equal(homeLeaderArtworkPath('monster-030', { artVariantId: 'showcase-monster-030' }), './assets/images/showcase/showcase-monster-030.webp');
-  assert.equal(homeLeaderArtworkPath('invalid'), './assets/images/showcase/showcase-inorganic-01.webp');
+  assert.equal(homeLeaderArtworkPath('monster-003'), './assets/images/home/monster-003.webp');
+  assert.equal(homeLeaderArtworkPath('monster-019'), './assets/images/home/monster-019.webp');
+  assert.equal(homeLeaderArtworkPath('monster-030', { artVariantId: 'showcase-monster-030' }), './assets/images/home/monster-030.webp');
+  assert.equal(homeLeaderArtworkPath('invalid'), './assets/images/home/monster-019.webp');
   const masterIndex = { cards: new Map([['a', {}], ['b', {}]]), data: { fusions: [{}, {}] } };
   assert.equal(homeCollectionLevel({ ownedCardMasterIds: ['a'], discoveredFusionIds: ['f1'] }, masterIndex), 50);
   assert.equal(homeCollectionLevel({ ownedCardMasterIds: ['a', 'a'], discoveredFusionIds: [] }, masterIndex), 25);

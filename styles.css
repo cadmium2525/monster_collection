@@ -1866,7 +1866,7 @@ button:disabled { opacity: .38; cursor: not-allowed; }
   .admin-preview-controls { padding:5px; }
 }
 
-/* Full-screen illustrated home lobby (v1.25) */
+/* Full-screen illustrated home lobby (v1.25.1) */
 body:has(.home-lobby) {
   position:fixed;
   inset:0;
@@ -1918,13 +1918,11 @@ body:has(.home-lobby) {
   background:#06101e;
 }
 .home-lobby-hero-art {
-  width:96%;
+  width:100%;
   height:100%;
   display:block;
-  margin-inline:auto;
   object-fit:cover;
-  object-position:center 43%;
-  scale:1;
+  object-position:center;
   filter:saturate(.9) contrast(1.04) brightness(.82);
   animation:home-lobby-arrive 1.15s cubic-bezier(.2,.72,.2,1) both;
 }
@@ -2254,7 +2252,7 @@ body:has(.home-lobby) {
 .home-gift-claim { min-width:145px; }
 .home-gift-empty { padding:18px; border:1px dashed rgba(151,185,200,.3); border-radius:10px; color:#b7c6cc; text-align:center; }
 .home-pending-pack-note { padding:7px 9px; border-left:3px solid var(--teal); color:#c9e3e4; background:rgba(95,212,206,.06); font-size:9px; }
-@keyframes home-lobby-arrive { from { opacity:0; scale:1.04; filter:saturate(.7) contrast(1.08) brightness(.55); } to { opacity:1; scale:1; } }
+@keyframes home-lobby-arrive { from { opacity:0; filter:saturate(.7) contrast(1.08) brightness(.55); } to { opacity:1; } }
 @keyframes home-lobby-foil { 0%,22% { transform:translateX(-42%); } 62%,100% { transform:translateX(42%); } }
 
 @media (max-width:1000px) {

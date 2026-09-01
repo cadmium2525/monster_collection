@@ -136,24 +136,10 @@ export function activeRunSummary(activeRun) {
   };
 }
 
-const FEATURED_HOME_ART = Object.freeze({
-  'monster-019': 'showcase-inorganic-01',
-  'monster-020': 'showcase-creation-01',
-  'monster-021': 'showcase-spirit-01',
-  'monster-022': 'showcase-demon-01',
-  'monster-023': 'showcase-beast-01',
-  'monster-024': 'showcase-monster-01',
-});
-
 export function homeLeaderArtworkPath(monsterId, cardAsset = null) {
-  const variant = String(cardAsset?.artVariantId ?? '');
-  if (variant && variant !== 'base' && /^[a-z0-9-]+$/.test(variant)) {
-    return `./assets/images/showcase/${variant}.webp`;
-  }
-  if (FEATURED_HOME_ART[monsterId]) return `./assets/images/showcase/${FEATURED_HOME_ART[monsterId]}.webp`;
   const number = Number(String(monsterId ?? '').match(/(\d+)$/)?.[1]);
-  if (!Number.isInteger(number) || number < 1 || number > 30) return './assets/images/showcase/showcase-inorganic-01.webp';
-  return `./assets/images/showcase/showcase-monster-${String(number).padStart(3, '0')}.webp`;
+  if (!Number.isInteger(number) || number < 1 || number > 30) return './assets/images/home/monster-019.webp';
+  return `./assets/images/home/monster-${String(number).padStart(3, '0')}.webp`;
 }
 
 export function homeCollectionLevel(catalog, masterIndex) {

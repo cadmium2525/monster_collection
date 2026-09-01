@@ -248,6 +248,17 @@ test('second-generation monster illustrations stay below the mobile detail budge
   }
 });
 
+test('all thirty home leaders use optimized standalone landscape WebP artwork', () => {
+  for (let number = 1; number <= 30; number += 1) {
+    const id = String(number).padStart(3, '0');
+    const url = new URL(`../../assets/images/home/monster-${id}.webp`, import.meta.url);
+    const bytes = readFileSync(url);
+    assert.equal(bytes.subarray(0, 4).toString('ascii'), 'RIFF', `home monster-${id} starts with RIFF marker`);
+    assert.equal(bytes.subarray(8, 12).toString('ascii'), 'WEBP', `home monster-${id} has WEBP signature`);
+    assert.ok(statSync(url).size < 500_000, `home monster-${id} stays practical for on-demand loading`);
+  }
+});
+
 test('all runtime game artwork uses valid WebP while compatibility PWA icons remain separate', () => {
   const assets = [
     'assets/images/battle-arena.webp',
