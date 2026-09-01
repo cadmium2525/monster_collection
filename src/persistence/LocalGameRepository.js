@@ -7,6 +7,7 @@ import {
   applyDiamondReward,
   applyLoginRewards,
   applyPackPurchase,
+  applyProgressionOperation,
   applyTournamentUnlock,
   normalizeEconomyState,
 } from '../gacha/economy-state.js';
@@ -191,6 +192,11 @@ export class LocalGameRepository {
     return clone(result);
   }
 
+  async commitProgression(operation) {
+    const next = applyProgressionOperation(await this.getEconomy(), operation, this.now());
+    return this.replaceEconomy(next);
+  }
+
   async getActiveRun() {
     return clone(parse(this.storage.getItem(this._activeRunKey()), null));
   }
@@ -242,6 +248,15 @@ export class LocalGameRepository {
     const decks = await this.listDecks();
     const next = decks.filter((deck) => deck.deckId !== deckId);
     this.storage.setItem(this._decksKey(), JSON.stringify(next));
+  }
+
+  async publishArenaDeck() { return null; }
+
+  async listArenaDecks() { return []; }
+
+  async listLegendArchives(maxResults = 20) {
+    const champion = await this.getChampion();
+    return champion ? [champion].slice(0, Math.max(1, Number(maxResults) || 20)) : [];
   }
 
   async listLegendDecks() { return []; }

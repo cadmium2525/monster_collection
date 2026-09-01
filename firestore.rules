@@ -93,6 +93,67 @@ service cloud.firestore {
         && profile.displayName == d.ownerDisplayName;
     }
 
+    function validArenaDeck(publicDeckId) {
+      let d = request.resource.data;
+      return d.keys().hasOnly([
+          'publicDeckId', 'ownerUserId', 'ownerDisplayName', 'sourceDeckId',
+          'deckName', 'cards', 'totalPlayTp', 'representativeMonsterId',
+          'arenaRating', 'arenaRank', 'schemaVersion', 'registeredAt', 'updatedAt'
+        ])
+        && d.publicDeckId == publicDeckId
+        && d.ownerUserId == request.auth.uid
+        && d.ownerDisplayName is string
+        && d.ownerDisplayName.size() > 0
+        && d.ownerDisplayName.size() <= 24
+        && d.sourceDeckId is string
+        && d.deckName is string
+        && d.deckName.size() > 0
+        && d.deckName.size() <= 30
+        && d.cards is list
+        && d.cards.size() == 40
+        && d.totalPlayTp is number
+        && (d.representativeMonsterId == null || d.representativeMonsterId is string)
+        && d.arenaRating is int
+        && d.arenaRating >= 900
+        && d.arenaRank in ['D', 'C', 'B', 'A', 'S', 'MASTER']
+        && d.schemaVersion == 1
+        && d.registeredAt is timestamp
+        && d.updatedAt is timestamp;
+    }
+
+    function validArenaSource(d) {
+      let ownerId = request.auth.uid;
+      let source = get(/databases/$(database)/documents/users/$(ownerId)/savedDecks/$(d.sourceDeckId)).data;
+      let profile = get(/databases/$(database)/documents/users/$(ownerId)).data;
+      return source.ownerUserId == ownerId
+        && source.deckId == d.sourceDeckId
+        && source.deckName == d.deckName
+        && source.cards == d.cards
+        && source.totalPlayTp == d.totalPlayTp
+        && source.representativeMonsterId == d.representativeMonsterId
+        && profile.displayName == d.ownerDisplayName;
+    }
+
+    function validLegendArchive(archiveId) {
+      let d = request.resource.data;
+      let champion = getAfter(/databases/$(database)/documents/gameState/champion).data;
+      return d.keys().hasOnly([
+          'archiveId', 'championUserId', 'championDisplayName', 'championDeckId',
+          'championDeckName', 'championDeckSnapshot', 'championGrowthSnapshot',
+          'championSnapshotVersion', 'representativeMonsterId', 'crownedAt',
+          'defenseCount', 'championVersion', 'schemaVersion', 'archivedAt'
+        ])
+        && d.archiveId == archiveId
+        && d.championUserId == request.auth.uid
+        && d.championUserId == champion.championUserId
+        && d.championVersion == champion.championVersion
+        && d.championDeckSnapshot == champion.championDeckSnapshot
+        && d.championGrowthSnapshot == champion.championGrowthSnapshot
+        && d.championVersion is int
+        && d.schemaVersion == 1
+        && d.archivedAt == request.time;
+    }
+
     match /users/{userId} {
       allow read, create, update: if owns(userId);
       allow delete: if false;
@@ -151,6 +212,30 @@ service cloud.firestore {
         && request.resource.data.publishedAt == resource.data.publishedAt
         && request.resource.data.updatedAt == request.time;
       allow delete: if signedIn() && resource.data.ownerUserId == request.auth.uid;
+    }
+
+    match /arenaDecks/{publicDeckId} {
+      allow read: if signedIn();
+      allow create: if signedIn()
+        && validArenaDeck(publicDeckId)
+        && validArenaSource(request.resource.data)
+        && request.resource.data.registeredAt == request.time
+        && request.resource.data.updatedAt == request.time;
+      allow update: if signedIn()
+        && validArenaDeck(publicDeckId)
+        && validArenaSource(request.resource.data)
+        && resource.data.ownerUserId == request.auth.uid
+        && request.resource.data.ownerUserId == resource.data.ownerUserId
+        && request.resource.data.sourceDeckId == resource.data.sourceDeckId
+        && request.resource.data.registeredAt == resource.data.registeredAt
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if signedIn() && resource.data.ownerUserId == request.auth.uid;
+    }
+
+    match /legendArchives/{archiveId} {
+      allow read: if signedIn();
+      allow create: if signedIn() && validLegendArchive(archiveId);
+      allow update, delete: if false;
     }
   }
 }

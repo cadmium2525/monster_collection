@@ -63,7 +63,7 @@ function deckSummaryCard(deck, masterIndex, onSelect, onRename, locked = false) 
   }, [
     el('button', {
       className: 'deck-summary-open',
-      attrs: { type: 'button', 'aria-label': `${deck.deckName}を開く${locked ? '（大会参加中・編集不可）' : ''}` },
+      attrs: { type: 'button', 'aria-label': `${deck.deckName}を開く${locked ? '（試合中・編集不可）' : ''}` },
       onclick: () => onSelect(deck),
     }, [
       el('div', { className: 'deck-representative' }, representative ? renderCard({ definition: representative, cardAsset: representativeAsset, label: `${deck.deckName}の代表モンスター`, interactive: false }) : null),
@@ -71,7 +71,7 @@ function deckSummaryCard(deck, masterIndex, onSelect, onRename, locked = false) 
         el('div', { className: 'deck-name-row' }, [
           el('h2', { text: deck.deckName }),
         ]),
-        locked ? el('span', { className: 'deck-run-lock', text: '大会参加中・編集不可' }) : null,
+        locked ? el('span', { className: 'deck-run-lock', text: '試合中・編集不可' }) : null,
         el('p', { text: representative ? `リーダー ${representative.name}` : 'モンスターなし' }),
         el('dl', {}, [
           el('dt', { text: 'デッキ総TP' }), el('dd', { text: deck.totalPlayTp }),
@@ -286,7 +286,7 @@ export class DeckDetailScreen {
       this.locked ? el('section', { className: 'deck-editor-bar tournament-locked' }, [
         el('span', { className: 'deck-lock-mark', text: 'LOCK' }),
         el('div', { className: 'deck-lock-copy' }, [
-          el('strong', { text: '大会参加中のため編集できません' }),
+          el('strong', { text: '試合中のため編集できません' }),
           el('small', { text: '大会を終了すると、名前・リーダー・40枚構成の編集と削除が再び可能になります。' }),
         ]),
       ]) : el('section', { className: 'deck-editor-bar' }, [
