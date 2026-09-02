@@ -1,7 +1,7 @@
 export const MISSION_SCHEMA_VERSION = 1;
 
 export const MISSION_DEFINITIONS = Object.freeze([
-  Object.freeze({ id: 'daily-login', period: 'daily', counter: 'login', target: 1, label: 'ログインする', reward: Object.freeze({ type: 'diamonds', amount: 300 }), autoClaim: true }),
+  Object.freeze({ id: 'daily-login', period: 'daily', counter: 'login', target: 1, label: 'ログインする', reward: Object.freeze({ type: 'diamonds', amount: 300 }) }),
   Object.freeze({ id: 'daily-play', period: 'daily', counter: 'battles', target: 1, label: '1試合する', reward: Object.freeze({ type: 'diamonds', amount: 100 }) }),
   Object.freeze({ id: 'daily-win', period: 'daily', counter: 'wins', target: 1, label: '1勝する', reward: Object.freeze({ type: 'diamonds', amount: 200 }) }),
   Object.freeze({ id: 'weekly-arena-wins', period: 'weekly', counter: 'arenaWins', target: 3, label: 'アリーナで3勝', reward: Object.freeze({ type: 'arena-card', amount: 1 }) }),

@@ -1,7 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
-  DAILY_LOGIN_DIAMONDS,
   STARTER_DIAMONDS,
   SUMMER_BONUS_DIAMONDS,
   SUMMER_BONUS_END,
@@ -11,43 +10,51 @@ import {
   HOME_RENEWAL_GIFT_ID,
   applyCampaignGiftClaim,
   applyLoginRewards,
+  applyProgressionOperation,
   applyTournamentUnlock,
   availableCampaignGifts,
   defaultEconomyState,
   japanDateKey,
 } from '../../src/gacha/economy-state.js';
 
-test('first login from 2026-08-29 grants daily 300 and one-time summer 3000', () => {
+test('first login completes the daily mission without auto-granting it, while campaigns remain automatic', () => {
   const first = applyLoginRewards(defaultEconomyState(), { loginDate: '2026-08-29' }, '2026-08-29T00:00:00.000Z');
-  assert.equal(first.state.diamonds, STARTER_DIAMONDS + DAILY_LOGIN_DIAMONDS + SUMMER_BONUS_DIAMONDS);
+  assert.equal(first.state.diamonds, STARTER_DIAMONDS + SUMMER_BONUS_DIAMONDS);
   assert.deepEqual(first.rewards.map(({ type, amount }) => ({ type, amount })), [
-    { type: 'daily', amount: 300 },
     { type: 'campaign', amount: 3000 },
   ]);
+  assert.equal(first.state.missionProgress.daily.counters.login, 1);
+  assert.deepEqual(first.state.missionProgress.daily.claimedIds, []);
   assert.equal(first.state.lastDailyLoginDate, '2026-08-29');
   assert.deepEqual(first.state.claimedCampaignIds, [SUMMER_BONUS_ID]);
+
+  const claimed = applyProgressionOperation(first.state, {
+    type: 'claim-mission', operationId: 'claim:daily-login:2026-08-29', missionId: 'daily-login', dateKey: '2026-08-29',
+  }, '2026-08-29T01:00:00.000Z');
+  assert.equal(claimed.diamonds, first.state.diamonds + 300);
+  assert.deepEqual(claimed.missionProgress.daily.claimedIds, ['daily-login']);
 
   const repeated = applyLoginRewards(first.state, { loginDate: '2026-08-29' }, '2026-08-29T01:00:00.000Z');
   assert.equal(repeated.state.diamonds, first.state.diamonds);
   assert.deepEqual(repeated.rewards, []);
 
   const nextDay = applyLoginRewards(repeated.state, { loginDate: '2026-08-30' }, '2026-08-30T00:00:00.000Z');
-  assert.equal(nextDay.state.diamonds, first.state.diamonds + DAILY_LOGIN_DIAMONDS);
-  assert.deepEqual(nextDay.rewards.map((reward) => reward.type), ['daily']);
+  assert.equal(nextDay.state.diamonds, first.state.diamonds);
+  assert.deepEqual(nextDay.rewards, []);
   assert.deepEqual(nextDay.state.claimedCampaignIds, [SUMMER_BONUS_ID]);
 });
 
 test('summer bonus is not granted before its start date', () => {
   const result = applyLoginRewards(defaultEconomyState(), { loginDate: '2026-08-28' });
-  assert.equal(result.state.diamonds, STARTER_DIAMONDS + DAILY_LOGIN_DIAMONDS);
-  assert.deepEqual(result.rewards.map((reward) => reward.type), ['daily']);
+  assert.equal(result.state.diamonds, STARTER_DIAMONDS);
+  assert.deepEqual(result.rewards, []);
 });
 
 test('summer bonus ends before the September home renewal campaign', () => {
   const result = applyLoginRewards(defaultEconomyState(), { loginDate: '2026-09-01' });
   assert.equal(SUMMER_BONUS_END, '2026-08-31');
-  assert.equal(result.state.diamonds, STARTER_DIAMONDS + DAILY_LOGIN_DIAMONDS);
-  assert.deepEqual(result.rewards.map((reward) => reward.type), ['daily']);
+  assert.equal(result.state.diamonds, STARTER_DIAMONDS);
+  assert.deepEqual(result.rewards, []);
   assert.deepEqual(result.state.claimedCampaignIds, []);
 });
 

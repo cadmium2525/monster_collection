@@ -222,7 +222,7 @@ function openGiftBox(economy, gifts, onClaimGift) {
         ])))
         : el('p', { className: 'home-gift-empty', text: '現在、未受取のギフトはありません。' }),
       pending ? el('p', { className: 'home-pending-pack-note', text: '未確認のブースターパックがあります。ショップから開封できます。' }) : null,
-      el('small', { text: 'デイリーログインボーナスはその日の初回ログイン時に自動で受け取ります。期間限定ギフトは受取期限までにここから受け取ってください。' }),
+      el('small', { text: 'デイリーログインボーナスは、その日の初回ログイン後にミッション画面から受け取れます。期間限定ギフトは受取期限までにここから受け取ってください。' }),
     ]),
   });
 }

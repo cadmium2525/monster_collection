@@ -589,7 +589,6 @@ class MonsterConstructionApp {
         this.catalog = await this.repository.recordCardCatalog({ ownedCardMasterIds: [selectedLoot.masterId] });
       }
       this.showMissions();
-      if (mission.reward.type === 'diamonds') this.showLoginBonus([{ type: 'mission', amount: mission.reward.amount, label: mission.label }]);
     } catch (error) {
       this.showError(error, 'ミッション報酬を受け取れません');
       this.showMissions();
