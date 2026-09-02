@@ -35,11 +35,23 @@ test('deck similarity compares card composition instead of display names', () =>
 });
 
 test('arena matchmaking offers lower, equal and higher opponent choices', () => {
-  const opponents = selectArenaOpponents({ masterIndex, arena: { rating: 1000 }, seed: 'three-choices' });
-  assert.equal(opponents.length, 3);
-  assert.deepEqual(opponents.map((entry) => entry.matchmakingLabel), ['格下', '同格', '格上']);
-  assert.equal(new Set(opponents.map((entry) => entry.id)).size, 3);
-  assert.ok(opponents.every((entry) => entry.cards.length === 40));
+  for (const rating of [900, 1000, 1190, 1450, 1990, 2050]) {
+    const opponents = selectArenaOpponents({ masterIndex, arena: { rating }, seed: `three-choices-${rating}` });
+    assert.equal(opponents.length, 3);
+    assert.deepEqual(opponents.map((entry) => entry.matchmakingLabel), ['格下', '同格', '格上']);
+    assert.equal(new Set(opponents.map((entry) => entry.id)).size, 3);
+    assert.ok(opponents[0].rating < opponents[1].rating, `格下と同格のレート: ${rating}`);
+    assert.ok(opponents[1].rating < opponents[2].rating, `同格と格上のレート: ${rating}`);
+    assert.ok(opponents.every((entry) => entry.cards.length === 40));
+  }
+});
+
+test('official opponents in each rank have distinct ratings', () => {
+  for (const rank of ARENA_RANKS) {
+    const ratings = OFFICIAL_ARENA_SPECS.filter((entry) => entry.rank === rank).map((entry) => entry.rating);
+    assert.equal(new Set(ratings).size, 6);
+    assert.deepEqual(ratings, [...ratings].sort((a, b) => a - b));
+  }
 });
 
 test('one arena result advances daily and weekly missions exactly once', () => {

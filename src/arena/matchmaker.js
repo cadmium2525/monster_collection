@@ -15,13 +15,13 @@ const OFFICIAL_NAMES = Object.freeze({
   '怪物': ['異形研究棟', '深層培養区', '群体観測班', '変異対策局', '混沌生態圏', '終端進化群'],
 });
 
-export const OFFICIAL_ARENA_SPECS = Object.freeze(ARENA_RANKS.flatMap((rank, rankIndex) => THEMES.map((theme) => Object.freeze({
+export const OFFICIAL_ARENA_SPECS = Object.freeze(ARENA_RANKS.flatMap((rank, rankIndex) => THEMES.map((theme, themeIndex) => Object.freeze({
   id: `official-${rank.toLowerCase()}-${theme}`,
   rank,
   theme,
   displayName: OFFICIAL_NAMES[theme][rankIndex],
   deckName: `${theme}・${rank}級公式デッキ`,
-  rating: ARENA_RANK_THRESHOLDS[rank] + (rankIndex ? 35 : 70),
+  rating: ARENA_RANK_THRESHOLDS[rank] + 40 + themeIndex * 30,
   aiRank: AI_RANK[rank],
   aiLevel: AI_LEVEL[rank],
 }))));
@@ -49,7 +49,7 @@ export function deckSimilarity(signatureA, signatureB) {
 }
 
 function officialCandidates(rank) {
-  return OFFICIAL_ARENA_SPECS.filter((spec) => spec.rank === rank).map((spec) => ({
+  return OFFICIAL_ARENA_SPECS.filter((spec) => !rank || spec.rank === rank).map((spec) => ({
     ...spec,
     sourceType: 'OFFICIAL_AI',
     sourceLabel: 'OFFICIAL AI',
@@ -113,7 +113,7 @@ export function selectArenaOpponent({ masterIndex, arena: current, playerGhosts 
   const recentOwners = new Set(recent.map((entry) => entry.ownerUserId).filter(Boolean));
   const recentIds = new Set(recent.map((entry) => entry.opponentId));
   const recentSignatures = recent.slice(-5).map((entry) => entry.deckSignature).filter(Boolean);
-  const official = officialCandidates(arena.rank);
+  const official = officialCandidates();
   const ghosts = playerCandidates(playerGhosts, masterIndex, arena)
     .filter((opponent) => !recentIds.has(opponent.id) && (!opponent.ownerUserId || !recentOwners.has(opponent.ownerUserId)));
   const archives = arena.rank === 'MASTER'
