@@ -15,7 +15,8 @@ export const AI_LABELS = Object.freeze({
 function legal(engine, playerId) {
   const actions = engine.getLegalActions(playerId);
   if (!actions.length) throw new Error(`${playerId}に合法行動がありません`);
-  return actions;
+  const preferred = actions.filter((action) => !action.meta?.aiAvoid);
+  return preferred.length ? preferred : actions;
 }
 
 function stableBest(scored) {

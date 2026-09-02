@@ -23,6 +23,28 @@ test('every AI level returns a legal action without changing battle state', () =
   }
 });
 
+test('AI does not waste material search when the inspected cards contain no monster', () => {
+  for (const level of AI_LEVELS) {
+    const battle = engine({ seed: `empty-material-search-${level}` });
+    const player = battle.player('p1');
+    player.deck.splice(-5, 5, ...Array.from({ length: 5 }, (_, index) => card(
+      index % 2 === 0 ? 'training-atk' : 'training-def',
+      `empty-search-support-${level}-${index}`,
+    )));
+    setHand(battle, 'p1', [card('breeder-022', `empty-search-${level}`)]);
+
+    const search = battle.getLegalActions('p1').find((action) => action.breederId === 'breeder-022');
+    assert.equal(search?.meta?.emptySearch, true);
+    const selected = chooseAiAction(level, battle, 'p1', new SeededRng(`empty-search-ai-${level}`), {
+      deterministicSearch: true,
+      beamWidth: 3,
+      branchLimit: 3,
+      maxDepth: 2,
+    });
+    assert.equal(selected.type, 'end-turn', `${level} should preserve the card and TP`);
+  }
+});
+
 test('all AI policies can finish a seeded game under the shared engine rules', () => {
   for (const level of AI_LEVELS) {
     const battle = engine({ seed: `finish-${level}` });

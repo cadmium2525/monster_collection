@@ -10,10 +10,10 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="モンコン">
     <title>モンスターコンストラクション</title>
-    <link rel="manifest" href="./manifest.webmanifest?v=1.28.0">
-    <link rel="icon" type="image/svg+xml" href="./assets/icons/app-icon.svg?v=1.28.0">
-    <link rel="apple-touch-icon" sizes="180x180" href="./assets/icons/apple-touch-icon.png?v=1.28.0">
-    <link rel="stylesheet" href="./styles.css?v=1.28.0">
+    <link rel="manifest" href="./manifest.webmanifest?v=1.28.1">
+    <link rel="icon" type="image/svg+xml" href="./assets/icons/app-icon.svg?v=1.28.1">
+    <link rel="apple-touch-icon" sizes="180x180" href="./assets/icons/apple-touch-icon.png?v=1.28.1">
+    <link rel="stylesheet" href="./styles.css?v=1.28.1">
   </head>
   <body>
     <div id="app" class="app-shell" aria-live="polite">
@@ -29,7 +29,7 @@
     </div>
     <script>
       if ('serviceWorker' in navigator) {
-        const updateKey = 'mc-sw-reload-1.28.0';
+        const updateKey = 'mc-sw-reload-1.28.1';
         const hadController = Boolean(navigator.serviceWorker.controller);
         let reloadingForUpdate = false;
         navigator.serviceWorker.addEventListener('controllerchange', () => {
@@ -38,9 +38,9 @@
           sessionStorage.setItem(updateKey, '1');
           location.reload();
         });
-        navigator.serviceWorker.register('./sw.js?v=1.28.0', { scope: './', updateViaCache: 'none' }).catch(() => {});
+        navigator.serviceWorker.register('./sw.js?v=1.28.1', { scope: './', updateViaCache: 'none' }).catch(() => {});
       }
     </script>
-    <script type="module" src="./src/app.js?v=1.28.0"></script>
+    <script type="module" src="./src/app.js?v=1.28.1"></script>
   </body>
 </html>

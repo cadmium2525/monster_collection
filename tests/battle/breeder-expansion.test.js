@@ -1,7 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { currentSp, effectiveAtk, effectiveDef } from '../../src/battle/state.js';
-import { card, engine, monsterByName, moveByName, placeUnit, setHand } from '../helpers.js';
+import { card, engine, masterData, monsterByName, moveByName, placeUnit, setHand } from '../helpers.js';
 
 function breederAction(battle, breederId, predicate = () => true) {
   const action = battle.getLegalActions().find((candidate) => candidate.type === 'breeder'
@@ -23,6 +23,137 @@ test('all thirty-two expansion breeder cards are canonical and have explanatory 
   assert.equal(additions.length, 32);
   assert.deepEqual(additions.map((entry) => entry.id), Array.from({ length: 32 }, (_, index) => `breeder-${String(index + 21).padStart(3, '0')}`));
   assert.equal(additions.every((entry) => entry.effect && entry.tp >= 1), true);
+});
+
+test('the eight general core breeder cards apply their written effects', () => {
+  const veteran = engine();
+  setHand(veteran, 'p1', [card('breeder-001', 'veteran')]);
+  veteran.applyAction(breederAction(veteran, 'breeder-001'));
+  assert.deepEqual(veteran.player('p1').effects.nextOwnMaxTpBonuses[0], {
+    amount: 1, remaining: 3, activeFromTurn: 2,
+  });
+
+  const pressure = engine();
+  setHand(pressure, 'p1', [card('breeder-002', 'pressure')]);
+  pressure.applyAction(breederAction(pressure, 'breeder-002'));
+  assert.deepEqual(pressure.player('p2').effects.nextTurnMaxTpPenalties[0], {
+    amount: 1, remaining: 1, activeFromTurn: 1,
+  });
+
+  const focus = engine();
+  const focused = placeUnit(focus, 'p1', 'ドラゴン', 0);
+  useOnUnit(focus, 'breeder-003', focused);
+  assert.equal(focused.statuses.nextDamageBonus, 0.2);
+
+  const guard = engine();
+  const guarded = placeUnit(guard, 'p1', 'モノリス', 0);
+  useOnUnit(guard, 'breeder-004', guarded);
+  assert.equal(guarded.statuses.nextDamageReduction, 0.5);
+
+  const supply = engine();
+  supply.player('p1').deck.push(
+    card('training-life', 'supply-1'),
+    card('training-atk', 'supply-2'),
+    card('training-def', 'supply-3'),
+  );
+  setHand(supply, 'p1', [card('breeder-005', 'supply')]);
+  supply.applyAction(breederAction(supply, 'breeder-005'));
+  assert.equal(supply.player('p1').hand.length, 3);
+
+  const assault = engine();
+  const attackerA = placeUnit(assault, 'p1', 'ドラゴン', 0);
+  const attackerB = placeUnit(assault, 'p1', 'ボルトウルフ', 1);
+  const attackBefore = [effectiveAtk(attackerA), effectiveAtk(attackerB)];
+  setHand(assault, 'p1', [card('breeder-006', 'assault')]);
+  assault.applyAction(breederAction(assault, 'breeder-006'));
+  assert.deepEqual([effectiveAtk(attackerA), effectiveAtk(attackerB)], attackBefore.map((value) => value + 5));
+
+  const ready = engine();
+  const exhausted = placeUnit(ready, 'p1', 'クロノギア', 0, { actionPoints: 0 });
+  useOnUnit(ready, 'breeder-007', exhausted);
+  assert.equal(exhausted.actionPoints, 1);
+
+  const disrupt = engine();
+  const disrupted = placeUnit(disrupt, 'p2', 'ゴーレム', 0);
+  setHand(disrupt, 'p1', [card('breeder-008', 'disrupt')]);
+  disrupt.applyAction(breederAction(disrupt, 'breeder-008', (action) => action.targetUnitId === disrupted.id));
+  assert.equal(disrupted.statuses.nextDamagePenalty, 0.2);
+});
+
+test('the twelve classification core breeder cards apply their written effects', () => {
+  const armor = engine();
+  const machine = placeUnit(armor, 'p1', 'ゴーレム', 0);
+  useOnUnit(armor, 'breeder-009', machine);
+  assert.deepEqual(machine.timedDefBuffs.at(-1), { amount: 5, remaining: 3 });
+
+  const analysis = engine();
+  const analyzed = placeUnit(analysis, 'p1', 'ギアセンチネル', 0);
+  useOnUnit(analysis, 'breeder-010', analyzed);
+  assert.deepEqual(analyzed.statuses.vsCreationDefIgnore, { base: 3, creation: 5 });
+
+  const efficient = engine();
+  setHand(efficient, 'p1', [card('breeder-011', 'efficient')]);
+  efficient.applyAction(breederAction(efficient, 'breeder-011'));
+  assert.equal(efficient.player('p1').effects.factionMoveDiscount['神造'], 1);
+
+  const shutdown = engine();
+  const stopped = placeUnit(shutdown, 'p2', 'クロノギア', 0);
+  setHand(shutdown, 'p1', [card('breeder-012', 'shutdown')]);
+  shutdown.applyAction(breederAction(shutdown, 'breeder-012', (action) => action.targetUnitId === stopped.id));
+  assert.equal(stopped.statuses.stunOnNextTurn, 1);
+
+  const manifest = engine();
+  const spirit = placeUnit(manifest, 'p1', 'ウンディーネ', 0);
+  useOnUnit(manifest, 'breeder-013', spirit);
+  assert.equal(spirit.actionPoints, 2);
+
+  const phase = engine();
+  const phasing = placeUnit(phase, 'p1', 'ウンディーネ', 0);
+  useOnUnit(phase, 'breeder-014', phasing);
+  assert.equal(phasing.statuses.evadeNext, true);
+
+  const infusion = engine();
+  const demon = placeUnit(infusion, 'p1', 'ドラゴン', 0);
+  const demonAtk = effectiveAtk(demon);
+  useOnUnit(infusion, 'breeder-015', demon);
+  assert.equal(effectiveAtk(demon), demonAtk + 5);
+
+  const resonance = engine();
+  const resonant = placeUnit(resonance, 'p1', 'ドラゴン', 0);
+  placeUnit(resonance, 'p1', 'ピクシー', 1);
+  const resonantAtk = effectiveAtk(resonant);
+  useOnUnit(resonance, 'breeder-016', resonant);
+  assert.equal(effectiveAtk(resonant), resonantAtk + 10);
+
+  const vitality = engine();
+  placeUnit(vitality, 'p1', 'ボルトウルフ', 0);
+  placeUnit(vitality, 'p1', 'コンゴウ', 1);
+  vitality.player('p1').tp = 4;
+  setHand(vitality, 'p1', [card('breeder-017', 'vitality')]);
+  vitality.applyAction(breederAction(vitality, 'breeder-017'));
+  assert.equal(vitality.player('p1').tp, 6);
+
+  const breath = engine();
+  const beast = placeUnit(breath, 'p1', 'コンゴウ', 0, { life: 5 });
+  useOnUnit(breath, 'breeder-018', beast);
+  assert.equal(beast.life, Math.min(beast.maxLife, 20));
+
+  const roar = engine();
+  const machineEnemy = placeUnit(roar, 'p2', 'ゴーレム', 0);
+  setHand(roar, 'p1', [card('breeder-019', 'roar')]);
+  roar.applyAction(breederAction(roar, 'breeder-019', (action) => action.targetUnitId === machineEnemy.id));
+  assert.equal(machineEnemy.statuses.stunOnNextTurn, 1);
+
+  const group = engine();
+  const monsterA = placeUnit(group, 'p1', 'ワーム', 0);
+  const monsterB = placeUnit(group, 'p1', 'ジョーカー', 1);
+  const before = [effectiveAtk(monsterA), effectiveDef(monsterA), effectiveAtk(monsterB), effectiveDef(monsterB)];
+  setHand(group, 'p1', [card('breeder-020', 'group')]);
+  group.applyAction(breederAction(group, 'breeder-020'));
+  assert.deepEqual(
+    [effectiveAtk(monsterA), effectiveDef(monsterA), effectiveAtk(monsterB), effectiveDef(monsterB)],
+    before.map((value) => value + 5),
+  );
 });
 
 test('high-tier capture breeders give every faction a strong but constrained payoff', () => {
@@ -151,6 +282,69 @@ test('frontline reorganization redraws selected hand cards and material search c
   setHand(search, 'p1', [card('breeder-022', 'search-card')]);
   search.applyAction(breederAction(search, 'breeder-022', (action) => action.chosenCardInstanceId === wanted.instanceId));
   assert.equal(search.player('p1').hand.some((entry) => entry.instanceId === wanted.instanceId), true);
+});
+
+test('material search remains usable when the inspected five cards contain no monster', () => {
+  const search = engine({ seed: 'material-search-empty' });
+  const inspectedIds = Array.from({ length: 5 }, (_, index) => `search-support-${index + 1}`);
+  search.player('p1').deck.push(...inspectedIds.map((instanceId, index) => card(
+    index % 2 === 0 ? 'training-atk' : 'training-def',
+    instanceId,
+  )));
+  setHand(search, 'p1', [card('breeder-022', 'search-card-empty')]);
+
+  const action = breederAction(search, 'breeder-022');
+  assert.equal(action.chosenCardInstanceId, null);
+  assert.match(action.label, /モンスターなし/);
+  search.applyAction(action);
+
+  assert.equal(search.player('p1').hand.length, 0);
+  assert.deepEqual(
+    new Set(search.player('p1').deck.slice(0, 5).map((entry) => entry.instanceId)),
+    new Set(inspectedIds),
+  );
+  assert.equal(search.player('p1').graveyard.some((entry) => entry.instanceId === 'search-card-empty'), true);
+});
+
+test('all breeder cards expose and resolve an action when their written conditions are satisfied', () => {
+  for (const definition of masterData.breeders) {
+    const battle = engine({ seed: `breeder-audit-${definition.id}` });
+    const player = battle.player('p1');
+    const opponent = battle.player('p2');
+    const faction = definition.faction ?? '獣族';
+    const factionMonsters = masterData.monsters.filter((monster) => monster.faction === faction);
+    const first = placeUnit(battle, 'p1', factionMonsters[0].name, 0, { actionPoints: 0 });
+    placeUnit(battle, 'p1', factionMonsters[1].name, 1);
+    const enemy = placeUnit(battle, 'p2', 'ゴーレム', 0);
+
+    player.turnNumber = 10;
+    player.tp = 9;
+    player.life = 50;
+    opponent.life = 100;
+    first.atkMod = -5;
+    first.statuses.stunOnNextTurn = 1;
+    first.statuses.incomingFlatDamage = { amount: 5, remaining: 2 };
+    enemy.atkBase = 200;
+    enemy.atkMod = 5;
+    enemy.timedDefBuffs.push({ amount: 5, remaining: 2 });
+    enemy.statuses.nextDamageReduction = 0.25;
+
+    const material = card(factionMonsters[2].id, `audit-material-${definition.id}`);
+    player.deck.push(card(factionMonsters[0].id, `audit-search-${definition.id}`));
+    setHand(battle, 'p1', [
+      card(definition.id, `audit-card-${definition.id}`),
+      material,
+      card('training-life', `audit-support-${definition.id}`),
+    ]);
+
+    const actions = battle.getLegalActions().filter((candidate) => candidate.type === 'breeder'
+      && candidate.breederId === definition.id);
+    assert.ok(actions.length > 0, `${definition.id} ${definition.name} should be usable`);
+    assert.doesNotThrow(() => battle.applyAction(actions[0]), `${definition.id} ${definition.name} should resolve`);
+    assert.equal(player.metrics.breederUses, 1, `${definition.id} should count as used`);
+    assert.equal(player.hand.some((entry) => entry.instanceId === `audit-card-${definition.id}`), false);
+    assert.equal(player.graveyard.some((entry) => entry.instanceId === `audit-card-${definition.id}`), true);
+  }
 });
 
 test('fusion order, first aid, sacrifice, defense, TP loan and adversity execute their full effects', () => {

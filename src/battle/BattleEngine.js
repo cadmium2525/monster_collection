@@ -1769,6 +1769,15 @@ export class BattleEngine {
       }
       case '素材探索': {
         const candidates = player.deck.slice(-5).filter((candidate) => cardDefinition(this.masterIndex, candidate)?.kind === 'monster');
+        if (!candidates.length) {
+          return [{
+            ...base,
+            targetUnitId: null,
+            chosenCardInstanceId: null,
+            label: '素材探索：モンスターなし（確認したカードを山札の下へ）',
+            meta: { aiAvoid: true, emptySearch: true },
+          }];
+        }
         return candidates.map((candidate) => ({
           ...base,
           targetUnitId: null,
