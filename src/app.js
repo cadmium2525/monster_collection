@@ -605,6 +605,7 @@ class MonsterConstructionApp {
       arena,
       match,
       onBack: () => { this.arenaMatch = null; this.showHome(); },
+      onBackToDeckSelection: () => { this.arenaMatch = null; this.showArena(); },
       onFindMatch: (deck) => this.findArenaOpponent(deck),
       onStartMatch: (deck, opponent) => this.startArenaBattle(deck, opponent),
       onRegisterDefense: (deck) => this.registerArenaDefense(deck),

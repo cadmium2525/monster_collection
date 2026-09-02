@@ -11,13 +11,14 @@ function nextRank(arena) {
 function sourceClass(sourceType) { return String(sourceType ?? '').toLowerCase().replaceAll('_', '-'); }
 
 export class ArenaScreen {
-  constructor({ root, collection, masterIndex, arena, match = null, onBack, onFindMatch, onStartMatch, onRegisterDefense, onClaimRankReward, onMissions }) {
+  constructor({ root, collection, masterIndex, arena, match = null, onBack, onBackToDeckSelection, onFindMatch, onStartMatch, onRegisterDefense, onClaimRankReward, onMissions }) {
     this.root = root;
     this.collection = collection;
     this.masterIndex = masterIndex;
     this.arena = arena;
     this.match = match;
     this.onBack = onBack;
+    this.onBackToDeckSelection = onBackToDeckSelection;
     this.onFindMatch = onFindMatch;
     this.onStartMatch = onStartMatch;
     this.onRegisterDefense = onRegisterDefense;
@@ -76,15 +77,17 @@ export class ArenaScreen {
     const ceiling = next ? ARENA_RANK_THRESHOLDS[next] : floor + 1;
     const progress = next ? Math.max(0, Math.min(100, (this.arena.rating - floor) / (ceiling - floor) * 100)) : 100;
     const claimableRanks = unclaimedArenaRankRewards(this.arena);
-    replace(this.root, el('main', { className: 'arena-screen' }, [
+    replace(this.root, el('main', { className: `arena-screen${this.match ? ' is-match' : ''}` }, [
       el('header', { className: 'screen-header arena-header' }, [
         el('div', {}, [el('p', { className: 'eyebrow', text: 'RATING ARENA' }), el('h1', { text: 'アリーナ' })]),
         el('div', { className: 'arena-header-actions' }, [
-          el('button', { className: 'text-button', text: 'ミッション', onclick: this.onMissions }),
+          this.match
+            ? el('button', { className: 'text-button', text: '戻る', onclick: this.onBackToDeckSelection })
+            : el('button', { className: 'text-button', text: 'ミッション', onclick: this.onMissions }),
           el('button', { className: 'text-button', text: 'ホームへ', onclick: this.onBack }),
         ]),
       ]),
-      el('section', { className: 'arena-rank-panel' }, [
+      this.match ? null : el('section', { className: 'arena-rank-panel' }, [
         el('div', { className: `arena-rank-emblem rank-${this.arena.rank.toLowerCase()}` }, [el('small', { text: 'RANK' }), el('strong', { text: this.arena.rank })]),
         el('div', { className: 'arena-rating-copy' }, [
           el('span', {}, [el('small', { text: 'ARENA RATING' }), el('strong', { text: String(this.arena.rating) })]),
@@ -97,7 +100,7 @@ export class ArenaScreen {
           el('span', {}, [el('small', { text: 'BEST STREAK' }), el('b', { text: String(this.arena.bestWinStreak) })]),
         ]),
       ]),
-      claimableRanks.length ? el('section', { className: 'arena-rank-rewards' }, claimableRanks.map((rank) => {
+      !this.match && claimableRanks.length ? el('section', { className: 'arena-rank-rewards' }, claimableRanks.map((rank) => {
         const reward = ARENA_RANK_REWARDS[rank];
         return el('article', {}, [
           el('span', {}, [el('strong', { text: reward.label }), el('small', { text: `ダイヤ ${reward.diamonds.toLocaleString('ja-JP')}${reward.packs ? `・パック券 ${reward.packs}` : ''}` })]),
