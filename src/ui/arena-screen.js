@@ -23,8 +23,9 @@ export class ArenaScreen {
     this.onRegisterDefense = onRegisterDefense;
     this.onClaimRankReward = onClaimRankReward;
     this.onMissions = onMissions;
-    this.selectedDeckId = arena.defenseDeckId && collection.get(arena.defenseDeckId)
-      ? arena.defenseDeckId : collection.list()[0]?.deckId ?? null;
+    const matchedDeckId = match?.deckId && collection.get(match.deckId) ? match.deckId : null;
+    const defenseDeckId = arena.defenseDeckId && collection.get(arena.defenseDeckId) ? arena.defenseDeckId : null;
+    this.selectedDeckId = matchedDeckId ?? defenseDeckId ?? collection.list()[0]?.deckId ?? null;
     this.render();
   }
 
@@ -43,25 +44,28 @@ export class ArenaScreen {
     }));
   }
 
-  renderMatchPreview(deck) {
-    const opponent = this.match;
+  renderOpponentChoice(deck, opponent) {
     const representativeId = opponent.cards.find((card) => this.masterIndex.cards.get(card.masterId)?.kind === 'monster')?.masterId;
     const representative = this.masterIndex.monsters.get(representativeId);
-    return el('section', { className: 'arena-match-preview' }, [
+    return el('article', { className: `arena-opponent-choice tier-${opponent.matchmakingTier}` }, [
+      el('header', {}, [
+        el('strong', { text: opponent.matchmakingLabel }),
+        el('span', { text: opponent.matchmakingDescription }),
+      ]),
       el('div', { className: `arena-source-label ${sourceClass(opponent.sourceType)}`, text: opponent.sourceLabel }),
-      el('div', { className: 'arena-versus' }, [
-        el('article', {}, [el('small', { text: 'YOUR DECK' }), el('strong', { text: deck.deckName }), el('b', { text: this.arena.rank })]),
-        el('i', { text: 'VS' }),
-        el('article', {}, [
+      el('div', { className: 'arena-opponent-profile' }, [
           representative ? renderCard({ definition: representative, cardAsset: opponent.cards.find((card) => card.masterId === representativeId), interactive: false, label: representative.name }) : null,
-          el('small', { text: opponent.sourceLabel }), el('strong', { text: opponent.displayName }), el('span', { text: opponent.deckName }),
-        ]),
+          el('div', {}, [el('strong', { text: opponent.displayName }), el('span', { text: opponent.deckName }), el('small', { text: `RATING ${opponent.rating}` })]),
       ]),
-      el('p', { text: 'マッチング待機なし。対戦相手のデッキはCPUが公平に操作します。' }),
-      el('div', { className: 'modal-actions' }, [
-        el('button', { className: 'text-button', text: '相手を選び直す', onclick: () => this.onFindMatch?.(deck) }),
-        el('button', { className: 'primary-button', text: 'アリーナ戦を開始', onclick: () => this.onStartMatch?.(deck, opponent) }),
-      ]),
+      el('button', { className: 'primary-button', text: 'この相手と対戦', onclick: () => this.onStartMatch?.(deck, opponent) }),
+    ]);
+  }
+
+  renderMatchChoices(deck) {
+    return el('section', { className: 'arena-match-choices' }, [
+      el('div', { className: 'section-title' }, [el('span', { className: 'step-number', text: '2' }), el('div', {}, [el('h2', { text: '対戦相手を選択' }), el('p', { text: `${deck.deckName}で挑戦します。相手の強さを選んでください。` })])]),
+      el('div', { className: 'arena-opponent-choice-list' }, this.match.opponents.map((opponent) => this.renderOpponentChoice(deck, opponent))),
+      el('div', { className: 'arena-choice-footer' }, [el('p', { text: '対戦相手のデッキはCPUが公平に操作します。' }), el('button', { className: 'text-button', text: '候補を更新', onclick: () => this.onFindMatch?.(deck) })]),
     ]);
   }
 
@@ -100,7 +104,7 @@ export class ArenaScreen {
           el('button', { className: 'primary-button', text: '受け取る', onclick: () => this.onClaimRankReward?.(rank) }),
         ]);
       })) : null,
-      el('section', { className: 'arena-main-grid' }, [
+      this.match ? this.renderMatchChoices(deck) : el('section', { className: 'arena-main-grid' }, [
         el('section', { className: 'arena-entry-panel' }, [
           el('div', { className: 'section-title' }, [el('span', { className: 'step-number', text: '1' }), el('div', {}, [el('h2', { text: '使用するデッキ' }), el('p', { text: '1回の参加につき1試合。試合中だけ編集できません。' })])]),
           this.renderDecks(),
@@ -109,7 +113,7 @@ export class ArenaScreen {
             el('button', { className: 'primary-button', text: '対戦相手を探す', disabled: !deck, onclick: () => this.onFindMatch?.(deck) }),
           ]),
         ]),
-        this.match ? this.renderMatchPreview(deck) : el('section', { className: 'arena-opponent-guide' }, [
+        el('section', { className: 'arena-opponent-guide' }, [
           el('div', { className: 'section-title' }, [el('span', { className: 'step-number', text: '2' }), el('div', {}, [el('h2', { text: '対戦相手' }), el('p', { text: '現在のレートと直近の対戦履歴から即時選出します。' })])]),
           el('article', {}, [el('b', { text: 'PLAYER' }), el('span', { text: '他プレイヤーの防衛デッキ' })]),
           el('article', {}, [el('b', { text: 'OFFICIAL AI' }), el('span', { text: '6分類×6ランク、全36種' })]),

@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { applyProgressionOperation, defaultEconomyState } from '../../src/gacha/economy-state.js';
 import { ARENA_RANKS, arenaRankForRating, normalizeArenaProgress } from '../../src/arena/arena-state.js';
-import { OFFICIAL_ARENA_SPECS, deckSimilarity, deckSignature, selectArenaOpponent } from '../../src/arena/matchmaker.js';
+import { OFFICIAL_ARENA_SPECS, deckSimilarity, deckSignature, selectArenaOpponent, selectArenaOpponents } from '../../src/arena/matchmaker.js';
 import { missionEntries } from '../../src/progression/mission-state.js';
 import { legalDeck, masterIndex } from '../helpers.js';
 
@@ -32,6 +32,14 @@ test('deck similarity compares card composition instead of display names', () =>
   const changed = base.map((card, index) => index < 20 ? { ...card, instanceId: `c-${index}` } : { instanceId: `c-${index}`, masterId: 'training-life' });
   assert.equal(deckSimilarity(deckSignature(base), deckSignature(same)), 1);
   assert.ok(deckSimilarity(deckSignature(base), deckSignature(changed)) < 1);
+});
+
+test('arena matchmaking offers lower, equal and higher opponent choices', () => {
+  const opponents = selectArenaOpponents({ masterIndex, arena: { rating: 1000 }, seed: 'three-choices' });
+  assert.equal(opponents.length, 3);
+  assert.deepEqual(opponents.map((entry) => entry.matchmakingLabel), ['格下', '同格', '格上']);
+  assert.equal(new Set(opponents.map((entry) => entry.id)).size, 3);
+  assert.ok(opponents.every((entry) => entry.cards.length === 40));
 });
 
 test('one arena result advances daily and weekly missions exactly once', () => {

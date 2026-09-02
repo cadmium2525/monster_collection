@@ -130,3 +130,25 @@ export function selectArenaOpponent({ masterIndex, arena: current, playerGhosts 
   }).sort((a, b) => b.score - a.score || a.opponent.id.localeCompare(b.opponent.id));
   return structuredClone(materializeOfficial(ranked[0]?.opponent ?? official[0], masterIndex));
 }
+
+export function selectArenaOpponents(options) {
+  const arena = normalizeArenaProgress(options.arena);
+  const pool = [];
+  for (let index = 0; index < 18 && pool.length < 8; index += 1) {
+    const opponent = selectArenaOpponent({ ...options, seed: `${options.seed ?? 'arena-match'}:choice-${index}` });
+    if (!pool.some((entry) => entry.id === opponent.id)) pool.push(opponent);
+  }
+
+  const tiers = [
+    { id: 'lower', label: '格下', offset: -120, description: '堅実に勝利を狙う' },
+    { id: 'equal', label: '同格', offset: 0, description: '実力の近い相手に挑む' },
+    { id: 'higher', label: '格上', offset: 120, description: '強敵へ挑戦する' },
+  ];
+  const remaining = [...pool];
+  return tiers.map((tier) => {
+    const target = arena.rating + tier.offset;
+    remaining.sort((a, b) => Math.abs(a.rating - target) - Math.abs(b.rating - target) || a.id.localeCompare(b.id));
+    const opponent = remaining.shift() ?? selectArenaOpponent({ ...options, seed: `${options.seed ?? 'arena-match'}:${tier.id}` });
+    return { ...opponent, matchmakingTier: tier.id, matchmakingLabel: tier.label, matchmakingDescription: tier.description };
+  });
+}

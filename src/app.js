@@ -26,7 +26,7 @@ import { accountErrorMessage } from './persistence/auth-errors.js';
 import { PLAYER_ID_RULE_COPY, normalizePlayerId } from './persistence/player-id.js';
 import { ArenaSession } from './arena/ArenaSession.js';
 import { normalizeArenaProgress } from './arena/arena-state.js';
-import { deckSignature, selectArenaOpponent } from './arena/matchmaker.js';
+import { deckSignature, selectArenaOpponents } from './arena/matchmaker.js';
 import { ArenaResultScreen, ArenaScreen } from './ui/arena-screen.js';
 import { MissionScreen } from './ui/mission-screen.js';
 
@@ -626,13 +626,14 @@ class MonsterConstructionApp {
           String(record.championVersion ?? `${record.championUserId}:${record.championDeckId}`), record,
         ])).values()]
         : [];
-      this.arenaMatch = selectArenaOpponent({
+      const opponents = selectArenaOpponents({
         masterIndex: this.masterIndex,
         arena,
         playerGhosts,
         legendArchives: archivePool,
         seed: `${this.seedSource.next()}:arena:${deck.deckId}:${Date.now()}`,
       });
+      this.arenaMatch = { deckId: deck.deckId, opponents };
       this.showArena(this.arenaMatch);
     } catch (error) {
       this.showError(error, '対戦相手を選出できません');
