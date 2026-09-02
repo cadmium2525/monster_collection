@@ -2335,7 +2335,7 @@ body:has(.home-lobby) {
   position:fixed;
   z-index:12;
   right:max(12px,var(--safe-right));
-  bottom:max(7px,var(--safe-bottom));
+  bottom:max(2px,calc(var(--safe-bottom) - 16px));
   padding:3px 5px;
   border-radius:4px;
   color:rgba(238,245,247,.86);
