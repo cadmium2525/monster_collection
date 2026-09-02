@@ -2385,6 +2385,18 @@ body:has(.home-lobby) {
 .arena-versus small { color:#8fdedb; font-size:7px; }.arena-versus strong { max-width:100%; overflow:hidden; color:#f2dfa5; font-size:13px; text-overflow:ellipsis; white-space:nowrap; }.arena-versus span { color:#b8c8cd; font-size:8px; }
 .arena-versus > i { color:#e1bd63; font:italic 800 23px/1 Georgia,serif; text-align:center; }
 .arena-match-preview > p { margin:0; color:#9fb1b8; font-size:8px; text-align:center; }
+.arena-match-choices { min-height:0; display:grid; grid-template-rows:auto minmax(0,1fr) auto; gap:10px; padding:12px; overflow:auto; border:1px solid rgba(108,163,184,.32); border-radius:17px 6px; background:linear-gradient(145deg,rgba(5,16,29,.95),rgba(10,29,43,.9)); }
+.arena-opponent-choice-list { min-height:0; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
+.arena-opponent-choice { min-width:0; display:grid; grid-template-rows:auto auto minmax(0,1fr) auto; gap:8px; padding:11px; border:1px solid rgba(106,169,187,.34); border-radius:14px 5px; background:linear-gradient(155deg,rgba(7,23,37,.96),rgba(3,12,22,.94)); box-shadow:0 10px 24px rgba(0,0,0,.22); }
+.arena-opponent-choice > header { display:flex; align-items:baseline; justify-content:space-between; gap:6px; border-bottom:1px solid rgba(125,169,182,.2); padding-bottom:7px; }
+.arena-opponent-choice > header strong { color:#8de3df; font-size:17px; }.arena-opponent-choice > header span { color:#9db1b8; font-size:7px; }
+.arena-opponent-choice.tier-higher { border-color:rgba(225,177,78,.55); }.arena-opponent-choice.tier-higher > header strong { color:#f0ca70; }
+.arena-opponent-choice.tier-lower { border-color:rgba(98,184,149,.43); }.arena-opponent-choice.tier-lower > header strong { color:#8cdbb4; }
+.arena-opponent-profile { min-height:0; display:grid; grid-template-columns:86px minmax(0,1fr); align-items:center; gap:9px; }
+.arena-opponent-profile .game-card { width:84px; pointer-events:none; }.arena-opponent-profile > div { min-width:0; display:grid; gap:5px; }
+.arena-opponent-profile strong,.arena-opponent-profile span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }.arena-opponent-profile strong { color:#f2dfa5; font-size:13px; }.arena-opponent-profile span { color:#c0d0d4; font-size:8px; }.arena-opponent-profile small { color:#80d7d4; font-size:7px; letter-spacing:.08em; }
+.arena-opponent-choice > .primary-button { width:100%; }
+.arena-choice-footer { display:flex; align-items:center; justify-content:space-between; gap:10px; }.arena-choice-footer p { margin:0; color:#9fb1b8; font-size:8px; }
 .arena-result-screen { display:grid; place-items:center; background:radial-gradient(circle at 50% 35%,rgba(25,92,102,.24),transparent 48%),rgba(1,6,12,.8); }
 .arena-result-screen.is-win { background:radial-gradient(circle at 50% 32%,rgba(175,129,43,.27),transparent 50%),rgba(1,6,12,.82); }
 .arena-result-panel { width:min(920px,94vw); max-height:94dvh; display:grid; justify-items:center; gap:8px; padding:17px; overflow:auto; border:1px solid rgba(224,185,94,.58); border-radius:25px 8px; background:linear-gradient(145deg,rgba(8,20,33,.97),rgba(17,31,43,.95)); box-shadow:0 20px 65px rgba(0,0,0,.62),inset 0 0 35px rgba(229,187,91,.05); }
