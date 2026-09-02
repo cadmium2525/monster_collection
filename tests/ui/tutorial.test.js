@@ -26,7 +26,7 @@ test('home lobby keeps the release version visible and separates its navigation 
   const css = fs.readFileSync(new URL('../../styles.css', import.meta.url), 'utf8');
   assert.match(homeSource, /className: 'home-app-version home-lobby-version'/);
   assert.match(homeSource, /`v\$\{APP_VERSION\}`/);
-  assert.match(css, /\.home-app-version\.home-lobby-version\s*\{[^}]*position:absolute/s);
+  assert.match(css, /\.home-app-version\.home-lobby-version\s*\{[^}]*position:fixed;[^}]*z-index:12;[^}]*background:rgba\(2,9,17,\.72\)/s);
   assert.match(css, /\.home-lobby-bottom-nav\s*\{[^}]*left:50%;[^}]*width:min\(760px,calc\(100% - 48px\)\);[^}]*grid-template-columns:repeat\(5,minmax\(0,1fr\)\);[^}]*transform:translateX\(-50%\)/s);
   for (const label of ['トーナメント', 'アリーナ', 'ホーム', 'カード', 'ショップ']) assert.match(homeSource, new RegExp(`label: '${label}'`));
   assert.doesNotMatch(homeSource, /home-lobby-leader-name/);
