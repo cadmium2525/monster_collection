@@ -125,3 +125,10 @@ test('tournament entry names the deck choice and renders its leader as art only'
   assert.match(css, /\.setup-deck \.game-card \.card-top,[\s\S]*\.setup-deck \.game-card \.card-corner,[\s\S]*display: none;/);
   assert.match(css, /\.setup-deck \.game-card > \.card-art\s*\{[^}]*inset: 0;[^}]*top: 0;/s);
 });
+
+test('arena deck choice renders its leader as art only, matching tournament entry', () => {
+  const arenaScreen = readFileSync(new URL('../../src/ui/arena-screen.js', import.meta.url), 'utf8');
+  assert.match(arenaScreen, /text: '使用するデッキ'/);
+  assert.match(css, /\.arena-deck-choice \.game-card \.card-top,[\s\S]*\.arena-deck-choice \.game-card \.card-corner,[\s\S]*display: none;/);
+  assert.match(css, /\.arena-deck-choice \.game-card > \.card-art\s*\{[^}]*inset: 0;[^}]*top: 0;/s);
+});
