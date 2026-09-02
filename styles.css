@@ -2279,14 +2279,19 @@ body:has(.home-lobby) {
 }
 .home-lobby-footer.sync-warning { border-color:rgba(239,106,112,.45); color:#f4b1b6; background:rgba(55,11,19,.78); }
 .home-app-version.home-lobby-version {
-  position:absolute;
-  z-index:8;
+  position:fixed;
+  z-index:12;
   right:max(12px,var(--safe-right));
-  bottom:max(5px,var(--safe-bottom));
-  padding:0;
-  color:rgba(220,229,232,.58);
-  font:700 7px/1 system-ui,sans-serif;
+  bottom:max(7px,var(--safe-bottom));
+  padding:3px 5px;
+  border-radius:4px;
+  color:rgba(238,245,247,.86);
+  background:rgba(2,9,17,.72);
+  box-shadow:0 1px 5px rgba(0,0,0,.5);
+  font:700 8px/1 system-ui,sans-serif;
   letter-spacing:.1em;
+  text-shadow:0 1px 2px #000;
+  white-space:nowrap;
 }
 .home-lobby-modal-copy { display:grid; gap:7px; padding-top:8px; }
 .home-lobby-modal-copy > * { margin:0; }
