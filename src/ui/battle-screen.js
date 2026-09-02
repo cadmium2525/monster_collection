@@ -5,6 +5,7 @@ import { renderCard, openCardDetails } from './card-renderer.js';
 import { createFusionAnimationModel, playFusionAnimation } from './fusion-animation.js';
 import { playFusionUnlockAnimation } from './fusion-unlock-animation.js';
 import { playAwakeningUnlockAnimation } from './awakening-unlock-animation.js';
+import { createAwakeningAnimationModel, playAwakeningAnimation } from './awakening-animation.js';
 import { playTurnTransition } from './turn-transition-animation.js';
 import { openModal } from './modal.js';
 import { lowLifeTargetEffects, unitLifePresentation } from './status-presentation.js';
@@ -1077,27 +1078,6 @@ export class BattleScreen {
       else await delay(duration);
       burst.remove();
     }
-    if (action.type === 'awaken') {
-      const target = this.findUnitSlotNode(action.unitId);
-      const material = this.findUnitSlotNode(action.materialUnitId);
-      if (!target) return;
-      const burst = el('span', { className: 'awakening-burst', text: '覚醒' });
-      target.append(burst);
-      const targetAnimation = target.animate?.([
-        { filter: 'brightness(1) saturate(1)', transform: 'scale(1)' },
-        { filter: 'brightness(2.2) saturate(1.7) hue-rotate(24deg)', transform: 'scale(1.13)', offset: .5 },
-        { filter: 'brightness(1.1) saturate(1.2)', transform: 'scale(1)' },
-      ], { duration: this.speed === 'fast' ? 260 : 820, easing: 'cubic-bezier(.2,.8,.25,1)' });
-      const materialAnimation = material?.animate?.([
-        { opacity: 1, transform: 'scale(1)' },
-        { opacity: .15, transform: 'scale(.65) rotate(5deg)', filter: 'blur(3px) hue-rotate(50deg)' },
-      ], { duration: this.speed === 'fast' ? 180 : 620, easing: 'ease-in', fill: 'forwards' });
-      await Promise.all([
-        targetAnimation?.finished?.catch(() => {}) ?? Promise.resolve(),
-        materialAnimation?.finished?.catch(() => {}) ?? Promise.resolve(),
-      ]);
-      burst.remove();
-    }
   }
 
   statChanges(before) {
@@ -1156,7 +1136,7 @@ export class BattleScreen {
 
   async executeEngineAction(action) {
     const before = this.captureStats();
-    const beforeState = action.type.startsWith('fusion-') ? this.engine.getState() : null;
+    const beforeState = action.type.startsWith('fusion-') || action.type === 'awaken' ? this.engine.getState() : null;
     const hadInteractionSelection = Boolean(this.selection || this.pendingMove);
     this.selection = null;
     this.pendingMove = null;
@@ -1170,6 +1150,12 @@ export class BattleScreen {
       afterPlayer: this.engine.player(action.playerId ?? beforeState.currentPlayerId),
       masterIndex: this.engine.masterIndex,
     }) : null;
+    const awakeningModel = beforeState ? createAwakeningAnimationModel({
+      action,
+      beforePlayer: beforeState.players[action.playerId ?? beforeState.currentPlayerId],
+      afterPlayer: this.engine.player(action.playerId ?? beforeState.currentPlayerId),
+      masterIndex: this.engine.masterIndex,
+    }) : null;
     let numbersCommitted = false;
     const commitNumbers = () => {
       if (numbersCommitted) return;
@@ -1177,6 +1163,7 @@ export class BattleScreen {
       this.render();
     };
     if (fusionModel) await playFusionAnimation({ model: fusionModel, speed: this.speed, onReveal: commitNumbers });
+    if (awakeningModel) await playAwakeningAnimation({ model: awakeningModel, speed: this.speed, onReveal: commitNumbers });
     await this.showStatDirections(before, commitNumbers);
     commitNumbers();
     await this.showCurrentTurnTransition();

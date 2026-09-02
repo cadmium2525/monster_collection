@@ -46,6 +46,19 @@ test('arena matchmaking offers lower, equal and higher opponent choices', () => 
   }
 });
 
+test('refreshing arena choices covers all classifications and official leaders match their decks', () => {
+  const classifications = new Set();
+  for (let refresh = 0; refresh < 6; refresh += 1) {
+    const opponents = selectArenaOpponents({ masterIndex, arena: { rating: 1030 }, seed: `coverage-${refresh}` });
+    for (const opponent of opponents) {
+      if (opponent.sourceType !== 'OFFICIAL_AI') continue;
+      classifications.add(opponent.theme);
+      assert.equal(masterIndex.monsters.get(opponent.representativeMonsterId)?.faction, opponent.theme);
+    }
+  }
+  assert.deepEqual(classifications, new Set(['機鋼', '神造', '幻霊', '魔族', '獣族', '怪物']));
+});
+
 test('official opponents in each rank have distinct ratings', () => {
   for (const rank of ARENA_RANKS) {
     const ratings = OFFICIAL_ARENA_SPECS.filter((entry) => entry.rank === rank).map((entry) => entry.rating);
@@ -104,6 +117,8 @@ test('home and Firestore expose missions, arena ghosts and honest source labels'
   assert.ok(giftIndex < missionIndex && missionIndex < noticeIndex && noticeIndex < helpIndex);
   assert.match(home, /claimableMissionCount/);
   for (const label of ['PLAYER', 'OFFICIAL AI', 'LEGEND ARCHIVE']) assert.match(arenaUi, new RegExp(label));
+  assert.doesNotMatch(arenaUi, /対戦相手のデッキはCPUが公平に操作します/);
+  assert.match(arenaUi, /arena-refresh-button/);
   assert.match(rules, /match \/arenaDecks\/\{publicDeckId\}/);
   assert.match(rules, /match \/legendArchives\/\{archiveId\}/);
 });

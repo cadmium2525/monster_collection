@@ -739,6 +739,59 @@ body:has(.battle-screen) {
 @keyframes awakening-unlock-copy { 0%,56%{opacity:0;transform:translateY(7px)} 68%,90%{opacity:1;transform:translateY(0)} 100%{opacity:0} }
 @keyframes awakening-unlock-particle { 0%,24%{opacity:0;transform:rotate(calc(var(--i)*20deg)) translateY(0) scaleY(.1)} 45%{opacity:1} 100%{opacity:0;transform:rotate(calc(var(--i)*20deg + 32deg)) translateY(-48vh) scaleY(1.8)} }
 @media (prefers-reduced-motion:reduce) { .awakening-unlock.reduced-motion .awakening-unlock-rays,.awakening-unlock.reduced-motion .awakening-unlock-particles { display:none; } .awakening-unlock.reduced-motion *,.awakening-unlock.reduced-motion { animation-timing-function:linear!important; } }
+
+.awakening-cinematic { --rite-cyan:#75efff; --rite-violet:#c45cff; --rite-gold:#ffe493; position:fixed; z-index:9999; inset:0; display:grid; grid-template-rows:auto minmax(0,1fr) auto; place-items:center; gap:4px; overflow:hidden; isolation:isolate; pointer-events:none; padding:clamp(10px,2dvh,20px); animation:awakening-rite-overlay var(--awakening-duration) linear both; }
+.awakening-cinematic-backdrop { position:absolute; z-index:-10; inset:0; background:radial-gradient(circle at 50% 48%,rgba(140,35,174,.72),rgba(17,41,68,.97) 38%,#01030a 73%),linear-gradient(135deg,#071b2c,#260836 52%,#030915); }
+.awakening-cinematic-backdrop::before,.awakening-cinematic-backdrop::after { content:""; position:absolute; inset:-35%; background:repeating-conic-gradient(from 8deg at 50% 50%,transparent 0 3.2deg,rgba(113,239,255,.22) 3.5deg 3.9deg,transparent 4.2deg 8deg,rgba(204,89,255,.16) 8.3deg 8.7deg,transparent 9deg 14deg); animation:awakening-rite-sky var(--awakening-duration) cubic-bezier(.12,.74,.18,1) both; }
+.awakening-cinematic-backdrop::after { inset:-18%; opacity:.42; filter:blur(7px); animation-direction:reverse; }
+.awakening-cinematic-eclipse { position:absolute; z-index:-7; left:50%; top:50%; width:min(74vw,680px); aspect-ratio:1; translate:-50% -50%; border-radius:50%; background:radial-gradient(circle,#fff 0 2%,#bdfbff 3%,#8b50df 11%,rgba(41,3,65,.94) 28%,rgba(0,2,9,.94) 48%,transparent 49%); box-shadow:0 0 22px #fff,0 0 65px var(--rite-cyan),0 0 140px var(--rite-violet),inset 0 0 55px #000; animation:awakening-rite-eclipse var(--awakening-duration) ease-in-out both; }
+.awakening-cinematic-rift { position:absolute; z-index:8; inset:0; mix-blend-mode:screen; }
+.awakening-cinematic-rift i { position:absolute; left:50%; top:50%; width:clamp(2px,.25vw,4px); height:70vmax; transform-origin:50% 0; rotate:calc(var(--rift)*40deg + 7deg); background:linear-gradient(#fff 0 1%,var(--rite-cyan) 3%,var(--rite-violet) 18%,transparent 55%); box-shadow:0 0 7px #fff,0 0 16px var(--rite-violet); clip-path:polygon(38% 0,100% 13%,55% 25%,90% 39%,45% 54%,72% 68%,20% 100%,35% 62%,0 49%,47% 32%,8% 18%); animation:awakening-rite-rift var(--awakening-duration) ease-out both; }
+.awakening-cinematic-title { position:relative; z-index:12; grid-row:1; display:grid; justify-items:center; line-height:1; text-align:center; text-shadow:0 3px 8px #000,0 0 22px var(--rite-violet); animation:awakening-rite-title var(--awakening-duration) ease both; }
+.awakening-cinematic-title small { color:#a8f5ff; font:900 clamp(7px,1vw,11px)/1 Georgia,serif; letter-spacing:.36em; }
+.awakening-cinematic-title strong { margin-top:6px; color:#fff0b5; font:900 clamp(27px,5.2vw,62px)/.88 Georgia,"Yu Mincho",serif; letter-spacing:.08em; text-shadow:0 3px 9px #000,0 0 9px #fff,0 0 26px var(--rite-violet),0 0 48px var(--rite-cyan); }
+.awakening-cinematic-title span { margin-top:8px; padding:4px 38px; border-block:1px solid rgba(135,240,255,.78); color:#fff; background:linear-gradient(90deg,transparent,rgba(95,22,133,.72),transparent); font-size:clamp(12px,1.8vw,20px); font-weight:900; letter-spacing:.58em; }
+.awakening-cinematic-stage { position:relative; z-index:5; grid-row:2; width:min(820px,91vw); height:min(58dvh,345px); min-height:190px; display:grid; place-items:center; }
+.awakening-sacrifice-card,.awakening-vessel-card,.awakening-result-card { position:absolute; z-index:5; width:clamp(108px,15vw,164px); display:grid; justify-items:center; gap:3px; }
+.awakening-sacrifice-card .game-card,.awakening-vessel-card .game-card,.awakening-result-card .game-card { width:100%; pointer-events:none; box-shadow:0 12px 35px #000,0 0 24px var(--rite-violet); }
+.awakening-sacrifice-card { left:0; animation:awakening-rite-sacrifice var(--awakening-duration) cubic-bezier(.4,.02,.22,1) both; }
+.awakening-sacrifice-card b { max-width:100%; overflow:hidden; color:#e9d4ff; font-size:10px; text-overflow:ellipsis; white-space:nowrap; }
+.awakening-sacrifice-card small { color:#d980ff; font:900 7px/1 Georgia,serif; letter-spacing:.18em; }
+.awakening-vessel-card { right:0; animation:awakening-rite-vessel var(--awakening-duration) cubic-bezier(.3,.02,.16,1) both; }
+.awakening-result-card { z-index:13; width:clamp(158px,22vw,230px); opacity:0; animation:awakening-rite-result var(--awakening-duration) cubic-bezier(.14,.86,.2,1) both; }
+.awakening-result-card .game-card { border-color:#fff0a0; box-shadow:0 0 0 2px rgba(255,255,255,.8),0 0 28px #fff,0 0 65px var(--rite-cyan),0 0 110px var(--rite-violet),0 15px 45px #000; }
+.awakening-result-halo { position:absolute; z-index:-1; left:50%; top:50%; width:175%; aspect-ratio:1; translate:-50% -50%; border:2px solid var(--rite-gold); border-radius:50%; background:repeating-conic-gradient(from 0deg,rgba(255,255,255,.8) 0 1deg,transparent 1.5deg 12deg),radial-gradient(circle,#fff 0 2%,rgba(116,239,255,.72) 9%,rgba(193,80,255,.42) 33%,transparent 68%); box-shadow:0 0 55px var(--rite-cyan),inset 0 0 40px var(--rite-violet); animation:awakening-rite-halo .7s linear infinite; }
+.awakening-cinematic-vortex { position:absolute; z-index:7; left:50%; top:50%; width:min(43vw,400px); aspect-ratio:1; translate:-50% -50%; display:grid; place-items:center; filter:drop-shadow(0 0 18px var(--rite-cyan)); animation:awakening-rite-vortex var(--awakening-duration) ease both; }
+.awakening-rite-ring { position:absolute; inset:0; border:2px solid var(--rite-cyan); border-radius:50%; box-shadow:0 0 15px var(--rite-cyan),inset 0 0 15px var(--rite-violet); }
+.awakening-rite-ring::before,.awakening-rite-ring::after { content:""; position:absolute; inset:8%; border:1px dashed #fff; transform:rotate(45deg); }
+.awakening-rite-ring::after { inset:22%; border-color:var(--rite-gold); border-style:solid; border-radius:50%; transform:none; }
+.awakening-rite-ring.rite-a { animation:fusion-ring-clockwise 1.05s linear infinite; }
+.awakening-rite-ring.rite-b { inset:12%; border-color:var(--rite-violet); border-style:dashed; animation:fusion-ring-counter .74s linear infinite; }
+.awakening-rite-ring.rite-c { inset:28%; border-color:var(--rite-gold); animation:fusion-ring-clockwise .51s linear infinite; }
+.awakening-rite-ring.rite-d { inset:40%; border-style:dotted; animation:fusion-ring-counter .34s linear infinite; }
+.awakening-cinematic-vortex b { position:relative; z-index:3; color:#fff5c7; font:900 clamp(44px,8vw,96px)/1 "Yu Mincho",Georgia,serif; text-shadow:0 0 8px #fff,0 0 24px var(--rite-cyan),0 0 52px var(--rite-violet); }
+.awakening-soul-particles { position:absolute; z-index:10; inset:50%; }
+.awakening-soul-particles i { position:absolute; width:7px; height:34px; border-radius:50%; transform-origin:50% 0; background:linear-gradient(#fff,var(--rite-gold),var(--rite-cyan),var(--rite-violet),transparent); box-shadow:0 0 10px #fff,0 0 19px var(--rite-cyan); animation:awakening-rite-soul var(--awakening-duration) ease-out var(--soul-delay) both; }
+.awakening-cinematic-copy { position:relative; z-index:14; grid-row:3; width:min(760px,90vw); display:grid; justify-items:center; gap:4px; padding:8px 26px; border-block:1px solid rgba(141,237,255,.76); background:linear-gradient(90deg,transparent,rgba(4,12,27,.94) 10% 90%,transparent); text-align:center; animation:awakening-rite-copy var(--awakening-duration) ease both; }
+.awakening-cinematic-copy small { color:#a9f4ff; font:900 8px/1.2 Georgia,serif; letter-spacing:.13em; }
+.awakening-cinematic-copy strong { color:#ffe8a4; font:900 clamp(17px,2.7vw,31px)/1 Georgia,"Yu Mincho",serif; text-shadow:0 0 13px var(--rite-violet); }
+.awakening-cinematic-copy span { max-width:680px; color:#e8f8fb; font-size:clamp(8px,1vw,11px); line-height:1.4; }
+.awakening-cinematic-flash { position:absolute; z-index:20; inset:0; background:#fff; mix-blend-mode:screen; animation:awakening-rite-flash var(--awakening-duration) linear both; }
+.awakening-cinematic.fast .rite-a { animation-duration:.38s; }.awakening-cinematic.fast .rite-b { animation-duration:.27s; }.awakening-cinematic.fast .rite-c { animation-duration:.2s; }.awakening-cinematic.fast .rite-d { animation-duration:.14s; }
+@keyframes awakening-rite-overlay { 0%{opacity:0} 3%,94%{opacity:1} 100%{opacity:0} }
+@keyframes awakening-rite-sky { 0%{opacity:0;transform:scale(.18) rotate(-28deg)} 36%{opacity:.9;transform:scale(.86) rotate(8deg)} 68%{opacity:.56;transform:scale(1.15) rotate(42deg)} 100%{opacity:0;transform:scale(1.7) rotate(88deg)} }
+@keyframes awakening-rite-eclipse { 0%,8%{opacity:0;transform:scale(.1)} 32%{opacity:1;transform:scale(.72)} 56%{opacity:.9;transform:scale(1)} 69%{opacity:1;transform:scale(.16);filter:brightness(4)} 76%,100%{opacity:0;transform:scale(1.65)} }
+@keyframes awakening-rite-rift { 0%,56%{opacity:0;transform:scaleY(.05)} 61%{opacity:1;transform:scaleY(1)} 74%,100%{opacity:0;transform:scaleY(1.3)} }
+@keyframes awakening-rite-title { 0%,8%{opacity:0;transform:translateY(-18px);filter:blur(6px)} 18%,88%{opacity:1;transform:translateY(0);filter:blur(0)} 100%{opacity:0;transform:translateY(-8px)} }
+@keyframes awakening-rite-sacrifice { 0%,10%{opacity:0;transform:translateX(-28vw) rotate(-9deg) scale(.78)} 20%,35%{opacity:1;transform:translateX(0) rotate(-2deg) scale(1)} 51%{opacity:1;transform:translateX(36vw) rotate(35deg) scale(.18);filter:brightness(5) hue-rotate(45deg)} 56%,100%{opacity:0;transform:translateX(38vw) rotate(90deg) scale(.04);filter:brightness(8)} }
+@keyframes awakening-rite-vessel { 0%,10%{opacity:0;transform:translateX(28vw) rotate(9deg) scale(.78)} 20%,43%{opacity:1;transform:translateX(0) rotate(2deg) scale(1)} 57%{opacity:1;transform:translateX(-36vw) rotate(-28deg) scale(.23);filter:brightness(4) saturate(2)} 63%,100%{opacity:0;transform:translateX(-38vw) rotate(-80deg) scale(.05);filter:brightness(7)} }
+@keyframes awakening-rite-vortex { 0%,13%{opacity:0;transform:scale(.15) rotate(-30deg)} 31%,58%{opacity:1;transform:scale(1) rotate(6deg)} 65%{opacity:1;transform:scale(.2) rotate(50deg);filter:brightness(5)} 73%,100%{opacity:0;transform:scale(2.4) rotate(92deg)} }
+@keyframes awakening-rite-result { 0%,64%{opacity:0;transform:scale(.06) rotate(-28deg);filter:brightness(8) blur(5px)} 72%{opacity:1;transform:scale(1.22) rotate(3deg);filter:brightness(2.2) blur(0)} 79%,92%{opacity:1;transform:scale(1) rotate(0);filter:brightness(1)} 100%{opacity:0;transform:scale(.96)} }
+@keyframes awakening-rite-halo { to{transform:rotate(360deg) scale(1.06)} }
+@keyframes awakening-rite-soul { 0%,41%{opacity:0;transform:rotate(var(--soul-angle)) translateY(0) scaleY(.08)} 55%{opacity:1} 78%,100%{opacity:0;transform:rotate(calc(var(--soul-angle) + 48deg)) translateY(clamp(-245px,-31dvh,-120px)) scaleY(1.8)} }
+@keyframes awakening-rite-copy { 0%,72%{opacity:0;transform:translateY(13px);filter:blur(3px)} 79%,94%{opacity:1;transform:translateY(0);filter:blur(0)} 100%{opacity:0} }
+@keyframes awakening-rite-flash { 0%,28%,55%,62%,100%{opacity:0} 31%{opacity:.2} 58%{opacity:.48} 65%{opacity:.95} 69%{opacity:0} }
+@media (prefers-reduced-motion:reduce) { .awakening-cinematic.reduced-motion .awakening-cinematic-rift,.awakening-cinematic.reduced-motion .awakening-soul-particles,.awakening-cinematic.reduced-motion .awakening-cinematic-backdrop::before,.awakening-cinematic.reduced-motion .awakening-cinematic-backdrop::after { display:none; } .awakening-cinematic.reduced-motion .awakening-rite-ring,.awakening-cinematic.reduced-motion .awakening-result-halo { animation:none!important; } .awakening-cinematic.reduced-motion *,.awakening-cinematic.reduced-motion { animation-timing-function:linear!important; } }
 @media (prefers-reduced-motion: reduce) {
   .fusion-unlock.reduced-motion .fusion-unlock-lines,.fusion-unlock.reduced-motion .unlock-card-mark { display: none; }
   .fusion-unlock.reduced-motion *,.fusion-unlock.reduced-motion { animation-timing-function: linear !important; }
@@ -2338,6 +2391,7 @@ body:has(.home-lobby) {
 .mission-loot-choice > span { max-width:70px; overflow:hidden; font-size:7px; text-overflow:ellipsis; white-space:nowrap; }
 .arena-screen { display:grid; grid-template-rows:auto auto auto minmax(0,1fr); gap:9px; }
 .arena-screen.is-match { height:100dvh; min-height:0; grid-template-rows:auto minmax(0,1fr); overflow:hidden; }
+.app-shell:has(> .arena-screen.is-match) { width:100%; height:100dvh; min-height:0; overflow:hidden; padding:0; }
 .arena-header-actions { display:flex; align-items:center; gap:7px; }
 .arena-header-loot { min-width:250px; max-width:420px; height:54px; display:flex; align-items:center; gap:9px; padding:5px 9px; overflow:hidden; border:1px solid rgba(232,186,98,.48); border-radius:12px 4px; background:linear-gradient(110deg,rgba(65,41,15,.78),rgba(8,22,34,.94)); }
 .arena-header-loot > span { flex:none; display:grid; gap:2px; color:#f0d58f; }
@@ -2393,7 +2447,10 @@ body:has(.home-lobby) {
 .arena-versus small { color:#8fdedb; font-size:7px; }.arena-versus strong { max-width:100%; overflow:hidden; color:#f2dfa5; font-size:13px; text-overflow:ellipsis; white-space:nowrap; }.arena-versus span { color:#b8c8cd; font-size:8px; }
 .arena-versus > i { color:#e1bd63; font:italic 800 23px/1 Georgia,serif; text-align:center; }
 .arena-match-preview > p { margin:0; color:#9fb1b8; font-size:8px; text-align:center; }
-.arena-match-choices { min-height:0; display:grid; grid-template-rows:auto minmax(0,1fr) auto; gap:10px; padding:12px; overflow:auto; border:1px solid rgba(108,163,184,.32); border-radius:17px 6px; background:linear-gradient(145deg,rgba(5,16,29,.95),rgba(10,29,43,.9)); }
+.arena-match-choices { min-height:0; display:grid; grid-template-rows:auto minmax(0,1fr); gap:8px; padding:10px; overflow:hidden; border:1px solid rgba(108,163,184,.32); border-radius:17px 6px; background:linear-gradient(145deg,rgba(5,16,29,.95),rgba(10,29,43,.9)); }
+.arena-match-heading { min-width:0; display:flex; align-items:center; justify-content:space-between; gap:12px; }
+.arena-match-heading .section-title { min-width:0; }
+.arena-refresh-button { flex:none; }
 .arena-opponent-choice-list { min-height:0; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
 .arena-opponent-choice { min-width:0; display:grid; grid-template-rows:auto auto minmax(0,1fr) auto; gap:8px; padding:11px; border:1px solid rgba(106,169,187,.34); border-radius:14px 5px; background:linear-gradient(155deg,rgba(7,23,37,.96),rgba(3,12,22,.94)); box-shadow:0 10px 24px rgba(0,0,0,.22); }
 .arena-opponent-choice > header { display:flex; align-items:baseline; justify-content:space-between; gap:6px; border-bottom:1px solid rgba(125,169,182,.2); padding-bottom:7px; }
@@ -2404,7 +2461,6 @@ body:has(.home-lobby) {
 .arena-opponent-profile .game-card { width:84px; pointer-events:none; }.arena-opponent-profile > div { min-width:0; display:grid; gap:5px; }
 .arena-opponent-profile strong,.arena-opponent-profile span { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }.arena-opponent-profile strong { color:#f2dfa5; font-size:13px; }.arena-opponent-profile span { color:#c0d0d4; font-size:8px; }.arena-opponent-profile small { color:#80d7d4; font-size:7px; letter-spacing:.08em; }
 .arena-opponent-choice > .primary-button { width:100%; }
-.arena-choice-footer { display:flex; align-items:center; justify-content:space-between; gap:10px; }.arena-choice-footer p { margin:0; color:#9fb1b8; font-size:8px; }
 .arena-result-screen { display:grid; place-items:center; background:radial-gradient(circle at 50% 35%,rgba(25,92,102,.24),transparent 48%),rgba(1,6,12,.8); }
 .arena-result-screen.is-win { background:radial-gradient(circle at 50% 32%,rgba(175,129,43,.27),transparent 50%),rgba(1,6,12,.82); }
 .arena-result-panel { width:min(920px,94vw); max-height:94dvh; display:grid; justify-items:center; gap:8px; padding:17px; overflow:auto; border:1px solid rgba(224,185,94,.58); border-radius:25px 8px; background:linear-gradient(145deg,rgba(8,20,33,.97),rgba(17,31,43,.95)); box-shadow:0 20px 65px rgba(0,0,0,.62),inset 0 0 35px rgba(229,187,91,.05); }
@@ -2467,6 +2523,17 @@ body:has(.home-lobby) {
   .arena-rank-emblem { width:57px; }.arena-rank-emblem strong { font-size:19px; }
   .arena-rating-copy strong { font-size:18px; }.arena-record span { min-height:38px; }.arena-record b { font-size:14px; }
   .arena-main-grid { grid-template-columns:minmax(390px,1.15fr) minmax(300px,.85fr); gap:6px; }
+  .arena-screen.is-match { padding:max(4px,var(--safe-top)) max(7px,var(--safe-right)) max(4px,var(--safe-bottom)) max(7px,var(--safe-left)); }
+  .arena-screen.is-match .screen-header { padding:6px 10px; }
+  .arena-screen.is-match .screen-header h1 { font-size:20px; }
+  .arena-match-choices { gap:5px; padding:7px; }
+  .arena-match-heading .section-title p { margin-top:1px; }
+  .arena-opponent-choice-list { gap:6px; }
+  .arena-opponent-choice { gap:5px; padding:7px; }
+  .arena-opponent-choice > header { padding-bottom:4px; }
+  .arena-opponent-profile { grid-template-columns:72px minmax(0,1fr); gap:7px; }
+  .arena-opponent-profile .game-card { width:70px; }
+  .arena-opponent-choice > .primary-button { padding-block:8px; }
   .arena-deck-list { grid-template-columns:repeat(3,minmax(0,1fr)); gap:4px; }
   .arena-deck-choice { grid-template-columns:36px minmax(0,1fr); padding:3px; }.arena-deck-choice .game-card { width:34px; }
   .arena-result-panel { padding:9px; gap:5px; }.arena-result-panel h1 { font-size:25px; }.arena-loot-offer .game-card { width:73px; }

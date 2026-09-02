@@ -7,7 +7,7 @@ import { chooseAiAction } from './levels.js';
 const METRIC_KEYS = Object.freeze([
   'cardsDrawn', 'reshuffles', 'summons', 'attacks', 'damageDealt',
   'directDamage', 'knockouts', 'trainingUses', 'shugyoUses',
-  'breederUses', 'fusions', 'specialFusions',
+  'breederUses', 'fusions', 'specialFusions', 'awakenings',
 ]);
 
 function add(counter, key, amount = 1) {
@@ -54,6 +54,30 @@ function finalizeSide(side, games) {
   };
 }
 
+export function awakeningAudit(log, state) {
+  const awakening = log.find((event) => event.type === 'awakening');
+  if (!awakening) return null;
+  const battleEnd = log.find((event) => event.type === 'battle-end');
+  const sameTurnWin = battleEnd?.winnerId === awakening.playerId
+    && battleEnd.halfTurn === awakening.halfTurn;
+  const decisiveEvent = sameTurnWin
+    ? log.slice(log.indexOf(awakening) + 1, log.indexOf(battleEnd)).findLast((event) => (
+      event.playerId === awakening.playerId && ['move', 'attack', 'direct-attack'].includes(event.type)
+    ))
+    : null;
+  return {
+    playerId: awakening.playerId,
+    secondPlayer: awakening.playerId !== state.firstPlayerId,
+    round: awakening.round,
+    halfTurn: awakening.halfTurn,
+    abilityId: awakening.abilityId,
+    abilityName: awakening.abilityName,
+    sameTurnWin,
+    decisiveActionType: decisiveEvent?.type ?? null,
+    decisiveMoveId: decisiveEvent?.moveId ?? null,
+  };
+}
+
 export function runAiMatchup({
   masterData,
   levelA,
@@ -78,6 +102,14 @@ export function runAiMatchup({
     totalActions: 0,
     gamesWithFusion: 0,
     gamesWithSpecialFusion: 0,
+    gamesWithAwakening: 0,
+    secondPlayerAwakenings: 0,
+    turn10Awakenings: 0,
+    awakeningTurnWins: 0,
+    turn10AwakeningTurnWins: 0,
+    awakeningAbilities: {},
+    decisiveAwakeningAbilities: {},
+    decisiveAwakeningActions: {},
     specialFusions: { [levelA]: 0, [levelB]: 0 },
     sides: { a: emptySide(levelA), b: emptySide(levelB) },
     traitTriggers: {},
@@ -122,6 +154,19 @@ export function runAiMatchup({
     const totalSpecialFusions = completed.state.players.a.metrics.specialFusions + completed.state.players.b.metrics.specialFusions;
     if (totalFusions > 0) summary.gamesWithFusion += 1;
     if (totalSpecialFusions > 0) summary.gamesWithSpecialFusion += 1;
+    const awakening = awakeningAudit(completed.state.log, completed.state);
+    if (awakening) {
+      summary.gamesWithAwakening += 1;
+      if (awakening.secondPlayer) summary.secondPlayerAwakenings += 1;
+      if (awakening.secondPlayer && awakening.round === 10) summary.turn10Awakenings += 1;
+      if (awakening.sameTurnWin) {
+        summary.awakeningTurnWins += 1;
+        add(summary.decisiveAwakeningAbilities, `${awakening.abilityId}:${awakening.abilityName}`);
+        add(summary.decisiveAwakeningActions, awakening.decisiveActionType ?? 'other');
+        if (awakening.secondPlayer && awakening.round === 10) summary.turn10AwakeningTurnWins += 1;
+      }
+      add(summary.awakeningAbilities, `${awakening.abilityId}:${awakening.abilityName}`);
+    }
     summary.specialFusions[levelA] += completed.state.players.a.metrics.specialFusions;
     summary.specialFusions[levelB] += completed.state.players.b.metrics.specialFusions;
     recordPlayerStats(summary.sides.a, completed.state.players.a, completed.state.log, battle.masterIndex);
@@ -137,6 +182,7 @@ export function runAiMatchup({
       round: completed.result.round,
       actions: completed.actions,
       reason: completed.result.reason,
+      awakening,
     });
   }
 
@@ -150,6 +196,13 @@ export function runAiMatchup({
   summary.turnLimitRate = summary.turnLimitGames / games;
   summary.fusionGameRate = summary.gamesWithFusion / games;
   summary.specialFusionGameRate = summary.gamesWithSpecialFusion / games;
+  summary.awakeningGameRate = summary.gamesWithAwakening / games;
+  summary.secondPlayerAwakeningRate = summary.secondPlayerAwakenings / games;
+  summary.turn10AwakeningRate = summary.turn10Awakenings / games;
+  summary.awakeningSameTurnWinRate = summary.gamesWithAwakening
+    ? summary.awakeningTurnWins / summary.gamesWithAwakening : 0;
+  summary.turn10AwakeningSameTurnWinRate = summary.turn10Awakenings
+    ? summary.turn10AwakeningTurnWins / summary.turn10Awakenings : 0;
   summary.firstPlayerWinRate = summary.firstPlayerWins / games;
   summary.secondPlayerWinRate = summary.secondPlayerWins / games;
   summary.sides = {

@@ -1,6 +1,6 @@
 {
   "name": "monster-construction-sim8-7",
-  "version": "1.27.2",
+  "version": "1.28.0",
   "private": true,
   "type": "module",
   "description": "モンスターコンストラクション Sim8.7 playable static web game",
@@ -16,6 +16,7 @@
     "test": "node --test",
     "test:engine": "node --test tests/battle tests/deck",
     "sim": "node tools/ai-lab.mjs",
+    "sim:awakening": "node tools/awakening-audit.mjs",
     "sim:decks": "node tools/deck-lab.mjs",
     "sim:tournament": "node tools/tournament-lab.mjs",
     "check": "npm test && npm run build"

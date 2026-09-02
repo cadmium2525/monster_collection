@@ -60,13 +60,34 @@ function officialCandidates(rank) {
   }));
 }
 
+function representativeMonsterId(cards, masterIndex, { preferredId = null, theme = null } = {}) {
+  const monsterCounts = new Map();
+  for (const card of cards ?? []) {
+    const definition = masterIndex.cards.get(card.masterId);
+    if (definition?.kind !== 'monster') continue;
+    monsterCounts.set(card.masterId, (monsterCounts.get(card.masterId) ?? 0) + 1);
+  }
+  if (preferredId && monsterCounts.has(preferredId)) return preferredId;
+  return [...monsterCounts]
+    .sort(([idA, countA], [idB, countB]) => {
+      const factionA = masterIndex.monsters.get(idA)?.faction === theme ? 1 : 0;
+      const factionB = masterIndex.monsters.get(idB)?.faction === theme ? 1 : 0;
+      return factionB - factionA || countB - countA || idA.localeCompare(idB);
+    })[0]?.[0] ?? null;
+}
+
 function materializeOfficial(opponent, masterIndex) {
   if (opponent.sourceType !== 'OFFICIAL_AI') return opponent;
   const rng = new SeededRng(`arena-official-v1:${opponent.id}`);
   const generated = generateCpuDeck({
     masterIndex, rank: opponent.aiRank, theme: opponent.theme, rng, seedLabel: opponent.id,
   });
-  return { ...opponent, cards: generated.cards, deckSignature: deckSignature(generated.cards) };
+  return {
+    ...opponent,
+    cards: generated.cards,
+    representativeMonsterId: representativeMonsterId(generated.cards, masterIndex, { theme: opponent.theme }),
+    deckSignature: deckSignature(generated.cards),
+  };
 }
 
 function playerCandidates(records, masterIndex, arena) {
@@ -82,7 +103,9 @@ function playerCandidates(records, masterIndex, arena) {
         deckName: record.deckName ?? '防衛デッキ',
         rating: Number(record.arenaRating) || arena.rating,
         aiLevel: arena.rank === 'MASTER' ? 'champion' : AI_LEVEL[arena.rank],
-        cards, tournamentGrowth: record.tournamentGrowth ?? {}, deckSignature: deckSignature(cards),
+        cards,
+        representativeMonsterId: representativeMonsterId(cards, masterIndex, { preferredId: record.representativeMonsterId }),
+        tournamentGrowth: record.tournamentGrowth ?? {}, deckSignature: deckSignature(cards),
       }];
     } catch { return []; }
   });
@@ -101,6 +124,7 @@ function archiveCandidates(records, masterIndex) {
         deckName: record.championDeckName ?? '王者の記録',
         rating: Math.max(ARENA_RANK_THRESHOLDS.MASTER, Number(record.arenaRating) || 2050),
         aiLevel: 'champion', cards,
+        representativeMonsterId: representativeMonsterId(cards, masterIndex, { preferredId: record.representativeMonsterId }),
         tournamentGrowth: record.championGrowthSnapshot ?? {}, deckSignature: deckSignature(cards),
       }];
     } catch { return []; }
@@ -134,7 +158,7 @@ export function selectArenaOpponent({ masterIndex, arena: current, playerGhosts 
 export function selectArenaOpponents(options) {
   const arena = normalizeArenaProgress(options.arena);
   const pool = [];
-  for (let index = 0; index < 18 && pool.length < 8; index += 1) {
+  for (let index = 0; index < 30 && pool.length < 12; index += 1) {
     const opponent = selectArenaOpponent({ ...options, seed: `${options.seed ?? 'arena-match'}:choice-${index}` });
     if (!pool.some((entry) => entry.id === opponent.id)) pool.push(opponent);
   }
@@ -144,11 +168,27 @@ export function selectArenaOpponents(options) {
     { id: 'equal', label: '同格', offset: 0, description: '実力の近い相手に挑む' },
     { id: 'higher', label: '格上', offset: 120, description: '強敵へ挑戦する' },
   ];
+  const rng = new SeededRng(`${options.seed ?? 'arena-match'}:tier-variety`);
   const remaining = [...pool];
-  return tiers.map((tier) => {
+  const usedRatings = new Set();
+  const selected = tiers.map((tier) => {
     const target = arena.rating + tier.offset;
-    remaining.sort((a, b) => Math.abs(a.rating - target) - Math.abs(b.rating - target) || a.id.localeCompare(b.id));
-    const opponent = remaining.shift() ?? selectArenaOpponent({ ...options, seed: `${options.seed ?? 'arena-match'}:${tier.id}` });
-    return { ...opponent, matchmakingTier: tier.id, matchmakingLabel: tier.label, matchmakingDescription: tier.description };
+    const ranked = remaining
+      .filter((entry) => !usedRatings.has(entry.rating))
+      .sort((a, b) => Math.abs(a.rating - target) - Math.abs(b.rating - target) || a.id.localeCompare(b.id));
+    const shortlist = ranked.slice(0, Math.min(5, ranked.length));
+    const opponent = rng.choice(shortlist) ?? remaining[0]
+      ?? selectArenaOpponent({ ...options, seed: `${options.seed ?? 'arena-match'}:${tier.id}` });
+    const index = remaining.findIndex((entry) => entry.id === opponent.id);
+    if (index >= 0) remaining.splice(index, 1);
+    usedRatings.add(opponent.rating);
+    return opponent;
   });
+  selected.sort((a, b) => a.rating - b.rating || a.id.localeCompare(b.id));
+  return selected.map((opponent, index) => ({
+    ...opponent,
+    matchmakingTier: tiers[index].id,
+    matchmakingLabel: tiers[index].label,
+    matchmakingDescription: tiers[index].description,
+  }));
 }

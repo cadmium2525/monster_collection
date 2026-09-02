@@ -45,7 +45,8 @@ export class ArenaScreen {
   }
 
   renderOpponentChoice(deck, opponent) {
-    const representativeId = opponent.cards.find((card) => this.masterIndex.cards.get(card.masterId)?.kind === 'monster')?.masterId;
+    const representativeId = opponent.representativeMonsterId
+      ?? opponent.cards.find((card) => this.masterIndex.cards.get(card.masterId)?.kind === 'monster')?.masterId;
     const representative = this.masterIndex.monsters.get(representativeId);
     return el('article', { className: `arena-opponent-choice tier-${opponent.matchmakingTier}` }, [
       el('header', {}, [
@@ -63,9 +64,11 @@ export class ArenaScreen {
 
   renderMatchChoices(deck) {
     return el('section', { className: 'arena-match-choices' }, [
-      el('div', { className: 'section-title' }, [el('span', { className: 'step-number', text: '2' }), el('div', {}, [el('h2', { text: '対戦相手を選択' }), el('p', { text: `${deck.deckName}で挑戦します。相手の強さを選んでください。` })])]),
+      el('div', { className: 'arena-match-heading' }, [
+        el('div', { className: 'section-title' }, [el('span', { className: 'step-number', text: '2' }), el('div', {}, [el('h2', { text: '対戦相手を選択' }), el('p', { text: `${deck.deckName}で挑戦します。相手の強さを選んでください。` })])]),
+        el('button', { className: 'text-button arena-refresh-button', text: '候補を更新', onclick: () => this.onFindMatch?.(deck) }),
+      ]),
       el('div', { className: 'arena-opponent-choice-list' }, this.match.opponents.map((opponent) => this.renderOpponentChoice(deck, opponent))),
-      el('div', { className: 'arena-choice-footer' }, [el('p', { text: '対戦相手のデッキはCPUが公平に操作します。' }), el('button', { className: 'text-button', text: '候補を更新', onclick: () => this.onFindMatch?.(deck) })]),
     ]);
   }
 
