@@ -5,7 +5,6 @@ import {
   claimMission,
   japanDateKey,
   japanWeekKey,
-  markMissionClaimed,
   normalizeMissionProgress,
   recordMissionEvent,
 } from '../progression/mission-state.js';
@@ -158,13 +157,10 @@ export function applyLoginRewards(current, {
   const state = normalizeEconomyState(current, now);
   const rewards = [];
   if (!state.lastDailyLoginDate || loginDate > state.lastDailyLoginDate) {
-    state.diamonds += DAILY_LOGIN_DIAMONDS;
     state.lastDailyLoginDate = loginDate;
     state.missionProgress = recordMissionEvent(state.missionProgress, {
       type: 'login', operationId: `mission:login:${loginDate}`,
     }, { dateKey: loginDate });
-    state.missionProgress = markMissionClaimed(state.missionProgress, 'daily-login', { dateKey: loginDate });
-    rewards.push({ type: 'daily', amount: DAILY_LOGIN_DIAMONDS, label: 'デイリーログインボーナス' });
   }
   if (loginDate >= campaignStart && loginDate <= campaignEnd && campaignId && !state.claimedCampaignIds.includes(campaignId)) {
     state.diamonds += SUMMER_BONUS_DIAMONDS;

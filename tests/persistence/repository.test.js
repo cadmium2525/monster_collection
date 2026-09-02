@@ -99,19 +99,19 @@ test('local and Firebase login rewards are atomic and idempotent for the same Ja
   await local.initialize();
   const localFirst = await local.claimLoginRewards({ loginDate: '2026-08-29' });
   const localAgain = await local.claimLoginRewards({ loginDate: '2026-08-29' });
-  assert.equal(localFirst.state.diamonds, 3900);
-  assert.deepEqual(localFirst.rewards.map((reward) => reward.amount), [300, 3000]);
+  assert.equal(localFirst.state.diamonds, 3600);
+  assert.deepEqual(localFirst.rewards.map((reward) => reward.amount), [3000]);
   assert.deepEqual(localAgain.rewards, []);
-  assert.equal(localAgain.state.diamonds, 3900);
+  assert.equal(localAgain.state.diamonds, 3600);
 
   const fake = fakeFirebaseSdk();
   const firebase = new FirebaseGameRepository({ config: { projectId: 'test' }, sdkLoader: async () => fake.sdk });
   await firebase.initialize();
   const cloudFirst = await firebase.claimLoginRewards({ loginDate: '2026-08-29' });
   const cloudAgain = await firebase.claimLoginRewards({ loginDate: '2026-08-29' });
-  assert.equal(cloudFirst.state.diamonds, 3900);
+  assert.equal(cloudFirst.state.diamonds, 3600);
   assert.deepEqual(cloudAgain.rewards, []);
-  assert.equal(cloudAgain.state.diamonds, 3900);
+  assert.equal(cloudAgain.state.diamonds, 3600);
   assert.ok(fake.transactionCount >= 2);
 });
 

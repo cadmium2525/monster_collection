@@ -2405,7 +2405,7 @@ body:has(.home-lobby) {
   .home-lobby-profile { min-height:66px; grid-template-columns:44px minmax(0,1fr) auto; padding:6px 9px; }
   .home-lobby-avatar { width:40px; font-size:18px; }
   .home-lobby-profile-copy > strong { font-size:13px; }
-  .home-profile-link,.home-lobby-level-track { display:none; }
+  .home-profile-link { display:none; }
   .home-lobby-wallet { min-height:49px; grid-template-columns:33px minmax(0,1fr) 23px; }
   .home-lobby-diamond { width:31px; height:31px; }
   .home-lobby-wallet strong { font-size:17px; }
