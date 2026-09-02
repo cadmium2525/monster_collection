@@ -1305,7 +1305,7 @@ button:disabled { opacity: .38; cursor: not-allowed; }
 .name-editor input { width: 100%; padding: 9px; border: 1px solid var(--line); border-radius: 8px; color: var(--ink); background: #081421; }
 
 .profile-screen { height:calc(100dvh - max(16px,var(--safe-top)) - max(16px,var(--safe-bottom))); min-height:350px; display:grid; grid-template-rows:auto minmax(0,1fr); gap:7px; }
-.mission-screen { height:calc(100dvh - max(16px,var(--safe-top)) - max(16px,var(--safe-bottom))); min-height:350px; display:grid; grid-template-rows:auto auto minmax(0,1fr) auto; gap:8px; background:linear-gradient(rgba(2,9,17,.78),rgba(2,9,17,.9)),url('./assets/images/tournament-grand-hall.webp') center/cover fixed; }
+.mission-screen { height:calc(100dvh - max(16px,var(--safe-top)) - max(16px,var(--safe-bottom))); min-height:350px; display:grid; grid-template-rows:auto auto minmax(0,1fr); gap:8px; background:linear-gradient(rgba(2,9,17,.78),rgba(2,9,17,.9)),url('./assets/images/tournament-grand-hall.webp') center/cover fixed; }
 .mission-header { min-height:64px; }
 .mission-header h1 { margin:2px 0 0; color:var(--gold); font-size:clamp(20px,3vw,30px); }
 .mission-header button { min-width:120px; }
@@ -1333,7 +1333,7 @@ button:disabled { opacity: .38; cursor: not-allowed; }
 .mission-reward strong { overflow:hidden; font-size:11px; text-overflow:ellipsis; white-space:nowrap; }
 .mission-diamond { width:27px; height:27px; flex:none; }
 .mission-card-reward { flex:none; padding:6px; border:1px solid var(--gold); border-radius:5px; color:#f1d99d; font:900 8px/1 Georgia,serif; }
-.mission-state { grid-area:state; min-height:52px; border:1px solid rgba(95,137,159,.25); border-radius:11px; color:#72858f; background:#0a1b2a; font-weight:800; }
+.mission-state { grid-area:state; width:100%; min-width:0; min-height:52px; padding:8px 6px; overflow:hidden; border:1px solid rgba(95,137,159,.25); border-radius:11px; color:#72858f; background:#0a1b2a; font-weight:800; white-space:nowrap; }
 .mission-entry.is-complete { border-color:rgba(95,212,206,.42); }
 .mission-entry.is-complete .mission-state { color:#82969c; }
 .mission-stock-note { display:flex; align-items:center; gap:18px; padding:10px 14px; border:1px solid rgba(74,143,174,.55); border-radius:12px; background:rgba(4,17,29,.95); }
@@ -2309,7 +2309,7 @@ body:has(.home-lobby) {
 .home-gift-empty { padding:18px; border:1px dashed rgba(151,185,200,.3); border-radius:10px; color:#b7c6cc; text-align:center; }
 .home-pending-pack-note { padding:7px 9px; border-left:3px solid var(--teal); color:#c9e3e4; background:rgba(95,212,206,.06); font-size:9px; }
 .mission-screen,.arena-screen,.arena-result-screen { min-height:100dvh; padding:max(10px,var(--safe-top)) max(14px,var(--safe-right)) max(10px,var(--safe-bottom)) max(14px,var(--safe-left)); overflow:auto; }
-.mission-screen { grid-template-rows:auto auto minmax(0,1fr) auto; }
+.mission-screen { grid-template-rows:auto auto minmax(0,1fr); }
 .mission-columns { min-height:0; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
 .mission-section,.mission-loot-section { min-width:0; padding:11px; border:1px solid rgba(113,169,190,.32); border-radius:16px 7px; background:linear-gradient(145deg,rgba(5,16,29,.96),rgba(9,30,44,.9)); box-shadow:0 12px 28px rgba(0,0,0,.34); }
 .mission-section { display:grid; align-content:start; gap:7px; }
@@ -2339,6 +2339,13 @@ body:has(.home-lobby) {
 .arena-screen { display:grid; grid-template-rows:auto auto auto minmax(0,1fr); gap:9px; }
 .arena-screen.is-match { height:100dvh; min-height:0; grid-template-rows:auto minmax(0,1fr); overflow:hidden; }
 .arena-header-actions { display:flex; align-items:center; gap:7px; }
+.arena-header-loot { min-width:250px; max-width:420px; height:54px; display:flex; align-items:center; gap:9px; padding:5px 9px; overflow:hidden; border:1px solid rgba(232,186,98,.48); border-radius:12px 4px; background:linear-gradient(110deg,rgba(65,41,15,.78),rgba(8,22,34,.94)); }
+.arena-header-loot > span { flex:none; display:grid; gap:2px; color:#f0d58f; }
+.arena-header-loot > span strong { font-size:10px; }.arena-header-loot > span small { color:#8fe0dc; font-size:7px; }
+.arena-header-loot > div { min-width:0; display:flex; gap:5px; overflow-x:auto; }
+.arena-header-loot .game-card { width:32px; flex:none; pointer-events:none; }
+.arena-header-loot > .arena-loot-empty { color:#aebdc2; font-size:8px; white-space:nowrap; }
+.arena-loot-missing { display:grid; place-items:center; width:32px; aspect-ratio:.7; border:1px solid rgba(232,186,98,.4); color:#f0d58f; }
 .arena-rank-panel { display:grid; grid-template-columns:92px minmax(170px,1fr) minmax(220px,.8fr); align-items:center; gap:14px; padding:10px 16px; border:1px solid rgba(110,219,221,.38); border-radius:23px 7px; background:linear-gradient(105deg,rgba(5,17,31,.96),rgba(13,38,52,.88)); box-shadow:0 12px 30px rgba(0,0,0,.38); }
 .arena-rank-emblem { width:78px; aspect-ratio:1; display:grid; place-items:center; align-content:center; border:2px solid #a6bbc2; border-radius:50% 18%; color:#eaf5f6; background:radial-gradient(circle,#294351,#08131e 70%); box-shadow:inset 0 0 18px rgba(255,255,255,.08),0 0 18px rgba(105,216,221,.14); }
 .arena-rank-emblem small { font-size:6px; letter-spacing:.15em; }

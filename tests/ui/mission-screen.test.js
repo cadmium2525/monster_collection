@@ -13,4 +13,13 @@ test('mission screen provides complete objectives in switchable daily and weekly
   assert.match(source, /role: 'tablist'/);
   assert.match(source, /role: 'tabpanel'/);
   assert.match(source, /aria-selected/);
+  assert.doesNotMatch(source, /mission-loot-section/);
+  assert.match(source, /lootStock\?\.\[0\]\?\.lootId/);
+});
+
+test('arena header replaces its mission shortcut with the loot stock', async () => {
+  const source = await readFile(new URL('../../src/ui/arena-screen.js', import.meta.url), 'utf8');
+  assert.match(source, /className: 'arena-header-loot'/);
+  assert.match(source, /text: '戦利品ストック'/);
+  assert.doesNotMatch(source, /text: 'ミッション'/);
 });

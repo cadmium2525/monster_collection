@@ -610,7 +610,6 @@ class MonsterConstructionApp {
       onStartMatch: (deck, opponent) => this.startArenaBattle(deck, opponent),
       onRegisterDefense: (deck) => this.registerArenaDefense(deck),
       onClaimRankReward: (rank) => this.claimArenaRankReward(rank),
-      onMissions: () => this.showMissions(),
     });
   }
 

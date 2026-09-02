@@ -1,7 +1,6 @@
 import { missionEntries } from '../progression/mission-state.js';
 import { el, replace } from './dom.js';
 import { diamondIcon } from './currency-icon.js';
-import { renderCard } from './card-renderer.js';
 
 export const MISSION_DETAILS = Object.freeze({
   'daily-login': Object.freeze({ title: 'ゲームにログインする', description: '毎日0:00以降、その日の初回ログインを完了すると達成です。' }),
@@ -31,14 +30,14 @@ export class MissionScreen {
     this.onBack = onBack;
     this.onClaim = onClaim;
     this.activeTab = PERIODS[initialTab] ? initialTab : 'daily';
-    this.selectedLootId = economy.arenaProgress?.lootStock?.[0]?.lootId ?? null;
     this.render();
   }
 
   renderMission(mission) {
     const detail = MISSION_DETAILS[mission.id] ?? { title: mission.label, description: mission.label };
     const needsLoot = mission.reward.type === 'arena-card';
-    const lootReady = !needsLoot || Boolean(this.selectedLootId);
+    const selectedLootId = needsLoot ? this.economy.arenaProgress?.lootStock?.[0]?.lootId : null;
+    const lootReady = !needsLoot || Boolean(selectedLootId);
     const progress = Math.min(100, mission.progress / mission.target * 100);
     return el('article', { className: `mission-entry${mission.completed ? ' is-complete' : ''}${mission.claimable ? ' is-claimable' : ''}${mission.claimed ? ' is-claimed' : ''}` }, [
       el('div', { className: 'mission-copy' }, [el('h3', { text: detail.title }), el('p', { text: detail.description })]),
@@ -55,22 +54,9 @@ export class MissionScreen {
         className: `mission-state${mission.claimable && lootReady ? ' primary-button' : ''}`,
         text: mission.claimed ? '受取済み' : mission.claimable ? (lootReady ? '受け取る' : 'カードを選択') : '進行中',
         disabled: mission.claimed || !mission.claimable || !lootReady,
-        onclick: () => this.onClaim?.(mission, needsLoot ? this.selectedLootId : null),
+        onclick: () => this.onClaim?.(mission, selectedLootId),
       }),
     ]);
-  }
-
-  renderLootStock() {
-    const stock = this.economy.arenaProgress?.lootStock ?? [];
-    if (!stock.length) return el('p', { className: 'mission-loot-empty', text: '戦利品ストックはまだありません。アリーナで勝利すると候補を保管できます。' });
-    return el('div', { className: 'mission-loot-grid' }, stock.map((loot) => {
-      const definition = this.masterIndex.cards.get(loot.masterId);
-      return el('button', {
-        className: `mission-loot-choice${loot.lootId === this.selectedLootId ? ' selected' : ''}`,
-        onclick: () => { this.selectedLootId = loot.lootId; this.render(); },
-        attrs: { 'aria-label': `${definition?.name ?? loot.masterId}を戦利品に選ぶ` },
-      }, [definition ? renderCard({ definition, cardAsset: loot, interactive: false, label: definition.name }) : null, el('span', { text: definition?.name ?? loot.masterId })]);
-    }));
   }
 
   render() {
@@ -89,10 +75,6 @@ export class MissionScreen {
       el('section', { id: 'mission-list', className: 'mission-list', attrs: { role: 'tabpanel', 'aria-label': period.label } }, [
         el('div', { className: 'mission-list-heading' }, [el('div', {}, [el('p', { className: 'eyebrow', text: `${this.activeTab.toUpperCase()} MISSION` }), el('h2', { text: `${period.label}ミッション` })]), el('span', { text: period.reset })]),
         ...entries.map((mission) => this.renderMission(mission)),
-      ]),
-      el('section', { className: 'mission-loot-section' }, [
-        el('div', { className: 'mission-section-title' }, [el('h2', { text: '戦利品ストック' }), el('small', { text: '週3勝達成後、ここから1枚獲得' })]),
-        this.renderLootStock(),
       ]),
     ]));
   }

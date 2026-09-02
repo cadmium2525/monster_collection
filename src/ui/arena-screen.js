@@ -11,7 +11,7 @@ function nextRank(arena) {
 function sourceClass(sourceType) { return String(sourceType ?? '').toLowerCase().replaceAll('_', '-'); }
 
 export class ArenaScreen {
-  constructor({ root, collection, masterIndex, arena, match = null, onBack, onBackToDeckSelection, onFindMatch, onStartMatch, onRegisterDefense, onClaimRankReward, onMissions }) {
+  constructor({ root, collection, masterIndex, arena, match = null, onBack, onBackToDeckSelection, onFindMatch, onStartMatch, onRegisterDefense, onClaimRankReward }) {
     this.root = root;
     this.collection = collection;
     this.masterIndex = masterIndex;
@@ -23,7 +23,6 @@ export class ArenaScreen {
     this.onStartMatch = onStartMatch;
     this.onRegisterDefense = onRegisterDefense;
     this.onClaimRankReward = onClaimRankReward;
-    this.onMissions = onMissions;
     const matchedDeckId = match?.deckId && collection.get(match.deckId) ? match.deckId : null;
     const defenseDeckId = arena.defenseDeckId && collection.get(arena.defenseDeckId) ? arena.defenseDeckId : null;
     this.selectedDeckId = matchedDeckId ?? defenseDeckId ?? collection.list()[0]?.deckId ?? null;
@@ -70,6 +69,21 @@ export class ArenaScreen {
     ]);
   }
 
+  renderLootStock() {
+    const stock = this.arena.lootStock ?? [];
+    return el('aside', { className: 'arena-header-loot', attrs: { 'aria-label': '戦利品ストック' } }, [
+      el('span', {}, [el('strong', { text: '戦利品ストック' }), el('small', { text: `${stock.length}枚` })]),
+      stock.length
+        ? el('div', {}, stock.map((loot) => {
+          const definition = this.masterIndex.cards.get(loot.masterId);
+          return definition
+            ? renderCard({ definition, cardAsset: loot, interactive: false, label: definition.name })
+            : el('span', { className: 'arena-loot-missing', text: '?' });
+        }))
+        : el('small', { className: 'arena-loot-empty', text: '勝利してカードを保管' }),
+    ]);
+  }
+
   render() {
     const deck = this.selectedDeckId ? this.collection.get(this.selectedDeckId) : null;
     const next = nextRank(this.arena);
@@ -83,7 +97,7 @@ export class ArenaScreen {
         el('div', { className: 'arena-header-actions' }, [
           this.match
             ? el('button', { className: 'text-button', text: '戻る', onclick: this.onBackToDeckSelection })
-            : el('button', { className: 'text-button', text: 'ミッション', onclick: this.onMissions }),
+            : this.renderLootStock(),
           el('button', { className: 'text-button', text: 'ホームへ', onclick: this.onBack }),
         ]),
       ]),
