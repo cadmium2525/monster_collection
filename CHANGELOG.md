@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.31.5 — 2026-09-03
+
+### Brighter home artwork
+- Raise the home artwork brightness and saturation while keeping lighter edge shading for menu readability.
+
 ## 1.31.4 — 2026-09-03
 
 ### Home artwork picker
