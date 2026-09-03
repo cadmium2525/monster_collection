@@ -24,7 +24,7 @@ test('fast and reduced-motion turn transitions remain visible but shorter', () =
 test('battle flow announces the initial turn and every changed current turn', () => {
   const source = fs.readFileSync(new URL('../../src/ui/battle-screen.js', import.meta.url), 'utf8');
   assert.match(source, /startInitialTurnFlow/);
-  assert.match(source, /await this\.showCurrentTurnTransition\(\);[\s\S]*await this\.showLatestEvent\(\);/);
+  assert.match(source, /await this\.showCurrentTurnTransition\(\);[\s\S]*await this\.showLatestEvent\(action\);/);
   assert.match(source, /humanTurn \? 'YOUR TURN' : 'ENEMY TURN'/);
 });
 

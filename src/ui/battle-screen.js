@@ -7,6 +7,7 @@ import { playFusionUnlockAnimation } from './fusion-unlock-animation.js';
 import { playAwakeningUnlockAnimation } from './awakening-unlock-animation.js';
 import { createAwakeningAnimationModel, playAwakeningAnimation } from './awakening-animation.js';
 import { playTurnTransition } from './turn-transition-animation.js';
+import { createCardUseAnimationModel, isCardUseAction, playCardUseAnimation } from './card-use-animation.js';
 import { openModal } from './modal.js';
 import { lowLifeTargetEffects, unitLifePresentation } from './status-presentation.js';
 import { automaticMulliganIds } from '../battle/mulligan.js';
@@ -1012,7 +1013,12 @@ export class BattleScreen {
     const players = new Map();
     for (const playerId of this.engine.state.playerOrder) {
       const player = this.engine.player(playerId);
-      players.set(playerId, { life: player.life });
+      players.set(playerId, {
+        life: player.life,
+        tp: player.tp,
+        maxTp: player.maxTp,
+        hand: player.hand.length,
+      });
       for (const unit of player.board.filter(Boolean)) {
         units.set(unit.id, {
           life: unit.life,
@@ -1033,6 +1039,25 @@ export class BattleScreen {
   findPlayerNode(playerId) {
     return [...this.root.querySelectorAll('.fighter-hud[data-player-id]')]
       .find((node) => node.dataset.playerId === playerId) ?? null;
+  }
+
+  findBoardNode(playerId) {
+    return [...this.root.querySelectorAll('.board-row[data-owner-id]')]
+      .find((node) => node.dataset.ownerId === playerId) ?? null;
+  }
+
+  findHandNode(playerId) {
+    return playerId === this.humanPlayerId
+      ? this.root.querySelector('.hand-panel')
+      : this.root.querySelector('.opponent-hand-panel');
+  }
+
+  cardUseTargetNode(model) {
+    if (!model?.target) return null;
+    if (model.target.kind === 'unit') return this.findUnitSlotNode(model.target.unitId);
+    if (model.target.kind === 'board') return this.findBoardNode(model.target.playerId);
+    if (model.target.kind === 'hand') return this.findHandNode(model.target.playerId);
+    return this.findPlayerNode(model.target.playerId);
   }
 
   async animateActionStart(action) {
@@ -1064,23 +1089,9 @@ export class BattleScreen {
       impact?.remove();
       return;
     }
-    if (['training', 'shugyo'].includes(action.type)) {
-      const target = this.findUnitSlotNode(action.unitId);
-      if (!target) return;
-      const burst = el('span', { className: `effect-burst ${action.type}`, text: action.type === 'training' ? '鍛' : '修' });
-      target.append(burst);
-      const animation = target.animate?.([
-        { filter: 'brightness(1)', transform: 'scale(1)' },
-        { filter: action.type === 'training' ? 'brightness(1.65) sepia(.45)' : 'brightness(1.55) hue-rotate(28deg)', transform: 'scale(1.045)' },
-        { filter: 'brightness(1)', transform: 'scale(1)' },
-      ], { duration: duration + (this.speed === 'fast' ? 50 : 170), easing: 'ease-out' });
-      if (animation) await animation.finished.catch(() => {});
-      else await delay(duration);
-      burst.remove();
-    }
   }
 
-  statChanges(before) {
+  statChanges(before, action = null) {
     const changes = [];
     for (const [unitId, previous] of before.units) {
       const current = this.engine.state.playerOrder
@@ -1101,20 +1112,31 @@ export class BattleScreen {
       if (labels.length) changes.push({ node: this.findUnitSlotNode(unitId), labels });
     }
     for (const [playerId, previous] of before.players) {
-      const now = this.engine.player(playerId).life;
-      if (now !== previous.life) changes.push({
-        node: this.findPlayerNode(playerId),
-        labels: [{
-          direction: now > previous.life ? 'up' : 'down',
-          text: `${now > previous.life ? '⬆︎' : '⬇︎'} LIFE ${now > previous.life ? '+' : ''}${now - previous.life}`,
-        }],
+      const current = this.engine.player(playerId);
+      const labels = [];
+      if (current.life !== previous.life) labels.push({
+        direction: current.life > previous.life ? 'up' : 'down',
+        text: `${current.life > previous.life ? '⬆︎' : '⬇︎'} LIFE ${current.life > previous.life ? '+' : ''}${current.life - previous.life}`,
       });
+      if (isCardUseAction(action) && current.tp > previous.tp) labels.push({
+        direction: 'up',
+        text: `⬆︎ TP +${current.tp - previous.tp}`,
+      });
+      if (isCardUseAction(action) && current.maxTp > previous.maxTp) labels.push({
+        direction: 'up',
+        text: `⬆︎ 最大TP +${current.maxTp - previous.maxTp}`,
+      });
+      if (isCardUseAction(action) && current.hand.length > previous.hand) labels.push({
+        direction: 'up',
+        text: `⬆︎ 手札 +${current.hand.length - previous.hand}`,
+      });
+      if (labels.length) changes.push({ node: this.findPlayerNode(playerId), labels });
     }
     return changes.filter((entry) => entry.node);
   }
 
-  async showStatDirections(before, commitNumbers) {
-    const changes = this.statChanges(before);
+  async showStatDirections(before, commitNumbers, action = null) {
+    const changes = this.statChanges(before, action);
     if (!changes.length) {
       commitNumbers();
       return;
@@ -1136,14 +1158,32 @@ export class BattleScreen {
 
   async executeEngineAction(action) {
     const before = this.captureStats();
-    const beforeState = action.type.startsWith('fusion-') || action.type === 'awaken' ? this.engine.getState() : null;
+    const needsBeforeState = action.type.startsWith('fusion-') || action.type === 'awaken' || isCardUseAction(action);
+    const beforeState = needsBeforeState ? this.engine.getState() : null;
+    const actingPlayerId = action.playerId ?? beforeState?.currentPlayerId ?? this.engine.state.currentPlayerId;
+    const actingPlayer = beforeState?.players[actingPlayerId] ?? null;
+    const opposingPlayer = beforeState
+      ? beforeState.players[beforeState.playerOrder.find((playerId) => playerId !== actingPlayerId)]
+      : null;
+    const cardUseModel = createCardUseAnimationModel({
+      action,
+      beforePlayer: actingPlayer,
+      beforeOpponent: opposingPlayer,
+      masterIndex: this.engine.masterIndex,
+      humanPlayerId: this.humanPlayerId,
+    });
     const hadInteractionSelection = Boolean(this.selection || this.pendingMove);
     this.selection = null;
     this.pendingMove = null;
     if (hadInteractionSelection) this.render();
-    await this.animateActionStart(action);
+    if (!cardUseModel) await this.animateActionStart(action);
     this.engine.applyAction(action);
     this.emitCheckpoint();
+    if (cardUseModel) await playCardUseAnimation({
+      model: cardUseModel,
+      speed: this.speed,
+      targetNode: this.cardUseTargetNode(cardUseModel),
+    });
     const fusionModel = beforeState ? createFusionAnimationModel({
       action,
       beforePlayer: beforeState.players[action.playerId ?? beforeState.currentPlayerId],
@@ -1164,10 +1204,10 @@ export class BattleScreen {
     };
     if (fusionModel) await playFusionAnimation({ model: fusionModel, speed: this.speed, onReveal: commitNumbers });
     if (awakeningModel) await playAwakeningAnimation({ model: awakeningModel, speed: this.speed, onReveal: commitNumbers });
-    await this.showStatDirections(before, commitNumbers);
+    await this.showStatDirections(before, commitNumbers, action);
     commitNumbers();
     await this.showCurrentTurnTransition();
-    await this.showLatestEvent();
+    await this.showLatestEvent(action);
   }
 
   async performHumanAction(action) {
@@ -1232,7 +1272,7 @@ export class BattleScreen {
     }
   }
 
-  async showLatestEvent() {
+  async showLatestEvent(action = null) {
     const event = this.engine.state.log.at(-1);
     if (!event) return;
     if (event.type === 'turn-start') return;
@@ -1252,6 +1292,7 @@ export class BattleScreen {
       return;
     }
     if (event.type.startsWith('fusion-')) return;
+    if (isCardUseAction(action)) return;
     const banner = el('div', { className: 'event-banner', text: event.message });
     document.body.append(banner);
     const major = event.type.startsWith('fusion') || event.type === 'battle-end' || event.type.startsWith('shugyo-move');

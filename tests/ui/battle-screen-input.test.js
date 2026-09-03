@@ -73,14 +73,15 @@ test('portrait guidance has one global owner instead of competing battle overlay
   assert.doesNotMatch(styles, /@media \(orientation: portrait\) and \(max-width:/);
 });
 
-test('moves create a short target impact while Training and shugyo keep distinct cast effects', () => {
+test('moves keep a short target impact while support cards use the shared cinematic', () => {
   const battleSource = fs.readFileSync(new URL('../../src/ui/battle-screen.js', import.meta.url), 'utf8');
   const styles = fs.readFileSync(new URL('../../styles.css', import.meta.url), 'utf8');
   assert.match(battleSource, /className: `combat-impact\$\{action\.targetPlayerId \? ' direct' : ''\}`/);
   assert.match(battleSource, /await delay\(Math\.round\(duration \* \.46\)\)/);
   assert.match(styles, /\.combat-impact\s*\{/);
   assert.match(styles, /\.combat-impact\.direct\s*\{/);
-  assert.match(styles, /\.effect-burst::before,\.effect-burst::after/);
+  assert.match(battleSource, /playCardUseAnimation/);
+  assert.match(styles, /\.card-use-impact::before,\.card-use-impact i/);
 });
 
 test('mulligan UI exposes 3/5-card limits and fits five opening cards in landscape', () => {
