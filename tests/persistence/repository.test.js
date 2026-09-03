@@ -286,7 +286,10 @@ function fakeFirebaseSdk() {
     collection: (...parts) => ({ path: pathOf(...parts) }),
     orderBy: (field, direction) => ({ kind: 'orderBy', field, direction }),
     limit: (count) => ({ kind: 'limit', count }),
-    query: (reference, ...constraints) => ({ ...reference, constraints }),
+    endBefore: (...values) => ({ kind: 'endBefore', values }),
+    startAt: (...values) => ({ kind: 'startAt', values }),
+    limitToLast: (count) => ({ kind: 'limitToLast', count }),
+    query: (reference, ...constraints) => ({ ...reference, constraints: [...(reference.constraints ?? []), ...constraints] }),
     serverTimestamp: () => ({ __serverTimestamp: true }),
     getDoc: async (reference) => snapshot(reference.path),
     setDoc: async (reference, data, options = {}) => {
@@ -297,11 +300,29 @@ function fakeFirebaseSdk() {
     deleteDoc: async (reference) => { docs.delete(reference.path); notify(reference.path); },
     getDocs: async (reference) => {
       let entries = [...docs.entries()].filter(([path]) => path.startsWith(`${reference.path}/`) && path.split('/').length === reference.path.split('/').length + 1);
-      const order = reference.constraints?.find((constraint) => constraint.kind === 'orderBy');
-      if (order) entries.sort(([, a], [, b]) => String(b[order.field] ?? '').localeCompare(String(a[order.field] ?? '')) * (order.direction === 'desc' ? 1 : -1));
+      const orders = reference.constraints?.filter((constraint) => constraint.kind === 'orderBy') ?? [];
+      const compareValues = (left, right) => {
+        for (let index = 0; index < orders.length; index += 1) {
+          const order = orders[index];
+          const comparison = String(left?.[order.field] ?? '').localeCompare(String(right?.[index] ?? right?.[order.field] ?? ''), 'en', { numeric: true });
+          if (comparison) return comparison * (order.direction === 'desc' ? -1 : 1);
+        }
+        return 0;
+      };
+      if (orders.length) entries.sort(([, a], [, b]) => compareValues(a, b));
+      const end = reference.constraints?.find((constraint) => constraint.kind === 'endBefore');
+      if (end) entries = entries.filter(([, data]) => compareValues(data, end.values) < 0);
+      const start = reference.constraints?.find((constraint) => constraint.kind === 'startAt');
+      if (start) entries = entries.filter(([, data]) => compareValues(data, start.values) >= 0);
       const cap = reference.constraints?.find((constraint) => constraint.kind === 'limit');
       if (cap) entries = entries.slice(0, cap.count);
+      const tailCap = reference.constraints?.find((constraint) => constraint.kind === 'limitToLast');
+      if (tailCap) entries = entries.slice(-tailCap.count);
       return { docs: entries.map(([path]) => snapshot(path)) };
+    },
+    getCountFromServer: async (reference) => {
+      const result = await sdk.getDocs(reference);
+      return { data: () => ({ count: result.docs.length }) };
     },
     onSnapshot: (reference, callback) => {
       if (!listeners.has(reference.path)) listeners.set(reference.path, new Set());
@@ -382,6 +403,40 @@ test('player statistics are transactionally idempotent in local and Firebase rep
   await firebase.recordPlayerStats(event);
   await firebase.recordPlayerStats(event);
   assert.equal((await firebase.getPlayerStats()).battleWins, 1);
+});
+
+test('Firebase publishes one arena ranking per player and returns top and nearby positions', async () => {
+  const fake = fakeFirebaseSdk();
+  const repository = new FirebaseGameRepository({ config: { projectId: 'test' }, sdkLoader: async () => fake.sdk });
+  await repository.initialize();
+  const deck = savedDeck('arena-ranking');
+  await repository.saveDeck(deck);
+  const economy = await repository.commitProgression({
+    type: 'arena-result', operationId: 'arena:ranking:1',
+    result: { won: true, opponentId: 'official', sourceType: 'OFFICIAL_AI', opponentRating: 1000, deckSignature: 'official' },
+  });
+  await repository.publishArenaRanking(economy.arenaProgress, deck);
+  const own = fake.docs.get('arenaRankings/firebase-user');
+  assert.equal(own.arenaRating, 1020);
+  assert.equal(own.wins, 1);
+  assert.equal(own.representativeMonsterId, 'monster-003');
+
+  const rival = (ownerUserId, arenaRating, ratingReachedAt) => ({
+    ownerUserId, ownerDisplayName: ownerUserId, playerIconMasterId: null,
+    sourceDeckId: 'deck', representativeMonsterId: 'monster-001', arenaRating,
+    arenaRank: arenaRating >= 1100 ? 'C' : 'D', wins: 3, losses: 1, schemaVersion: 1,
+    registeredAt: '2026-08-24T00:00:00.000Z', ratingReachedAt, updatedAt: ratingReachedAt,
+  });
+  fake.docs.set('arenaRankings/rival-high', rival('rival-high', 1200, '2026-08-24T01:00:00.000Z'));
+  fake.docs.set('arenaRankings/rival-earlier', rival('rival-earlier', 1020, '2026-08-24T01:30:00.000Z'));
+  fake.docs.set('arenaRankings/rival-low', rival('rival-low', 980, '2026-08-24T03:00:00.000Z'));
+
+  const leaderboard = await repository.getArenaLeaderboard({ topLimit: 50, nearbyRadius: 1 });
+  assert.equal(leaderboard.total, 4);
+  assert.equal(leaderboard.selfRank, 3);
+  assert.deepEqual(leaderboard.top.map((entry) => entry.ownerUserId), ['rival-high', 'rival-earlier', 'firebase-user', 'rival-low']);
+  assert.deepEqual(leaderboard.nearby.map((entry) => entry.position), [2, 3, 4]);
+  assert.equal(leaderboard.nearby.find((entry) => entry.isSelf)?.ownerUserId, 'firebase-user');
 });
 
 test('local backup scopes isolate a recovered account from the temporary anonymous account', async () => {

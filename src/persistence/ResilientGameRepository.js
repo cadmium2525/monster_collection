@@ -371,6 +371,18 @@ export class ResilientGameRepository {
     catch (error) { this.lastError = error; return []; }
   }
 
+  async publishArenaRanking(arena, deck) {
+    if (!this.activeCloud?.publishArenaRanking) return this.local.publishArenaRanking(arena, deck);
+    try { return await this.activeCloud.publishArenaRanking(arena, deck); }
+    catch (error) { this.lastError = error; return this.local.publishArenaRanking(arena, deck); }
+  }
+
+  async getArenaLeaderboard(options = {}) {
+    if (!this.activeCloud?.getArenaLeaderboard) return this.local.getArenaLeaderboard(options);
+    try { return await this.activeCloud.getArenaLeaderboard(options); }
+    catch (error) { this.lastError = error; return this.local.getArenaLeaderboard(options); }
+  }
+
   async listLegendArchives(maxResults = 20) {
     if (!this.activeCloud?.listLegendArchives) return this.local.listLegendArchives(maxResults);
     try {

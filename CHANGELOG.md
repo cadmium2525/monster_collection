@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.32.0 — 2026-09-04
+
+### Arena leaderboard and artwork focus
+- Add a live Arena rating leaderboard with TOP 50 and nearby-player views, current position, icons, ranks, records, and representative monsters.
+- Publish one privacy-limited ranking profile per Arena player and keep it synchronized after battles.
+- Turn the centered MC mark into a hidden full-screen home artwork viewer that closes with a single tap.
+
 ## 1.31.5 — 2026-09-03
 
 ### Brighter home artwork

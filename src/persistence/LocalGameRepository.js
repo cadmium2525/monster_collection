@@ -265,6 +265,12 @@ export class LocalGameRepository {
 
   async listArenaDecks() { return []; }
 
+  async publishArenaRanking() { return null; }
+
+  async getArenaLeaderboard() {
+    return { available: false, top: [], nearby: [], selfRank: null, total: 0 };
+  }
+
   async listLegendArchives(maxResults = 20) {
     const champion = await this.getChampion();
     return champion ? [champion].slice(0, Math.max(1, Number(maxResults) || 20)) : [];

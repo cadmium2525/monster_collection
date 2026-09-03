@@ -119,7 +119,12 @@ test('home and Firestore expose missions, arena ghosts and honest source labels'
   for (const label of ['PLAYER', 'OFFICIAL AI', 'LEGEND ARCHIVE']) assert.match(arenaUi, new RegExp(label));
   assert.doesNotMatch(arenaUi, /対戦相手のデッキはCPUが公平に操作します/);
   assert.match(arenaUi, /arena-refresh-button/);
+  assert.match(arenaUi, /arena-ranking-button/);
+  assert.match(arenaUi, /アリーナランキング/);
+  assert.match(arenaUi, /TOP 50/);
+  assert.match(arenaUi, /自分周辺/);
   assert.match(rules, /match \/arenaDecks\/\{publicDeckId\}/);
+  assert.match(rules, /match \/arenaRankings\/\{userId\}/);
   assert.match(rules, /match \/legendArchives\/\{archiveId\}/);
 });
 

@@ -27,7 +27,7 @@ import { PLAYER_ID_RULE_COPY, normalizePlayerId } from './persistence/player-id.
 import { ArenaSession } from './arena/ArenaSession.js';
 import { normalizeArenaProgress } from './arena/arena-state.js';
 import { deckSignature, selectArenaOpponents } from './arena/matchmaker.js';
-import { ArenaResultScreen, ArenaScreen } from './ui/arena-screen.js';
+import { ArenaResultScreen, ArenaScreen, openArenaRankingModal } from './ui/arena-screen.js';
 import { MissionScreen } from './ui/mission-screen.js';
 import { defaultHomeArtworkSelection, homeArtworkSelectionKey, normalizeHomeArtworkSelection, ownedHomeArtworkSelections } from './profile/home-artwork.js';
 
@@ -42,6 +42,9 @@ class MonsterConstructionApp {
     this.currentScreen = 'boot';
     this.session = null;
     this.activeRun = null;
+    this.arenaLeaderboard = null;
+    this.arenaLeaderboardKey = null;
+    this.arenaLeaderboardLoading = false;
     this.installPromptEvent = null;
     globalThis.__MC_DEBUG_MODE__ = params.get('debug') === '1' && ['localhost', '127.0.0.1', '::1'].includes(location.hostname);
     globalThis.__MC_ADMIN_MODE__ = params.get('admin') === '1';
@@ -681,11 +684,13 @@ class MonsterConstructionApp {
   showArena(match = this.arenaMatch ?? null) {
     this.currentScreen = 'arena';
     const arena = normalizeArenaProgress(this.economy.arenaProgress);
-    new ArenaScreen({
+    this.arenaScreen = new ArenaScreen({
       root: this.root,
       collection: this.decks,
       masterIndex: this.masterIndex,
       arena,
+      leaderboard: this.arenaLeaderboard,
+      leaderboardLoading: this.arenaLeaderboardLoading,
       match,
       onBack: () => { this.arenaMatch = null; this.showHome(); },
       onBackToDeckSelection: () => { this.arenaMatch = null; this.showArena(); },
@@ -693,7 +698,46 @@ class MonsterConstructionApp {
       onStartMatch: (deck, opponent) => this.startArenaBattle(deck, opponent),
       onRegisterDefense: (deck) => this.registerArenaDefense(deck),
       onClaimRankReward: (rank) => this.claimArenaRankReward(rank),
+      onOpenRanking: (deck) => this.openArenaLeaderboard(deck),
     });
+    const rankingKey = `${arena.rating}:${arena.wins}:${arena.losses}:${this.user?.displayName}:${this.user?.playerIconMasterId ?? ''}`;
+    if (!match && !this.arenaLeaderboardLoading && this.arenaLeaderboardKey !== rankingKey) {
+      const rankingDeck = this.decks.list().find((deck) => deck.deckId === arena.defenseDeckId) ?? this.decks.list()[0] ?? null;
+      void this.refreshArenaLeaderboard({ deck: rankingDeck });
+    }
+  }
+
+  openArenaLeaderboard(deck) {
+    const arena = normalizeArenaProgress(this.economy.arenaProgress);
+    const rankingKey = `${arena.rating}:${arena.wins}:${arena.losses}:${this.user?.displayName}:${this.user?.playerIconMasterId ?? ''}`;
+    if (this.arenaLeaderboard && this.arenaLeaderboardKey === rankingKey) {
+      openArenaRankingModal({ leaderboard: this.arenaLeaderboard, masterIndex: this.masterIndex });
+      return;
+    }
+    void this.refreshArenaLeaderboard({ deck, open: true });
+  }
+
+  async refreshArenaLeaderboard({ deck = null, open = false } = {}) {
+    if (this.arenaLeaderboardLoading) return;
+    this.arenaLeaderboardLoading = true;
+    if (this.currentScreen === 'arena' && !this.arenaMatch) this.arenaScreen?.setLeaderboard(this.arenaLeaderboard, true);
+    const arena = normalizeArenaProgress(this.economy.arenaProgress);
+    const rankingDeck = this.decks.list().find((candidate) => candidate.deckId === arena.defenseDeckId) ?? deck ?? this.decks.list()[0] ?? null;
+    try {
+      if (rankingDeck && arena.wins + arena.losses > 0) {
+        await this.repository.publishArenaRanking?.(arena, rankingDeck);
+      }
+      this.arenaLeaderboard = await this.repository.getArenaLeaderboard?.({ topLimit: 50, nearbyRadius: 5 })
+        ?? { available: false, top: [], nearby: [], selfRank: null, total: 0 };
+      this.arenaLeaderboardKey = `${arena.rating}:${arena.wins}:${arena.losses}:${this.user?.displayName}:${this.user?.playerIconMasterId ?? ''}`;
+    } catch (error) {
+      console.warn('Arena leaderboard could not be loaded', error);
+      this.arenaLeaderboard = { available: false, top: [], nearby: [], selfRank: null, total: 0 };
+    } finally {
+      this.arenaLeaderboardLoading = false;
+    }
+    if (this.currentScreen === 'arena' && !this.arenaMatch) this.arenaScreen?.setLeaderboard(this.arenaLeaderboard, false);
+    if (open) openArenaRankingModal({ leaderboard: this.arenaLeaderboard, masterIndex: this.masterIndex });
   }
 
   async findArenaOpponent(deck) {
@@ -822,6 +866,11 @@ class MonsterConstructionApp {
           deckSignature: opponent.deckSignature ?? deckSignature(opponent.cards),
         },
       });
+      const arenaAfter = normalizeArenaProgress(this.economy.arenaProgress);
+      const rankingDeck = this.decks.list().find((deck) => deck.deckId === arenaAfter.defenseDeckId) ?? this.session.playerDeck;
+      await this.repository.publishArenaRanking?.(arenaAfter, rankingDeck);
+      this.arenaLeaderboard = null;
+      this.arenaLeaderboardKey = null;
       await this.session.saveCheckpoint('arena-result');
       this.activeRun = await this.repository.getActiveRun?.();
       this.showArenaResult(result);

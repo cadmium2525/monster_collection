@@ -134,6 +134,52 @@ service cloud.firestore {
         && profile.displayName == d.ownerDisplayName;
     }
 
+    function validArenaRanking(userId) {
+      let d = request.resource.data;
+      return d.keys().hasOnly([
+          'ownerUserId', 'ownerDisplayName', 'playerIconMasterId', 'sourceDeckId',
+          'representativeMonsterId', 'arenaRating', 'arenaRank', 'wins', 'losses',
+          'schemaVersion', 'registeredAt', 'ratingReachedAt', 'updatedAt'
+        ])
+        && d.ownerUserId == userId
+        && d.ownerUserId == request.auth.uid
+        && d.ownerDisplayName is string
+        && d.ownerDisplayName.size() > 0
+        && d.ownerDisplayName.size() <= 24
+        && (d.playerIconMasterId == null || d.playerIconMasterId is string)
+        && d.sourceDeckId is string
+        && (d.representativeMonsterId == null || d.representativeMonsterId is string)
+        && d.arenaRating is int
+        && d.arenaRating >= 900
+        && d.arenaRank in ['D', 'C', 'B', 'A', 'S', 'MASTER']
+        && d.wins is int
+        && d.wins >= 0
+        && d.losses is int
+        && d.losses >= 0
+        && d.wins + d.losses > 0
+        && d.schemaVersion == 1
+        && d.registeredAt is timestamp
+        && d.ratingReachedAt is timestamp
+        && d.updatedAt is timestamp;
+    }
+
+    function validArenaRankingSource(d) {
+      let ownerId = request.auth.uid;
+      let source = get(/databases/$(database)/documents/users/$(ownerId)/savedDecks/$(d.sourceDeckId)).data;
+      let profile = get(/databases/$(database)/documents/users/$(ownerId)).data;
+      return source.ownerUserId == ownerId
+        && source.deckId == d.sourceDeckId
+        && source.representativeMonsterId == d.representativeMonsterId
+        && profile.displayName == d.ownerDisplayName
+        && profile.get('playerIconMasterId', null) == d.playerIconMasterId
+        && profile.economy is map
+        && profile.economy.arenaProgress is map
+        && profile.economy.arenaProgress.rating == d.arenaRating
+        && profile.economy.arenaProgress.rank == d.arenaRank
+        && profile.economy.arenaProgress.wins == d.wins
+        && profile.economy.arenaProgress.losses == d.losses;
+    }
+
     function validLegendArchive(archiveId) {
       let d = request.resource.data;
       let champion = getAfter(/databases/$(database)/documents/gameState/champion).data;
@@ -230,6 +276,28 @@ service cloud.firestore {
         && request.resource.data.registeredAt == resource.data.registeredAt
         && request.resource.data.updatedAt == request.time;
       allow delete: if signedIn() && resource.data.ownerUserId == request.auth.uid;
+    }
+
+    match /arenaRankings/{userId} {
+      allow read: if signedIn();
+      allow create: if owns(userId)
+        && validArenaRanking(userId)
+        && validArenaRankingSource(request.resource.data)
+        && request.resource.data.registeredAt == request.time
+        && request.resource.data.ratingReachedAt == request.time
+        && request.resource.data.updatedAt == request.time;
+      allow update: if owns(userId)
+        && validArenaRanking(userId)
+        && validArenaRankingSource(request.resource.data)
+        && request.resource.data.ownerUserId == resource.data.ownerUserId
+        && request.resource.data.registeredAt == resource.data.registeredAt
+        && request.resource.data.ratingReachedAt == (
+          request.resource.data.arenaRating == resource.data.arenaRating
+            ? resource.data.ratingReachedAt
+            : request.time
+        )
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if false;
     }
 
     match /legendArchives/{archiveId} {

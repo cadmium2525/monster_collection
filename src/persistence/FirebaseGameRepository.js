@@ -39,6 +39,7 @@ function normalizeRecord(data) {
     crownedAt: normalizedTimestamp(data.crownedAt),
     catalogUpdatedAt: normalizedTimestamp(data.catalogUpdatedAt),
     registeredAt: normalizedTimestamp(data.registeredAt),
+    ratingReachedAt: normalizedTimestamp(data.ratingReachedAt),
     archivedAt: normalizedTimestamp(data.archivedAt),
   };
 }
@@ -94,6 +95,8 @@ export class FirebaseGameRepository {
   _legendDeckRef(deckId) { this._requireUser(); return this.sdk.doc(this.db, 'legendDecks', publicDeckId(this.user.uid, deckId)); }
   _arenaDecksRef() { this._requireUser(); return this.sdk.collection(this.db, 'arenaDecks'); }
   _arenaDeckRef(deckId) { this._requireUser(); return this.sdk.doc(this.db, 'arenaDecks', publicDeckId(this.user.uid, deckId)); }
+  _arenaRankingsRef() { this._requireUser(); return this.sdk.collection(this.db, 'arenaRankings'); }
+  _arenaRankingRef() { this._requireUser(); return this.sdk.doc(this.db, 'arenaRankings', this.user.uid); }
   _legendArchivesRef() { return this.sdk.collection(this.db, 'legendArchives'); }
   _legendArchiveRef(version) { return this.sdk.doc(this.db, 'legendArchives', `champion-${String(version).padStart(8, '0')}`); }
   _championRef() { return this.sdk.doc(this.db, 'gameState', 'champion'); }
@@ -425,6 +428,78 @@ export class FirebaseGameRepository {
       .map((snapshot) => normalizeRecord({ ...snapshot.data(), publicDeckId: snapshot.id }))
       .filter((record) => record.ownerUserId !== this.user.uid)
       .slice(0, requested);
+  }
+
+  async publishArenaRanking(arena = {}, deck) {
+    if (!deck?.deckId) throw new Error('ランキングに使用するデッキがありません');
+    const reference = this._arenaRankingRef();
+    const [existing, profile] = await Promise.all([this.sdk.getDoc(reference), this.getProfile()]);
+    const previous = existing.exists() ? existing.data() : null;
+    const rating = Math.max(900, Math.round(Number(arena.rating) || 1000));
+    const ratingReachedAt = previous && Number(previous.arenaRating) === rating
+      ? previous.ratingReachedAt
+      : this.sdk.serverTimestamp();
+    await this.sdk.setDoc(reference, {
+      ownerUserId: this.user.uid,
+      ownerDisplayName: profile?.displayName ?? '名無しブリーダー',
+      playerIconMasterId: profile?.playerIconMasterId ?? null,
+      sourceDeckId: deck.deckId,
+      representativeMonsterId: deck.representativeMonsterId ?? null,
+      arenaRating: rating,
+      arenaRank: String(arena.rank ?? 'D'),
+      wins: Math.max(0, Math.trunc(Number(arena.wins) || 0)),
+      losses: Math.max(0, Math.trunc(Number(arena.losses) || 0)),
+      schemaVersion: 1,
+      registeredAt: previous?.registeredAt ?? this.sdk.serverTimestamp(),
+      ratingReachedAt,
+      updatedAt: this.sdk.serverTimestamp(),
+    });
+    return normalizeRecord((await this.sdk.getDoc(reference)).data());
+  }
+
+  async getArenaLeaderboard({ topLimit = 50, nearbyRadius = 5 } = {}) {
+    const topCount = Math.max(1, Math.min(50, Math.trunc(Number(topLimit) || 50)));
+    const radius = Math.max(1, Math.min(10, Math.trunc(Number(nearbyRadius) || 5)));
+    const base = this.sdk.query(
+      this._arenaRankingsRef(),
+      this.sdk.orderBy('arenaRating', 'desc'),
+      this.sdk.orderBy('ratingReachedAt', 'asc'),
+      this.sdk.orderBy('ownerUserId', 'asc'),
+    );
+    const [topSnapshots, selfSnapshot, totalSnapshot] = await Promise.all([
+      this.sdk.getDocs(this.sdk.query(base, this.sdk.limit(topCount))),
+      this.sdk.getDoc(this._arenaRankingRef()),
+      this.sdk.getCountFromServer(base),
+    ]);
+    const top = topSnapshots.docs.map((snapshot, index) => ({
+      ...normalizeRecord({ ...snapshot.data(), ownerUserId: snapshot.id }),
+      position: index + 1,
+      isSelf: snapshot.id === this.user.uid,
+    }));
+    const total = Number(totalSnapshot.data().count) || top.length;
+    if (!selfSnapshot.exists()) return { available: true, top, nearby: [], selfRank: null, total };
+
+    const selfData = { ...selfSnapshot.data(), ownerUserId: selfSnapshot.id };
+    const self = normalizeRecord(selfData);
+    const cursor = [selfData.arenaRating, selfData.ratingReachedAt, selfData.ownerUserId];
+    const before = this.sdk.query(base, this.sdk.endBefore(...cursor));
+    const [beforeCountSnapshot, aboveSnapshots, fromSelfSnapshots] = await Promise.all([
+      this.sdk.getCountFromServer(before),
+      this.sdk.getDocs(this.sdk.query(before, this.sdk.limitToLast(radius))),
+      this.sdk.getDocs(this.sdk.query(base, this.sdk.startAt(...cursor), this.sdk.limit(radius + 1))),
+    ]);
+    const selfRank = (Number(beforeCountSnapshot.data().count) || 0) + 1;
+    const above = aboveSnapshots.docs.map((snapshot, index) => ({
+      ...normalizeRecord({ ...snapshot.data(), ownerUserId: snapshot.id }),
+      position: selfRank - aboveSnapshots.docs.length + index,
+      isSelf: false,
+    }));
+    const fromSelf = fromSelfSnapshots.docs.map((snapshot, index) => ({
+      ...normalizeRecord({ ...snapshot.data(), ownerUserId: snapshot.id }),
+      position: selfRank + index,
+      isSelf: snapshot.id === this.user.uid,
+    }));
+    return { available: true, top, nearby: [...above, ...fromSelf], selfRank, total };
   }
 
   async listLegendArchives(maxResults = 20) {

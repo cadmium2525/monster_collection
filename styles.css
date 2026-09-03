@@ -2236,6 +2236,7 @@ body:has(.home-lobby) {
   filter:drop-shadow(0 3px 9px rgba(0,0,0,.65));
 }
 .home-lobby-brand-mark {
+  padding:0;
   display:grid;
   place-items:center;
   width:46px;
@@ -2246,11 +2247,21 @@ body:has(.home-lobby) {
   color:#f3d58a;
   background:rgba(4,13,24,.82);
   box-shadow:inset 0 0 14px rgba(225,182,89,.14),0 0 15px rgba(0,0,0,.4);
+  cursor:pointer;
+  appearance:none;
 }
+.home-lobby-brand-mark:hover,.home-lobby-brand-mark:focus-visible { border-color:#ffe7a3; background:rgba(18,30,42,.9); box-shadow:inset 0 0 18px rgba(247,204,107,.23),0 0 18px rgba(240,198,97,.25); }
 .home-lobby-brand-mark b { rotate:8deg; font:800 17px/1 Georgia,serif; }
 .home-lobby-brand > span:last-child { display:grid; }
 .home-lobby-brand strong { color:#f2deaa; font:800 9px/1 Georgia,serif; letter-spacing:.18em; }
 .home-lobby-brand small { margin-top:3px; color:#8de5e1; font:800 6px/1 system-ui,sans-serif; letter-spacing:.22em; }
+.home-artwork-fullscreen { position:fixed; z-index:500; inset:0; width:100%; height:100dvh; padding:0; overflow:hidden; border:0; opacity:0; color:#fff; background:#020711; cursor:pointer; transition:opacity .22s ease; }
+.home-artwork-fullscreen.is-visible { opacity:1; }
+.home-artwork-fullscreen.is-closing { opacity:0; }
+.home-artwork-fullscreen > img { width:100%; height:100%; display:block; object-fit:cover; object-position:center; }
+.home-artwork-fullscreen > small { position:absolute; right:max(18px,var(--safe-right)); bottom:max(13px,var(--safe-bottom)); padding:5px 9px; border:1px solid rgba(255,255,255,.28); border-radius:999px; color:rgba(255,255,255,.78); background:rgba(1,6,12,.42); font-size:8px; letter-spacing:.08em; text-shadow:0 1px 3px #000; animation:home-artwork-hint 3.2s ease both; }
+.home-artwork-fullscreen-foil { position:absolute; inset:-32%; opacity:.18; pointer-events:none; background:linear-gradient(112deg,transparent 34%,rgba(115,240,255,.72) 43%,rgba(255,219,133,.68) 49%,rgba(213,139,255,.65) 55%,transparent 64%); mix-blend-mode:screen; animation:home-lobby-foil 6.5s ease-in-out infinite; }
+@keyframes home-artwork-hint { 0%,70% { opacity:1; } 100% { opacity:0; } }
 .home-lobby-wallet {
   min-width:clamp(160px,16vw,210px);
   min-height:58px;
@@ -2510,6 +2521,11 @@ body:has(.home-lobby) {
 .arena-screen.is-match { height:100dvh; min-height:0; grid-template-rows:auto minmax(0,1fr); overflow:hidden; }
 .app-shell:has(> .arena-screen.is-match) { width:100%; height:100dvh; min-height:0; overflow:hidden; padding:0; }
 .arena-header-actions { display:flex; align-items:center; gap:7px; }
+.arena-ranking-button { height:54px; min-width:128px; display:grid; grid-template-columns:30px minmax(0,1fr); align-items:center; gap:7px; padding:5px 9px; border:1px solid rgba(111,224,219,.48); border-radius:12px 4px; color:#e9ffff; background:linear-gradient(115deg,rgba(10,57,68,.9),rgba(7,20,34,.95)); box-shadow:inset 0 0 18px rgba(83,221,216,.06); cursor:pointer; text-align:left; }
+.arena-ranking-button:hover,.arena-ranking-button:focus-visible { border-color:#83eee8; background:linear-gradient(115deg,rgba(14,79,87,.94),rgba(9,28,45,.96)); }
+.arena-ranking-button > span { display:grid; place-items:center; width:30px; aspect-ratio:1; border:1px solid rgba(232,186,98,.62); border-radius:50% 18%; color:#f2ce78; background:rgba(60,39,15,.46); font:800 18px/1 Georgia,serif; }
+.arena-ranking-button > i { min-width:0; display:grid; gap:2px; font-style:normal; }
+.arena-ranking-button strong { font-size:10px; white-space:nowrap; }.arena-ranking-button small { color:#84ded9; font-size:7px; white-space:nowrap; }
 .arena-header-loot { min-width:250px; max-width:420px; height:54px; display:flex; align-items:center; gap:9px; padding:5px 9px; overflow:hidden; border:1px solid rgba(232,186,98,.48); border-radius:12px 4px; background:linear-gradient(110deg,rgba(65,41,15,.78),rgba(8,22,34,.94)); }
 .arena-header-loot > span { flex:none; display:grid; gap:2px; color:#f0d58f; }
 .arena-header-loot > span strong { font-size:10px; }.arena-header-loot > span small { color:#8fe0dc; font-size:7px; }
@@ -2517,6 +2533,26 @@ body:has(.home-lobby) {
 .arena-header-loot .game-card { width:32px; flex:none; pointer-events:none; }
 .arena-header-loot > .arena-loot-empty { color:#aebdc2; font-size:8px; white-space:nowrap; }
 .arena-loot-missing { display:grid; place-items:center; width:32px; aspect-ratio:.7; border:1px solid rgba(232,186,98,.4); color:#f0d58f; }
+.arena-ranking-modal { width:min(790px,96vw); overflow:hidden; display:grid; grid-template-rows:auto minmax(0,1fr); }
+.arena-ranking-board { min-height:0; overflow:hidden; }
+.arena-ranking-board-inner { min-height:0; height:100%; display:grid; grid-template-rows:auto auto minmax(0,1fr); gap:7px; padding-top:8px; }
+.arena-ranking-summary { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; }
+.arena-ranking-summary > span { display:flex; justify-content:space-between; align-items:baseline; gap:10px; padding:7px 10px; border:1px solid rgba(109,190,204,.25); border-radius:9px; background:rgba(255,255,255,.03); }
+.arena-ranking-summary small { color:#8adfdc; font:800 7px/1 Georgia,serif; letter-spacing:.12em; }.arena-ranking-summary strong { color:#f3d787; font-size:15px; }
+.arena-ranking-tabs { display:flex; gap:5px; }
+.arena-ranking-tabs button { min-width:110px; min-height:30px; padding:4px 11px; border:1px solid rgba(120,168,184,.28); border-radius:16px; color:#aebdc5; background:rgba(255,255,255,.03); cursor:pointer; font-size:9px; }
+.arena-ranking-tabs button.selected { border-color:rgba(232,186,98,.68); color:#fff0bd; background:rgba(112,73,23,.5); }
+.arena-ranking-list { min-height:0; max-height:min(61dvh,440px); overflow:auto; display:grid; align-content:start; gap:4px; padding:1px 4px 8px 1px; overscroll-behavior:contain; }
+.arena-ranking-row { min-width:0; min-height:51px; display:grid; grid-template-columns:34px 40px minmax(140px,1fr) 68px 38px 88px; align-items:center; gap:8px; padding:5px 8px; border:1px solid rgba(117,162,181,.22); border-radius:9px 3px; background:linear-gradient(100deg,rgba(6,18,31,.96),rgba(12,31,45,.86)); }
+.arena-ranking-row.is-self { border-color:rgba(95,222,216,.74); background:linear-gradient(100deg,rgba(10,67,72,.86),rgba(16,39,57,.92)); box-shadow:inset 0 0 20px rgba(78,219,213,.08); }
+.arena-ranking-row.is-top-1 { border-color:rgba(243,204,103,.7); background:linear-gradient(100deg,rgba(72,48,15,.72),rgba(12,30,43,.9)); }.arena-ranking-row.is-top-2 { border-color:rgba(198,218,226,.52); }.arena-ranking-row.is-top-3 { border-color:rgba(198,137,83,.55); }
+.arena-ranking-position { color:#dfe9eb; font:800 17px/1 Georgia,serif; text-align:center; }.arena-ranking-row.is-top-1 .arena-ranking-position { color:#ffe283; }
+.arena-ranking-avatar { position:relative; display:grid; place-items:center; width:36px; aspect-ratio:1; overflow:hidden; border:1px solid rgba(111,219,215,.48); border-radius:50%; color:#fff0bd; background:#081523; font:800 15px/1 Georgia,serif; }
+.arena-ranking-player { min-width:0; display:grid; gap:2px; }.arena-ranking-player strong { overflow:hidden; color:#edf5f6; font-size:11px; text-overflow:ellipsis; white-space:nowrap; }.arena-ranking-player small { color:#90aab4; font-size:7px; }.arena-ranking-row.is-self .arena-ranking-player small { color:#7ff1e9; font-weight:900; }
+.arena-ranking-rank { display:grid; place-items:center; min-height:25px; border:1px solid rgba(188,204,212,.35); border-radius:8px; color:#e7f0f2; background:rgba(255,255,255,.035); font:800 9px/1 Georgia,serif; }.arena-ranking-rank.rank-master,.arena-ranking-rank.rank-s { border-color:rgba(221,184,103,.58); color:#ffe3a0; }
+.arena-ranking-leader { display:grid; place-items:center; width:34px; aspect-ratio:1; overflow:hidden; border:1px solid rgba(170,193,202,.32); border-radius:7px 2px; background:#07111c; }.arena-ranking-leader .monster-portrait { width:100%; height:100%; aspect-ratio:auto; border:0; border-radius:0; }.arena-ranking-leader.is-empty { color:#82949d; }
+.arena-ranking-rating { display:grid; justify-items:end; gap:1px; }.arena-ranking-rating small { color:#7fdad7; font:800 6px/1 Georgia,serif; letter-spacing:.1em; }.arena-ranking-rating strong { color:#fff0bd; font:800 15px/1 Georgia,serif; }
+.arena-ranking-empty { display:grid; place-items:center; min-height:130px; margin:0; padding:18px; border:1px dashed rgba(137,176,190,.3); border-radius:10px; color:#b9c9cf; text-align:center; }
 .arena-rank-panel { display:grid; grid-template-columns:92px minmax(170px,1fr) minmax(220px,.8fr); align-items:center; gap:14px; padding:10px 16px; border:1px solid rgba(110,219,221,.38); border-radius:23px 7px; background:linear-gradient(105deg,rgba(5,17,31,.96),rgba(13,38,52,.88)); box-shadow:0 12px 30px rgba(0,0,0,.38); }
 .arena-rank-emblem { width:78px; aspect-ratio:1; display:grid; place-items:center; align-content:center; border:2px solid #a6bbc2; border-radius:50% 18%; color:#eaf5f6; background:radial-gradient(circle,#294351,#08131e 70%); box-shadow:inset 0 0 18px rgba(255,255,255,.08),0 0 18px rgba(105,216,221,.14); }
 .arena-rank-emblem small { font-size:6px; letter-spacing:.15em; }
@@ -2636,6 +2672,16 @@ body:has(.home-lobby) {
   .mission-section,.mission-loot-section,.arena-entry-panel,.arena-opponent-guide,.arena-match-preview { padding:7px; }
   .mission-card { grid-template-columns:minmax(0,1fr) 108px 78px; padding:5px 7px; }
   .mission-loot-section { grid-template-columns:160px minmax(0,1fr); }
+  .arena-header-actions { gap:4px; }
+  .arena-ranking-button { min-width:105px; height:47px; grid-template-columns:26px minmax(0,1fr); gap:5px; padding:4px 6px; }
+  .arena-ranking-button > span { width:26px; font-size:15px; }.arena-ranking-button strong { font-size:8px; }
+  .arena-header-loot { min-width:210px; height:47px; padding-block:3px; }
+  .arena-ranking-board-inner { gap:4px; padding-top:5px; }
+  .arena-ranking-summary > span { padding:4px 8px; }.arena-ranking-summary strong { font-size:12px; }
+  .arena-ranking-tabs button { min-height:25px; }
+  .arena-ranking-list { max-height:calc(100dvh - 142px); gap:3px; }
+  .arena-ranking-row { min-height:42px; grid-template-columns:28px 32px minmax(110px,1fr) 57px 31px 72px; gap:6px; padding:3px 6px; }
+  .arena-ranking-avatar { width:30px; }.arena-ranking-leader { width:29px; }.arena-ranking-rating strong { font-size:12px; }
   .arena-rank-panel { grid-template-columns:68px minmax(160px,1fr) minmax(190px,.8fr); gap:8px; padding:5px 10px; }
   .arena-rank-emblem { width:57px; }.arena-rank-emblem strong { font-size:19px; }
   .arena-rating-copy strong { font-size:18px; }.arena-record span { min-height:38px; }.arena-record b { font-size:14px; }
@@ -2657,6 +2703,6 @@ body:has(.home-lobby) {
 }
 
 @media (prefers-reduced-motion:reduce) {
-  .opening-pack,.opening-aura,.opening-aura i,.pack-particle-field i,.pack-foil-sheen,.pack-break-flash,.pack-break-flash::before,.pack-break-flash i,.pack-card-slot,.pack-card-reveal-shell,.pack-rarity-burst,.rarity-burst-rings i,.pack-rarity-burst strong,.game-card.finish-foil::before,.fusion-catalog-card.finish-foil::before,.monster-portrait.finish-foil::after,.card-art.finish-foil-art::after,.game-card.life-critical .card-life,.login-bonus-diamond-art,.mulligan-motion-cue,.mulligan-motion-sigil i,.game-card.mulligan-draw-enter,.game-card.mulligan-return-to-deck,.game-card.turn-draw-enter,.turn-draw-cue,.boot-progress.is-indeterminate > i,.home-lobby-hero-art,.home-lobby-foil-shine,.profile-home-art-preview > i { animation:none !important; }
+  .opening-pack,.opening-aura,.opening-aura i,.pack-particle-field i,.pack-foil-sheen,.pack-break-flash,.pack-break-flash::before,.pack-break-flash i,.pack-card-slot,.pack-card-reveal-shell,.pack-rarity-burst,.rarity-burst-rings i,.pack-rarity-burst strong,.game-card.finish-foil::before,.fusion-catalog-card.finish-foil::before,.monster-portrait.finish-foil::after,.card-art.finish-foil-art::after,.game-card.life-critical .card-life,.login-bonus-diamond-art,.mulligan-motion-cue,.mulligan-motion-sigil i,.game-card.mulligan-draw-enter,.game-card.mulligan-return-to-deck,.game-card.turn-draw-enter,.turn-draw-cue,.boot-progress.is-indeterminate > i,.home-lobby-hero-art,.home-lobby-foil-shine,.home-artwork-fullscreen-foil,.home-artwork-fullscreen > small,.profile-home-art-preview > i { animation:none !important; }
   .pack-particle-field { display:none; }
 }

@@ -1,4 +1,14 @@
 {
-  "indexes": [],
+  "indexes": [
+    {
+      "collectionGroup": "arenaRankings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "arenaRating", "order": "DESCENDING" },
+        { "fieldPath": "ratingReachedAt", "order": "ASCENDING" },
+        { "fieldPath": "ownerUserId", "order": "ASCENDING" }
+      ]
+    }
+  ],
   "fieldOverrides": []
 }

@@ -1,6 +1,8 @@
 import { ARENA_RANK_REWARDS, ARENA_RANK_THRESHOLDS, ARENA_RANKS, unclaimedArenaRankRewards } from '../arena/arena-state.js';
 import { el, replace } from './dom.js';
-import { renderCard } from './card-renderer.js';
+import { renderCard, renderMonsterPortrait } from './card-renderer.js';
+import { openModal } from './modal.js';
+import { playerIconContent } from './player-icon.js';
 import { representativeCardAsset } from './representative-card.js';
 
 function nextRank(arena) {
@@ -10,12 +12,60 @@ function nextRank(arena) {
 
 function sourceClass(sourceType) { return String(sourceType ?? '').toLowerCase().replaceAll('_', '-'); }
 
+function rankingRow(entry, masterIndex) {
+  const representative = masterIndex.monsters.get(entry.representativeMonsterId);
+  const position = Number(entry.position) || 0;
+  return el('article', { className: `arena-ranking-row${entry.isSelf ? ' is-self' : ''}${position > 0 && position <= 3 ? ` is-top-${position}` : ''}` }, [
+    el('strong', { className: 'arena-ranking-position', text: position ? String(position) : '—' }),
+    el('span', { className: 'arena-ranking-avatar' }, playerIconContent({
+      user: { displayName: entry.ownerDisplayName, playerIconMasterId: entry.playerIconMasterId },
+      catalog: { ownedCardMasterIds: entry.playerIconMasterId ? [entry.playerIconMasterId] : [] },
+      masterIndex,
+    })),
+    el('span', { className: 'arena-ranking-player' }, [
+      el('strong', { text: entry.ownerDisplayName ?? '名無しブリーダー' }),
+      el('small', { text: entry.isSelf ? 'YOU' : `${Number(entry.wins) || 0}勝 ${Number(entry.losses) || 0}敗` }),
+    ]),
+    el('b', { className: `arena-ranking-rank rank-${String(entry.arenaRank ?? 'D').toLowerCase()}`, text: entry.arenaRank ?? 'D' }),
+    representative
+      ? el('span', { className: 'arena-ranking-leader', attrs: { title: representative.name } }, renderMonsterPortrait(representative, representative.name))
+      : el('span', { className: 'arena-ranking-leader is-empty', text: '?' }),
+    el('span', { className: 'arena-ranking-rating' }, [el('small', { text: 'RATING' }), el('strong', { text: Number(entry.arenaRating ?? 1000).toLocaleString('ja-JP') })]),
+  ]);
+}
+
+export function openArenaRankingModal({ leaderboard, masterIndex }) {
+  let mode = 'top';
+  const content = el('div', { className: 'arena-ranking-board' });
+  const render = () => {
+    const rows = mode === 'nearby' ? leaderboard.nearby : leaderboard.top;
+    replace(content, el('div', { className: 'arena-ranking-board-inner' }, [
+      el('div', { className: 'arena-ranking-summary' }, [
+        el('span', {}, [el('small', { text: 'YOUR POSITION' }), el('strong', { text: leaderboard.selfRank ? `${leaderboard.selfRank}位` : '未参加' })]),
+        el('span', {}, [el('small', { text: 'RANKED PLAYERS' }), el('strong', { text: `${Number(leaderboard.total) || 0}人` })]),
+      ]),
+      !leaderboard.available ? el('p', { className: 'arena-ranking-empty', text: 'ランキングはオンライン接続時に表示できます。' }) : null,
+      leaderboard.available ? el('div', { className: 'arena-ranking-tabs' }, [
+        el('button', { className: mode === 'top' ? 'selected' : '', text: 'TOP 50', onclick: () => { mode = 'top'; render(); } }),
+        el('button', { className: mode === 'nearby' ? 'selected' : '', text: '自分周辺', disabled: !leaderboard.nearby?.length, onclick: () => { mode = 'nearby'; render(); } }),
+      ]) : null,
+      leaderboard.available && rows?.length
+        ? el('div', { className: 'arena-ranking-list', attrs: { role: 'list', 'aria-label': mode === 'top' ? 'アリーナ上位ランキング' : '自分周辺のランキング' } }, rows.map((entry) => rankingRow(entry, masterIndex)))
+        : leaderboard.available ? el('p', { className: 'arena-ranking-empty', text: 'まだランキング参加者はいません。' }) : null,
+    ]));
+  };
+  render();
+  return openModal({ title: 'アリーナランキング', content, className: 'arena-ranking-modal' });
+}
+
 export class ArenaScreen {
-  constructor({ root, collection, masterIndex, arena, match = null, onBack, onBackToDeckSelection, onFindMatch, onStartMatch, onRegisterDefense, onClaimRankReward }) {
+  constructor({ root, collection, masterIndex, arena, leaderboard = null, leaderboardLoading = false, match = null, onBack, onBackToDeckSelection, onFindMatch, onStartMatch, onRegisterDefense, onClaimRankReward, onOpenRanking }) {
     this.root = root;
     this.collection = collection;
     this.masterIndex = masterIndex;
     this.arena = arena;
+    this.leaderboard = leaderboard;
+    this.leaderboardLoading = leaderboardLoading;
     this.match = match;
     this.onBack = onBack;
     this.onBackToDeckSelection = onBackToDeckSelection;
@@ -23,9 +73,16 @@ export class ArenaScreen {
     this.onStartMatch = onStartMatch;
     this.onRegisterDefense = onRegisterDefense;
     this.onClaimRankReward = onClaimRankReward;
+    this.onOpenRanking = onOpenRanking;
     const matchedDeckId = match?.deckId && collection.get(match.deckId) ? match.deckId : null;
     const defenseDeckId = arena.defenseDeckId && collection.get(arena.defenseDeckId) ? arena.defenseDeckId : null;
     this.selectedDeckId = matchedDeckId ?? defenseDeckId ?? collection.list()[0]?.deckId ?? null;
+    this.render();
+  }
+
+  setLeaderboard(leaderboard, loading = false) {
+    this.leaderboard = leaderboard;
+    this.leaderboardLoading = loading;
     this.render();
   }
 
@@ -87,6 +144,22 @@ export class ArenaScreen {
     ]);
   }
 
+  renderRankingButton(deck) {
+    const rank = this.leaderboard?.selfRank;
+    return el('button', {
+      className: 'arena-ranking-button',
+      disabled: this.leaderboardLoading,
+      onclick: () => this.onOpenRanking?.(deck),
+      attrs: { 'aria-label': rank ? `アリーナランキングを表示。現在${rank}位` : 'アリーナランキングを表示' },
+    }, [
+      el('span', { text: '♛', attrs: { 'aria-hidden': 'true' } }),
+      el('i', {}, [
+        el('strong', { text: 'ランキング' }),
+        el('small', { text: this.leaderboardLoading ? '集計中…' : rank ? `${rank}位` : `RATING ${this.arena.rating}` }),
+      ]),
+    ]);
+  }
+
   render() {
     const deck = this.selectedDeckId ? this.collection.get(this.selectedDeckId) : null;
     const next = nextRank(this.arena);
@@ -98,9 +171,9 @@ export class ArenaScreen {
       el('header', { className: 'screen-header arena-header' }, [
         el('div', {}, [el('p', { className: 'eyebrow', text: 'RATING ARENA' }), el('h1', { text: 'アリーナ' })]),
         el('div', { className: 'arena-header-actions' }, [
-          this.match
-            ? el('button', { className: 'text-button', text: '戻る', onclick: this.onBackToDeckSelection })
-            : this.renderLootStock(),
+          ...(this.match
+            ? [el('button', { className: 'text-button', text: '戻る', onclick: this.onBackToDeckSelection })]
+            : [this.renderRankingButton(deck), this.renderLootStock()]),
           el('button', { className: 'text-button', text: 'ホームへ', onclick: this.onBack }),
         ]),
       ]),

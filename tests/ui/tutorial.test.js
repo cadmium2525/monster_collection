@@ -37,6 +37,10 @@ test('home lobby keeps the release version visible and separates its navigation 
   assert.match(css, /\.home-lobby-level-track\s*\{[^}]*height:6px;[^}]*border:1px solid/s);
   assert.match(css, /\.home-lobby-hero-art\s*\{[^}]*width:100%;[^}]*object-fit:cover;[^}]*object-position:center;/s);
   assert.match(css, /\.home-lobby-hero-art\s*\{[^}]*brightness\(\.96\);/s);
+  assert.match(homeSource, /aria-label': 'ホーム画面イラストを全面表示'/);
+  assert.match(homeSource, /openArtworkFullscreen/);
+  assert.match(css, /\.home-artwork-fullscreen\s*\{/);
+  assert.match(css, /\.home-artwork-fullscreen > img\s*\{[^}]*object-fit:cover;/s);
   assert.match(css, /\.home-lobby-topbar\s*\{[^}]*right:max\(18px,var\(--safe-right\)\)/s);
   assert.match(css, /\.home-lobby-utility-rail\s*\{[^}]*right:max\(18px,var\(--safe-right\)\)/s);
   assert.doesNotMatch(css, /\.home-lobby-utility-rail\s*\{\s*right:12px;/s);

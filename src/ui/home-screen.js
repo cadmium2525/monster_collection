@@ -271,6 +271,28 @@ export class HomeScreen {
     this.render();
   }
 
+  openArtworkFullscreen({ src, alt, foil = false }) {
+    let closed = false;
+    const overlay = el('button', {
+      className: `home-artwork-fullscreen${foil ? ' is-foil' : ''}`,
+      attrs: { type: 'button', 'aria-label': 'ホーム画面イラストの全面表示を終了' },
+    }, [
+      el('img', { src, alt, draggable: false, attrs: { decoding: 'async' } }),
+      foil ? el('span', { className: 'home-artwork-fullscreen-foil', attrs: { 'aria-hidden': 'true' } }) : null,
+      el('small', { text: '画面をタップして戻る' }),
+    ]);
+    const close = () => {
+      if (closed) return;
+      closed = true;
+      overlay.classList.add('is-closing');
+      window.setTimeout(() => overlay.remove(), 220);
+    };
+    overlay.addEventListener('click', close);
+    this.root.append(overlay);
+    requestAnimationFrame(() => overlay.classList.add('is-visible'));
+    overlay.focus({ preventScroll: true });
+  }
+
   renderChampion() {
     const champion = this.champion;
     const cards = champion?.championDeckSnapshot ?? champion?.cards ?? [];
@@ -341,7 +363,11 @@ export class HomeScreen {
           el('i', { className: 'home-lobby-chevron', text: '›', attrs: { 'aria-hidden': 'true' } }),
         ]),
         el('div', { className: 'home-lobby-brand', attrs: { 'aria-label': 'モンスターコンストラクション' } }, [
-          el('span', { className: 'home-lobby-brand-mark' }, el('b', { text: 'MC' })),
+          el('button', {
+            className: 'home-lobby-brand-mark',
+            onclick: () => this.openArtworkFullscreen({ src: hero.src, alt: hero.alt, foil: artworkAppearance?.finish === 'foil' }),
+            attrs: { type: 'button', 'aria-label': 'ホーム画面イラストを全面表示' },
+          }, el('b', { text: 'MC' })),
           el('span', {}, [el('strong', { text: 'MONSTER' }), el('small', { text: 'CONSTRUCTION' })]),
         ]),
         el('button', { className: 'home-lobby-wallet', onclick: this.onBoosters, attrs: { 'aria-label': `所持ダイヤ ${this.economy?.diamonds ?? 0}。ショップを開く` } }, [
