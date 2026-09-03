@@ -437,6 +437,13 @@ test('Firebase publishes one arena ranking per player and returns top and nearby
   assert.deepEqual(leaderboard.top.map((entry) => entry.ownerUserId), ['rival-high', 'rival-earlier', 'firebase-user', 'rival-low']);
   assert.deepEqual(leaderboard.nearby.map((entry) => entry.position), [2, 3, 4]);
   assert.equal(leaderboard.nearby.find((entry) => entry.isSelf)?.ownerUserId, 'firebase-user');
+
+  fake.sdk.getCountFromServer = async () => { throw new Error('aggregate unavailable'); };
+  const withoutAggregate = await repository.getArenaLeaderboard({ topLimit: 50, nearbyRadius: 1 });
+  assert.equal(withoutAggregate.available, true);
+  assert.equal(withoutAggregate.total, 4);
+  assert.equal(withoutAggregate.selfRank, 3);
+  assert.deepEqual(withoutAggregate.nearby.map((entry) => entry.position), [2, 3, 4]);
 });
 
 test('local backup scopes isolate a recovered account from the temporary anonymous account', async () => {

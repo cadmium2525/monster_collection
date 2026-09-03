@@ -469,37 +469,53 @@ export class FirebaseGameRepository {
     const [topSnapshots, selfSnapshot, totalSnapshot] = await Promise.all([
       this.sdk.getDocs(this.sdk.query(base, this.sdk.limit(topCount))),
       this.sdk.getDoc(this._arenaRankingRef()),
-      this.sdk.getCountFromServer(base),
+      this.sdk.getCountFromServer(base).catch(() => null),
     ]);
     const top = topSnapshots.docs.map((snapshot, index) => ({
       ...normalizeRecord({ ...snapshot.data(), ownerUserId: snapshot.id }),
       position: index + 1,
       isSelf: snapshot.id === this.user.uid,
     }));
-    const total = Number(totalSnapshot.data().count) || top.length;
+    const total = Number(totalSnapshot?.data?.().count) || top.length;
     if (!selfSnapshot.exists()) return { available: true, top, nearby: [], selfRank: null, total };
 
     const selfData = { ...selfSnapshot.data(), ownerUserId: selfSnapshot.id };
     const self = normalizeRecord(selfData);
+    const topSelfIndex = top.findIndex((entry) => entry.ownerUserId === this.user.uid);
+    if (topSelfIndex >= 0) {
+      return {
+        available: true,
+        top,
+        nearby: top.slice(Math.max(0, topSelfIndex - radius), topSelfIndex + radius + 1),
+        selfRank: topSelfIndex + 1,
+        total,
+      };
+    }
+
     const cursor = [selfData.arenaRating, selfData.ratingReachedAt, selfData.ownerUserId];
-    const before = this.sdk.query(base, this.sdk.endBefore(...cursor));
-    const [beforeCountSnapshot, aboveSnapshots, fromSelfSnapshots] = await Promise.all([
-      this.sdk.getCountFromServer(before),
-      this.sdk.getDocs(this.sdk.query(before, this.sdk.limitToLast(radius))),
-      this.sdk.getDocs(this.sdk.query(base, this.sdk.startAt(...cursor), this.sdk.limit(radius + 1))),
-    ]);
-    const selfRank = (Number(beforeCountSnapshot.data().count) || 0) + 1;
-    const above = aboveSnapshots.docs.map((snapshot, index) => ({
-      ...normalizeRecord({ ...snapshot.data(), ownerUserId: snapshot.id }),
-      position: selfRank - aboveSnapshots.docs.length + index,
-      isSelf: false,
-    }));
-    const fromSelf = fromSelfSnapshots.docs.map((snapshot, index) => ({
-      ...normalizeRecord({ ...snapshot.data(), ownerUserId: snapshot.id }),
-      position: selfRank + index,
-      isSelf: snapshot.id === this.user.uid,
-    }));
-    return { available: true, top, nearby: [...above, ...fromSelf], selfRank, total };
+    try {
+      const before = this.sdk.query(base, this.sdk.endBefore(...cursor));
+      const [beforeCountSnapshot, aboveSnapshots, fromSelfSnapshots] = await Promise.all([
+        this.sdk.getCountFromServer(before),
+        this.sdk.getDocs(this.sdk.query(before, this.sdk.limitToLast(radius))),
+        this.sdk.getDocs(this.sdk.query(base, this.sdk.startAt(...cursor), this.sdk.limit(radius + 1))),
+      ]);
+      const selfRank = (Number(beforeCountSnapshot.data().count) || 0) + 1;
+      const above = aboveSnapshots.docs.map((snapshot, index) => ({
+        ...normalizeRecord({ ...snapshot.data(), ownerUserId: snapshot.id }),
+        position: selfRank - aboveSnapshots.docs.length + index,
+        isSelf: false,
+      }));
+      const fromSelf = fromSelfSnapshots.docs.map((snapshot, index) => ({
+        ...normalizeRecord({ ...snapshot.data(), ownerUserId: snapshot.id }),
+        position: selfRank + index,
+        isSelf: snapshot.id === this.user.uid,
+      }));
+      return { available: true, top, nearby: [...above, ...fromSelf], selfRank, total };
+    } catch (error) {
+      console.warn('Arena nearby ranking could not be loaded', error);
+      return { available: true, top, nearby: [], selfRank: null, total };
+    }
   }
 
   async listLegendArchives(maxResults = 20) {

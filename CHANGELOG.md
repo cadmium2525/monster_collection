@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.32.2 — 2026-09-04
+
+### Resilient Arena ranking reads
+- Calculate the current player's position and nearby rows directly from TOP 50 whenever possible, avoiding the failing secondary query for ranked players.
+- Keep the available TOP 50 visible even if total-count or out-of-range nearby aggregation temporarily fails.
+
 ## 1.32.1 — 2026-09-04
 
 ### Arena leaderboard retry
