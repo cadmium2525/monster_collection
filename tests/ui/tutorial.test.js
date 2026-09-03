@@ -45,7 +45,7 @@ test('home lobby keeps the release version visible and separates its navigation 
 test('home chooses one leader illustration and calculates collection progress safely', () => {
   assert.equal(homeLeaderArtworkPath('monster-003'), './assets/images/home/monster-003.webp');
   assert.equal(homeLeaderArtworkPath('monster-019'), './assets/images/home/monster-019.webp');
-  assert.equal(homeLeaderArtworkPath('monster-030', { artVariantId: 'showcase-monster-030' }), './assets/images/home/monster-030.webp');
+  assert.equal(homeLeaderArtworkPath('monster-030', { artVariantId: 'showcase-monster-030' }), './assets/images/home-showcase/monster-030.webp');
   assert.equal(homeLeaderArtworkPath('invalid'), './assets/images/home/monster-019.webp');
   const masterIndex = { cards: new Map([['a', {}], ['b', {}]]), data: { fusions: [{}, {}] } };
   assert.equal(homeCollectionLevel({ ownedCardMasterIds: ['a'], discoveredFusionIds: ['f1'] }, masterIndex), 50);

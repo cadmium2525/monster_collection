@@ -13,6 +13,7 @@ import {
 } from '../gacha/economy-state.js';
 import { applyPlayerStatsEvent, normalizePlayerStats } from '../profile/player-stats.js';
 import { normalizePlayerIconMasterId } from '../profile/player-icon.js';
+import { normalizeHomeArtworkSelection } from '../profile/home-artwork.js';
 
 const USER_KEY = 'mc:v1:user';
 const CHAMPION_KEY = 'mc:v1:champion';
@@ -45,6 +46,7 @@ export class LocalGameRepository {
         id: this._scopeId,
         displayName: this.user.displayName ?? '名無しブリーダー',
         playerIconMasterId: normalizePlayerIconMasterId(this.user.playerIconMasterId),
+        homeArtwork: normalizeHomeArtworkSelection(this.user.homeArtwork),
         isAnonymous: this.user.isAnonymous ?? true,
         mode: 'local',
       }));
@@ -100,11 +102,13 @@ export class LocalGameRepository {
       id: this._scope(),
       displayName: String(profile.displayName ?? '名無しブリーダー').trim().slice(0, 24) || '名無しブリーダー',
       playerIconMasterId: normalizePlayerIconMasterId(profile.playerIconMasterId),
+      homeArtwork: normalizeHomeArtworkSelection(profile.homeArtwork),
       isAnonymous: Boolean(profile.isAnonymous),
       mode: 'local',
     };
     this.user.displayName = normalized.displayName;
     this.user.playerIconMasterId = normalized.playerIconMasterId;
+    this.user.homeArtwork = normalized.homeArtwork;
     this.storage.setItem(USER_KEY, JSON.stringify(this.user));
     this.storage.setItem(this._profileKey(), JSON.stringify(normalized));
     return clone(normalized);
@@ -124,6 +128,13 @@ export class LocalGameRepository {
     const value = normalizePlayerIconMasterId(playerIconMasterId);
     if (playerIconMasterId != null && !value) throw new Error('プレイヤーアイコンが不正です');
     return this.replaceProfile({ ...(await this.getProfile()), playerIconMasterId: value });
+  }
+
+  async setHomeArtwork(homeArtwork) {
+    this._requireUser();
+    const value = normalizeHomeArtworkSelection(homeArtwork);
+    if (homeArtwork != null && !value) throw new Error('ホーム画面イラストの設定が不正です');
+    return this.replaceProfile({ ...(await this.getProfile()), homeArtwork: value });
   }
 
   async getAccountStatus() {

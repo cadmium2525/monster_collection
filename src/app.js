@@ -29,6 +29,7 @@ import { normalizeArenaProgress } from './arena/arena-state.js';
 import { deckSignature, selectArenaOpponents } from './arena/matchmaker.js';
 import { ArenaResultScreen, ArenaScreen } from './ui/arena-screen.js';
 import { MissionScreen } from './ui/mission-screen.js';
+import { defaultHomeArtworkSelection, homeArtworkSelectionKey, normalizeHomeArtworkSelection, ownedHomeArtworkSelections } from './profile/home-artwork.js';
 
 const AI_BUDGET = Object.freeze({ bronze: 4, silver: 8, gold: 22, legend: 85, champion: 240 });
 
@@ -90,6 +91,11 @@ class MonsterConstructionApp {
     this.catalog = await this.repository.recordCardCatalog({
       ownedCardMasterIds: this.decks.list().flatMap((deck) => deck.cards.map((card) => card.masterId)),
     });
+    if (!normalizeHomeArtworkSelection(this.user?.homeArtwork)) {
+      const homeArtwork = defaultHomeArtworkSelection(this.decks.list(), this.masterIndex);
+      const profile = await this.repository.setHomeArtwork(homeArtwork);
+      this.user = { ...this.user, ...profile, homeArtwork };
+    }
     const flushCheckpoint = () => { void this.session?.flushCheckpoint?.(); };
     window.addEventListener('pagehide', flushCheckpoint);
     document.addEventListener('visibilitychange', () => {
@@ -227,6 +233,8 @@ class MonsterConstructionApp {
         account,
         stats,
         catalog,
+        decks: this.decks.list(),
+        economy: this.economy,
         masterIndex: this.masterIndex,
         catalogProgress: catalogProgress(catalog, this.masterIndex),
         qualification: this.economy.tournamentQualification,
@@ -235,6 +243,7 @@ class MonsterConstructionApp {
         onBack: () => this.showHome(),
         onRename: () => this.renameProfile('profile'),
         onSelectIcon: (masterId) => this.selectPlayerIcon(masterId),
+        onSelectHomeArtwork: (selection) => this.selectHomeArtwork(selection),
         onRegisterRecovery: () => this.openRecoveryRegistration(),
         onSignIn: () => this.openRecoverySignIn(),
       });
@@ -252,6 +261,27 @@ class MonsterConstructionApp {
       await this.showProfile();
     } catch (error) {
       this.showError(error, 'プレイヤーアイコンを変更できません');
+    }
+  }
+
+  async selectHomeArtwork(selection) {
+    try {
+      const normalized = normalizeHomeArtworkSelection(selection);
+      const available = ownedHomeArtworkSelections({
+        catalog: this.catalog,
+        decks: this.decks.list(),
+        economy: this.economy,
+        masterIndex: this.masterIndex,
+        current: this.user?.homeArtwork,
+      });
+      if (!normalized || !available.some((choice) => homeArtworkSelectionKey(choice) === homeArtworkSelectionKey(normalized))) {
+        throw new Error('選択できないホーム画面イラストです');
+      }
+      const profile = await this.repository.setHomeArtwork(normalized);
+      this.user = { ...this.user, ...profile, homeArtwork: normalized };
+      await this.showProfile();
+    } catch (error) {
+      this.showError(error, 'ホーム画面イラストを変更できません');
     }
   }
 

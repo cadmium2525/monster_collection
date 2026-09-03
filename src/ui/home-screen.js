@@ -11,6 +11,8 @@ import { APP_VERSION } from '../config/app-version.js';
 import { availableCampaignGifts } from '../gacha/economy-state.js';
 import { playerIconContent } from './player-icon.js';
 import { claimableMissionCount } from '../progression/mission-state.js';
+import { normalizeHomeArtworkSelection } from '../profile/home-artwork.js';
+import { homeArtworkImagePath } from './home-artwork.js';
 
 export const TUTORIAL_STEPS = Object.freeze([
   {
@@ -138,9 +140,11 @@ export function activeRunSummary(activeRun) {
 }
 
 export function homeLeaderArtworkPath(monsterId, cardAsset = null) {
-  const number = Number(String(monsterId ?? '').match(/(\d+)$/)?.[1]);
-  if (!Number.isInteger(number) || number < 1 || number > 30) return './assets/images/home/monster-019.webp';
-  return `./assets/images/home/monster-${String(number).padStart(3, '0')}.webp`;
+  return homeArtworkImagePath({
+    masterId: monsterId,
+    artVariantId: cardAsset?.artVariantId ?? 'base',
+    finish: cardAsset?.finish ?? 'normal',
+  });
 }
 
 export function homeCollectionLevel(catalog, masterIndex) {
@@ -233,7 +237,7 @@ function openHomeNotices(champion) {
     content: el('div', { className: 'home-lobby-modal-copy' }, [
       el('p', { className: 'eyebrow', text: `VERSION ${APP_VERSION}` }),
       el('h3', { text: '王座とデッキを巡る、新しいホームへ' }),
-      el('p', { text: '選択中デッキのリーダーを中心に、王者情報・大会・カード・ショップへ直接移動できるホーム画面になりました。' }),
+      el('p', { text: 'マイページで選んだモンスターイラストを中心に、王者情報・大会・カード・ショップへ直接移動できるホーム画面です。' }),
       champion?.championDisplayName ? el('small', { text: `現在のレジェンド王者：${champion.championDisplayName}` }) : null,
     ]),
   });
@@ -297,15 +301,20 @@ export class HomeScreen {
       ? this.masterIndex.monsters.get(selectedDeck.representativeMonsterId)
       : selectedDeck?.cards?.length ? representativeMonster(selectedDeck.cards, this.masterIndex) : this.masterIndex.monsters.get('monster-019');
     const leaderAsset = leader && selectedDeck ? representativeCardAsset(selectedDeck.cards, leader.id) : null;
+    const configuredArtwork = normalizeHomeArtworkSelection(this.user?.homeArtwork);
+    const artworkDefinition = configuredArtwork
+      ? this.masterIndex.monsters.get(configuredArtwork.masterId)
+      : leader;
+    const artworkAppearance = artworkDefinition && configuredArtwork ? configuredArtwork : leaderAsset;
     const collectionLevel = homeCollectionLevel(this.catalog, this.masterIndex);
     const gifts = availableCampaignGifts(this.economy);
     const online = this.repositoryStatus.mode === 'firebase';
     const tournamentAction = resume ? this.onResume : this.onTournament;
     const missionCount = claimableMissionCount(this.economy?.missionProgress);
     const hero = el('img', {
-      className: `home-lobby-hero-art${leaderAsset?.finish === 'foil' ? ' is-foil' : ''}`,
-      src: homeLeaderArtworkPath(leader?.id, leaderAsset),
-      alt: leader ? `${leader.name}のホーム画面イラスト` : 'ホーム画面のリーダーイラスト',
+      className: `home-lobby-hero-art${artworkAppearance?.finish === 'foil' ? ' is-foil' : ''}`,
+      src: homeLeaderArtworkPath(artworkDefinition?.id, artworkAppearance),
+      alt: artworkDefinition ? `${artworkDefinition.name}のホーム画面イラスト` : 'ホーム画面のモンスターイラスト',
       draggable: false,
       attrs: { decoding: 'sync', fetchpriority: 'high' },
     });
@@ -314,7 +323,7 @@ export class HomeScreen {
       el('div', { className: 'home-lobby-artwork', attrs: { 'aria-hidden': 'true' } }, [
         hero,
         el('span', { className: 'home-lobby-art-shade' }),
-        leaderAsset?.finish === 'foil' ? el('span', { className: 'home-lobby-foil-shine' }) : null,
+        artworkAppearance?.finish === 'foil' ? el('span', { className: 'home-lobby-foil-shine' }) : null,
       ]),
       el('header', { className: 'home-lobby-topbar' }, [
         el('button', { className: 'home-lobby-profile', onclick: this.onProfile, attrs: { 'aria-label': 'マイページを開く' } }, [

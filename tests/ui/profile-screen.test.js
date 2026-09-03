@@ -28,6 +28,10 @@ test('my page exposes recovery, records and catalog progress', () => {
   assert.match(source, /aria-label': 'プレイヤーアイコンを変更'/);
   assert.match(source, /所持したことのあるカードからアイコンを選択できます/);
   assert.match(source, /ownedPlayerIconDefinitions/);
+  assert.match(source, /text: 'ホーム画面イラスト'/);
+  assert.match(source, /デッキリーダーとは別に/);
+  assert.match(source, /home-artwork-picker-grid/);
+  assert.match(source, /onSelectHomeArtwork/);
   assert.doesNotMatch(source, /パスワード再設定メール/);
 });
 

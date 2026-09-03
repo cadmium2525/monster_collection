@@ -1429,7 +1429,7 @@ button:disabled { opacity: .38; cursor: not-allowed; }
   .mission-stock-note { padding:6px 10px; }
 }
 .profile-header h1 { margin:1px 0 0; color:var(--gold); font-size:clamp(18px,2.6vw,28px); }
-.profile-layout { min-height:0; overflow:auto; display:grid; grid-template-columns:minmax(260px,.78fr) minmax(400px,1.22fr); grid-template-areas:"identity record" "account record" "catalog record"; grid-template-rows:auto auto auto; align-content:start; gap:7px; overscroll-behavior:contain; }
+.profile-layout { min-height:0; overflow:auto; display:grid; grid-template-columns:minmax(260px,.78fr) minmax(400px,1.22fr); grid-template-areas:"identity record" "homeart record" "account record" "catalog record"; grid-template-rows:auto auto auto auto; align-content:start; gap:7px; overscroll-behavior:contain; }
 .profile-layout .panel { min-width:0; padding:10px 12px; border:1px solid var(--line); border-radius:var(--radius); background:linear-gradient(145deg,rgba(12,29,46,.96),rgba(5,14,24,.96)); }
 .profile-identity { grid-area:identity; display:grid; grid-template-columns:54px minmax(0,1fr) auto; align-items:center; gap:9px; }
 .profile-avatar { position:relative; display:grid; place-items:center; width:52px; aspect-ratio:1; overflow:hidden; border:1px solid var(--gold); border-radius:16px 5px; color:#fff0bf; background:radial-gradient(circle at 35% 30%,#476a7a,#152434 60%,#090e17); box-shadow:0 0 18px rgba(232,186,98,.14); font:800 24px/1 Georgia,serif; }
@@ -1439,6 +1439,13 @@ button:disabled { opacity: .38; cursor: not-allowed; }
 .profile-name-copy h2 { overflow:hidden; margin:2px 0; color:#fff0bf; font-size:18px; text-overflow:ellipsis; white-space:nowrap; }
 .profile-name-copy span { color:var(--muted); font-size:9px; }
 .profile-rename { min-height:34px; }
+.profile-home-art { grid-area:homeart; display:grid; gap:6px; }
+.profile-home-art .profile-section-title button { min-height:29px; padding:5px 10px; }
+.profile-home-art-preview { position:relative; min-height:88px; aspect-ratio:16/7; overflow:hidden; border:1px solid rgba(95,212,206,.34); border-radius:10px 4px; background:#050d17; box-shadow:inset 0 0 20px rgba(0,0,0,.42); }
+.profile-home-art-preview img { width:100%; height:100%; display:block; object-fit:cover; object-position:center; }
+.profile-home-art-preview strong { position:absolute; z-index:3; right:0; bottom:0; left:0; padding:18px 9px 6px; overflow:hidden; color:#fff1c2; background:linear-gradient(transparent,rgba(2,8,15,.92)); font-size:10px; text-overflow:ellipsis; text-shadow:0 1px 3px #000; white-space:nowrap; }
+.profile-home-art-preview > i { position:absolute; z-index:2; inset:-25% -55%; background:linear-gradient(105deg,transparent 35%,rgba(117,237,255,.06) 41%,rgba(255,240,167,.32) 48%,rgba(205,117,255,.13) 54%,transparent 61%); transform:translateX(-32%); animation:home-artwork-preview-foil 4.8s ease-in-out infinite; pointer-events:none; }
+@keyframes home-artwork-preview-foil { 0%,18% { transform:translateX(-32%); } 66%,100% { transform:translateX(32%); } }
 .profile-account { grid-area:account; display:grid; align-content:start; gap:6px; }
 .profile-account.account-safe { border-color:rgba(82,217,157,.48); box-shadow:inset 0 0 24px rgba(82,217,157,.045); }
 .profile-account.account-warning { border-color:rgba(232,186,98,.55); box-shadow:inset 0 0 24px rgba(232,186,98,.055); }
@@ -1487,6 +1494,20 @@ button:disabled { opacity: .38; cursor: not-allowed; }
 .player-icon-choice small { width:100%; overflow:hidden; font-size:7px; text-align:center; text-overflow:ellipsis; white-space:nowrap; }
 .player-icon-thumbnail { position:relative; display:grid; place-items:center; width:52px; aspect-ratio:1; overflow:hidden; border:1px solid rgba(116,218,218,.44); border-radius:50%; color:#fff0bd; background:#091827; box-shadow:0 4px 10px rgba(0,0,0,.38); }
 .player-icon-letter { font:800 21px/1 Georgia,"Yu Mincho",serif; }
+.home-artwork-picker-modal { width:min(980px,97vw); overflow:hidden; display:grid; grid-template-rows:auto minmax(0,1fr); }
+.home-artwork-picker { min-height:0; overflow:hidden; display:grid; grid-template-rows:auto minmax(0,1fr); gap:8px; padding-top:7px; }
+.home-artwork-picker > p { margin:0; color:#c9d5da; font-size:10px; }
+.home-artwork-picker-grid { min-height:0; max-height:min(66dvh,520px); overflow:auto; display:grid; grid-template-columns:repeat(6,minmax(112px,1fr)); align-content:start; gap:8px; padding:4px 5px 12px; overscroll-behavior:contain; }
+.home-artwork-choice { min-width:0; display:grid; gap:4px; padding:5px; overflow:hidden; border:1px solid rgba(145,181,198,.28); border-radius:11px 4px; color:#dce8eb; background:rgba(255,255,255,.025); cursor:pointer; }
+.home-artwork-choice:hover,.home-artwork-choice:focus-visible { border-color:rgba(95,212,206,.72); background:rgba(95,212,206,.08); }
+.home-artwork-choice.is-special { border-color:rgba(219,159,255,.42); background:linear-gradient(145deg,rgba(85,28,105,.18),rgba(255,255,255,.025)); }
+.home-artwork-choice.selected { border-color:#f2cf78; background:rgba(232,186,98,.12); box-shadow:0 0 16px rgba(232,186,98,.26); }
+.home-artwork-choice-image { width:100%; aspect-ratio:16/9; display:block; border-radius:7px 2px; background-color:#07111c; background-image:linear-gradient(180deg,transparent 58%,rgba(1,6,12,.5)),url("./assets/images/home/home-artwork-thumbnails.webp"); background-repeat:no-repeat; background-size:100% 100%,1000% 600%; background-position:center,var(--home-thumb-x) var(--home-thumb-y); }
+.home-artwork-choice-copy { min-width:0; display:grid; gap:1px; text-align:left; }
+.home-artwork-choice-copy strong,.home-artwork-choice-copy small { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+.home-artwork-choice-copy strong { color:#edf4f5; font-size:9px; }
+.home-artwork-choice-copy small { color:#88deda; font-size:6px; letter-spacing:.09em; }
+.home-artwork-choice.is-special .home-artwork-choice-copy small { color:#e2a8fb; }
 .account-modal { width:min(570px,95vw); }
 .account-form { display:grid; gap:9px; padding-top:8px; }
 .account-form > p { margin:0; color:#cbd6dc; font-size:11px; line-height:1.5; }
@@ -1496,15 +1517,17 @@ button:disabled { opacity: .38; cursor: not-allowed; }
 
 @media (max-height:430px) {
   .profile-screen { gap:4px; }
-  .profile-layout { gap:4px; grid-template-columns:minmax(235px,.75fr) minmax(390px,1.25fr); grid-template-rows:auto auto auto; }
+  .profile-layout { gap:4px; grid-template-columns:minmax(235px,.75fr) minmax(390px,1.25fr); grid-template-rows:auto auto auto auto; }
   .profile-layout .panel { padding:6px 8px; }
   .profile-avatar { width:42px; font-size:19px; }
   .profile-identity { grid-template-columns:44px minmax(0,1fr) auto; gap:6px; }
   .profile-name-copy h2 { font-size:15px; }
+  .profile-home-art-preview { min-height:66px; aspect-ratio:16/5; }
   .profile-account { gap:4px; }
   .profile-account-actions button { min-height:29px; font-size:9px; }
   .profile-metric { padding:5px 7px; }
   .profile-metric strong { font-size:18px; }
+  .home-artwork-picker-grid { max-height:calc(100dvh - 90px); grid-template-columns:repeat(8,minmax(82px,1fr)); gap:5px; }
 }
 
 .tournament-setup-screen { height: calc(100dvh - max(16px,var(--safe-top)) - max(16px,var(--safe-bottom))); display: grid; grid-template-rows: auto minmax(0,1fr) auto; gap: 7px; }
@@ -2563,6 +2586,6 @@ body:has(.home-lobby) {
 }
 
 @media (prefers-reduced-motion:reduce) {
-  .opening-pack,.opening-aura,.opening-aura i,.pack-particle-field i,.pack-foil-sheen,.pack-break-flash,.pack-break-flash::before,.pack-break-flash i,.pack-card-slot,.pack-card-reveal-shell,.pack-rarity-burst,.rarity-burst-rings i,.pack-rarity-burst strong,.game-card.finish-foil::before,.fusion-catalog-card.finish-foil::before,.monster-portrait.finish-foil::after,.card-art.finish-foil-art::after,.game-card.life-critical .card-life,.login-bonus-diamond-art,.mulligan-motion-cue,.mulligan-motion-sigil i,.game-card.mulligan-draw-enter,.game-card.mulligan-return-to-deck,.home-lobby-hero-art,.home-lobby-foil-shine { animation:none !important; }
+  .opening-pack,.opening-aura,.opening-aura i,.pack-particle-field i,.pack-foil-sheen,.pack-break-flash,.pack-break-flash::before,.pack-break-flash i,.pack-card-slot,.pack-card-reveal-shell,.pack-rarity-burst,.rarity-burst-rings i,.pack-rarity-burst strong,.game-card.finish-foil::before,.fusion-catalog-card.finish-foil::before,.monster-portrait.finish-foil::after,.card-art.finish-foil-art::after,.game-card.life-critical .card-life,.login-bonus-diamond-art,.mulligan-motion-cue,.mulligan-motion-sigil i,.game-card.mulligan-draw-enter,.game-card.mulligan-return-to-deck,.home-lobby-hero-art,.home-lobby-foil-shine,.profile-home-art-preview > i { animation:none !important; }
   .pack-particle-field { display:none; }
 }

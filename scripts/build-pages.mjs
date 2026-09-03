@@ -82,6 +82,7 @@ const cacheUrls = ['./', ...outputFiles
       && !relative.startsWith('assets/images/showcase/')
       && !relative.startsWith('assets/images/showcase-fusions/')
       && !relative.startsWith('assets/images/home/')
+      && !relative.startsWith('assets/images/home-showcase/')
       && !relative.startsWith('assets/images/catalog-thumbnails/')
       // Runtime uses the corrected standalone fusion cells. Keep the two
       // source atlases deployable for traceability without preloading them.

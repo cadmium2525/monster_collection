@@ -13,6 +13,7 @@ import {
 } from '../gacha/economy-state.js';
 import { applyPlayerStatsEvent, normalizePlayerStats } from '../profile/player-stats.js';
 import { normalizePlayerIconMasterId } from '../profile/player-icon.js';
+import { normalizeHomeArtworkSelection } from '../profile/home-artwork.js';
 import {
   playerIdToRecoveryEmail,
   recoveryEmailToPlayerId,
@@ -76,7 +77,7 @@ export class FirebaseGameRepository {
     const existing = await this.sdk.getDoc(profileRef);
     if (!existing.exists()) {
       await this.sdk.setDoc(profileRef, {
-        displayName: '名無しブリーダー', playerIconMasterId: null, isAnonymous: this.user.isAnonymous,
+        displayName: '名無しブリーダー', playerIconMasterId: null, homeArtwork: null, isAnonymous: this.user.isAnonymous,
         ownedCardMasterIds: [], discoveredFusionIds: [], catalogSchemaVersion: 1,
         economy: normalizeEconomyState(null),
         stats: normalizePlayerStats(null),
@@ -114,6 +115,14 @@ export class FirebaseGameRepository {
     const value = normalizePlayerIconMasterId(playerIconMasterId);
     if (playerIconMasterId != null && !value) throw new Error('プレイヤーアイコンが不正です');
     await this.sdk.setDoc(this._profileRef(), { playerIconMasterId: value, updatedAt: this.sdk.serverTimestamp() }, { merge: true });
+    this.profile = await this.getProfile();
+    return { ...this.profile, id: this.user.uid };
+  }
+
+  async setHomeArtwork(homeArtwork) {
+    const value = normalizeHomeArtworkSelection(homeArtwork);
+    if (homeArtwork != null && !value) throw new Error('ホーム画面イラストの設定が不正です');
+    await this.sdk.setDoc(this._profileRef(), { homeArtwork: value, updatedAt: this.sdk.serverTimestamp() }, { merge: true });
     this.profile = await this.getProfile();
     return { ...this.profile, id: this.user.uid };
   }

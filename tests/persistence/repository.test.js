@@ -151,6 +151,20 @@ test('player card icon persists in local and Firebase profiles', async () => {
   assert.equal((await firebase.getProfile()).playerIconMasterId, 'monster-019');
 });
 
+test('independent home artwork selection persists in local and Firebase profiles', async () => {
+  const selection = { masterId: 'monster-019', artVariantId: 'showcase-inorganic-01', finish: 'foil' };
+  const local = new LocalGameRepository({ storage: new MemoryStorage(), idFactory: () => 'home-art-local' });
+  await local.initialize();
+  assert.deepEqual((await local.setHomeArtwork(selection)).homeArtwork, selection);
+  assert.deepEqual((await local.getProfile()).homeArtwork, selection);
+
+  const fake = fakeFirebaseSdk();
+  const firebase = new FirebaseGameRepository({ config: { projectId: 'test' }, sdkLoader: async () => fake.sdk });
+  await firebase.initialize();
+  assert.deepEqual((await firebase.setHomeArtwork(selection)).homeArtwork, selection);
+  assert.deepEqual((await firebase.getProfile()).homeArtwork, selection);
+});
+
 test('repository stores player-wide tournament unlock without downgrading it', async () => {
   const local = new LocalGameRepository({ storage: new MemoryStorage(), idFactory: () => 'unlock-local' });
   await local.initialize();

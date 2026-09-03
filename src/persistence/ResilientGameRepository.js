@@ -100,6 +100,17 @@ export class ResilientGameRepository {
     } catch (error) { this.lastError = error; return local; }
   }
 
+  async setHomeArtwork(homeArtwork) {
+    const local = await this.local.setHomeArtwork(homeArtwork);
+    if (!this.activeCloud?.setHomeArtwork) return local;
+    try {
+      const cloud = await this.activeCloud.setHomeArtwork(homeArtwork);
+      await this.local.replaceProfile?.(cloud);
+      this.user = { ...this.user, ...cloud };
+      return cloud;
+    } catch (error) { this.lastError = error; return local; }
+  }
+
   async getEconomy() {
     const localEconomy = await this.local.getEconomy();
     if (!this.activeCloud?.getEconomy) return localEconomy;

@@ -76,5 +76,6 @@ test('growing and on-demand catalog art is excluded from install-time precache a
   assert.match(buildScript, /special-fusion-atlas-v1\.webp/);
   assert.match(buildScript, /blue-drill-v2\.webp/);
   assert.match(buildScript, /assets\/images\/home\//);
+  assert.match(buildScript, /assets\/images\/home-showcase\//);
   assert.match(buildScript, /deployIgnored/);
 });

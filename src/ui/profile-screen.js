@@ -3,6 +3,8 @@ import { battleWinRate, normalizePlayerStats } from '../profile/player-stats.js'
 import { el, formatDate, replace } from './dom.js';
 import { openModal } from './modal.js';
 import { ownedPlayerIconDefinitions, playerIconContent, playerIconThumbnail } from './player-icon.js';
+import { defaultHomeArtworkSelection, homeArtworkSelectionKey, normalizeHomeArtworkSelection, ownedHomeArtworkSelections } from '../profile/home-artwork.js';
+import { homeArtworkImagePath, homeArtworkLabel, homeArtworkThumbnailStyle } from './home-artwork.js';
 
 function percent(value) {
   return `${Math.round(Number(value || 0) * 100)}%`;
@@ -87,13 +89,58 @@ function openPlayerIconPicker(screen) {
   });
 }
 
+function openHomeArtworkPicker(screen) {
+  const current = normalizeHomeArtworkSelection(screen.user.homeArtwork)
+    ?? defaultHomeArtworkSelection(screen.decks, screen.masterIndex);
+  const currentKey = homeArtworkSelectionKey(current);
+  const selections = ownedHomeArtworkSelections({
+    catalog: screen.catalog,
+    decks: screen.decks,
+    economy: screen.economy,
+    masterIndex: screen.masterIndex,
+    current,
+  });
+  let modal = null;
+  const choices = selections.map((selection) => {
+    const special = selection.artVariantId !== 'base';
+    const selected = homeArtworkSelectionKey(selection) === currentKey;
+    return el('button', {
+      className: `home-artwork-choice${special ? ' is-special' : ''}${selection.finish === 'foil' ? ' is-foil' : ''}${selected ? ' selected' : ''}`,
+      onclick: () => {
+        modal.close();
+        void screen.onSelectHomeArtwork?.(selection);
+      },
+      attrs: {
+        'aria-label': `${homeArtworkLabel(selection, screen.masterIndex)}をホーム画面に設定`,
+        'aria-pressed': String(selected),
+      },
+    }, [
+      el('span', { className: 'home-artwork-choice-image', attrs: { style: homeArtworkThumbnailStyle(selection), 'aria-hidden': 'true' } }),
+      el('span', { className: 'home-artwork-choice-copy' }, [
+        el('strong', { text: screen.masterIndex.monsters.get(selection.masterId)?.name ?? selection.masterId }),
+        el('small', { text: special ? `SPECIAL${selection.finish === 'foil' ? ' / Foil' : ''}` : selection.finish === 'foil' ? 'NORMAL / Foil' : 'NORMAL' }),
+      ]),
+    ]);
+  });
+  modal = openModal({
+    title: 'ホーム画面イラスト',
+    content: el('div', { className: 'home-artwork-picker' }, [
+      el('p', { text: 'デッキリーダーとは別に、所持・獲得したモンスターのホーム画面用イラストを選択できます。' }),
+      el('div', { className: 'home-artwork-picker-grid' }, choices),
+    ]),
+    className: 'home-artwork-picker-modal',
+  });
+}
+
 export class ProfileScreen {
-  constructor({ root, user, account, stats, catalog, masterIndex, catalogProgress, qualification, champion, hasActiveRun = false, onBack, onRename, onSelectIcon, onRegisterRecovery, onSignIn }) {
+  constructor({ root, user, account, stats, catalog, decks = [], economy = null, masterIndex, catalogProgress, qualification, champion, hasActiveRun = false, onBack, onRename, onSelectIcon, onSelectHomeArtwork, onRegisterRecovery, onSignIn }) {
     this.root = root;
     this.user = user;
     this.account = account;
     this.stats = normalizePlayerStats(stats);
     this.catalog = catalog;
+    this.decks = decks;
+    this.economy = economy;
     this.masterIndex = masterIndex;
     this.catalogProgress = catalogProgress;
     this.qualification = qualification;
@@ -102,6 +149,7 @@ export class ProfileScreen {
     this.onBack = onBack;
     this.onRename = onRename;
     this.onSelectIcon = onSelectIcon;
+    this.onSelectHomeArtwork = onSelectHomeArtwork;
     this.onRegisterRecovery = onRegisterRecovery;
     this.onSignIn = onSignIn;
     this.render();
@@ -114,6 +162,8 @@ export class ProfileScreen {
     const cupWins = Object.entries(stats.cupWins)
       .map(([rank, wins]) => `${TOURNAMENT_LABELS[rank] ?? rank} ${wins}`)
       .join(' / ');
+    const homeArtwork = normalizeHomeArtworkSelection(this.user.homeArtwork)
+      ?? defaultHomeArtworkSelection(this.decks, this.masterIndex);
     replace(this.root, el('main', { className: 'profile-screen' }, [
       el('header', { className: 'screen-header profile-header' }, [
         el('div', {}, [el('p', { className: 'eyebrow', text: 'MY PAGE' }), el('h1', { text: 'マイページ' })]),
@@ -132,6 +182,17 @@ export class ProfileScreen {
             el('span', { text: `${TOURNAMENT_LABELS[this.qualification] ?? this.qualification}まで出場可能` }),
           ]),
           el('button', { className: 'utility-button profile-rename', text: '名前を変更', onclick: this.onRename }),
+        ]),
+        el('section', { className: 'profile-home-art panel' }, [
+          el('div', { className: 'profile-section-title' }, [
+            el('div', {}, [el('p', { className: 'eyebrow', text: 'HOME ARTWORK' }), el('h2', { text: 'ホーム画面イラスト' })]),
+            el('button', { className: 'utility-button', text: '変更', onclick: () => openHomeArtworkPicker(this) }),
+          ]),
+          el('div', { className: `profile-home-art-preview${homeArtwork.finish === 'foil' ? ' is-foil' : ''}` }, [
+            el('img', { src: homeArtworkImagePath(homeArtwork), alt: homeArtworkLabel(homeArtwork, this.masterIndex), draggable: false, attrs: { loading: 'lazy', decoding: 'async' } }),
+            homeArtwork.finish === 'foil' ? el('i', { attrs: { 'aria-hidden': 'true' } }) : null,
+            el('strong', { text: homeArtworkLabel(homeArtwork, this.masterIndex) }),
+          ]),
         ]),
         accountPanel(this, account),
         el('section', { className: 'profile-record panel' }, [

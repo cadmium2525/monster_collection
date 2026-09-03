@@ -276,6 +276,26 @@ test('all thirty home leaders use optimized standalone landscape WebP artwork', 
   }
 });
 
+test('all thirty showcase appearances have optimized on-demand landscape home artwork', () => {
+  let totalBytes = 0;
+  for (let number = 1; number <= 30; number += 1) {
+    const id = String(number).padStart(3, '0');
+    const url = new URL(`../../assets/images/home-showcase/monster-${id}.webp`, import.meta.url);
+    const bytes = readFileSync(url);
+    const size = statSync(url).size;
+    totalBytes += size;
+    assert.equal(bytes.subarray(0, 4).toString('ascii'), 'RIFF', `special home monster-${id} starts with RIFF marker`);
+    assert.equal(bytes.subarray(8, 12).toString('ascii'), 'WEBP', `special home monster-${id} has WEBP signature`);
+    assert.ok(size < 330_000, `special home monster-${id} stays practical for on-demand loading`);
+  }
+  assert.ok(totalBytes < 5_500_000, 'all special home illustrations stay below a 5.5 MB aggregate budget');
+  const atlasUrl = new URL('../../assets/images/home/home-artwork-thumbnails.webp', import.meta.url);
+  const atlasBytes = readFileSync(atlasUrl);
+  assert.equal(atlasBytes.subarray(0, 4).toString('ascii'), 'RIFF');
+  assert.equal(atlasBytes.subarray(8, 12).toString('ascii'), 'WEBP');
+  assert.ok(statSync(atlasUrl).size < 220_000, 'the 60-choice picker atlas stays lightweight');
+});
+
 test('all runtime game artwork uses valid WebP while compatibility PWA icons remain separate', () => {
   const assets = [
     'assets/images/battle-arena.webp',
