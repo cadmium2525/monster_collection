@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.31.4 — 2026-09-03
+
+### Home artwork picker
+- Keep monster names and artwork variants fully visible in compact iPhone landscape layouts by preventing grid rows from collapsing.
+
 ## 1.31.3 — 2026-09-03
 
 ### Reliable startup progress

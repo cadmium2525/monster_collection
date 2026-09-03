@@ -43,6 +43,13 @@ test('home replaces the direct rename action with a my-page entry', () => {
   assert.doesNotMatch(source, /text: '名前変更'/);
 });
 
+test('home artwork choices keep their labels visible in compact landscape layouts', () => {
+  const css = fs.readFileSync(new URL('../../styles.css', import.meta.url), 'utf8');
+  assert.match(css, /\.home-artwork-picker-grid\s*\{[^}]*grid-auto-rows:max-content;/s);
+  assert.match(css, /\.home-artwork-choice\s*\{[^}]*grid-template-rows:auto minmax\(21px,max-content\);/s);
+  assert.match(css, /@media \(max-height:430px\)[\s\S]*\.home-artwork-choice\s*\{\s*min-height:82px;/);
+});
+
 test('recovery forms request a player ID instead of an email address', () => {
   const source = fs.readFileSync(new URL('../../src/app.js', import.meta.url), 'utf8');
   assert.match(source, /aria-label': '復旧ID'/);
