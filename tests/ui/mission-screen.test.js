@@ -15,6 +15,11 @@ test('mission screen provides complete objectives in switchable daily and weekly
   assert.match(source, /aria-selected/);
   assert.doesNotMatch(source, /mission-loot-section/);
   assert.match(source, /lootStock\?\.\[0\]\?\.lootId/);
+
+  const css = await readFile(new URL('../../styles.css', import.meta.url), 'utf8');
+  assert.match(css, /\.mission-entry\.is-claimable \.mission-state\.primary-button/);
+  assert.match(css, /background:linear-gradient\(135deg,#fff0ae/);
+  assert.match(css, /@keyframes mission-claim-ready/);
 });
 
 test('arena header replaces its mission shortcut with the loot stock', async () => {

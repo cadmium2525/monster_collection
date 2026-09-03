@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFileSync, statSync } from 'node:fs';
+import { readFileSync, readdirSync, statSync } from 'node:fs';
 import {
   cardArtPlacement,
   cardDisplayStats,
@@ -227,6 +227,23 @@ test('all sixty premium special-fusion illustrations are optimized standalone We
     assert.equal(bytes.subarray(8, 12).toString('ascii'), 'WEBP', `showcase-fusion-${id} has WEBP signature`);
     assert.ok(statSync(url).size < 300_000, `showcase-fusion-${id} stays practical for on-demand loading`);
   }
+});
+
+test('all thirty monster showcase illustrations stay within the on-demand mobile budget', () => {
+  const root = new URL('../../assets/images/showcase/', import.meta.url);
+  const filenames = readdirSync(root).filter((filename) => filename.endsWith('.webp')).sort();
+  assert.equal(filenames.length, 30);
+  let totalBytes = 0;
+  for (const filename of filenames) {
+    const url = new URL(filename, root);
+    const bytes = readFileSync(url);
+    const size = statSync(url).size;
+    totalBytes += size;
+    assert.equal(bytes.subarray(0, 4).toString('ascii'), 'RIFF', `${filename} starts with RIFF marker`);
+    assert.equal(bytes.subarray(8, 12).toString('ascii'), 'WEBP', `${filename} has WEBP signature`);
+    assert.ok(size < 230_000, `${filename} stays practical for on-demand loading`);
+  }
+  assert.ok(totalBytes < 4_100_000, 'all monster showcase illustrations stay below a 4.1 MB aggregate budget');
 });
 
 test('all thirty-two expansion breeder illustrations are optimized WebP project assets', () => {
