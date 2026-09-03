@@ -7,6 +7,7 @@ import { playFusionUnlockAnimation } from './fusion-unlock-animation.js';
 import { playAwakeningUnlockAnimation } from './awakening-unlock-animation.js';
 import { createAwakeningAnimationModel, playAwakeningAnimation } from './awakening-animation.js';
 import { playTurnTransition } from './turn-transition-animation.js';
+import { normalTurnDrawCards, turnDrawTimings } from './turn-draw-animation.js';
 import { createCardUseAnimationModel, isCardUseAction, playCardUseAnimation } from './card-use-animation.js';
 import { openModal } from './modal.js';
 import { lowLifeTargetEffects, unitLifePresentation } from './status-presentation.js';
@@ -48,6 +49,11 @@ export class BattleScreen {
     this.mulliganMotionCount = pendingHumanMulligan
       ? engine.player(humanPlayerId).hand.length
       : 0;
+    this.turnDrawHiddenIds = new Set();
+    this.turnDrawQueue = [];
+    this.turnDrawAnimatingCardId = null;
+    this.turnDrawActive = false;
+    this.turnDrawCount = 0;
     this.busy = engine.state.status === 'active' && !engine.state.pendingMoveChoice;
     this.turnAnnouncementKey = null;
     this.queuedCardSelectionId = null;
@@ -226,6 +232,7 @@ export class BattleScreen {
       ]),
       this.renderMulliganOverlay(own),
       this.renderMulliganMotionCue(),
+      this.renderTurnDrawCue(),
     ]);
     replace(this.root, screen);
     this._renderLegalActions = null;
@@ -238,8 +245,66 @@ export class BattleScreen {
   }
 
   presentedHandCards(player) {
-    if (!['initial-deal', 'redrawing'].includes(this.mulliganPresentationPhase)) return player.hand;
-    return player.hand.filter((card) => this.presentedMulliganHandIds.has(card.instanceId));
+    let cards = player.hand;
+    if (['initial-deal', 'redrawing'].includes(this.mulliganPresentationPhase)) {
+      cards = cards.filter((card) => this.presentedMulliganHandIds.has(card.instanceId));
+    }
+    if (this.turnDrawHiddenIds.size) {
+      cards = cards.filter((card) => !this.turnDrawHiddenIds.has(card.instanceId));
+    }
+    return cards;
+  }
+
+  renderTurnDrawCue() {
+    if (!this.turnDrawActive || !this.turnDrawCount) return null;
+    return el('div', {
+      className: 'turn-draw-cue',
+      attrs: { role: 'status', 'aria-live': 'polite' },
+    }, [
+      el('span', { className: 'turn-draw-cue-sigil', text: '札', attrs: { 'aria-hidden': 'true' } }),
+      el('span', {}, [
+        el('strong', { text: 'CARD DRAW' }),
+        el('small', { text: `山札から${this.turnDrawCount}枚引きます` }),
+      ]),
+    ]);
+  }
+
+  prepareNormalTurnDraw(action, beforeHandIds, newLogs) {
+    const player = this.engine.player(this.humanPlayerId);
+    const cards = normalTurnDrawCards({
+      action,
+      logs: newLogs,
+      currentPlayerId: this.engine.state.currentPlayerId,
+      humanPlayerId: this.humanPlayerId,
+      beforeHandIds,
+      hand: player.hand,
+    });
+    if (!cards.length) return;
+    this.turnDrawQueue = cards.map((card) => card.instanceId);
+    this.turnDrawHiddenIds = new Set(this.turnDrawQueue);
+    this.turnDrawCount = cards.length;
+  }
+
+  async playPreparedNormalTurnDraw() {
+    if (!this.turnDrawQueue.length) return;
+    const timing = turnDrawTimings({ speed: this.speed, reducedMotion: this.prefersReducedMotion() });
+    const queue = [...this.turnDrawQueue];
+    this.turnDrawActive = true;
+    this.render();
+    await delay(timing.lead);
+    for (const instanceId of queue) {
+      this.turnDrawAnimatingCardId = instanceId;
+      this.turnDrawHiddenIds.delete(instanceId);
+      this.render();
+      await delay(timing.deal);
+    }
+    this.turnDrawAnimatingCardId = null;
+    await delay(timing.settle);
+    this.turnDrawActive = false;
+    this.turnDrawQueue = [];
+    this.turnDrawHiddenIds.clear();
+    this.turnDrawCount = 0;
+    this.render();
   }
 
   renderMulliganMotionCue() {
@@ -389,6 +454,7 @@ export class BattleScreen {
     if (this.mulliganPresentationPhase === 'selecting') return '交換するカードを選択してください';
     if (this.mulliganPresentationPhase === 'returning') return '選択したカードを山札へ戻しています';
     if (this.mulliganPresentationPhase === 'redrawing') return '新しいカードを引いています';
+    if (this.turnDrawActive || this.turnDrawHiddenIds.size) return 'ターン開始時のカードを引いています';
     if (this.engine.state.pendingMoveChoice?.playerId === this.humanPlayerId) {
       return '新しく覚えた技の入替を選択';
     }
@@ -425,6 +491,11 @@ export class BattleScreen {
       if (!isOpponent && ['initial-deal', 'redrawing'].includes(this.mulliganPresentationPhase)) {
         handCount = this.presentedHandCards(player).length;
         deckCount += player.hand.length - handCount;
+      }
+      if (!isOpponent && this.turnDrawHiddenIds.size) {
+        const hiddenCount = player.hand.filter((card) => this.turnDrawHiddenIds.has(card.instanceId)).length;
+        handCount -= hiddenCount;
+        deckCount += hiddenCount;
       }
       const graveyardCount = player.graveyard.length;
       const playerTarget = isOpponent && this.pendingMove && this.legalActions().some((action) => action.type === 'move'
@@ -590,6 +661,11 @@ export class BattleScreen {
     if (this.mulliganReturningIds.has(card.instanceId)) {
       node.classList.add('mulligan-return-to-deck');
       node.style.setProperty('--mulligan-return-duration', `${this.mulliganTimings().return}ms`);
+    }
+    if (this.turnDrawAnimatingCardId === card.instanceId) {
+      const timing = turnDrawTimings({ speed: this.speed, reducedMotion: this.prefersReducedMotion() });
+      node.classList.add('turn-draw-enter');
+      node.style.setProperty('--turn-draw-duration', `${timing.deal}ms`);
     }
     if (this.queuedCardSelectionId === card.instanceId) node.classList.add('tap-queued');
     return node;
@@ -1158,6 +1234,8 @@ export class BattleScreen {
 
   async executeEngineAction(action) {
     const before = this.captureStats();
+    const beforeLogLength = this.engine.state.log.length;
+    const beforeHumanHandIds = new Set(this.engine.player(this.humanPlayerId).hand.map((card) => card.instanceId));
     const needsBeforeState = action.type.startsWith('fusion-') || action.type === 'awaken' || isCardUseAction(action);
     const beforeState = needsBeforeState ? this.engine.getState() : null;
     const actingPlayerId = action.playerId ?? beforeState?.currentPlayerId ?? this.engine.state.currentPlayerId;
@@ -1178,6 +1256,7 @@ export class BattleScreen {
     if (hadInteractionSelection) this.render();
     if (!cardUseModel) await this.animateActionStart(action);
     this.engine.applyAction(action);
+    this.prepareNormalTurnDraw(action, beforeHumanHandIds, this.engine.state.log.slice(beforeLogLength));
     this.emitCheckpoint();
     if (cardUseModel) await playCardUseAnimation({
       model: cardUseModel,
@@ -1207,6 +1286,7 @@ export class BattleScreen {
     await this.showStatDirections(before, commitNumbers, action);
     commitNumbers();
     await this.showCurrentTurnTransition();
+    await this.playPreparedNormalTurnDraw();
     await this.showLatestEvent(action);
   }
 
