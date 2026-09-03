@@ -44,7 +44,7 @@ export function openArenaRankingModal({ leaderboard, masterIndex }) {
         el('span', {}, [el('small', { text: 'YOUR POSITION' }), el('strong', { text: leaderboard.selfRank ? `${leaderboard.selfRank}位` : '未参加' })]),
         el('span', {}, [el('small', { text: 'RANKED PLAYERS' }), el('strong', { text: `${Number(leaderboard.total) || 0}人` })]),
       ]),
-      !leaderboard.available ? el('p', { className: 'arena-ranking-empty', text: 'ランキングはオンライン接続時に表示できます。' }) : null,
+      !leaderboard.available ? el('p', { className: 'arena-ranking-empty', text: 'ランキングを取得できませんでした。閉じてもう一度お試しください。' }) : null,
       leaderboard.available ? el('div', { className: 'arena-ranking-tabs' }, [
         el('button', { className: mode === 'top' ? 'selected' : '', text: 'TOP 50', onclick: () => { mode = 'top'; render(); } }),
         el('button', { className: mode === 'nearby' ? 'selected' : '', text: '自分周辺', disabled: !leaderboard.nearby?.length, onclick: () => { mode = 'nearby'; render(); } }),

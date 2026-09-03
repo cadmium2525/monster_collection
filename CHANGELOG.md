@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.32.1 — 2026-09-04
+
+### Arena leaderboard retry
+- Do not cache failed Arena leaderboard requests, so reopening the ranking immediately retries after a temporary Firestore index or network failure.
+- Replace the misleading online-only message with a retry instruction.
+
 ## 1.32.0 — 2026-09-04
 
 ### Arena leaderboard and artwork focus

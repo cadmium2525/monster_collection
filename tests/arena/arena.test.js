@@ -109,6 +109,7 @@ test('three arena wins unlock one selected weekly loot card', () => {
 test('home and Firestore expose missions, arena ghosts and honest source labels', () => {
   const home = fs.readFileSync(new URL('../../src/ui/home-screen.js', import.meta.url), 'utf8');
   const arenaUi = fs.readFileSync(new URL('../../src/ui/arena-screen.js', import.meta.url), 'utf8');
+  const app = fs.readFileSync(new URL('../../src/app.js', import.meta.url), 'utf8');
   const rules = fs.readFileSync(new URL('../../firestore.rules', import.meta.url), 'utf8');
   const giftIndex = home.indexOf("homeIcon('gift')");
   const missionIndex = home.indexOf("homeIcon('mission')");
@@ -123,6 +124,9 @@ test('home and Firestore expose missions, arena ghosts and honest source labels'
   assert.match(arenaUi, /アリーナランキング/);
   assert.match(arenaUi, /TOP 50/);
   assert.match(arenaUi, /自分周辺/);
+  assert.match(app, /this\.arenaLeaderboard\?\.available && this\.arenaLeaderboardKey === rankingKey/);
+  assert.match(app, /this\.arenaLeaderboardKey = this\.arenaLeaderboard\.available\s*\?/);
+  assert.match(app, /this\.arenaLeaderboardKey = null;/);
   assert.match(rules, /match \/arenaDecks\/\{publicDeckId\}/);
   assert.match(rules, /match \/arenaRankings\/\{userId\}/);
   assert.match(rules, /match \/legendArchives\/\{archiveId\}/);

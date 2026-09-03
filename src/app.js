@@ -710,7 +710,7 @@ class MonsterConstructionApp {
   openArenaLeaderboard(deck) {
     const arena = normalizeArenaProgress(this.economy.arenaProgress);
     const rankingKey = `${arena.rating}:${arena.wins}:${arena.losses}:${this.user?.displayName}:${this.user?.playerIconMasterId ?? ''}`;
-    if (this.arenaLeaderboard && this.arenaLeaderboardKey === rankingKey) {
+    if (this.arenaLeaderboard?.available && this.arenaLeaderboardKey === rankingKey) {
       openArenaRankingModal({ leaderboard: this.arenaLeaderboard, masterIndex: this.masterIndex });
       return;
     }
@@ -729,10 +729,13 @@ class MonsterConstructionApp {
       }
       this.arenaLeaderboard = await this.repository.getArenaLeaderboard?.({ topLimit: 50, nearbyRadius: 5 })
         ?? { available: false, top: [], nearby: [], selfRank: null, total: 0 };
-      this.arenaLeaderboardKey = `${arena.rating}:${arena.wins}:${arena.losses}:${this.user?.displayName}:${this.user?.playerIconMasterId ?? ''}`;
+      this.arenaLeaderboardKey = this.arenaLeaderboard.available
+        ? `${arena.rating}:${arena.wins}:${arena.losses}:${this.user?.displayName}:${this.user?.playerIconMasterId ?? ''}`
+        : null;
     } catch (error) {
       console.warn('Arena leaderboard could not be loaded', error);
       this.arenaLeaderboard = { available: false, top: [], nearby: [], selfRank: null, total: 0 };
+      this.arenaLeaderboardKey = null;
     } finally {
       this.arenaLeaderboardLoading = false;
     }
