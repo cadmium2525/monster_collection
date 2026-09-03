@@ -57,16 +57,21 @@ class MonsterConstructionApp {
   }
 
   async initialize() {
+    this.showStartupProgress(8, 'マスターデータを読み込んでいます…');
     this.masterData = await loadMasterData();
+    this.showStartupProgress(18, 'カードデータを確認しています…');
     this.masterIndex = createMasterIndex(this.masterData);
     this.repository = createGameRepository();
+    this.showStartupProgress(28, 'アカウントと端末データを確認しています…');
     this.user = await this.repository.initialize();
+    this.showStartupProgress(40, '所持ダイヤと報酬を確認しています…');
     this.economy = await this.repository.getEconomy();
     const loginResult = this.repository.claimLoginRewards
       ? await this.repository.claimLoginRewards({ loginDate: japanDateKey() })
       : { state: this.economy, rewards: [] };
     this.economy = loginResult.state;
     this.loginRewards = loginResult.rewards;
+    this.showStartupProgress(53, '保存デッキを読み込んでいます…');
     const records = await this.repository.listDecks();
     this.decks = new DeckCollection({
       masterIndex: this.masterIndex,
@@ -88,9 +93,11 @@ class MonsterConstructionApp {
       const starter = this.decks.create({ deckName: 'はじまりの40枚', cards: createBaselineDeck(this.masterData, `starter-${this.seed}`) });
       await this.repository.saveDeck(starter);
     }
+    this.showStartupProgress(68, 'カード図鑑を更新しています…');
     this.catalog = await this.repository.recordCardCatalog({
       ownedCardMasterIds: this.decks.list().flatMap((deck) => deck.cards.map((card) => card.masterId)),
     });
+    this.showStartupProgress(78, 'ホーム画面を準備しています…');
     if (!normalizeHomeArtworkSelection(this.user?.homeArtwork)) {
       const homeArtwork = defaultHomeArtworkSelection(this.decks.list(), this.masterIndex);
       const profile = await this.repository.setHomeArtwork(homeArtwork);
@@ -101,13 +108,18 @@ class MonsterConstructionApp {
     document.addEventListener('visibilitychange', () => {
       if (document.visibilityState === 'hidden') flushCheckpoint();
     });
-    this.champion = await this.repository.getChampion();
-    const activeRun = await this.repository.getActiveRun?.();
+    this.showStartupProgress(88, '王座と試合データを確認しています…');
+    const [champion, activeRun] = await Promise.all([
+      this.repository.getChampion(),
+      this.repository.getActiveRun?.(),
+    ]);
+    this.champion = champion;
     this.activeRun = ['tournament', 'battle', 'reward', 'arena-battle', 'arena-result'].includes(activeRun?.phase) ? activeRun : null;
     this.unsubscribeChampion = this.repository.subscribeChampion((champion) => {
       this.champion = champion;
       if (this.currentScreen === 'home') this.showHome();
     });
+    this.showStartupProgress(100, 'ホーム画面を表示します…');
     this.showHome();
     if (this.loginRewards.length) this.showLoginBonus(this.loginRewards);
     globalThis.__MC_DEBUG__ = { app: this, masterData: this.masterData, masterIndex: this.masterIndex, repository: this.repository };
@@ -141,7 +153,48 @@ class MonsterConstructionApp {
 
   showLoading(message) {
     this.currentScreen = 'loading';
-    replace(this.root, el('main', { className: 'boot-screen' }, [el('div', { className: 'brand-mark', text: 'MC' }), el('p', { text: message })]));
+    replace(this.root, this.loadingScreen(message));
+  }
+
+  loadingScreen(message, progress = null) {
+    const determinate = Number.isFinite(progress);
+    const value = determinate ? Math.max(0, Math.min(100, Math.round(progress))) : null;
+    return el('main', { className: 'boot-screen' }, [
+      el('div', { className: 'brand-mark', text: 'MC', attrs: { 'aria-hidden': 'true' } }),
+      el('p', { className: 'boot-message', text: message }),
+      el('div', {
+        className: `boot-progress${determinate ? '' : ' is-indeterminate'}`,
+        attrs: {
+          role: 'progressbar', 'aria-label': determinate ? '起動進捗' : '処理進捗',
+          ...(determinate ? { 'aria-valuemin': '0', 'aria-valuemax': '100', 'aria-valuenow': String(value) } : {}),
+        },
+      }, el('i', { style: determinate ? `width:${value}%` : '' })),
+      el('div', { className: 'boot-progress-copy' }, [
+        el('span', { text: determinate ? 'INITIALIZING' : 'PROCESSING' }),
+        el('strong', { text: determinate ? `${value}%` : '…' }),
+      ]),
+    ]);
+  }
+
+  showStartupProgress(progress, message) {
+    this.currentScreen = 'loading';
+    const value = Math.max(0, Math.min(100, Math.round(progress)));
+    const screen = this.root.querySelector('.boot-screen');
+    const bar = screen?.querySelector('.boot-progress');
+    const fill = bar?.querySelector('i');
+    const messageNode = screen?.querySelector('.boot-message');
+    const percentage = screen?.querySelector('.boot-progress-copy strong');
+    if (!screen || !bar || !fill || !messageNode || !percentage) {
+      replace(this.root, this.loadingScreen(message, value));
+      return;
+    }
+    messageNode.textContent = message;
+    bar.classList.remove('is-indeterminate');
+    bar.setAttribute('aria-valuemin', '0');
+    bar.setAttribute('aria-valuemax', '100');
+    bar.setAttribute('aria-valuenow', String(value));
+    fill.style.width = `${value}%`;
+    percentage.textContent = `${value}%`;
   }
 
   showHome() {

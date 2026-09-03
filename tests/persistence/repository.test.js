@@ -193,6 +193,30 @@ test('resilient repository preserves local deck when cloud write fails', async (
   assert.match(repository.getStatus().error, /network down/);
 });
 
+test('resilient startup falls back to local data when cloud initialization stalls', async () => {
+  const local = new LocalGameRepository({ storage: new MemoryStorage(), idFactory: () => 'timeout-local' });
+  const cloud = { initialize: () => new Promise(() => {}) };
+  const repository = new ResilientGameRepository({ local, cloud, cloudTimeoutMs: 5 });
+  const user = await repository.initialize();
+  assert.equal(user.id, 'local-timeout-local');
+  assert.equal(repository.getStatus().mode, 'local');
+  assert.match(repository.getStatus().error, /端末内データで起動/);
+});
+
+test('a stalled startup sync disables cloud for the session and returns the local value', async () => {
+  const local = new LocalGameRepository({ storage: new MemoryStorage(), idFactory: () => 'sync-timeout-local' });
+  const cloud = {
+    async initialize() { return { id: 'sync-timeout-cloud', mode: 'firebase' }; },
+    getEconomy: () => new Promise(() => {}),
+  };
+  const repository = new ResilientGameRepository({ local, cloud, cloudTimeoutMs: 5 });
+  await repository.initialize();
+  const economy = await repository.getEconomy();
+  assert.equal(economy.diamonds, 600);
+  assert.equal(repository.getStatus().mode, 'local');
+  assert.match(repository.getStatus().error, /所持データの同期/);
+});
+
 test('cloud delete failure leaves the recoverable local deck intact', async () => {
   const local = new LocalGameRepository({ storage: new MemoryStorage(), idFactory: () => 'delete-safe' });
   const cloud = {

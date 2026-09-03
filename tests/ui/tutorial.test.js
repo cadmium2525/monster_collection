@@ -32,7 +32,7 @@ test('home lobby keeps the release version visible and separates its navigation 
   for (const label of ['トーナメント', 'アリーナ', 'ホーム', 'カード', 'ショップ']) assert.match(homeSource, new RegExp(`label: '${label}'`));
   assert.doesNotMatch(homeSource, /home-lobby-leader-name/);
   assert.match(homeSource, /document\.createElementNS\('http:\/\/www\.w3\.org\/2000\/svg', 'svg'\)/);
-  assert.match(homeSource, /attrs: \{ decoding: 'sync', fetchpriority: 'high' \}/);
+  assert.match(homeSource, /attrs: \{ decoding: 'async', fetchpriority: 'high' \}/);
   assert.match(homeSource, /aria-label': 'コレクションレベル進捗'/);
   assert.match(css, /\.home-lobby-level-track\s*\{[^}]*height:6px;[^}]*border:1px solid/s);
   assert.match(css, /\.home-lobby-hero-art\s*\{[^}]*width:100%;[^}]*object-fit:cover;[^}]*object-position:center;/s);

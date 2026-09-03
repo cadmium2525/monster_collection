@@ -271,6 +271,15 @@ body:has(.battle-screen) {
   justify-content: center;
   gap: clamp(16px, 2vw, 26px);
 }
+
+.boot-screen { width:min(430px,82vw); margin-inline:auto; }
+.boot-screen > p { margin:3px 0 0; color:#d8e5e9; font-size:clamp(12px,1.45vw,16px); font-weight:700; }
+.boot-progress { position:relative; width:min(360px,72vw); height:8px; margin-top:7px; overflow:hidden; border:1px solid rgba(102,211,215,.46); border-radius:999px; background:rgba(2,10,18,.82); box-shadow:inset 0 1px 5px rgba(0,0,0,.75),0 0 16px rgba(54,201,210,.1); }
+.boot-progress > i { position:absolute; inset:0 auto 0 0; width:0; border-radius:inherit; background:linear-gradient(90deg,#1e8797,#69dbe0 72%,#e6ffff); box-shadow:0 0 12px rgba(99,230,235,.62); transition:width .28s ease-out; }
+.boot-progress.is-indeterminate > i { width:38% !important; animation:boot-progress-indeterminate 1.15s ease-in-out infinite; }
+.boot-progress-copy { width:min(360px,72vw); display:flex; justify-content:space-between; align-items:center; color:#8eb8c2; font:800 10px/1 Georgia,serif; letter-spacing:.14em; }
+.boot-progress-copy strong { color:#baf9fc; font-size:12px; font-variant-numeric:tabular-nums; }
+@keyframes boot-progress-indeterminate { 0% { translate:-115% 0; } 55%,100% { translate:265% 0; } }
 .board-row::before { content: attr(data-field-label); position: absolute; left: 1px; z-index: 0; color: rgba(220,232,230,.18); font: 700 7px/1 Georgia,serif; letter-spacing: .16em; writing-mode: vertical-rl; }
 .board-row.opponent { align-items: end; transform: translateX(var(--field-stagger)); }
 .board-row.player { align-items: start; }
@@ -2647,6 +2656,6 @@ body:has(.home-lobby) {
 }
 
 @media (prefers-reduced-motion:reduce) {
-  .opening-pack,.opening-aura,.opening-aura i,.pack-particle-field i,.pack-foil-sheen,.pack-break-flash,.pack-break-flash::before,.pack-break-flash i,.pack-card-slot,.pack-card-reveal-shell,.pack-rarity-burst,.rarity-burst-rings i,.pack-rarity-burst strong,.game-card.finish-foil::before,.fusion-catalog-card.finish-foil::before,.monster-portrait.finish-foil::after,.card-art.finish-foil-art::after,.game-card.life-critical .card-life,.login-bonus-diamond-art,.mulligan-motion-cue,.mulligan-motion-sigil i,.game-card.mulligan-draw-enter,.game-card.mulligan-return-to-deck,.game-card.turn-draw-enter,.turn-draw-cue,.home-lobby-hero-art,.home-lobby-foil-shine,.profile-home-art-preview > i { animation:none !important; }
+  .opening-pack,.opening-aura,.opening-aura i,.pack-particle-field i,.pack-foil-sheen,.pack-break-flash,.pack-break-flash::before,.pack-break-flash i,.pack-card-slot,.pack-card-reveal-shell,.pack-rarity-burst,.rarity-burst-rings i,.pack-rarity-burst strong,.game-card.finish-foil::before,.fusion-catalog-card.finish-foil::before,.monster-portrait.finish-foil::after,.card-art.finish-foil-art::after,.game-card.life-critical .card-life,.login-bonus-diamond-art,.mulligan-motion-cue,.mulligan-motion-sigil i,.game-card.mulligan-draw-enter,.game-card.mulligan-return-to-deck,.game-card.turn-draw-enter,.turn-draw-cue,.boot-progress.is-indeterminate > i,.home-lobby-hero-art,.home-lobby-foil-shine,.profile-home-art-preview > i { animation:none !important; }
   .pack-particle-field { display:none; }
 }

@@ -1,6 +1,28 @@
 import { RepositoryUnavailableError } from './errors.js';
 import { mergeCardCatalogs } from './card-catalog.js';
 
+export const DEFAULT_CLOUD_TIMEOUT_MS = 10_000;
+
+function cloudTimeout(label, timeoutMs) {
+  const error = new RepositoryUnavailableError(`${label}が${Math.ceil(timeoutMs / 1000)}秒以内に完了しませんでした。端末内データで起動します`);
+  error.code = 'repository/cloud-timeout';
+  return error;
+}
+
+async function withTimeout(promise, timeoutMs, label) {
+  let timer = null;
+  try {
+    return await Promise.race([
+      Promise.resolve(promise),
+      new Promise((_, reject) => {
+        timer = setTimeout(() => reject(cloudTimeout(label, timeoutMs)), timeoutMs);
+      }),
+    ]);
+  } finally {
+    if (timer != null) clearTimeout(timer);
+  }
+}
+
 function newerCheckpoint(left, right) {
   if (!left) return right;
   if (!right) return left;
@@ -8,12 +30,22 @@ function newerCheckpoint(left, right) {
 }
 
 export class ResilientGameRepository {
-  constructor({ local, cloud = null }) {
+  constructor({ local, cloud = null, cloudTimeoutMs = DEFAULT_CLOUD_TIMEOUT_MS }) {
     this.local = local;
     this.cloud = cloud;
     this.activeCloud = null;
     this.user = null;
     this.lastError = null;
+    this.cloudTimeoutMs = Math.max(1, Number(cloudTimeoutMs) || DEFAULT_CLOUD_TIMEOUT_MS);
+  }
+
+  async _cloud(promise, label) {
+    try {
+      return await withTimeout(promise, this.cloudTimeoutMs, label);
+    } catch (error) {
+      if (error?.code === 'repository/cloud-timeout') this.activeCloud = null;
+      throw error;
+    }
   }
 
   async initialize() {
@@ -23,7 +55,7 @@ export class ResilientGameRepository {
       return this.user;
     }
     try {
-      const cloudUser = await this.cloud.initialize();
+      const cloudUser = await this._cloud(this.cloud.initialize(), 'クラウドアカウントの確認');
       await this.local.useAccountScope?.(cloudUser.id, { copyCurrent: !localUser.activeScopeId });
       await this.local.replaceProfile?.(cloudUser);
       this.activeCloud = this.cloud;
@@ -104,7 +136,7 @@ export class ResilientGameRepository {
     const local = await this.local.setHomeArtwork(homeArtwork);
     if (!this.activeCloud?.setHomeArtwork) return local;
     try {
-      const cloud = await this.activeCloud.setHomeArtwork(homeArtwork);
+      const cloud = await this._cloud(this.activeCloud.setHomeArtwork(homeArtwork), 'ホーム画面設定の同期');
       await this.local.replaceProfile?.(cloud);
       this.user = { ...this.user, ...cloud };
       return cloud;
@@ -115,7 +147,7 @@ export class ResilientGameRepository {
     const localEconomy = await this.local.getEconomy();
     if (!this.activeCloud?.getEconomy) return localEconomy;
     try {
-      const cloudEconomy = await this.activeCloud.getEconomy();
+      const cloudEconomy = await this._cloud(this.activeCloud.getEconomy(), '所持データの同期');
       await this.local.replaceEconomy(cloudEconomy);
       return cloudEconomy;
     } catch (error) {
@@ -167,7 +199,7 @@ export class ResilientGameRepository {
     const localResult = await this.local.unlockTournamentRank(rank);
     if (!this.activeCloud?.unlockTournamentRank) return localResult;
     try {
-      const cloudResult = await this.activeCloud.unlockTournamentRank(rank);
+      const cloudResult = await this._cloud(this.activeCloud.unlockTournamentRank(rank), '大会解禁情報の同期');
       await this.local.replaceEconomy(cloudResult);
       return cloudResult;
     } catch (error) {
@@ -180,7 +212,7 @@ export class ResilientGameRepository {
     const localResult = await this.local.claimLoginRewards(config);
     if (!this.activeCloud?.claimLoginRewards) return localResult;
     try {
-      const cloudResult = await this.activeCloud.claimLoginRewards(config);
+      const cloudResult = await this._cloud(this.activeCloud.claimLoginRewards(config), 'ログイン報酬の同期');
       await this.local.replaceEconomy(cloudResult.state);
       return cloudResult;
     } catch (error) {
@@ -219,7 +251,7 @@ export class ResilientGameRepository {
     const localDecks = await this.local.listDecks();
     if (!this.activeCloud) return localDecks;
     try {
-      const cloudDecks = await this.activeCloud.listDecks();
+      const cloudDecks = await this._cloud(this.activeCloud.listDecks(), '保存デッキの同期');
       if (!cloudDecks.length && localDecks.length) return localDecks;
       for (const deck of cloudDecks) await this.local.saveDeck(deck);
       return cloudDecks;
@@ -233,7 +265,7 @@ export class ResilientGameRepository {
     const localRun = await this.local.getActiveRun();
     if (!this.activeCloud?.getActiveRun) return localRun;
     try {
-      const cloudRun = await this.activeCloud.getActiveRun();
+      const cloudRun = await this._cloud(this.activeCloud.getActiveRun(), '試合データの同期');
       const latest = newerCheckpoint(localRun, cloudRun);
       if (latest === cloudRun && cloudRun) await this.local.saveActiveRun(cloudRun);
       if (latest === localRun && localRun && Number(localRun.updatedAtMs) > Number(cloudRun?.updatedAtMs ?? 0)) {
@@ -282,7 +314,7 @@ export class ResilientGameRepository {
     const localCatalog = await this.local.recordCardCatalog(update);
     if (!this.activeCloud) return localCatalog;
     try {
-      const cloudCatalog = await this.activeCloud.recordCardCatalog(update);
+      const cloudCatalog = await this._cloud(this.activeCloud.recordCardCatalog(update), 'カード図鑑の同期');
       const merged = mergeCardCatalogs(localCatalog, cloudCatalog);
       await this.local.recordCardCatalog(merged);
       return merged;
@@ -295,7 +327,7 @@ export class ResilientGameRepository {
   async saveDeck(deck) {
     const localResult = await this.local.saveDeck(deck);
     if (!this.activeCloud) return localResult;
-    try { return await this.activeCloud.saveDeck(deck); }
+    try { return await this._cloud(this.activeCloud.saveDeck(deck), '保存デッキの同期'); }
     catch (error) { this.lastError = error; return localResult; }
   }
 
@@ -349,7 +381,7 @@ export class ResilientGameRepository {
 
   async getChampion() {
     if (!this.activeCloud) return this.local.getChampion();
-    try { return await this.activeCloud.getChampion(); }
+    try { return await this._cloud(this.activeCloud.getChampion(), '王座データの同期'); }
     catch (error) { this.lastError = error; return this.local.getChampion(); }
   }
 

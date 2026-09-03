@@ -316,7 +316,7 @@ export class HomeScreen {
       src: homeLeaderArtworkPath(artworkDefinition?.id, artworkAppearance),
       alt: artworkDefinition ? `${artworkDefinition.name}のホーム画面イラスト` : 'ホーム画面のモンスターイラスト',
       draggable: false,
-      attrs: { decoding: 'sync', fetchpriority: 'high' },
+      attrs: { decoding: 'async', fetchpriority: 'high' },
     });
 
     replace(this.root, el('main', { className: `home-screen home-lobby${showFooter ? '' : ' no-technical-footer'}` }, [
