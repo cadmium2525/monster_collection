@@ -1,5 +1,10 @@
 # Changelog
 
+## 1.32.3 — 2026-09-04
+
+### Arena representative thumbnail
+- Render the representative monster in ranking rows with the lightweight catalog thumbnail assets instead of an unstyled card portrait.
+
 ## 1.32.2 — 2026-09-04
 
 ### Resilient Arena ranking reads

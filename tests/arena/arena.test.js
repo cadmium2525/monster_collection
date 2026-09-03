@@ -124,6 +124,8 @@ test('home and Firestore expose missions, arena ghosts and honest source labels'
   assert.match(arenaUi, /アリーナランキング/);
   assert.match(arenaUi, /TOP 50/);
   assert.match(arenaUi, /自分周辺/);
+  assert.match(arenaUi, /catalogCardThumbnailPlacement/);
+  assert.match(arenaUi, /arena-ranking-leader-art/);
   assert.match(app, /this\.arenaLeaderboard\?\.available && this\.arenaLeaderboardKey === rankingKey/);
   assert.match(app, /this\.arenaLeaderboardKey = this\.arenaLeaderboard\.available\s*\?/);
   assert.match(app, /this\.arenaLeaderboardKey = null;/);

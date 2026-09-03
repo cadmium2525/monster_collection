@@ -1,6 +1,6 @@
 import { ARENA_RANK_REWARDS, ARENA_RANK_THRESHOLDS, ARENA_RANKS, unclaimedArenaRankRewards } from '../arena/arena-state.js';
 import { el, replace } from './dom.js';
-import { renderCard, renderMonsterPortrait } from './card-renderer.js';
+import { catalogCardThumbnailPlacement, renderCard } from './card-renderer.js';
 import { openModal } from './modal.js';
 import { playerIconContent } from './player-icon.js';
 import { representativeCardAsset } from './representative-card.js';
@@ -11,6 +11,18 @@ function nextRank(arena) {
 }
 
 function sourceClass(sourceType) { return String(sourceType ?? '').toLowerCase().replaceAll('_', '-'); }
+
+function rankingLeaderArt(representative) {
+  const art = catalogCardThumbnailPlacement(representative);
+  return el('i', {
+    className: `arena-ranking-leader-art ${art.className}`,
+    attrs: {
+      role: 'img',
+      'aria-label': representative.name,
+      ...(art.style ? { style: art.style } : {}),
+    },
+  });
+}
 
 function rankingRow(entry, masterIndex) {
   const representative = masterIndex.monsters.get(entry.representativeMonsterId);
@@ -28,7 +40,7 @@ function rankingRow(entry, masterIndex) {
     ]),
     el('b', { className: `arena-ranking-rank rank-${String(entry.arenaRank ?? 'D').toLowerCase()}`, text: entry.arenaRank ?? 'D' }),
     representative
-      ? el('span', { className: 'arena-ranking-leader', attrs: { title: representative.name } }, renderMonsterPortrait(representative, representative.name))
+      ? el('span', { className: 'arena-ranking-leader', attrs: { title: representative.name } }, rankingLeaderArt(representative))
       : el('span', { className: 'arena-ranking-leader is-empty', text: '?' }),
     el('span', { className: 'arena-ranking-rating' }, [el('small', { text: 'RATING' }), el('strong', { text: Number(entry.arenaRating ?? 1000).toLocaleString('ja-JP') })]),
   ]);
