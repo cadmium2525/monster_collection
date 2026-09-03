@@ -255,6 +255,7 @@ body:has(.battle-screen) {
 }
 .board-divider { background: linear-gradient(90deg,transparent,rgba(226,199,135,.58) 15% 85%,transparent); box-shadow: 0 0 7px rgba(223,182,101,.25); }
 .board-row {
+  --field-stagger: clamp(28px, 6.4vw, 54px);
   position: relative;
   min-height: 0;
   display: grid;
@@ -263,7 +264,7 @@ body:has(.battle-screen) {
   gap: clamp(16px, 2vw, 26px);
 }
 .board-row::before { content: attr(data-field-label); position: absolute; left: 1px; z-index: 0; color: rgba(220,232,230,.18); font: 700 7px/1 Georgia,serif; letter-spacing: .16em; writing-mode: vertical-rl; }
-.board-row.opponent { align-items: end; }
+.board-row.opponent { align-items: end; transform: translateX(var(--field-stagger)); }
 .board-row.player { align-items: start; }
 .board-row.player::before { bottom: 1px; }
 .board-row.opponent::before { top: 1px; }

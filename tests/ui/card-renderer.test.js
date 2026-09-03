@@ -351,6 +351,15 @@ test('opponent cards stay upright so their corner values remain readable', () =>
   assert.doesNotMatch(css, /\.board-row\.opponent\s+\.game-card\s*\{[^}]*rotate\(180deg\)/s);
 });
 
+test('opposing fields use a visual half-slot stagger without changing slot semantics', () => {
+  const css = readFileSync(new URL('../../styles.css', import.meta.url), 'utf8');
+  const battleSource = readFileSync(new URL('../../src/ui/battle-screen.js', import.meta.url), 'utf8');
+  assert.match(css, /\.board-row\s*\{[^}]*--field-stagger:\s*clamp\(28px,\s*6\.4vw,\s*54px\)/s);
+  assert.match(css, /\.board-row\.opponent\s*\{[^}]*transform:\s*translateX\(var\(--field-stagger\)\)/s);
+  assert.match(css, /\.board-row\.player\s*\{\s*align-items:\s*start;\s*\}/s);
+  assert.match(battleSource, /dataset:\s*\{\s*unitId:\s*unit\.id,\s*slot:\s*String\(slot\),\s*ownerId:\s*player\.id\s*\}/);
+});
+
 test('atlas artwork renders exactly once while standalone details preserve the full image', () => {
   const css = readFileSync(new URL('../../styles.css', import.meta.url), 'utf8');
   assert.match(css, /\.game-card \.card-art\.monster-art::after,[^{]+\{\s*content: none;\s*display: none;/s);
