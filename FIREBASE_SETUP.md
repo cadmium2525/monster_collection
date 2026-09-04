@@ -54,7 +54,7 @@ gameState/champion
 
 `users/{uid}`にはプロフィール名に加えて、カード図鑑用の`ownedCardMasterIds`、`discoveredFusionIds`、`catalogSchemaVersion`、`catalogUpdatedAt`を保存します。これらは追加専用の履歴としてRepositoryのtransactionで集合統合し、カードをデッキから放出した後も削除しません。v1.20.0以降は、通算試合・勝敗・大会参加／優勝・王座獲得・奪取枚数を`stats`へ保存します。各更新は一意のoperation IDを持ち、大会再開時にも二重計上しません。
 
-v1.14.0以降は同じ`users/{uid}`に`economy`も保存します。ここには所持ダイヤ、初回無料回数、未所属カード資産、モン類別パック回数、処理済みoperation ID、演出前に確定した未確認パックが入ります。v1.17.0以降はさらにプレイヤー共通の`tournamentQualification`、デイリー報酬の`lastDailyLoginDate`、一回性報酬の`claimedCampaignIds`を保存します。パック購入・大会報酬・ログイン報酬・大会解禁はFirestore transactionで更新し、再送時の二重消費・二重受取を防ぎます。`savedDecks/{deckId}`には使用中40枚に加えて、その保存デッキだけで使える`pool`が保存されます。外観違いは`artVariantId`と`finish`で区別します。
+v1.14.0以降は同じ`users/{uid}`に`economy`も保存します。ここには所持ダイヤ、初回無料回数、未所属カード資産、分類別パック回数、処理済みoperation ID、演出前に確定した未確認パックが入ります。v1.17.0以降はさらにプレイヤー共通の`tournamentQualification`、デイリー報酬の`lastDailyLoginDate`、一回性報酬の`claimedCampaignIds`を保存します。v1.34.0以降はデイリー・ウィークリー・マンスリーの`missionProgress`と、未使用の`monsterExchangeTickets`も同じeconomy内へ保存します。パック購入・大会報酬・ログイン報酬・大会解禁・ミッション報酬・交換券消費はFirestore transactionで更新し、再送時の二重消費・二重受取を防ぎます。`savedDecks/{deckId}`には使用中40枚に加えて、その保存デッキだけで使える`pool`が保存されます。外観違いは`artVariantId`と`finish`で区別します。
 
 同じユーザードキュメントの`activeRun`には、進行中大会・バトル・カード奪取の再開用チェックポイントを保存します。自分だけが読み書きでき、各端末のLocalStorageにも同じデータを先に保存します。`updatedAtMs`が新しい状態だけをtransactionで採用し、大会終了時は`phase: "cleared"`のtombstoneを残すため、遅れて届いた古い保存で終了済み大会が復活しません。
 

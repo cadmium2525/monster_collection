@@ -1437,7 +1437,7 @@ button:disabled { opacity: .38; cursor: not-allowed; }
 .mission-header { min-height:64px; }
 .mission-header h1 { margin:2px 0 0; color:var(--gold); font-size:clamp(20px,3vw,30px); }
 .mission-header button { min-width:120px; }
-.mission-tabs { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:7px; padding:5px; border:1px solid var(--line); border-radius:12px; background:rgba(3,12,21,.91); }
+.mission-tabs { display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:7px; padding:5px; border:1px solid var(--line); border-radius:12px; background:rgba(3,12,21,.91); }
 .mission-tabs button { min-height:46px; display:flex; align-items:center; justify-content:center; gap:12px; border:1px solid transparent; border-radius:9px; color:#8fa3ad; background:transparent; font-size:16px; font-weight:900; cursor:pointer; }
 .mission-tabs button.is-active { color:#fff0bd; border-color:rgba(232,186,98,.58); background:linear-gradient(180deg,rgba(105,73,28,.56),rgba(35,27,17,.72)); box-shadow:inset 0 -3px var(--gold); }
 .mission-tabs small { color:#9de4df; font-size:9px; font-weight:700; }
@@ -1461,8 +1461,10 @@ button:disabled { opacity: .38; cursor: not-allowed; }
 .mission-reward strong { overflow:hidden; font-size:11px; text-overflow:ellipsis; white-space:nowrap; }
 .mission-diamond { width:27px; height:27px; flex:none; }
 .mission-card-reward { flex:none; padding:6px; border:1px solid var(--gold); border-radius:5px; color:#f1d99d; font:900 8px/1 Georgia,serif; }
+.mission-card-reward.is-ticket { min-width:27px; text-align:center; color:#2a1600; background:linear-gradient(145deg,#fff0a7,#d79a35); box-shadow:0 0 12px rgba(241,190,77,.32); }
 .mission-state { grid-area:state; width:100%; min-width:0; min-height:52px; padding:8px 6px; overflow:hidden; border:1px solid rgba(95,137,159,.25); border-radius:11px; color:#72858f; background:#0a1b2a; font-weight:800; white-space:nowrap; }
 .mission-entry.is-complete { border-color:rgba(95,212,206,.42); }
+.mission-entry.is-monthly-complete { border-color:rgba(231,188,91,.5); background:linear-gradient(100deg,rgba(52,39,18,.97),rgba(15,24,36,.97)); }
 .mission-entry.is-complete .mission-state { color:#82969c; }
 .mission-entry.is-claimable .mission-state.primary-button {
   border-color:#fff0ab;
@@ -1824,6 +1826,11 @@ button:disabled { opacity: .38; cursor: not-allowed; }
 .diamond-balance-icon { grid-row:1/3; width:32px; height:32px; object-fit:contain; filter:drop-shadow(0 0 6px rgba(80,229,255,.68)); }
 .diamond-balance strong { color:#dffcff; font:900 17px/1 Georgia,serif; }
 .diamond-balance small { color:#8ee9f4; font-size:8px; }
+.monster-ticket-button { min-width:92px; min-height:44px; display:grid; grid-template-columns:26px auto; grid-template-rows:auto auto; place-content:center; align-items:center; gap:1px 5px; padding:4px 9px; border:1px solid rgba(239,194,91,.58); border-radius:14px; color:#fff0b1; background:linear-gradient(145deg,rgba(67,46,17,.94),rgba(15,27,40,.94)); cursor:pointer; }
+.monster-ticket-button > span { grid-row:1/3; display:grid; place-items:center; width:25px; aspect-ratio:1; border:1px solid #eac66c; border-radius:5px; background:#22190e; font-size:13px; font-weight:900; }
+.monster-ticket-button > strong { font:900 13px/1 Georgia,serif; text-align:left; }
+.monster-ticket-button > small { color:#d1b876; font-size:7px; text-align:left; }
+.monster-ticket-button:disabled { opacity:.45; cursor:default; filter:saturate(.35); }
 .pending-pack-banner { min-height:38px; display:flex; justify-content:center; align-items:center; gap:14px; border:1px solid #f1cf71; border-radius:var(--radius); color:#fff2be; background:linear-gradient(90deg,rgba(58,31,7,.9),rgba(29,17,50,.94),rgba(58,31,7,.9)); cursor:pointer; box-shadow:0 0 16px rgba(235,189,86,.25); }
 .pending-pack-banner span { color:#cbd9e4; font-size:10px; }
 .booster-pack-grid { min-height:0; overflow:auto; overscroll-behavior:contain; scrollbar-gutter:stable; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); grid-auto-rows:minmax(150px,auto); align-content:start; gap:10px; padding:3px 6px 10px 3px; }
@@ -1879,6 +1886,33 @@ button:disabled { opacity: .38; cursor: not-allowed; }
 .pack-card-rate-table strong,.pack-card-rate-table small { display:block; }
 .pack-card-rate-table strong { font-size:11px; }
 .pack-card-rate-table small { margin-top:2px; color:#74d9d8; font-size:8px; }
+
+.modal.monster-ticket-modal { width:min(920px,97vw); overflow:hidden; display:grid; grid-template-rows:auto minmax(0,1fr); }
+.monster-ticket-exchange { min-height:0; overflow:hidden; display:grid; grid-template-rows:auto minmax(0,1fr); gap:8px; margin-top:8px; }
+.monster-ticket-intro { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:7px 10px; border:1px solid rgba(228,187,92,.32); border-radius:9px; background:rgba(48,34,15,.42); }
+.monster-ticket-intro p { margin:0; color:#cbd7dc; font-size:10px; }
+.monster-ticket-intro strong { flex:none; color:#ffe69c; font-size:12px; }
+.monster-ticket-layout { min-height:0; display:grid; grid-template-columns:minmax(340px,1fr) minmax(330px,.85fr); gap:10px; }
+.monster-ticket-browser,.monster-ticket-selection { min-height:0; overflow:hidden; padding:9px; border:1px solid var(--line); border-radius:11px; background:rgba(4,15,25,.86); }
+.monster-ticket-browser { display:grid; grid-template-rows:auto minmax(0,1fr); gap:7px; }
+.monster-ticket-factions { display:grid; grid-template-columns:repeat(6,minmax(0,1fr)); gap:4px; }
+.monster-ticket-factions button,.monster-ticket-monsters button,.monster-ticket-choice-row button { min-width:0; border:1px solid rgba(92,130,150,.42); border-radius:7px; color:#aebdc5; background:#091826; cursor:pointer; }
+.monster-ticket-factions button { min-height:31px; padding:4px; font-size:9px; font-weight:800; }
+.monster-ticket-factions button.is-active,.monster-ticket-monsters button.is-active,.monster-ticket-choice-row button.is-active { border-color:#ecc65f; color:#fff0b4; background:linear-gradient(145deg,#59401c,#172434); box-shadow:inset 0 -2px #d9a83d; }
+.monster-ticket-monsters { min-height:0; overflow:auto; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); align-content:start; gap:5px; }
+.monster-ticket-monsters button { min-height:42px; display:grid; align-content:center; gap:2px; padding:6px 8px; text-align:left; }
+.monster-ticket-monsters strong { overflow:hidden; font-size:11px; text-overflow:ellipsis; white-space:nowrap; }
+.monster-ticket-monsters small { color:#76d7d7; font-size:7px; }
+.monster-ticket-selection { display:grid; grid-template-columns:minmax(112px,145px) minmax(0,1fr); align-items:center; gap:12px; }
+.monster-ticket-preview { display:grid; place-items:center; }
+.monster-ticket-preview .game-card { width:min(100%,145px); }
+.monster-ticket-options { min-width:0; display:grid; gap:8px; }
+.monster-ticket-options > div > small { display:block; margin-bottom:4px; color:#83dcd9; font-size:8px; font-weight:800; }
+.monster-ticket-choice-row { display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:5px; }
+.monster-ticket-choice-row button { min-height:34px; padding:5px; font-size:10px; font-weight:800; }
+.monster-ticket-result { margin:1px 0; color:#f4d987; font-size:10px; line-height:1.4; }
+.monster-ticket-confirm { min-height:42px; }
+.monster-ticket-note { color:#8599a3; font-size:8px; line-height:1.4; }
 
 .pack-opening-screen { --pack-color:#65e2ef; position:relative; height:calc(100dvh - max(8px,var(--safe-top)) - max(8px,var(--safe-bottom))); min-height:350px; overflow:hidden; color:#fff; background:radial-gradient(circle at 50% 48%,color-mix(in srgb,var(--pack-color) 24%,transparent),transparent 40%),linear-gradient(125deg,#020811,#0c1524 50%,#10091c); border:1px solid color-mix(in srgb,var(--pack-color) 45%,#344); border-radius:16px; isolation:isolate; }
 .pack-sealed { display:grid; place-items:center; }

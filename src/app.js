@@ -478,7 +478,22 @@ class MonsterConstructionApp {
       onBack: () => this.showHome(),
       onInventory: () => this.showAssetCollection(),
       onOpen: (pack, resume = false) => this.openBooster(pack, resume),
+      onExchangeMonster: (selection) => this.exchangeMonsterCard(selection),
     });
+  }
+
+  async exchangeMonsterCard({ masterId, artVariantId, finish }) {
+    const operationId = `monster-exchange-${globalThis.crypto?.randomUUID?.() ?? `${Date.now().toString(36)}-${Math.random().toString(36).slice(2, 9)}`}`;
+    this.economy = await this.repository.commitProgression({
+      type: 'exchange-monster-ticket',
+      operationId,
+      masterId,
+      artVariantId,
+      finish,
+      dateKey: japanDateKey(),
+    });
+    this.catalog = await this.repository.recordCardCatalog({ ownedCardMasterIds: [masterId] });
+    this.showBoosterShop();
   }
 
   showAssetCollection({ returnTo = 'boosters' } = {}) {

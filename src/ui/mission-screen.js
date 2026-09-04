@@ -9,16 +9,26 @@ export const MISSION_DETAILS = Object.freeze({
   'weekly-arena-wins': Object.freeze({ title: 'アリーナで3勝する', description: '今週のアリーナで合計3回勝利すると達成です。戦利品ストックからカード1枚を獲得できます。' }),
   'weekly-arena-plays': Object.freeze({ title: 'アリーナを5試合プレイする', description: '今週のアリーナで、勝敗にかかわらず合計5試合を最後までプレイすると達成です。' }),
   'weekly-tournament-entry': Object.freeze({ title: 'トーナメントに2回出場する', description: '今週、トーナメントへ合計2回エントリーすると達成です。' }),
+  'monthly-login': Object.freeze({ title: '今月20日ログインする', description: '月内の異なる日に合計20日ログインすると達成です。デイリーのログイン実績が同時に加算されます。' }),
+  'monthly-play': Object.freeze({ title: '今月30試合プレイする', description: '今月、アリーナまたはトーナメントの試合を合計30回最後までプレイすると達成です。' }),
+  'monthly-win': Object.freeze({ title: '今月のバトルで15勝する', description: '今月、アリーナまたはトーナメントで対戦相手に合計15回勝利すると達成です。' }),
+  'monthly-arena-wins': Object.freeze({ title: '今月アリーナで10勝する', description: '今月のアリーナで対戦相手に合計10回勝利すると達成です。' }),
+  'monthly-arena-plays': Object.freeze({ title: '今月アリーナを20試合する', description: '今月のアリーナで、勝敗にかかわらず合計20試合を最後までプレイすると達成です。' }),
+  'monthly-tournament-entry': Object.freeze({ title: '今月トーナメントに8回出場する', description: '今月、いずれかのトーナメントへ合計8回エントリーすると達成です。' }),
+  'monthly-complete': Object.freeze({ title: 'マンスリーミッションを全達成する', description: '上にある6つの月間目標をすべて達成すると、モンスターカード交換券を受け取れます。' }),
 });
 
 const PERIODS = Object.freeze({
   daily: Object.freeze({ label: 'デイリー', reset: '毎日 0:00 更新' }),
   weekly: Object.freeze({ label: 'ウィークリー', reset: '毎週 月曜 0:00 更新' }),
+  monthly: Object.freeze({ label: 'マンスリー', reset: '毎月 1日 0:00 更新' }),
 });
 
 function rewardLabel(reward) {
+  if (!reward) return '全項目達成で交換券';
   if (reward.type === 'diamonds') return `ダイヤ ${reward.amount.toLocaleString('ja-JP')}`;
   if (reward.type === 'arena-card') return '戦利品カード ×1';
+  if (reward.type === 'monster-exchange-ticket') return 'モンスターカード交換券 ×1';
   return '報酬';
 }
 
@@ -35,11 +45,15 @@ export class MissionScreen {
 
   renderMission(mission) {
     const detail = MISSION_DETAILS[mission.id] ?? { title: mission.label, description: mission.label };
-    const needsLoot = mission.reward.type === 'arena-card';
+    const needsLoot = mission.reward?.type === 'arena-card';
     const selectedLootId = needsLoot ? this.economy.arenaProgress?.lootStock?.[0]?.lootId : null;
     const lootReady = !needsLoot || Boolean(selectedLootId);
     const progress = Math.min(100, mission.progress / mission.target * 100);
-    return el('article', { className: `mission-entry${mission.completed ? ' is-complete' : ''}${mission.claimable ? ' is-claimable' : ''}${mission.claimed ? ' is-claimed' : ''}` }, [
+    const isTicket = mission.reward?.type === 'monster-exchange-ticket';
+    const stateLabel = mission.progressOnly
+      ? (mission.completed ? '達成' : '進行中')
+      : mission.claimed ? '受取済み' : mission.claimable ? (lootReady ? '受け取る' : 'カードを選択') : '進行中';
+    return el('article', { className: `mission-entry${mission.completed ? ' is-complete' : ''}${mission.claimable ? ' is-claimable' : ''}${mission.claimed ? ' is-claimed' : ''}${mission.aggregateFrom ? ' is-monthly-complete' : ''}` }, [
       el('div', { className: 'mission-copy' }, [el('h3', { text: detail.title }), el('p', { text: detail.description })]),
       el('div', { className: 'mission-progress-copy' }, [
         el('strong', { text: `${mission.progress} / ${mission.target}` }),
@@ -47,13 +61,15 @@ export class MissionScreen {
       ]),
       el('span', { className: 'mission-progress', attrs: { role: 'progressbar', 'aria-label': `${detail.title}の進捗`, 'aria-valuemin': '0', 'aria-valuemax': String(mission.target), 'aria-valuenow': String(mission.progress) } }, el('i', { style: `width:${progress}%` })),
       el('div', { className: 'mission-reward' }, [
-        el('small', { text: '達成報酬' }),
-        el('span', {}, [mission.reward.type === 'diamonds' ? diamondIcon('mission-diamond') : el('span', { className: 'mission-card-reward', text: 'CARD' }), el('strong', { text: rewardLabel(mission.reward) })]),
+        el('small', { text: mission.progressOnly ? '月間目標' : '達成報酬' }),
+        el('span', {}, [mission.reward?.type === 'diamonds'
+          ? diamondIcon('mission-diamond')
+          : el('span', { className: `mission-card-reward${isTicket ? ' is-ticket' : ''}`, text: isTicket ? '券' : mission.progressOnly ? 'ALL' : 'CARD' }), el('strong', { text: rewardLabel(mission.reward) })]),
       ]),
       el('button', {
         className: `mission-state${mission.claimable && lootReady ? ' primary-button' : ''}`,
-        text: mission.claimed ? '受取済み' : mission.claimable ? (lootReady ? '受け取る' : 'カードを選択') : '進行中',
-        disabled: mission.claimed || !mission.claimable || !lootReady,
+        text: stateLabel,
+        disabled: mission.progressOnly || mission.claimed || !mission.claimable || !lootReady,
         onclick: () => this.onClaim?.(mission, selectedLootId),
       }),
     ]);

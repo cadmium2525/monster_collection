@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { readFileSync } from 'node:fs';
+import { boosterGuaranteeLabel } from '../../src/ui/booster-screen.js';
 
 const source = readFileSync(new URL('../../src/ui/booster-screen.js', import.meta.url), 'utf8');
 const css = readFileSync(new URL('../../styles.css', import.meta.url), 'utf8');
@@ -27,10 +28,21 @@ test('rare, foil and showcase pulls receive a dedicated readable burst', () => {
 test('booster shop discloses next-pack card rates without the removed billing note', () => {
   assert.match(source, /text: '収録カード・提供割合'/);
   assert.match(source, /boosterPackDisclosure/);
-  assert.match(source, /次の1パック（5枚）に同じカードが1枚以上含まれる確率/);
+  assert.match(source, /すべて「次の1パック（5枚）を開けたとき」の確率/);
+  assert.match(source, /1パックでの入手確率/);
+  assert.doesNotMatch(source, /'出現枠'/);
+  assert.match(source, /showcaseGuaranteed\) return '特別イラスト1枚以上確定'/);
+  assert.match(source, /foilGuaranteed\) return 'モンスターFoil 1枚以上確定'/);
   assert.match(source, /初回と5パックごとにその分類のブースター限定モンスター2種から1体/);
   assert.doesNotMatch(source, /このゲームに課金要素はありません/);
   assert.match(css, /\.pack-card-rate-table/);
+});
+
+test('booster guarantee copy only shows the strongest overlapping guarantee', () => {
+  assert.equal(boosterGuaranteeLabel({ boosterMonsterGuaranteed: true }), 'ブースター限定モンスター1枚以上確定');
+  assert.equal(boosterGuaranteeLabel({ boosterMonsterGuaranteed: true, foilGuaranteed: true }), 'モンスターFoil 1枚以上確定');
+  assert.equal(boosterGuaranteeLabel({ boosterMonsterGuaranteed: true, foilGuaranteed: true, showcaseGuaranteed: true }), '特別イラスト1枚以上確定');
+  assert.equal(boosterGuaranteeLabel({}), null);
 });
 
 test('booster shop favors readable two-column tiles with one large action row', () => {

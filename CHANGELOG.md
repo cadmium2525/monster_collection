@@ -1,5 +1,17 @@
 # Changelog
 
+## 1.34.0 — 2026-09-05
+
+### Monthly missions and monster exchange tickets
+- Add six month-long objectives derived from the existing login, battle, arena, and tournament mission actions.
+- Award one monster card exchange ticket after all monthly objectives are complete, with idempotent claim and exchange persistence.
+- Add a Shop exchange flow for choosing any base monster in normal or special artwork and normal or Foil finish.
+
+### Clearer booster disclosure
+- Explain all displayed rates as the probability of obtaining at least one matching card in the next five-card pack.
+- Remove the internal draw-slot column from the player-facing card table.
+- Collapse overlapping guarantees to the strongest applicable promise so special-art guarantees do not look like several guaranteed cards.
+
 ## 1.33.8 — 2026-09-05
 
 ### Daily mission claim isolation

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { FirebaseGameRepository, LocalGameRepository, MemoryStorage, ResilientGameRepository } from '../../src/persistence/index.js';
-import { HOME_RENEWAL_GIFT_ID } from '../../src/gacha/economy-state.js';
+import { HOME_RENEWAL_GIFT_ID, defaultEconomyState } from '../../src/gacha/economy-state.js';
 import { legalDeck } from '../helpers.js';
 
 function savedDeck(deckId = 'deck-1') {
@@ -403,6 +403,25 @@ test('player statistics are transactionally idempotent in local and Firebase rep
   await firebase.recordPlayerStats(event);
   await firebase.recordPlayerStats(event);
   assert.equal((await firebase.getPlayerStats()).battleWins, 1);
+});
+
+test('local and Firebase repositories persist one idempotent monster ticket exchange', async () => {
+  const local = new LocalGameRepository({ storage: new MemoryStorage(), idFactory: () => 'exchange-local' });
+  const fake = fakeFirebaseSdk();
+  const firebase = new FirebaseGameRepository({ config: { projectId: 'test' }, sdkLoader: async () => fake.sdk });
+  for (const repository of [local, firebase]) {
+    await repository.initialize();
+    await repository.replaceEconomy({ ...defaultEconomyState('2026-09-05T00:00:00.000Z'), monsterExchangeTickets: 1 });
+    const operation = {
+      type: 'exchange-monster-ticket', operationId: 'exchange:persisted:1', dateKey: '2026-09-05',
+      masterId: 'monster-030', artVariantId: 'showcase-monster-030', finish: 'foil',
+    };
+    await repository.commitProgression(operation);
+    await repository.commitProgression(operation);
+    const economy = await repository.getEconomy();
+    assert.equal(economy.monsterExchangeTickets, 0);
+    assert.equal(economy.unassignedAssets.find(({ masterId }) => masterId === 'monster-030')?.quantity, 1);
+  }
 });
 
 test('Firebase publishes one arena ranking per player and returns top and nearby positions', async () => {

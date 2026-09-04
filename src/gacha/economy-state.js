@@ -14,6 +14,7 @@ import {
   normalizeArenaProgress,
   recordArenaResult,
 } from '../arena/arena-state.js';
+import { SHOWCASE_VARIANTS } from './pack-generator.js';
 
 export const ECONOMY_SCHEMA_VERSION = 1;
 export const STARTER_DIAMONDS = 600;
@@ -38,6 +39,10 @@ const CAMPAIGN_GIFTS = Object.freeze([
     endsAt: HOME_RENEWAL_GIFT_END,
   }),
 ]);
+
+const MONSTER_SHOWCASE_BY_ID = new Map(
+  Object.values(SHOWCASE_VARIANTS).flat().map((variant) => [variant.masterId, variant.artVariantId]),
+);
 
 function clone(value) { return value == null ? value : structuredClone(value); }
 
@@ -93,6 +98,7 @@ export function defaultEconomyState(now = null) {
     schemaVersion: ECONOMY_SCHEMA_VERSION,
     diamonds: STARTER_DIAMONDS,
     freePackCredits: 1,
+    monsterExchangeTickets: 0,
     unassignedAssets: [],
     pendingPack: null,
     packCounters: Object.fromEntries(FACTIONS.map((faction) => [faction, 0])),
@@ -114,6 +120,7 @@ export function normalizeEconomyState(value, now = null) {
     schemaVersion: ECONOMY_SCHEMA_VERSION,
     diamonds: Math.max(0, Math.trunc(Number(value.diamonds) || 0)),
     freePackCredits: Math.max(0, Math.trunc(Number(value.freePackCredits) || 0)),
+    monsterExchangeTickets: Math.max(0, Math.trunc(Number(value.monsterExchangeTickets) || 0)),
     unassignedAssets: mergeAssetStacks(value.unassignedAssets),
     pendingPack: normalizePendingPack(value.pendingPack),
     packCounters: Object.fromEntries(FACTIONS.map((faction) => [
@@ -289,8 +296,15 @@ export function applyProgressionOperation(current, operation, now = new Date().t
         ...progressBeforeClaim.weekly,
         claimedIds: [...claimed.progress.weekly.claimedIds],
       },
+      monthly: {
+        ...progressBeforeClaim.monthly,
+        claimedIds: [...claimed.progress.monthly.claimedIds],
+      },
     };
     if (claimed.reward?.type === 'diamonds') state.diamonds += claimed.reward.amount;
+    if (claimed.reward?.type === 'monster-exchange-ticket') {
+      state.monsterExchangeTickets += claimed.reward.amount;
+    }
     if (claimed.reward?.type === 'arena-card') {
       const weekKey = japanWeekKey(dateKey);
       const loot = state.arenaProgress.lootStock.find((entry) => entry.lootId === operation.lootId && entry.weekKey === weekKey);
@@ -301,6 +315,29 @@ export function applyProgressionOperation(current, operation, now = new Date().t
       }]);
       state.arenaProgress.lootStock = state.arenaProgress.lootStock.filter((entry) => entry.weekKey !== weekKey);
     }
+  } else if (operation.type === 'exchange-monster-ticket') {
+    if (state.processedOperationIds.includes(operationId)) return state;
+    if (state.monsterExchangeTickets <= 0) throw new Error('モンスターカード交換券を所持していません');
+    const masterId = cleanString(operation.masterId);
+    const expectedShowcaseId = MONSTER_SHOWCASE_BY_ID.get(masterId);
+    if (!expectedShowcaseId) throw new Error('交換対象のモンスターが見つかりません');
+    const artVariantId = cleanString(operation.artVariantId, 'base');
+    if (artVariantId !== 'base' && artVariantId !== expectedShowcaseId) {
+      throw new Error('選択した特別イラストは交換対象外です');
+    }
+    const finish = cleanString(operation.finish, 'normal');
+    if (!['normal', 'foil'].includes(finish)) throw new Error('カードの加工指定が不正です');
+    state.monsterExchangeTickets -= 1;
+    state.unassignedAssets = mergeAssetStacks([...state.unassignedAssets, {
+      masterId,
+      artVariantId,
+      finish,
+      origin: 'exchange',
+      rarity: artVariantId === 'base' ? 'rare' : 'showcase',
+      quantity: 1,
+      firstObtainedAt: now,
+    }]);
+    rememberOperation(state, operationId);
   } else if (operation.type === 'claim-arena-rank') {
     const claimed = claimArenaRankReward(state.arenaProgress, operation.rank, now);
     state.arenaProgress = claimed.arena;

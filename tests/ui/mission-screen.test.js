@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { MISSION_DETAILS } from '../../src/ui/mission-screen.js';
 
-test('mission screen provides complete objectives in switchable daily and weekly tabs', async () => {
-  assert.equal(Object.keys(MISSION_DETAILS).length, 6);
+test('mission screen provides complete objectives in switchable daily, weekly and monthly tabs', async () => {
+  assert.equal(Object.keys(MISSION_DETAILS).length, 13);
   for (const [id, mission] of Object.entries(MISSION_DETAILS)) {
     assert.ok(mission.title.length >= 8, id);
     assert.ok(mission.description.length >= 20, id);
@@ -13,6 +13,8 @@ test('mission screen provides complete objectives in switchable daily and weekly
   assert.match(source, /role: 'tablist'/);
   assert.match(source, /role: 'tabpanel'/);
   assert.match(source, /aria-selected/);
+  assert.match(source, /monthly: Object\.freeze/);
+  assert.match(source, /モンスターカード交換券 ×1/);
   assert.doesNotMatch(source, /mission-loot-section/);
   assert.match(source, /lootStock\?\.\[0\]\?\.lootId/);
 

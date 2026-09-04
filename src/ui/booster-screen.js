@@ -1,7 +1,7 @@
 import { BOOSTER_PACKS } from '../gacha/pack-catalog.js';
 import { acquisitionLabel } from '../gacha/acquisition.js';
 import { assetStackKey } from '../gacha/economy-state.js';
-import { boosterPackDisclosure } from '../gacha/pack-generator.js';
+import { boosterPackDisclosure, SHOWCASE_VARIANTS } from '../gacha/pack-generator.js';
 import { el, replace } from './dom.js';
 import { openCardDetails, renderCard } from './card-renderer.js';
 import { diamondIcon } from './currency-icon.js';
@@ -29,15 +29,131 @@ function cardTypeLabel(definition) {
   return 'Training';
 }
 
+const SHOWCASE_BY_MONSTER_ID = new Map(
+  Object.values(SHOWCASE_VARIANTS).flat().map((variant) => [variant.masterId, variant.artVariantId]),
+);
+
+export function boosterGuaranteeLabel(guarantees = {}) {
+  if (guarantees.showcaseGuaranteed) return '特別イラスト1枚以上確定';
+  if (guarantees.foilGuaranteed) return 'モンスターFoil 1枚以上確定';
+  if (guarantees.boosterMonsterGuaranteed) return 'ブースター限定モンスター1枚以上確定';
+  return null;
+}
+
 export class BoosterShopScreen {
-  constructor({ root, economy, masterIndex, onBack, onOpen, onInventory }) {
+  constructor({ root, economy, masterIndex, onBack, onOpen, onInventory, onExchangeMonster }) {
     this.root = root;
     this.economy = economy;
     this.masterIndex = masterIndex;
     this.onBack = onBack;
     this.onOpen = onOpen;
     this.onInventory = onInventory;
+    this.onExchangeMonster = onExchangeMonster;
     this.render();
+  }
+
+  openMonsterExchange() {
+    if (this.economy.monsterExchangeTickets <= 0) return;
+    const monsters = [...this.masterIndex.monsters.values()]
+      .filter((monster) => SHOWCASE_BY_MONSTER_ID.has(monster.id))
+      .sort((a, b) => a.id.localeCompare(b.id));
+    let activeFaction = monsters[0]?.faction ?? null;
+    let selected = monsters[0] ?? null;
+    let artVariantId = 'base';
+    let finish = 'normal';
+    let pending = false;
+    let errorMessage = '';
+    const content = el('div', { className: 'monster-ticket-exchange' });
+    let modal = null;
+
+    const renderExchange = () => {
+      const factionMonsters = monsters.filter((monster) => monster.faction === activeFaction);
+      const showcaseId = selected ? SHOWCASE_BY_MONSTER_ID.get(selected.id) : null;
+      const cardAsset = selected ? {
+        masterId: selected.id,
+        artVariantId,
+        finish,
+        rarity: artVariantId === 'base' ? 'rare' : 'showcase',
+        origin: 'exchange',
+      } : null;
+      replace(content, ...[
+        el('div', { className: 'monster-ticket-intro' }, [
+          el('p', { text: '好きなモンスターを、通常絵・特別絵と通常加工・Foilの組み合わせから選べます。' }),
+          el('strong', { text: `所持交換券 ×${this.economy.monsterExchangeTickets}` }),
+        ]),
+        el('div', { className: 'monster-ticket-layout' }, [
+          el('section', { className: 'monster-ticket-browser' }, [
+            el('div', { className: 'monster-ticket-factions' }, [...new Set(monsters.map((monster) => monster.faction))].map((faction) => el('button', {
+              className: faction === activeFaction ? 'is-active' : '',
+              text: faction,
+              attrs: { type: 'button' },
+              onclick: () => {
+                activeFaction = faction;
+                selected = monsters.find((monster) => monster.faction === faction);
+                artVariantId = 'base';
+                finish = 'normal';
+                errorMessage = '';
+                renderExchange();
+              },
+            }))),
+            el('div', { className: 'monster-ticket-monsters' }, factionMonsters.map((monster) => el('button', {
+              className: monster.id === selected?.id ? 'is-active' : '',
+              attrs: { type: 'button', 'aria-pressed': String(monster.id === selected?.id) },
+              onclick: () => {
+                selected = monster;
+                artVariantId = 'base';
+                finish = 'normal';
+                errorMessage = '';
+                renderExchange();
+              },
+            }, [el('strong', { text: monster.name }), el('small', { text: monster.faction })]))),
+          ]),
+          selected ? el('section', { className: 'monster-ticket-selection' }, [
+            el('div', { className: 'monster-ticket-preview' }, renderCard({ definition: selected, cardAsset, interactive: false })),
+            el('div', { className: 'monster-ticket-options' }, [
+              el('div', {}, [
+                el('small', { text: 'イラスト' }),
+                el('div', { className: 'monster-ticket-choice-row' }, [
+                  el('button', { className: artVariantId === 'base' ? 'is-active' : '', text: '通常絵', onclick: () => { artVariantId = 'base'; renderExchange(); } }),
+                  el('button', { className: artVariantId === showcaseId ? 'is-active' : '', text: '特別絵', onclick: () => { artVariantId = showcaseId; renderExchange(); } }),
+                ]),
+              ]),
+              el('div', {}, [
+                el('small', { text: '加工' }),
+                el('div', { className: 'monster-ticket-choice-row' }, [
+                  el('button', { className: finish === 'normal' ? 'is-active' : '', text: '通常', onclick: () => { finish = 'normal'; renderExchange(); } }),
+                  el('button', { className: finish === 'foil' ? 'is-active' : '', text: 'Foil', onclick: () => { finish = 'foil'; renderExchange(); } }),
+                ]),
+              ]),
+              el('p', { className: 'monster-ticket-result', text: `${selected.name} / ${artVariantId === 'base' ? '通常絵' : '特別絵'} / ${finish === 'foil' ? 'Foil' : '通常加工'}` }),
+              errorMessage ? el('p', { className: 'form-error', text: errorMessage }) : null,
+              el('button', {
+                className: 'primary-button monster-ticket-confirm',
+                text: pending ? '交換しています…' : '交換券1枚で交換',
+                disabled: pending,
+                onclick: async () => {
+                  if (!selected || pending) return;
+                  pending = true;
+                  errorMessage = '';
+                  renderExchange();
+                  try {
+                    await this.onExchangeMonster?.({ masterId: selected.id, artVariantId, finish });
+                    modal?.close();
+                  } catch (error) {
+                    pending = false;
+                    errorMessage = error?.message ?? 'カードを交換できませんでした';
+                    renderExchange();
+                  }
+                },
+              }),
+              el('small', { className: 'monster-ticket-note', text: '交換したカードは「未所属カード」に追加されます。' }),
+            ]),
+          ]) : null,
+        ]),
+      ]);
+    };
+    renderExchange();
+    modal = openModal({ title: 'モンスターカード交換券', className: 'monster-ticket-modal', content });
   }
 
   openPackDisclosure(pack) {
@@ -46,11 +162,7 @@ export class BoosterShopScreen {
       faction: pack.faction,
       openedCount: this.economy.packCounters?.[pack.faction] ?? 0,
     });
-    const guaranteeLabels = [
-      disclosure.guarantees.boosterMonsterGuaranteed ? 'ブースター限定保証' : null,
-      disclosure.guarantees.foilGuaranteed ? 'Foil保証' : null,
-      disclosure.guarantees.showcaseGuaranteed ? '特別イラスト保証' : null,
-    ].filter(Boolean);
+    const guaranteeLabel = boosterGuaranteeLabel(disclosure.guarantees);
     return openModal({
       title: `${pack.name} 提供内容`,
       className: 'pack-disclosure-modal',
@@ -60,14 +172,14 @@ export class BoosterShopScreen {
             el('small', { text: `${pack.faction} BOOSTER` }),
             el('strong', { text: `次回は第${disclosure.nextPackNumber}パック` }),
           ]),
-          guaranteeLabels.length ? el('div', { className: 'pack-guarantee-chips' }, guaranteeLabels.map((label) => el('span', { text: label }))) : el('span', { className: 'pack-standard-draw', text: '通常提供割合' }),
+          guaranteeLabel ? el('div', { className: 'pack-guarantee-chips' }, el('span', { text: guaranteeLabel })) : el('span', { className: 'pack-standard-draw', text: '確定枠なし' }),
           el('dl', { className: 'pack-appearance-rates' }, [
-            el('div', {}, [el('dt', { text: 'Rare以上' }), el('dd', { text: percentage(disclosure.appearanceRates.rareOrBetter) })]),
-            el('div', {}, [el('dt', { text: 'Foil' }), el('dd', { text: percentage(disclosure.appearanceRates.foil) })]),
-            el('div', {}, [el('dt', { text: '特別イラスト' }), el('dd', { text: percentage(disclosure.appearanceRates.showcase) })]),
+            el('div', {}, [el('dt', { text: 'Rare以上を1枚以上' }), el('dd', { text: percentage(disclosure.appearanceRates.rareOrBetter) })]),
+            el('div', {}, [el('dt', { text: 'Foilを1枚以上' }), el('dd', { text: percentage(disclosure.appearanceRates.foil) })]),
+            el('div', {}, [el('dt', { text: '特別絵を1枚以上' }), el('dd', { text: percentage(disclosure.appearanceRates.showcase) })]),
           ]),
         ]),
-        el('p', { className: 'pack-rate-note', text: 'カード名別の割合は、通常絵と特別絵を合わせて、次の1パック（5枚）に同じカードが1枚以上含まれる確率です。複数の抽選枠から出るカードがあるため、割合の合計は100%になりません。' }),
+        el('p', { className: 'pack-rate-note', text: '表示している提供割合は、すべて「次の1パック（5枚）を開けたとき」の確率です。カード名別は、通常絵と特別絵を合わせて、そのカードが5枚のうち1枚以上含まれる確率です。同じカードが複数の抽選対象になるため、カード別確率の合計は100%になりません。' }),
         disclosure.showcaseCards.length ? el('section', { className: 'pack-showcase-rate-section' }, [
           el('div', { className: 'pack-showcase-rate-heading' }, [
             el('strong', { text: '特別イラスト候補' }),
@@ -75,7 +187,7 @@ export class BoosterShopScreen {
           ]),
           el('div', { className: 'pack-card-rate-table-wrap' }, [
             el('table', { className: 'pack-card-rate-table pack-showcase-rate-table' }, [
-              el('thead', {}, el('tr', {}, ['カード名', '外観', '提供割合'].map((label) => el('th', { text: label })))),
+              el('thead', {}, el('tr', {}, ['カード名', '外観', '1パックでの入手確率'].map((label) => el('th', { text: label })))),
               el('tbody', {}, disclosure.showcaseCards.map(({ definition, variant, probability }) => {
                 const cardAsset = {
                   masterId: variant.masterId,
@@ -99,15 +211,14 @@ export class BoosterShopScreen {
         ]) : null,
         el('div', { className: 'pack-card-rate-table-wrap' }, [
           el('table', { className: 'pack-card-rate-table' }, [
-            el('thead', {}, el('tr', {}, ['カード名', '種類', '出現枠', '提供割合'].map((label) => el('th', { text: label })))),
-            el('tbody', {}, disclosure.cards.map(({ definition, probability, slots }) => el('tr', {}, [
+            el('thead', {}, el('tr', {}, ['カード名', '種類', '1パックでの入手確率'].map((label) => el('th', { text: label })))),
+            el('tbody', {}, disclosure.cards.map(({ definition, probability }) => el('tr', {}, [
               el('td', {}, el('button', {
                 className: 'pack-card-detail-button',
                 attrs: { type: 'button', 'aria-label': `${definition.name}のカード詳細を表示` },
                 onclick: () => openCardDetails({ definition, masterIndex: this.masterIndex }),
               }, [el('strong', { text: definition.name }), el('small', { text: acquisitionLabel(definition) })])),
               el('td', { text: cardTypeLabel(definition) }),
-              el('td', { text: slots.join('・') }),
               el('td', { text: percentage(probability) }),
             ]))),
           ]),
@@ -126,6 +237,12 @@ export class BoosterShopScreen {
         ]),
         el('div', { className: 'booster-header-actions' }, [
           diamondBalance(this.economy),
+          el('button', {
+            className: 'monster-ticket-button',
+            disabled: this.economy.monsterExchangeTickets <= 0,
+            attrs: { type: 'button', 'aria-label': `モンスターカード交換券 ${this.economy.monsterExchangeTickets}枚` },
+            onclick: () => this.openMonsterExchange(),
+          }, [el('span', { text: '券' }), el('strong', { text: `×${this.economy.monsterExchangeTickets}` }), el('small', { text: 'カード交換' })]),
           el('button', { className: 'utility-button', text: '未所属カード', onclick: this.onInventory }),
           el('button', { className: 'utility-button', text: 'ホームへ', onclick: this.onBack }),
         ]),
