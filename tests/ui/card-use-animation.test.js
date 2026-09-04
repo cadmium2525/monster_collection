@@ -21,11 +21,11 @@ function index(...definitions) {
 }
 
 test('player and CPU card use share exactly the same standard and fast timings', () => {
-  assert.deepEqual(cardUseAnimationTimings({ speed: 'standard' }), { reveal: 420, descriptionHold: 900, copyOut: 200, preTravel: 300, travel: 420, impact: 260 });
-  assert.deepEqual(cardUseAnimationTimings({ speed: 'fast' }), { reveal: 130, descriptionHold: 260, copyOut: 70, preTravel: 90, travel: 150, impact: 100 });
-  assert.equal(cardUseAnimationDuration(), 2500);
-  assert.equal(cardUseAnimationDuration({ speed: 'fast' }), 800);
-  assert.equal(cardUseAnimationDuration({ reducedMotion: true }), 680);
+  assert.deepEqual(cardUseAnimationTimings({ speed: 'standard' }), { reveal: 420, copyOut: 150, preTravel: 1250, travel: 360, impact: 240 });
+  assert.deepEqual(cardUseAnimationTimings({ speed: 'fast' }), { reveal: 130, copyOut: 55, preTravel: 365, travel: 120, impact: 85 });
+  assert.equal(cardUseAnimationDuration(), 2420);
+  assert.equal(cardUseAnimationDuration({ speed: 'fast' }), 755);
+  assert.equal(cardUseAnimationDuration({ reducedMotion: true }), 640);
 });
 
 test('targeted Training and shugyo resolve into the selected monster', () => {
@@ -116,6 +116,7 @@ test('battle flow uses one shared card-use cinematic and suppresses the duplicat
   assert.match(styles, /\.card-use-impact\.tp/);
   assert.match(styles, /@keyframes card-use-card-reveal/);
   assert.match(styles, /\.card-use-cinematic\.copy-clearing \.card-use-copy/);
-  assert.match(animation, /await delay\(timing\.reveal\);\s*await delay\(timing\.descriptionHold\);\s*overlay\.classList\.add\('copy-clearing'\)/s);
+  assert.match(animation, /await delay\(timing\.reveal\);\s*overlay\.classList\.add\('copy-clearing'\)/s);
+  assert.doesNotMatch(animation, /descriptionHold/);
   assert.match(animation, /classList\.add\('copy-clearing'\);\s*await delay\(timing\.copyOut\);\s*overlay\.classList\.add\('copy-cleared'\);\s*await delay\(timing\.preTravel\);\s*overlay\.classList\.add\('travelling'\)/s);
 });

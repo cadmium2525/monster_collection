@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.33.5 — 2026-09-04
+
+### Support-card copy timing correction
+- Restore the original readable-copy duration for Training, shugyo, and breeder cards.
+- Move the added delay entirely after the explanation has faded, keeping the card still before absorption without prolonging its text.
+
 ## 1.33.4 — 2026-09-04
 
 ### Support-card cinematic timing
