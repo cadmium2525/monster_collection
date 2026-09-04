@@ -27,6 +27,7 @@ test('web app manifest is installable from a GitHub Pages subpath', () => {
 });
 
 test('PWA icons have their declared raster dimensions', () => {
+  assert.deepEqual(pngDimensions('assets/icons/app-icon-source.png'), { width: 1254, height: 1254 });
   assert.deepEqual(pngDimensions('assets/icons/icon-192.png'), { width: 192, height: 192 });
   assert.deepEqual(pngDimensions('assets/icons/icon-512.png'), { width: 512, height: 512 });
   assert.deepEqual(pngDimensions('assets/icons/maskable-icon-512.png'), { width: 512, height: 512 });
@@ -68,6 +69,7 @@ test('release version cache-busts the page shell and service worker together', (
 
 test('growing and on-demand catalog art is excluded from install-time precache and source atlases stay out of deploy', () => {
   const buildScript = text('scripts/build-pages.mjs');
+  assert.match(buildScript, /assets\/icons\/app-icon-source\.png/);
   assert.match(buildScript, /assets\/images\/booster\//);
   assert.match(buildScript, /assets\/images\/showcase\//);
   assert.match(buildScript, /assets\/images\/showcase-fusions\//);

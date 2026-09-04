@@ -9,6 +9,7 @@ const publicEntries = ['index.html', 'styles.css', 'manifest.webmanifest', 'sw.j
 const deployIgnored = new Set([
   'assets/images/special-fusion-atlas-v1.webp',
   'assets/images/blue-drill-v2.webp',
+  'assets/icons/app-icon-source.png',
 ]);
 
 function copyEntry(source, destination) {

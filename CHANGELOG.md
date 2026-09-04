@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.33.0 — 2026-09-04
+
+### Mobile home-screen icon renewal
+- Replace the plain MC initials with an original mechanical-monster crest combining a magical card frame, dark forged armor, antique gold, and a luminous cyan core.
+- Generate dedicated 180, 192, 512, and maskable 512/1024 PNGs from one high-resolution source; keep the source out of the deployed Pages artifact.
+- Use the matching raster icon for the browser favicon so the installed game and site share one identity.
+
 ## 1.32.4 — 2026-09-04
 
 ### Support-card cinematic timing
