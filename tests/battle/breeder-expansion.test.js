@@ -17,11 +17,11 @@ function useOnUnit(battle, breederId, unit, extraHand = []) {
   return action;
 }
 
-test('all thirty-two expansion breeder cards are canonical and have explanatory copy', () => {
+test('all thirty-five expansion breeder cards are canonical and have explanatory copy', () => {
   const battle = engine();
   const additions = battle.masterData.breeders.filter((entry) => Number(entry.id.slice(-3)) >= 21);
-  assert.equal(additions.length, 32);
-  assert.deepEqual(additions.map((entry) => entry.id), Array.from({ length: 32 }, (_, index) => `breeder-${String(index + 21).padStart(3, '0')}`));
+  assert.equal(additions.length, 35);
+  assert.deepEqual(additions.map((entry) => entry.id), Array.from({ length: 35 }, (_, index) => `breeder-${String(index + 21).padStart(3, '0')}`));
   assert.equal(additions.every((entry) => entry.effect && entry.tp >= 1), true);
 });
 

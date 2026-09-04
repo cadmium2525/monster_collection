@@ -97,6 +97,8 @@ export class BattleEngine {
         unit.awakeningAbilityName ??= null;
         unit.awakeningAbilityEffect ??= null;
         unit.awakeningAbilityLimit ??= null;
+        unit.statuses.attackSeal ??= null;
+        unit.statuses.deathPact ??= null;
         unit.statuses.awakening ??= {
           battleUsed: false,
           turnUsed: false,
@@ -377,6 +379,8 @@ export class BattleEngine {
     const opponentUnits = livingUnits(opponent);
     for (const unit of livingUnits(player)) {
       if (unit.actionPoints <= 0 || unit.summonedThisTurn || unit.stunnedThisTurn) continue;
+      const attackSealed = unit.statuses.attackSeal?.playerId === player.id
+        && unit.statuses.attackSeal?.activeTurn === player.turnNumber;
       for (const moveId of unit.equippedMoveIds) {
         const move = this.masterIndex.moves.get(moveId);
         if (!move) continue;
@@ -387,6 +391,7 @@ export class BattleEngine {
           }
           continue;
         }
+        if (attackSealed) continue;
         if (opponentUnits.length) {
           for (const target of opponentUnits) {
             const cost = resolvedMoveTp(player, unit, target, move, opponent);
@@ -631,6 +636,7 @@ export class BattleEngine {
     this._applyTurnEndEffects(player);
     player.effects.nextFusionBuff = false;
     this._decrementTurnModifiers(player);
+    this._expireOpponentTurnStatuses(player);
     this._log('turn-end', `${player.displayName}がターン終了`, { playerId: player.id });
 
     if (this.state.playerOrder.every((id) => this.player(id).turnNumber >= RULES.maxRounds)) {
@@ -1006,6 +1012,7 @@ export class BattleEngine {
       damageResult.actual += echoResult.actual;
       damageResult.overflow += echoResult.overflow;
       damageResult.defeated = echoResult.defeated;
+      damageResult.destroyAttacker ||= echoResult.destroyAttacker;
       damageResult.incomingTriggers.push(...echoResult.incomingTriggers.map((trigger) => `残響:${trigger}`));
     }
     player.metrics.damageDealt += damageResult.actual + damageResult.overflow;
@@ -1014,7 +1021,16 @@ export class BattleEngine {
     updateConsecutiveTarget(unit, target.id);
     unit.movesUsedThisTurn += 1;
     this._afterMoveUse(player, unit, move, damageResult.defeated);
-    if (recoilDamage > 0) this._selfDamage(player, unit, recoilDamage);
+    const deathPactTriggered = damageResult.destroyAttacker && Boolean(findUnit(player, unit.id));
+    if (deathPactTriggered) {
+      this._removeUnit(player, unit, { allowReturn: false });
+      this._log('death-pact', `${target.name}の道連れの契約により${unit.name}も墓地へ送られた`, {
+        playerId: player.id,
+        unitId: unit.id,
+        targetUnitId: target.id,
+      });
+    }
+    if (recoilDamage > 0 && !deathPactTriggered) this._selfDamage(player, unit, recoilDamage);
     this._log('attack', `${unit.name}の${move.name}。${target.name}へ${damageResult.actual}ダメージ${echoDamage ? `（残響${echoDamage}）` : ''}${damageResult.overflow ? `、超過${damageResult.overflow}` : ''}`, {
       playerId: player.id,
       unitId: unit.id,
@@ -1047,7 +1063,7 @@ export class BattleEngine {
         unit.statuses.awakening.battleUsed = true;
       }
       if (triggerAttacked) this._onAttacked(unit, attacker, 0, false);
-      return { actual: 0, overflow: 0, defeated: false, evaded: true, incomingTriggers: ['完全回避'] };
+      return { actual: 0, overflow: 0, defeated: false, destroyAttacker: false, evaded: true, incomingTriggers: ['完全回避'] };
     }
     let adjustedRawDamage = rawDamage;
     const flatMark = unit.statuses.incomingFlatDamage;
@@ -1112,8 +1128,12 @@ export class BattleEngine {
       triggers.push(unit.awakeningAbilityName);
     }
     if (triggerAttacked) this._onAttacked(unit, attacker, actual, defeated);
+    const pact = unit.statuses.deathPact;
+    const destroyAttacker = Boolean(defeated && attacker && pact
+      && pact.playerId === this.state.currentPlayerId
+      && pact.activeTurn === this.player(pact.playerId)?.turnNumber);
     if (defeated) this._removeUnit(owner, unit);
-    return { actual, overflow, defeated, evaded: false, incomingTriggers: triggers };
+    return { actual, overflow, defeated, destroyAttacker, evaded: false, incomingTriggers: triggers };
   }
 
   _onAttacked(unit, attacker, actualDamage, defeated) {
@@ -1690,6 +1710,19 @@ export class BattleEngine {
     player.effects.nextTurnMoveSurcharges = (player.effects.nextTurnMoveSurcharges ?? []).filter((effect) => effect.remaining > 0);
   }
 
+  _expireOpponentTurnStatuses(player) {
+    for (const unit of livingUnits(player)) {
+      const seal = unit.statuses.attackSeal;
+      if (seal?.playerId === player.id && seal.activeTurn <= player.turnNumber) unit.statuses.attackSeal = null;
+    }
+    for (const ownerId of this.state.playerOrder) {
+      for (const unit of livingUnits(this.player(ownerId))) {
+        const pact = unit.statuses.deathPact;
+        if (pact?.playerId === player.id && pact.activeTurn <= player.turnNumber) unit.statuses.deathPact = null;
+      }
+    }
+  }
+
   _normalDraw(player) {
     const requested = player.hand.length <= 3 ? 5 - player.hand.length : 2;
     this._drawCards(player, Math.max(0, Math.min(requested, RULES.handLimit - player.hand.length)), 'turn');
@@ -1814,6 +1847,19 @@ export class BattleEngine {
       }
       case '緊急撤退指示':
         return targetActions(own.filter((unit) => unit.fusionStage === 0 && !(unit.absorbedCardInstanceIds ?? []).length));
+      case '封印の鎖':
+        return targetActions(enemy);
+      case '粛清': {
+        const all = [...own, ...enemy];
+        const highestAtk = Math.max(...all.map((unit) => effectiveAtk(unit)));
+        return all.filter((unit) => effectiveAtk(unit) === highestAtk).map((unit) => ({
+          ...base,
+          targetUnitId: unit.id,
+          label: `粛清 → ${own.includes(unit) ? '味方' : '敵'} ${unit.name}`,
+        }));
+      }
+      case '道連れの契約':
+        return targetActions(own);
       case '応急処置':
       case '捨て身命令':
         return targetActions(own);
@@ -1995,6 +2041,24 @@ export class BattleEngine {
         });
         break;
       }
+      case '封印の鎖':
+        enemyTarget.statuses.attackSeal = {
+          playerId: opponent.id,
+          activeTurn: opponent.turnNumber + 1,
+        };
+        break;
+      case '粛清': {
+        const targetOwner = ownTarget ? player : opponent;
+        const target = ownTarget ?? enemyTarget;
+        this._removeUnit(targetOwner, target, { allowReturn: false });
+        break;
+      }
+      case '道連れの契約':
+        ownTarget.statuses.deathPact = {
+          playerId: opponent.id,
+          activeTurn: opponent.turnNumber + 1,
+        };
+        break;
       case '機鋼・オーバークロック':
         ownTarget.temporaryAtk += 10;
         ownTarget.statuses.overclockPendingDefPenalty = 5;
@@ -2086,7 +2150,7 @@ export class BattleEngine {
       || unit.statuses.nextDamageBonus > 0 || unit.statuses.nextDamageReduction > 0
       || unit.statuses.spareParts || unit.statuses.echoNext > 0
       || unit.statuses.autoRepairRemaining > 0 || unit.statuses.tpOnNextKill > 0
-      || unit.statuses.predationEvolution;
+      || unit.statuses.predationEvolution || Boolean(unit.statuses.deathPact);
   }
 
   _clearPositiveBattleEffects(unit) {
@@ -2103,13 +2167,15 @@ export class BattleEngine {
     unit.statuses.autoRepairRemaining = 0;
     unit.statuses.tpOnNextKill = 0;
     unit.statuses.predationEvolution = false;
+    unit.statuses.deathPact = null;
   }
 
   _hasRemovableDebuff(unit) {
     return unit.atkMod < 0 || unit.defMod < 0 || unit.temporaryAtk < 0 || unit.temporaryDef < 0
       || unit.statuses.nextDamagePenalty > 0 || unit.statuses.stunOnNextTurn > 0 || unit.stunnedThisTurn
       || Boolean(unit.statuses.parasite) || Boolean(unit.statuses.incomingFlatDamage)
-      || unit.statuses.overclockPendingDefPenalty > 0 || unit.statuses.recoilOnNextAttack > 0;
+      || unit.statuses.overclockPendingDefPenalty > 0 || unit.statuses.recoilOnNextAttack > 0
+      || Boolean(unit.statuses.attackSeal);
   }
 
   _clearNegativeBattleEffects(unit) {
@@ -2123,6 +2189,7 @@ export class BattleEngine {
     unit.statuses.incomingFlatDamage = null;
     unit.statuses.overclockPendingDefPenalty = 0;
     unit.statuses.recoilOnNextAttack = 0;
+    unit.statuses.attackSeal = null;
     if (unit.stunnedThisTurn && !unit.summonedThisTurn) {
       unit.stunnedThisTurn = false;
       unit.actionPoints = Math.max(1, unit.actionPoints);

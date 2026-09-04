@@ -246,8 +246,8 @@ test('all thirty monster showcase illustrations stay within the on-demand mobile
   assert.ok(totalBytes < 4_100_000, 'all monster showcase illustrations stay below a 4.1 MB aggregate budget');
 });
 
-test('all thirty-two expansion breeder illustrations are optimized WebP project assets', () => {
-  for (let number = 21; number <= 52; number += 1) {
+test('all thirty-five expansion breeder illustrations are optimized WebP project assets', () => {
+  for (let number = 21; number <= 55; number += 1) {
     const id = String(number).padStart(3, '0');
     const url = new URL(`../../assets/images/breeders/breeder-${id}.webp`, import.meta.url);
     const bytes = readFileSync(url);
@@ -336,6 +336,7 @@ test('catalog uses two bounded thumbnail atlases and keeps full art for details'
   assert.match(catalogCardThumbnailPlacement(masterIndex.cards.get('monster-001')).style, /--art-x:0%;--art-y:0%/);
   assert.match(catalogCardThumbnailPlacement(masterIndex.cards.get('monster-025')).style, /catalog-thumbnails\/monster-025\.webp/);
   assert.match(catalogCardThumbnailPlacement(masterIndex.cards.get('breeder-052')).style, /--art-x:100%;--art-y:100%/);
+  assert.match(catalogCardThumbnailPlacement(masterIndex.cards.get('breeder-053')).style, /catalog-thumbnails\/breeder-053\.webp/);
   assert.match(catalogFusionThumbnailPlacement({ id: 'fusion-048' }).style, /--art-x:100%;--art-y:100%/);
   assert.match(catalogFusionThumbnailPlacement({ id: 'fusion-049' }).style, /fusion-thumbnails\/fusion-049\.webp/);
   assert.ok(statSync(new URL('../../assets/images/catalog-thumbnails/cards.webp', import.meta.url)).size < 350_000);

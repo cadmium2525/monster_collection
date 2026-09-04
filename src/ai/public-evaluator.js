@@ -12,6 +12,8 @@ function statusValue(unit) {
   value -= (unit.statuses.stunOnNextTurn ?? 0) * 18;
   value -= unit.statuses.parasite ? 10 : 0;
   value -= unit.statuses.incomingFlatDamage ? (unit.statuses.incomingFlatDamage.remaining ?? 1) * 4 : 0;
+  value -= unit.statuses.attackSeal ? 30 : 0;
+  value += unit.statuses.deathPact ? 24 : 0;
   return value;
 }
 

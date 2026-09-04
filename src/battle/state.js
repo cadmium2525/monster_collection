@@ -166,6 +166,8 @@ export function createUnit({ unitId, card, monster, growth, masterIndex, slot })
       incomingFlatDamage: null,
       tpOnNextKill: 0,
       predationEvolution: false,
+      attackSeal: null,
+      deathPact: null,
       awakening: {
         battleUsed: false,
         turnUsed: false,

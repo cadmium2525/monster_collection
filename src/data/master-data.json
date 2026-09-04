@@ -8,7 +8,7 @@
     "legacyDistanceFieldsAreNonGameplay": true,
     "expectedMonsterCount": 30,
     "expectedMoveCount": 270,
-    "expectedBreederCount": 52,
+    "expectedBreederCount": 55,
     "expectedFusionCount": 60,
     "boosterExpansion": "Six Heroines 2026-08-31",
     "thirdGenerationFusions": "Six Heroines 12 recipes 2026-08-31"
@@ -4361,6 +4361,33 @@
       "name": "怪物・完全捕食",
       "tp": 3,
       "effect": "手札のモンスター1枚を捨て、怪物1体のLIFEを20回復・ATK+10"
+    },
+    {
+      "id": "breeder-053",
+      "kind": "breeder",
+      "category": "汎用",
+      "faction": null,
+      "name": "封印の鎖",
+      "tp": 2,
+      "effect": "指定敵1体は次ターン攻撃技を使えない"
+    },
+    {
+      "id": "breeder-054",
+      "kind": "breeder",
+      "category": "汎用",
+      "faction": null,
+      "name": "粛清",
+      "tp": 4,
+      "effect": "敵味方含めATK最高の1体を墓地へ"
+    },
+    {
+      "id": "breeder-055",
+      "kind": "breeder",
+      "category": "汎用",
+      "faction": null,
+      "name": "道連れの契約",
+      "tp": 2,
+      "effect": "指定した自分のモンスターが次の相手ターンに破壊された場合、破壊した敵も墓地へ"
     }
   ],
   "growthCards": [

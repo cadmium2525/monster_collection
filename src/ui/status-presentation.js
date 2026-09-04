@@ -79,6 +79,8 @@ export function unitStatusEntries(unit) {
   }
   if (number(statuses.tpOnNextKill) > 0) add('tp-on-kill', 'positive', 'TP', `次の撃破でTP +${number(statuses.tpOnNextKill)}`, '撃破すると解除');
   if (statuses.predationEvolution) add('predation-evolution', 'positive', '喰', '捕食進化', '撃破時にATK・DEF上昇');
+  if (statuses.attackSeal) add('attack-seal', 'negative', '封', '攻撃技封印', '次の自ターン終了まで');
+  if (statuses.deathPact) add('death-pact', 'positive', '契', '道連れ契約', '次の相手ターン中');
   if (statuses.phantomExtraActionPending) add('phantom-extra-action', 'positive', '時', '次ターン行動権 +1', '次の自ターン開始時');
   if (number(statuses.specialCounters?.gaiaRetaliation) > 0) {
     add('gaia-retaliation', 'positive', '牙', `反撃充填 +${percent(statuses.specialCounters.gaiaRetaliation)}`, '次の技を使うと解除');

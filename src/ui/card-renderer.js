@@ -92,6 +92,12 @@ export function catalogCardThumbnailPlacement(definition) {
     }
   } else if (definition.id.startsWith('breeder-')) {
     const number = Number(definition.id.match(/(\d+)$/)?.[1]);
+    if (number > 52) {
+      return {
+        className: 'catalog-standalone-thumbnail-art',
+        style: `--thumbnail-art:url("./assets/images/catalog-thumbnails/${definition.id}.webp")`,
+      };
+    }
     index = number <= 20 ? 28 + number : 49 + (number - 21);
   } else {
     const supportIndex = SUPPORT_CARD_IDS.indexOf(definition.id);
@@ -127,7 +133,7 @@ export function isFoilAppearance(definition, unit = null, cardAsset = null) {
 export function cardArtPlacement(definition, unit = null, cardAsset = null) {
   if (definition.kind !== 'monster') {
     const breederNumber = definition.kind === 'breeder' ? Number(definition.id.match(/(\d+)$/)?.[1]) : 0;
-    if (breederNumber > 20 && breederNumber <= 52) {
+    if (breederNumber > 20) {
       return {
         className: 'support-card-art standalone-support-art',
         style: `--support-art:url("./assets/images/breeders/${definition.id}.webp")`,

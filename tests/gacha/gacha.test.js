@@ -3,7 +3,7 @@ import assert from 'node:assert/strict';
 import { existsSync } from 'node:fs';
 import { CardStealSession } from '../../src/reward/CardStealSession.js';
 import { GUARANTEED_MONSTER_IDS, SHOWCASE_VARIANTS, boosterPackDisclosure, generateBoosterPack } from '../../src/gacha/pack-generator.js';
-import { BOOSTER_MONSTER_IDS, TROPHY_BREEDER_IDS, acquisitionOrigin, isPackEligible } from '../../src/gacha/acquisition.js';
+import { BOOSTER_MONSTER_IDS, TROPHY_BREEDER_IDS, acquisitionOrigin, isNormalCpuEligible, isPackEligible } from '../../src/gacha/acquisition.js';
 import { applyDiamondReward, applyPackPurchase, defaultEconomyState, normalizeEconomyState } from '../../src/gacha/economy-state.js';
 import { SeededRng } from '../../src/core/rng.js';
 import { generateCpuDeck } from '../../src/tournament/deck-generator.js';
@@ -224,9 +224,13 @@ test('the six stronger trophy breeders are used by matching CPUs and can be capt
   }
 });
 
-test('all six counter commands are available from boosters, normal CPUs and post-win capture', () => {
-  const counterIds = Array.from({ length: 6 }, (_, index) => `breeder-${String(index + 41).padStart(3, '0')}`);
+test('all nine counter commands are available from boosters, normal CPUs and post-win capture', () => {
+  const counterIds = [
+    ...Array.from({ length: 6 }, (_, index) => `breeder-${String(index + 41).padStart(3, '0')}`),
+    'breeder-053', 'breeder-054', 'breeder-055',
+  ];
   assert.equal(counterIds.every((id) => isPackEligible(masterIndex.cards.get(id))), true);
+  assert.equal(counterIds.every((id) => isNormalCpuEligible(masterIndex.cards.get(id))), true);
   const disclosure = boosterPackDisclosure({ masterIndex, faction: '機鋼', openedCount: 1 });
   assert.equal(counterIds.every((id) => disclosure.cards.some(({ definition }) => definition.id === id)), true);
 

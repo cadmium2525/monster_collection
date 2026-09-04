@@ -8,7 +8,7 @@ import { legalDeck, masterData, masterIndex } from '../helpers.js';
 test('master data contains all canonical records', () => {
   assert.equal(masterData.monsters.length, 30);
   assert.equal(masterData.moves.length, 270);
-  assert.equal(masterData.breeders.length, 52);
+  assert.equal(masterData.breeders.length, 55);
   assert.equal(masterData.fusions.length, 60);
   for (const monster of masterData.monsters) {
     const moves = masterData.moves.filter((move) => move.monsterName === monster.name);

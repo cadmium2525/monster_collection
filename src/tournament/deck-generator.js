@@ -16,6 +16,7 @@ const GENERIC_BREEDERS = [
   'breeder-001', 'breeder-002', 'breeder-003', 'breeder-004', 'breeder-005', 'breeder-006', 'breeder-007', 'breeder-008',
   'breeder-021', 'breeder-022', 'breeder-023', 'breeder-024', 'breeder-025', 'breeder-026', 'breeder-027', 'breeder-028',
   'breeder-041', 'breeder-042', 'breeder-043', 'breeder-044', 'breeder-045', 'breeder-046',
+  'breeder-053', 'breeder-054', 'breeder-055',
 ];
 
 function addCopy(counts, id, max = 3) {
@@ -106,6 +107,8 @@ function genericBreederScore(masterIndex, id, theme, rank) {
     if (['強化解除指示', '状態浄化', '反転防壁'].includes(card.name)) score += 4;
     if (['合体妨害工作', '技術封鎖', '緊急撤退指示'].includes(card.name)) score += 3;
     if (['融合強化指示', '素材探索', '全体防御命令', 'TP前借り'].includes(card.name)) score += 2;
+    if (card.name === '粛清') score += 5;
+    if (['封印の鎖', '道連れの契約'].includes(card.name)) score += 4;
   }
   if (theme === '混合' && card.faction == null) score += 1;
   return score;
