@@ -11,9 +11,9 @@ const OPPONENT_BOARD_EFFECTS = new Set(['breeder-042', 'breeder-043']);
 const OPPONENT_PLAYER_EFFECTS = new Set(['breeder-002']);
 
 const TIMINGS = Object.freeze({
-  standard: Object.freeze({ reveal: 420, copyOut: 150, preTravel: 1250, travel: 360, impact: 240 }),
-  fast: Object.freeze({ reveal: 130, copyOut: 55, preTravel: 365, travel: 120, impact: 85 }),
-  reduced: Object.freeze({ reveal: 100, copyOut: 45, preTravel: 315, travel: 105, impact: 75 }),
+  standard: Object.freeze({ reveal: 420, copyOut: 150, travel: 360, impact: 240 }),
+  fast: Object.freeze({ reveal: 130, copyOut: 55, travel: 120, impact: 85 }),
+  reduced: Object.freeze({ reveal: 100, copyOut: 45, travel: 105, impact: 75 }),
 });
 
 const CHANNEL_PRESENTATION = Object.freeze({
@@ -204,6 +204,8 @@ export async function playCardUseAnimation({ model, speed = 'standard', targetNo
     el('p', { text: model.effect }),
     el('span', { text: `TARGET  ${model.target.label}` }),
   ]);
+  const backdrop = el('div', { className: 'card-use-backdrop', attrs: { 'aria-hidden': 'true' } });
+  const radiance = el('div', { className: 'card-use-radiance', attrs: { 'aria-hidden': 'true' } });
   const overlay = el('div', {
     className: `card-use-cinematic ${model.tone} channel-${model.channel}${speed === 'fast' ? ' fast' : ''}${reducedMotion ? ' reduced-motion' : ''}`,
     attrs: {
@@ -213,8 +215,8 @@ export async function playCardUseAnimation({ model, speed = 'standard', targetNo
       style: `--card-use-reveal:${timing.reveal}ms;--card-use-copy-out:${timing.copyOut}ms`,
     },
   }, [
-    el('div', { className: 'card-use-backdrop', attrs: { 'aria-hidden': 'true' } }),
-    el('div', { className: 'card-use-radiance', attrs: { 'aria-hidden': 'true' } }),
+    backdrop,
+    radiance,
     el('section', { className: 'card-use-stage' }, [
       shell,
       copy,
@@ -228,8 +230,9 @@ export async function playCardUseAnimation({ model, speed = 'standard', targetNo
   copy.getBoundingClientRect?.();
   overlay.classList.add('copy-clearing');
   await waitForTransition(copy, 'opacity', timing.copyOut);
-  overlay.classList.add('copy-cleared');
-  await delay(timing.preTravel);
+  overlay.classList.add('copy-cleared', 'travel-ready');
+  [backdrop, radiance].forEach((node) => node.getAnimations?.().forEach((animation) => animation.cancel()));
+  radiance.getBoundingClientRect?.();
   overlay.classList.add('travelling');
 
   const sourceRect = shell.getBoundingClientRect();

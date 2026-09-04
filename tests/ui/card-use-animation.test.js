@@ -21,11 +21,11 @@ function index(...definitions) {
 }
 
 test('player and CPU card use share exactly the same standard and fast timings', () => {
-  assert.deepEqual(cardUseAnimationTimings({ speed: 'standard' }), { reveal: 420, copyOut: 150, preTravel: 1250, travel: 360, impact: 240 });
-  assert.deepEqual(cardUseAnimationTimings({ speed: 'fast' }), { reveal: 130, copyOut: 55, preTravel: 365, travel: 120, impact: 85 });
-  assert.equal(cardUseAnimationDuration(), 2420);
-  assert.equal(cardUseAnimationDuration({ speed: 'fast' }), 755);
-  assert.equal(cardUseAnimationDuration({ reducedMotion: true }), 640);
+  assert.deepEqual(cardUseAnimationTimings({ speed: 'standard' }), { reveal: 420, copyOut: 150, travel: 360, impact: 240 });
+  assert.deepEqual(cardUseAnimationTimings({ speed: 'fast' }), { reveal: 130, copyOut: 55, travel: 120, impact: 85 });
+  assert.equal(cardUseAnimationDuration(), 1170);
+  assert.equal(cardUseAnimationDuration({ speed: 'fast' }), 390);
+  assert.equal(cardUseAnimationDuration({ reducedMotion: true }), 325);
 });
 
 test('targeted Training and shugyo resolve into the selected monster', () => {
@@ -118,7 +118,9 @@ test('battle flow uses one shared card-use cinematic and suppresses the duplicat
   assert.match(styles, /\.card-use-cinematic\.copy-clearing \.card-use-copy/);
   assert.match(animation, /await delay\(timing\.reveal\);\s*overlay\.classList\.add\('copy-ready'\);\s*copy\.getAnimations\?\.\(\)\.forEach\(\(animation\) => animation\.cancel\(\)\);\s*copy\.getBoundingClientRect\?\.\(\);\s*overlay\.classList\.add\('copy-clearing'\)/s);
   assert.doesNotMatch(animation, /descriptionHold/);
-  assert.match(animation, /classList\.add\('copy-clearing'\);\s*await waitForTransition\(copy, 'opacity', timing\.copyOut\);\s*overlay\.classList\.add\('copy-cleared'\);\s*await delay\(timing\.preTravel\);\s*overlay\.classList\.add\('travelling'\)/s);
+  assert.match(animation, /classList\.add\('copy-clearing'\);\s*await waitForTransition\(copy, 'opacity', timing\.copyOut\);\s*overlay\.classList\.add\('copy-cleared', 'travel-ready'\);[\s\S]*overlay\.classList\.add\('travelling'\)/);
+  assert.doesNotMatch(animation, /preTravel/);
   assert.match(styles, /\.card-use-cinematic\.copy-ready \.card-use-copy\s*\{\s*animation:none/);
   assert.match(styles, /\.card-use-cinematic\.copy-cleared \.card-use-copy[^{}]*\{[^}]*visibility:hidden/s);
+  assert.match(styles, /\.card-use-cinematic\.travel-ready \.card-use-backdrop[^{}]*\{[^}]*animation:none/s);
 });

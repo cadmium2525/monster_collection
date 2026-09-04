@@ -592,6 +592,9 @@ body:has(.battle-screen) {
 .card-use-cinematic.copy-ready .card-use-copy { animation:none; }
 .card-use-cinematic.copy-clearing .card-use-copy,.card-use-cinematic.copy-cleared .card-use-copy,.card-use-cinematic.travelling .card-use-copy { opacity:0; transform:translateX(14px); }
 .card-use-cinematic.copy-cleared .card-use-copy,.card-use-cinematic.travelling .card-use-copy { visibility:hidden; }
+.card-use-cinematic.travel-ready .card-use-backdrop,.card-use-cinematic.travel-ready .card-use-radiance { animation:none; }
+.card-use-cinematic.travel-ready .card-use-backdrop { opacity:1; }
+.card-use-cinematic.travel-ready .card-use-radiance { opacity:.54; transform:scale(1) rotate(8deg); }
 .card-use-cinematic.travelling .card-use-radiance,.card-use-cinematic.resolved .card-use-backdrop { opacity:0; }
 .hand-panel,.opponent-hand-panel { position:relative; }
 .card-use-impact { position:absolute; z-index:60; left:50%; top:50%; width:min(82%,clamp(70px,10vw,116px)); aspect-ratio:1; translate:-50% -50%; display:grid; place-items:center; border:2px solid var(--card-use-accent,#ffe18a); border-radius:50%; color:var(--card-use-accent,#ffe18a); background:radial-gradient(circle,#fff 0 3%,color-mix(in srgb,currentColor 60%,transparent) 8%,rgba(3,12,20,.88) 34%,transparent 67%); box-shadow:0 0 12px #fff,0 0 30px currentColor,inset 0 0 20px currentColor; text-shadow:0 0 7px #fff,0 0 15px currentColor; pointer-events:none; animation:card-use-impact-pop .48s cubic-bezier(.12,.78,.2,1) both; }

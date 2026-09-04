@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.33.7 — 2026-09-04
+
+### Continuous support-card travel
+- Remove the pause after effect-copy fade so the card immediately flows into its target.
+- Release and fade the cinematic radiance during travel instead of leaving the mandala-like background visible.
+
 ## 1.33.6 — 2026-09-04
 
 ### Support-card copy fade sequencing
