@@ -183,33 +183,7 @@ export class ProfileScreen {
           ]),
           el('button', { className: 'utility-button profile-rename', text: '名前を変更', onclick: this.onRename }),
         ]),
-        el('section', { className: 'profile-home-art panel' }, [
-          el('div', { className: 'profile-section-title' }, [
-            el('div', {}, [el('p', { className: 'eyebrow', text: 'HOME ARTWORK' }), el('h2', { text: 'ホーム画面イラスト' })]),
-            el('button', { className: 'utility-button', text: '変更', onclick: () => openHomeArtworkPicker(this) }),
-          ]),
-          el('div', { className: `profile-home-art-preview${homeArtwork.finish === 'foil' ? ' is-foil' : ''}` }, [
-            el('img', { src: homeArtworkImagePath(homeArtwork), alt: homeArtworkLabel(homeArtwork, this.masterIndex), draggable: false, attrs: { loading: 'lazy', decoding: 'async' } }),
-            homeArtwork.finish === 'foil' ? el('i', { attrs: { 'aria-hidden': 'true' } }) : null,
-            el('strong', { text: homeArtworkLabel(homeArtwork, this.masterIndex) }),
-          ]),
-        ]),
         accountPanel(this, account),
-        el('section', { className: 'profile-record panel' }, [
-          el('div', { className: 'profile-section-title' }, [
-            el('div', {}, [el('p', { className: 'eyebrow', text: 'BATTLE RECORD' }), el('h2', { text: '戦績' })]),
-            stats.updatedAt ? el('small', { text: `最終更新 ${formatDate(stats.updatedAt)}` }) : null,
-          ]),
-          el('div', { className: 'profile-metric-grid' }, [
-            metric('通算試合', stats.battlesPlayed, `${stats.battleWins}勝 ${stats.battleLosses}敗 ${stats.battleDraws}分`),
-            metric('勝率', percent(battleWinRate(stats)), `最高連勝 ${stats.bestWinStreak}`),
-            metric('大会参加', stats.tournamentsEntered, `完走 ${stats.tournamentsCompleted}`),
-            metric('大会優勝', stats.tournamentWins, cupWins),
-            metric('王座獲得', stats.championshipsWon, currentChampion ? `現王者・防衛 ${this.champion?.defenseCount ?? 0}` : '累計戴冠回数', 'champion-metric'),
-            metric('奪取カード', stats.cardsStolen, '確定して持ち帰った枚数'),
-          ]),
-          el('small', { className: 'profile-stats-note', text: '戦績はこの機能の公開後に終了した試合から記録されます。' }),
-        ]),
         el('section', { className: 'profile-catalog panel' }, [
           el('div', { className: 'profile-section-title' }, [
             el('div', {}, [el('p', { className: 'eyebrow', text: 'COLLECTION' }), el('h2', { text: 'カード図鑑' })]),
@@ -225,6 +199,32 @@ export class ProfileScreen {
             el('div', { className: 'profile-progress fusion-progress' }, el('i', { style: `width:${this.catalogProgress.fusionRate * 100}%` })),
             el('b', { text: `${this.catalogProgress.discoveredFusions}/${this.catalogProgress.totalFusions}` }),
           ]),
+        ]),
+        el('section', { className: 'profile-home-art panel' }, [
+          el('div', { className: 'profile-section-title' }, [
+            el('div', {}, [el('p', { className: 'eyebrow', text: 'HOME ARTWORK' }), el('h2', { text: 'ホーム画面イラスト' })]),
+            el('button', { className: 'utility-button', text: '変更', onclick: () => openHomeArtworkPicker(this) }),
+          ]),
+          el('div', { className: `profile-home-art-preview${homeArtwork.finish === 'foil' ? ' is-foil' : ''}` }, [
+            el('img', { src: homeArtworkImagePath(homeArtwork), alt: homeArtworkLabel(homeArtwork, this.masterIndex), draggable: false, attrs: { loading: 'lazy', decoding: 'async' } }),
+            homeArtwork.finish === 'foil' ? el('i', { attrs: { 'aria-hidden': 'true' } }) : null,
+            el('strong', { text: homeArtworkLabel(homeArtwork, this.masterIndex) }),
+          ]),
+        ]),
+        el('section', { className: 'profile-record panel' }, [
+          el('div', { className: 'profile-section-title' }, [
+            el('div', {}, [el('p', { className: 'eyebrow', text: 'BATTLE RECORD' }), el('h2', { text: '戦績' })]),
+            stats.updatedAt ? el('small', { text: `最終更新 ${formatDate(stats.updatedAt)}` }) : null,
+          ]),
+          el('div', { className: 'profile-metric-grid' }, [
+            metric('通算試合', stats.battlesPlayed, `${stats.battleWins}勝 ${stats.battleLosses}敗 ${stats.battleDraws}分`),
+            metric('勝率', percent(battleWinRate(stats)), `最高連勝 ${stats.bestWinStreak}`),
+            metric('大会参加', stats.tournamentsEntered, `完走 ${stats.tournamentsCompleted}`),
+            metric('大会優勝', stats.tournamentWins, cupWins),
+            metric('王座獲得', stats.championshipsWon, currentChampion ? `現王者・防衛 ${this.champion?.defenseCount ?? 0}` : '累計戴冠回数', 'champion-metric'),
+            metric('奪取カード', stats.cardsStolen, '確定して持ち帰った枚数'),
+          ]),
+          el('small', { className: 'profile-stats-note', text: '戦績はこの機能の公開後に終了した試合から記録されます。' }),
         ]),
       ]),
     ]));

@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.33.1 — 2026-09-04
+
+### My Page layout renewal
+- Keep profile, account recovery, and catalog progress in the always-visible top row so a new account can immediately reach registration and login.
+- Move home artwork and a narrower two-column battle record into the lower row, preventing oversized statistics cards from pushing account controls out of view.
+- Fit the dashboard to one landscape screen with a compact-height variant instead of depending on a hidden vertical scroll.
+
 ## 1.33.0 — 2026-09-04
 
 ### Mobile home-screen icon renewal

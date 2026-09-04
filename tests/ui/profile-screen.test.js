@@ -50,6 +50,14 @@ test('home artwork choices keep their labels visible in compact landscape layout
   assert.match(css, /@media \(max-height:430px\)[\s\S]*\.home-artwork-choice\s*\{\s*min-height:82px;/);
 });
 
+test('my page keeps account recovery visible in a one-screen dashboard', () => {
+  const source = fs.readFileSync(new URL('../../src/ui/profile-screen.js', import.meta.url), 'utf8');
+  const css = fs.readFileSync(new URL('../../styles.css', import.meta.url), 'utf8');
+  assert.ok(source.indexOf('accountPanel(this, account)') < source.indexOf("className: 'profile-home-art panel'"));
+  assert.match(css, /\.profile-layout\s*\{[^}]*overflow:hidden;[^}]*grid-template-areas:"identity account catalog" "homeart homeart record";/s);
+  assert.match(css, /\.profile-metric-grid\s*\{[^}]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\);[^}]*grid-template-rows:repeat\(3,minmax\(0,1fr\)\);/s);
+});
+
 test('recovery forms request a player ID instead of an email address', () => {
   const source = fs.readFileSync(new URL('../../src/app.js', import.meta.url), 'utf8');
   assert.match(source, /aria-label': '復旧ID'/);
