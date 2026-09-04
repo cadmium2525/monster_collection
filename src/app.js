@@ -31,12 +31,14 @@ import { ArenaResultScreen, ArenaScreen, openArenaRankingModal } from './ui/aren
 import { MissionScreen } from './ui/mission-screen.js';
 import { defaultHomeArtworkSelection, homeArtworkSelectionKey, normalizeHomeArtworkSelection, ownedHomeArtworkSelections } from './profile/home-artwork.js';
 import { renderTitleScreen } from './ui/title-screen.js';
+import { HomeBgmController } from './audio/home-bgm.js';
 
 const AI_BUDGET = Object.freeze({ bronze: 4, silver: 8, gold: 22, legend: 85, champion: 240 });
 
 class MonsterConstructionApp {
   constructor(root) {
     this.root = root;
+    this.bgm = new HomeBgmController();
     const params = new URLSearchParams(location.search);
     this.seedSource = new TournamentSeedSource({ fixedSeed: params.has('seed') ? params.get('seed') : null });
     this.seed = this.seedSource.sessionSeed;
@@ -205,6 +207,8 @@ class MonsterConstructionApp {
     replace(this.root, renderTitleScreen({
       onStart: () => {
         if (this.currentScreen !== 'title') return;
+        this.bgm.setHomeActive(true);
+        void this.bgm.unlockFromGesture();
         const rewards = this.loginRewards ?? [];
         this.loginRewards = [];
         this.showHome();
@@ -229,6 +233,8 @@ class MonsterConstructionApp {
       debugMode: globalThis.__MC_DEBUG_MODE__,
       adminMode: globalThis.__MC_ADMIN_MODE__,
       activeRun: this.activeRun,
+      bgmVolume: this.bgm.volume,
+      onBgmVolumeChange: (volume) => this.bgm.setVolume(volume),
       onResume: () => this.resumeTournament(),
       onTournament: () => this.showTournamentSetup(),
       onArena: () => ['arena-battle', 'arena-result'].includes(this.activeRun?.phase) ? this.resumeArena() : this.showArena(),
@@ -493,6 +499,15 @@ class MonsterConstructionApp {
       onOpen: (pack, resume = false) => this.openBooster(pack, resume),
       onExchangeMonster: (selection) => this.exchangeMonsterCard(selection),
     });
+  }
+
+  get currentScreen() {
+    return this._currentScreen;
+  }
+
+  set currentScreen(value) {
+    this._currentScreen = value;
+    this.bgm?.setHomeActive(value === 'home');
   }
 
   async exchangeMonsterCard({ masterId, artVariantId, finish }) {

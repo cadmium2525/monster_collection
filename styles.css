@@ -2329,6 +2329,45 @@ body:has(.home-lobby) {
 .home-artwork-fullscreen > small { position:absolute; right:max(18px,var(--safe-right)); bottom:max(13px,var(--safe-bottom)); padding:5px 9px; border:1px solid rgba(255,255,255,.28); border-radius:999px; color:rgba(255,255,255,.78); background:rgba(1,6,12,.42); font-size:8px; letter-spacing:.08em; text-shadow:0 1px 3px #000; animation:home-artwork-hint 3.2s ease both; }
 .home-artwork-fullscreen-foil { position:absolute; inset:-32%; opacity:.18; pointer-events:none; background:linear-gradient(112deg,transparent 34%,rgba(115,240,255,.72) 43%,rgba(255,219,133,.68) 49%,rgba(213,139,255,.65) 55%,transparent 64%); mix-blend-mode:screen; animation:home-lobby-foil 6.5s ease-in-out infinite; }
 @keyframes home-artwork-hint { 0%,70% { opacity:1; } 100% { opacity:0; } }
+.home-lobby-top-actions { display:flex; align-items:flex-start; gap:8px; }
+.home-lobby-sound {
+  width:58px;
+  min-width:58px;
+  height:58px;
+  display:grid;
+  grid-template-rows:31px auto;
+  place-items:center;
+  gap:1px;
+  padding:5px 4px 4px;
+  border:1px solid rgba(98,211,220,.48);
+  border-radius:18px 6px;
+  color:#8ce5e2;
+  background:linear-gradient(145deg,rgba(4,16,29,.95),rgba(10,34,48,.88));
+  box-shadow:0 8px 25px rgba(0,0,0,.45),inset 0 0 18px rgba(73,215,224,.06);
+  cursor:pointer;
+  backdrop-filter:blur(10px);
+}
+.home-lobby-sound svg { width:29px; height:29px; fill:none; stroke:currentColor; stroke-width:2.4; stroke-linecap:round; stroke-linejoin:round; }
+.home-lobby-sound strong { color:#f0e1af; font:800 8px/1 system-ui,sans-serif; letter-spacing:.04em; }
+.home-lobby-sound:hover,.home-lobby-sound:focus-visible { border-color:#86f0ec; color:#b7ffff; background:rgba(13,45,58,.96); }
+.home-lobby-sound.is-muted { color:#84939b; border-color:rgba(132,147,155,.38); }
+.bgm-volume-modal { width:min(560px,92vw); }
+.bgm-volume-settings { display:grid; gap:9px; padding-top:8px; }
+.bgm-volume-heading { display:flex; align-items:end; justify-content:space-between; gap:15px; }
+.bgm-volume-heading > span:first-child { display:grid; gap:3px; }
+.bgm-volume-heading > span:first-child small { color:#78deda; font:800 8px/1 Georgia,serif; letter-spacing:.2em; }
+.bgm-volume-heading > span:first-child strong { color:#f4e3b4; font-size:16px; }
+.bgm-volume-value { display:flex; align-items:baseline; justify-content:flex-end; min-width:70px; color:#fff2c5; }
+.bgm-volume-value output { font:800 29px/1 Georgia,serif; }
+.bgm-volume-value small { margin-left:3px; color:#80ddd9; font-size:10px; }
+.bgm-volume-settings input[type="range"] { width:100%; height:24px; margin:0; appearance:none; -webkit-appearance:none; accent-color:#56d8d4; background:transparent; cursor:pointer; }
+.bgm-volume-settings input[type="range"]::-webkit-slider-runnable-track { height:7px; border:1px solid rgba(112,221,221,.44); border-radius:999px; background:linear-gradient(90deg,#176e82,#64ded8); box-shadow:inset 0 1px 3px rgba(0,0,0,.48),0 0 8px rgba(74,209,207,.2); }
+.bgm-volume-settings input[type="range"]::-webkit-slider-thumb { width:22px; height:22px; margin-top:-8px; border:2px solid #f2d589; border-radius:50%; background:#102b3c; box-shadow:0 0 0 3px rgba(5,15,25,.85),0 0 12px rgba(102,225,220,.55); -webkit-appearance:none; }
+.bgm-volume-scale { display:flex; justify-content:space-between; margin-top:-8px; color:#80939e; font-size:8px; }
+.bgm-volume-actions { display:flex; align-items:center; justify-content:space-between; gap:10px; }
+.bgm-volume-actions button { min-width:115px; min-height:34px; }
+.bgm-volume-actions span { color:#91a4ad; font-size:9px; }
+.bgm-volume-settings > p { margin:0; padding:8px 10px; border:1px solid rgba(109,196,202,.2); border-radius:8px; color:#bdcbd0; background:rgba(255,255,255,.025); font-size:9px; line-height:1.45; }
 .home-lobby-wallet {
   min-width:clamp(160px,16vw,210px);
   min-height:58px;
@@ -2712,6 +2751,8 @@ body:has(.home-lobby) {
   .home-lobby-profile-copy > strong { font-size:13px; }
   .home-profile-link { display:none; }
   .home-lobby-wallet { min-height:49px; grid-template-columns:33px minmax(0,1fr) 23px; }
+  .home-lobby-sound { width:49px; min-width:49px; height:49px; grid-template-rows:25px auto; padding:3px; }
+  .home-lobby-sound svg { width:24px; height:24px; }
   .home-lobby-diamond { width:31px; height:31px; }
   .home-lobby-wallet strong { font-size:17px; }
   .home-lobby-left-rail { bottom:max(91px,calc(var(--safe-bottom) + 82px)); width:270px; gap:6px; }
