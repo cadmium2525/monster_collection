@@ -11,9 +11,9 @@ const OPPONENT_BOARD_EFFECTS = new Set(['breeder-042', 'breeder-043']);
 const OPPONENT_PLAYER_EFFECTS = new Set(['breeder-002']);
 
 const TIMINGS = Object.freeze({
-  standard: Object.freeze({ reveal: 420, copyOut: 150, travel: 360, impact: 240 }),
-  fast: Object.freeze({ reveal: 130, copyOut: 55, travel: 120, impact: 85 }),
-  reduced: Object.freeze({ reveal: 100, copyOut: 45, travel: 105, impact: 75 }),
+  standard: Object.freeze({ reveal: 420, descriptionHold: 900, copyOut: 200, preTravel: 300, travel: 420, impact: 260 }),
+  fast: Object.freeze({ reveal: 130, descriptionHold: 260, copyOut: 70, preTravel: 90, travel: 150, impact: 100 }),
+  reduced: Object.freeze({ reveal: 100, descriptionHold: 220, copyOut: 60, preTravel: 80, travel: 130, impact: 90 }),
 });
 
 const CHANNEL_PRESENTATION = Object.freeze({
@@ -205,8 +205,11 @@ export async function playCardUseAnimation({ model, speed = 'standard', targetNo
 
   document.body.append(overlay);
   await delay(timing.reveal);
+  await delay(timing.descriptionHold);
   overlay.classList.add('copy-clearing');
   await delay(timing.copyOut);
+  overlay.classList.add('copy-cleared');
+  await delay(timing.preTravel);
   overlay.classList.add('travelling');
 
   const sourceRect = shell.getBoundingClientRect();

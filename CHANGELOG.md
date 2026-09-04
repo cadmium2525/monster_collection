@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.33.4 — 2026-09-04
+
+### Support-card cinematic timing
+- Hold Training, shugyo, and breeder effect copy on screen after its entrance so the card name and explanation can be read before clearing.
+- After the copy has fully faded, keep the card still for a distinct beat before it travels into its target monster, board, hand, or player field.
+- Preserve the same phase order for player and CPU actions while retaining proportionally shorter fast and reduced-motion timings.
+
 ## 1.33.3 — 2026-09-04
 
 ### Brighter home artwork
