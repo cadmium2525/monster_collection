@@ -69,6 +69,22 @@ button:focus-visible, input:focus-visible, select:focus-visible {
   font: 800 28px/1 Georgia, serif;
 }
 
+.app-shell:has(> .title-screen) { padding:0; }
+body:has(.title-screen), #app:has(.title-screen) { height:100dvh; overflow:hidden; }
+.title-screen { position:relative; width:100%; height:100dvh; min-height:0; overflow:hidden; isolation:isolate; background:#030915; }
+.title-screen-art { position:absolute; z-index:-3; inset:0; width:100%; height:100%; object-fit:cover; object-position:center; user-select:none; -webkit-user-drag:none; }
+.title-screen::before { content:""; position:absolute; z-index:-2; inset:0; background:linear-gradient(180deg,rgba(2,7,14,.12),rgba(2,7,14,.02) 48%,rgba(1,5,11,.56)),radial-gradient(ellipse at 50% 45%,transparent 15%,rgba(2,7,14,.18) 68%,rgba(1,5,11,.52)); pointer-events:none; }
+.title-screen-copy { position:absolute; z-index:1; top:43%; left:50%; width:min(980px,92vw); translate:-50% -50%; display:grid; justify-items:center; gap:clamp(3px,.65dvh,8px); text-align:center; pointer-events:none; }
+.title-screen-emblem { display:grid; place-items:center; width:clamp(54px,7dvh,78px); aspect-ratio:1; border:2px solid #efd083; border-radius:22px 7px; color:#f8df9e; background:rgba(4,12,23,.52); box-shadow:0 0 30px rgba(57,209,221,.3),inset 0 0 18px rgba(232,186,98,.18); font:800 clamp(20px,3.2dvh,31px)/1 Georgia,serif; text-shadow:0 2px 8px #000; }
+.title-screen-copy p { margin:0; color:#8ce9e7; font:800 clamp(9px,1.5dvh,14px)/1 Georgia,serif; letter-spacing:.24em; text-shadow:0 2px 8px #000; }
+.title-screen-copy h1 { margin:0; color:#f7e6bb; font:900 clamp(27px,4.2vw,62px)/1.08 Georgia,"Yu Mincho","Hiragino Mincho ProN",serif; letter-spacing:.02em; white-space:nowrap; text-shadow:0 3px 3px rgba(0,0,0,.95),0 0 18px rgba(6,10,18,.95),0 0 34px rgba(232,186,98,.28); }
+.title-screen-copy > small { color:#e2edf0; font-size:clamp(10px,1.65dvh,15px); font-weight:700; letter-spacing:.12em; text-shadow:0 2px 8px #000; }
+.title-start-button { position:absolute; z-index:2; inset:0; display:flex; flex-direction:column; align-items:center; justify-content:flex-end; gap:5px; padding:0 max(16px,var(--safe-right)) max(7.5dvh,var(--safe-bottom)); border:0; background:transparent; cursor:pointer; -webkit-tap-highlight-color:transparent; }
+.title-start-button span { color:#f8e9c3; font:800 clamp(17px,2.8dvh,25px)/1 Georgia,serif; letter-spacing:.24em; text-indent:.24em; text-shadow:0 2px 6px #000,0 0 14px rgba(95,212,206,.75); animation:title-start-pulse 2.6s ease-in-out infinite; }
+.title-start-button small { color:rgba(224,238,241,.74); font-size:clamp(8px,1.25dvh,11px); letter-spacing:.14em; }
+.title-start-button:focus-visible { outline:2px solid rgba(95,212,206,.85); outline-offset:-8px; }
+@keyframes title-start-pulse { 0%,100% { opacity:.3; filter:brightness(.82); } 50% { opacity:1; filter:brightness(1.25); } }
+
 .app-shell:has(> .battle-screen) {
   width: 100%;
   height: 100dvh;
@@ -2747,6 +2763,7 @@ body:has(.home-lobby) {
 }
 
 @media (prefers-reduced-motion:reduce) {
-  .opening-pack,.opening-aura,.opening-aura i,.pack-particle-field i,.pack-foil-sheen,.pack-break-flash,.pack-break-flash::before,.pack-break-flash i,.pack-card-slot,.pack-card-reveal-shell,.pack-rarity-burst,.rarity-burst-rings i,.pack-rarity-burst strong,.game-card.finish-foil::before,.fusion-catalog-card.finish-foil::before,.monster-portrait.finish-foil::after,.card-art.finish-foil-art::after,.game-card.life-critical .card-life,.login-bonus-diamond-art,.mulligan-motion-cue,.mulligan-motion-sigil i,.game-card.mulligan-draw-enter,.game-card.mulligan-return-to-deck,.game-card.turn-draw-enter,.turn-draw-cue,.boot-progress.is-indeterminate > i,.home-lobby-hero-art,.home-lobby-foil-shine,.home-artwork-fullscreen-foil,.home-artwork-fullscreen > small,.profile-home-art-preview > i { animation:none !important; }
+  .opening-pack,.opening-aura,.opening-aura i,.pack-particle-field i,.pack-foil-sheen,.pack-break-flash,.pack-break-flash::before,.pack-break-flash i,.pack-card-slot,.pack-card-reveal-shell,.pack-rarity-burst,.rarity-burst-rings i,.pack-rarity-burst strong,.game-card.finish-foil::before,.fusion-catalog-card.finish-foil::before,.monster-portrait.finish-foil::after,.card-art.finish-foil-art::after,.game-card.life-critical .card-life,.login-bonus-diamond-art,.mulligan-motion-cue,.mulligan-motion-sigil i,.game-card.mulligan-draw-enter,.game-card.mulligan-return-to-deck,.game-card.turn-draw-enter,.turn-draw-cue,.boot-progress.is-indeterminate > i,.title-start-button span,.home-lobby-hero-art,.home-lobby-foil-shine,.home-artwork-fullscreen-foil,.home-artwork-fullscreen > small,.profile-home-art-preview > i { animation:none !important; }
+  .title-start-button span { opacity:1; filter:none; }
   .pack-particle-field { display:none; }
 }

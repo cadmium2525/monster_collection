@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.35.0 — 2026-09-05
+
+### Title screen
+- Insert a dedicated title screen between startup loading and the home lobby, with an explicit tap gesture ready for future BGM playback.
+- Add newly generated native 16:9 title artwork representing all six monster classifications without reusing or stretching card art.
+- Add a slow `TAP TO START` pulse, keyboard-accessible start control, reduced-motion support, and critical-image preload.
+
 ## 1.34.1 — 2026-09-05
 
 ### Normal-draw rate disclosure

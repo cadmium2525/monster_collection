@@ -30,6 +30,7 @@ import { deckSignature, selectArenaOpponents } from './arena/matchmaker.js';
 import { ArenaResultScreen, ArenaScreen, openArenaRankingModal } from './ui/arena-screen.js';
 import { MissionScreen } from './ui/mission-screen.js';
 import { defaultHomeArtworkSelection, homeArtworkSelectionKey, normalizeHomeArtworkSelection, ownedHomeArtworkSelections } from './profile/home-artwork.js';
+import { renderTitleScreen } from './ui/title-screen.js';
 
 const AI_BUDGET = Object.freeze({ bronze: 4, silver: 8, gold: 22, legend: 85, champion: 240 });
 
@@ -122,10 +123,9 @@ class MonsterConstructionApp {
       this.champion = champion;
       if (this.currentScreen === 'home') this.showHome();
     });
-    this.showStartupProgress(100, 'ホーム画面を表示します…');
-    this.showHome();
-    if (this.loginRewards.length) this.showLoginBonus(this.loginRewards);
     globalThis.__MC_DEBUG__ = { app: this, masterData: this.masterData, masterIndex: this.masterIndex, repository: this.repository };
+    this.showStartupProgress(100, 'タイトル画面を表示します…');
+    this.showTitle();
   }
 
   showLoginBonus(rewards) {
@@ -198,6 +198,19 @@ class MonsterConstructionApp {
     bar.setAttribute('aria-valuenow', String(value));
     fill.style.width = `${value}%`;
     percentage.textContent = `${value}%`;
+  }
+
+  showTitle() {
+    this.currentScreen = 'title';
+    replace(this.root, renderTitleScreen({
+      onStart: () => {
+        if (this.currentScreen !== 'title') return;
+        const rewards = this.loginRewards ?? [];
+        this.loginRewards = [];
+        this.showHome();
+        if (rewards.length) this.showLoginBonus(rewards);
+      },
+    }));
   }
 
   showHome() {
