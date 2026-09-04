@@ -60,7 +60,6 @@ const SHOWCASE_VARIANTS = Object.freeze(Object.fromEntries(
 
 export const BOOSTER_DRAW_RATES = Object.freeze({
   showcase: 0.04,
-  showcaseFoil: 0.35,
   firstMonsterBoosterWeight: 2,
   themedMonsterWeight: 1.4,
   themedBreederWeight: 1.3,
@@ -198,7 +197,7 @@ export function boosterPackDisclosure({ masterIndex, faction, openedCount = 0 })
     appearanceRates: {
       rareOrBetter: 1,
       showcase: showcaseChance,
-      foil: foilGuaranteed ? 1 : showcaseChance * BOOSTER_DRAW_RATES.showcaseFoil,
+      foil: foilGuaranteed ? 1 : showcaseChance,
     },
   };
 }
@@ -244,7 +243,7 @@ export function generateBoosterPack({ masterIndex, faction, seed, openedCount = 
     const showcaseVariant = rng.choice(availableShowcases);
     cards.push(asset(masterIndex.cards.get(showcaseVariant.masterId), {
       artVariantId: showcaseVariant.artVariantId,
-      finish: foilGuaranteed || rng.next() < BOOSTER_DRAW_RATES.showcaseFoil ? 'foil' : 'normal',
+      finish: 'foil',
     }));
   } else {
     const rarePool = monsters.filter((definition) => baseCardRarity(definition) === 'rare');

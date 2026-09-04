@@ -1940,7 +1940,7 @@ button:disabled { opacity: .38; cursor: not-allowed; }
 .monster-ticket-note { color:#8599a3; font-size:8px; line-height:1.4; }
 
 .pack-opening-screen { --pack-color:#65e2ef; position:relative; height:calc(100dvh - max(8px,var(--safe-top)) - max(8px,var(--safe-bottom))); min-height:350px; overflow:hidden; color:#fff; background:radial-gradient(circle at 50% 48%,color-mix(in srgb,var(--pack-color) 24%,transparent),transparent 40%),linear-gradient(125deg,#020811,#0c1524 50%,#10091c); border:1px solid color-mix(in srgb,var(--pack-color) 45%,#344); border-radius:16px; isolation:isolate; }
-.pack-sealed { display:grid; place-items:center; }
+.pack-sealed { display:grid; place-items:center; cursor:pointer; touch-action:manipulation; }
 .opening-aura { position:absolute; z-index:-1; left:50%; top:50%; width:min(72dvh,58vw); aspect-ratio:1; translate:-50% -50%; border-radius:50%; background:radial-gradient(circle,color-mix(in srgb,var(--pack-color) 30%,transparent),transparent 64%); filter:drop-shadow(0 0 28px var(--pack-color)); animation:aura-breathe 2.2s ease-in-out infinite alternate; }
 .opening-aura i { position:absolute; inset:7%; border:1px solid color-mix(in srgb,var(--pack-color) 65%,transparent); border-radius:50%; box-shadow:inset 0 0 22px color-mix(in srgb,var(--pack-color) 22%,transparent); animation:aura-ring 7s linear infinite; }
 .opening-aura i:nth-child(2) { inset:19%; border-radius:8%; animation-direction:reverse; animation-duration:5.4s; }
@@ -2026,7 +2026,7 @@ button:disabled { opacity: .38; cursor: not-allowed; }
 .asset-collection-screen { grid-template-rows:auto minmax(0,1fr); }
 .asset-card-grid { --asset-card-width:clamp(108px,11.15vw,142px); min-height:0; overflow:auto; display:grid; grid-template-columns:repeat(auto-fill,var(--asset-card-width)); grid-auto-rows:max-content; align-content:start; justify-content:start; gap:24px clamp(20px,2vw,28px); padding:18px 20px 24px; border:1px solid var(--line); border-radius:var(--radius); background:rgba(3,12,22,.82); }
 .asset-card-entry { width:var(--asset-card-width); min-width:0; display:grid; align-content:start; gap:8px; }
-.asset-card-entry .game-card { width:100%; height:auto; aspect-ratio:.72; }
+.asset-card-entry .game-card { width:100%; min-width:0; max-width:100%; height:auto; aspect-ratio:.72; }
 .asset-card-entry > div { display:flex; justify-content:space-between; gap:4px; }
 .asset-card-entry > div strong { color:#fff0a9; }
 .asset-card-entry > div small { overflow:hidden; color:var(--muted); font-size:7px; text-overflow:ellipsis; white-space:nowrap; }

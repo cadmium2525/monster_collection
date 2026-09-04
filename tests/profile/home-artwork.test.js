@@ -31,7 +31,7 @@ test('home artwork choices include catalog base art and only actually owned show
   });
   assert.deepEqual(selections, [
     { masterId: 'monster-001', artVariantId: 'base', finish: 'normal' },
-    { masterId: 'monster-001', artVariantId: 'showcase-monster-001', finish: 'normal' },
+    { masterId: 'monster-001', artVariantId: 'showcase-monster-001', finish: 'foil' },
     { masterId: 'monster-002', artVariantId: 'base', finish: 'normal' },
     { masterId: 'monster-019', artVariantId: 'base', finish: 'normal' },
     { masterId: 'monster-019', artVariantId: 'showcase-inorganic-01', finish: 'foil' },

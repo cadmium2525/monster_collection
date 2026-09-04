@@ -16,6 +16,13 @@ test('booster opening advances through seal break, deal and individual card flip
   assert.match(css, /@keyframes card-reveal-flip/);
 });
 
+test('the whole sealed-pack screen can start opening while the pack button remains keyboard accessible', () => {
+  assert.match(source, /className: `pack-opening-screen pack-sealed[\s\S]*onclick: \(\) => \{[\s\S]*this\.phase === 'sealed'[\s\S]*this\.revealPack\(\)/);
+  assert.match(source, /className: 'opening-pack'[\s\S]*event\.stopPropagation\(\)/);
+  assert.match(source, /TAP ANYWHERE TO OPEN/);
+  assert.match(css, /\.pack-sealed\s*\{[^}]*cursor:pointer;[^}]*touch-action:manipulation;/s);
+});
+
 test('rare, foil and showcase pulls receive a dedicated readable burst', () => {
   assert.match(source, /asset\.rarity === 'showcase' \|\| asset\.rarity === 'rare' \|\| asset\.finish === 'foil'/);
   assert.match(source, /className: `pack-rarity-burst/);

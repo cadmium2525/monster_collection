@@ -121,8 +121,7 @@ export function isFoilAppearance(definition, unit = null, cardAsset = null) {
   if (definition.kind !== 'monster') return false;
   if ((cardAsset?.finish ?? unit?.finish) === 'foil') return true;
   const artVariantId = cardAsset?.artVariantId ?? unit?.artVariantId ?? 'base';
-  const fusionIndex = specialFusionIndex(unit);
-  return artVariantId !== 'base' && fusionIndex >= 0 && fusionIndex < SPECIAL_FUSION_NAMES.length;
+  return artVariantId !== 'base';
 }
 
 export function cardArtPlacement(definition, unit = null, cardAsset = null) {

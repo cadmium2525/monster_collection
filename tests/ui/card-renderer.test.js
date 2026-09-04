@@ -185,7 +185,7 @@ test('champion portraits retain standalone and showcase artwork instead of falli
   assert.match(showcase.className, /finish-foil/);
 });
 
-test('every showcase special fusion is Foil even when its main asset has a normal finish', () => {
+test('every monster showcase is Foil even when legacy data has a normal finish', () => {
   const monster = monsterByName('アストラノイド');
   assert.equal(isFoilAppearance(monster, {
     specialFusionId: 'fusion-027',
@@ -202,7 +202,7 @@ test('every showcase special fusion is Foil even when its main asset has a norma
   assert.equal(isFoilAppearance(monster, {
     artVariantId: 'showcase-monster-005',
     finish: 'normal',
-  }), false, 'an unfused showcase keeps its independently rolled finish');
+  }), true, 'an unfused showcase is also always Foil');
   assert.equal(isFoilAppearance(monster, { finish: 'foil' }), true);
   assert.equal(isFoilAppearance({ id: 'breeder-001', kind: 'breeder' }, null, { finish: 'foil' }), false);
 });
@@ -389,7 +389,7 @@ test('standalone booster monster art and asset cards share one fixed footprint',
   const css = readFileSync(new URL('../../styles.css', import.meta.url), 'utf8');
   assert.match(css, /\.game-card \.card-art\.monster-art::after,[^{]+\{\s*content: none;\s*display: none;/s);
   assert.match(css, /\.asset-card-grid\s*\{[^}]*grid-template-columns:repeat\(auto-fill,var\(--asset-card-width\)\)/s);
-  assert.match(css, /\.asset-card-entry \.game-card\s*\{[^}]*width:100%;[^}]*aspect-ratio:\.72;/s);
+  assert.match(css, /\.asset-card-entry \.game-card\s*\{[^}]*width:100%;[^}]*min-width:0;[^}]*max-width:100%;[^}]*aspect-ratio:\.72;/s);
 });
 
 test('Foil uses one non-repeating sweep and premium classes are monster-only', () => {

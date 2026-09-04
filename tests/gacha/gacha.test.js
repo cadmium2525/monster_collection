@@ -98,7 +98,7 @@ test('pack disclosures expose exact next-pack card and appearance rates for ever
       assert.ok([...monsterSlot.distribution.values()].every((probability) => probability === 0.5));
     }
     assert.equal(normal.appearanceRates.showcase, 0.04);
-    assert.ok(Math.abs(normal.appearanceRates.foil - 0.014) < 1e-12);
+    assert.equal(normal.appearanceRates.foil, 0.04);
     assert.equal(tenth.appearanceRates.foil, 1);
     assert.equal(twentieth.appearanceRates.showcase, 1);
     assert.equal(twentieth.appearanceRates.foil, 1);
@@ -154,14 +154,29 @@ test('legacy faction names keep pack counters and pending pack state after renam
   assert.equal(migrated.pendingPack.faction, '機鋼');
 });
 
-test('every generated Foil and special illustration belongs to a monster', () => {
+test('every generated Foil and special illustration belongs to a monster and every special illustration is Foil', () => {
   for (const faction of ['機鋼', '神造', '幻霊', '魔族', '獣族', '怪物']) {
     for (let openedCount = 0; openedCount < 40; openedCount += 1) {
       const pack = generateBoosterPack({ masterIndex, faction, openedCount, seed: `premium-rule:${faction}:${openedCount}` });
       const premium = pack.cards.filter((card) => card.finish === 'foil' || card.artVariantId !== 'base');
       assert.ok(premium.every((card) => masterIndex.cards.get(card.masterId)?.kind === 'monster'));
+      assert.ok(pack.cards.filter((card) => card.artVariantId !== 'base').every((card) => card.finish === 'foil'));
     }
   }
+});
+
+test('legacy monster showcase assets are migrated to Foil in inventory and pending packs', () => {
+  const legacy = defaultEconomyState();
+  legacy.unassignedAssets = [{
+    masterId: 'monster-019', artVariantId: 'showcase-inorganic-01', finish: 'normal', rarity: 'showcase', origin: 'booster', quantity: 2,
+  }];
+  legacy.pendingPack = {
+    operationId: 'legacy-showcase-pack', faction: '機鋼', packId: 'pack-inorganic',
+    cards: [{ masterId: 'monster-019', artVariantId: 'showcase-inorganic-01', finish: 'normal', rarity: 'showcase', origin: 'booster' }],
+  };
+  const migrated = normalizeEconomyState(legacy);
+  assert.equal(migrated.unassignedAssets[0].finish, 'foil');
+  assert.equal(migrated.pendingPack.cards[0].finish, 'foil');
 });
 
 test('normal CPU decks keep trophy breeders obtainable but never generate booster-only monsters', () => {

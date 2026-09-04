@@ -14,13 +14,16 @@ export function normalizeCardAppearance(asset = {}) {
     .some((key) => Object.prototype.hasOwnProperty.call(asset, key));
   if (!hasAppearance) return { ...asset };
   const premiumAllowed = isMonsterCardAsset(asset);
+  const artVariantId = premiumAllowed ? cleanString(asset.artVariantId, 'base') : 'base';
   return {
     ...asset,
-    artVariantId: premiumAllowed ? cleanString(asset.artVariantId, 'base') : 'base',
-    finish: premiumAllowed ? cleanString(asset.finish, 'normal') : 'normal',
+    artVariantId,
+    finish: premiumAllowed
+      ? (artVariantId !== 'base' ? 'foil' : cleanString(asset.finish, 'normal'))
+      : 'normal',
     rarity: canonicalCardRarity({
       masterId: asset.masterId,
-      artVariantId: premiumAllowed ? cleanString(asset.artVariantId, 'base') : 'base',
+      artVariantId,
     }),
   };
 }

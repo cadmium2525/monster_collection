@@ -9,7 +9,7 @@ export function normalizeHomeArtworkSelection(value) {
   return {
     masterId,
     artVariantId,
-    finish: value.finish === 'foil' ? 'foil' : 'normal',
+    finish: artVariantId !== 'base' || value.finish === 'foil' ? 'foil' : 'normal',
   };
 }
 

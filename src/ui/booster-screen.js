@@ -96,7 +96,7 @@ export class BoosterShopScreen {
       } : null;
       replace(content, ...[
         el('div', { className: 'monster-ticket-intro' }, [
-          el('p', { text: '好きなモンスターを、通常絵・特別絵と通常加工・Foilの組み合わせから選べます。' }),
+          el('p', { text: '好きなモンスターを選べます。通常絵は通常加工・Foilを選択でき、特別絵はFoil固定です。' }),
           el('strong', { text: `所持交換券 ×${this.economy.monsterExchangeTickets}` }),
         ]),
         el('div', { className: 'monster-ticket-layout' }, [
@@ -133,13 +133,13 @@ export class BoosterShopScreen {
                 el('small', { text: 'イラスト' }),
                 el('div', { className: 'monster-ticket-choice-row' }, [
                   el('button', { className: artVariantId === 'base' ? 'is-active' : '', text: '通常絵', onclick: () => { artVariantId = 'base'; renderExchange(); } }),
-                  el('button', { className: artVariantId === showcaseId ? 'is-active' : '', text: '特別絵', onclick: () => { artVariantId = showcaseId; renderExchange(); } }),
+                  el('button', { className: artVariantId === showcaseId ? 'is-active' : '', text: '特別絵', onclick: () => { artVariantId = showcaseId; finish = 'foil'; renderExchange(); } }),
                 ]),
               ]),
               el('div', {}, [
                 el('small', { text: '加工' }),
                 el('div', { className: 'monster-ticket-choice-row' }, [
-                  el('button', { className: finish === 'normal' ? 'is-active' : '', text: '通常', onclick: () => { finish = 'normal'; renderExchange(); } }),
+                  el('button', { className: finish === 'normal' ? 'is-active' : '', text: '通常', disabled: artVariantId !== 'base', onclick: () => { if (artVariantId === 'base') finish = 'normal'; renderExchange(); } }),
                   el('button', { className: finish === 'foil' ? 'is-active' : '', text: 'Foil', onclick: () => { finish = 'foil'; renderExchange(); } }),
                 ]),
               ]),
@@ -431,16 +431,19 @@ export class PackOpeningScreen {
       replace(this.root, el('main', {
         className: `pack-opening-screen pack-sealed${this.phase === 'breaking' ? ' breaking' : ''}${this.reducedMotion ? ' reduced-motion' : ''}`,
         attrs: { style: `--pack-color:${pack?.color ?? '#62d9e7'}` },
+        onclick: () => {
+          if (this.phase === 'sealed') void this.revealPack();
+        },
       }, [
         this.previewMode ? el('div', { className: 'admin-preview-watermark', text: 'ADMIN PREVIEW / 資産変更なし' }) : null,
         el('div', { className: 'opening-aura', attrs: { 'aria-hidden': 'true' } }, [el('i'), el('i'), el('i')]),
         el('div', { className: 'pack-particle-field', attrs: { 'aria-hidden': 'true' } }, Array.from({ length: 28 }, (_, index) => el('i', { attrs: { style: `--p:${index}` } }))),
-        el('button', { className: 'opening-pack', disabled: this.phase === 'breaking', onclick: () => this.revealPack(), attrs: { type: 'button', 'aria-label': `${pack?.name ?? 'パック'}を開封` } }, [
+        el('button', { className: 'opening-pack', disabled: this.phase === 'breaking', onclick: (event) => { event.stopPropagation(); void this.revealPack(); }, attrs: { type: 'button', 'aria-label': `${pack?.name ?? 'パック'}を開封` } }, [
           el('i', { className: 'pack-foil-sheen', attrs: { 'aria-hidden': 'true' } }),
           el('span', { text: 'MONSTER CONSTRUCTION' }),
           el('strong', { text: pack?.sigil ?? '封' }),
           el('b', { text: pack?.name ?? 'ブースターパック' }),
-          el('small', { text: this.phase === 'breaking' ? 'SEAL BREAKING' : 'TAP TO BREAK THE SEAL' }),
+          el('small', { text: this.phase === 'breaking' ? 'SEAL BREAKING' : 'TAP ANYWHERE TO OPEN' }),
         ]),
         this.phase === 'breaking' ? el('div', { className: 'pack-break-flash', attrs: { 'aria-hidden': 'true' } }, [el('i'), el('i'), el('i')]) : null,
       ]));
@@ -522,7 +525,7 @@ export class AssetCollectionScreen {
           renderCard({ definition, cardAsset: asset, lazyArt: true, onClick: () => openCardDetails({ definition, masterIndex: this.masterIndex, cardAsset: asset }) }),
           el('div', {}, [
             el('strong', { text: `×${asset.quantity}` }),
-            el('small', { text: `${acquisitionLabel(definition)} / ${asset.finish === 'foil' ? 'Foil' : asset.artVariantId !== 'base' ? '特別絵' : '通常絵'}` }),
+            el('small', { text: `${acquisitionLabel(definition)} / ${asset.artVariantId !== 'base' ? '特別絵 / Foil' : asset.finish === 'foil' ? '通常絵 / Foil' : '通常絵'}` }),
           ]),
         ]);
       })) : el('section', { className: 'empty-state' }, [
