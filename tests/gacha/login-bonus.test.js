@@ -16,6 +16,7 @@ import {
   defaultEconomyState,
   japanDateKey,
 } from '../../src/gacha/economy-state.js';
+import { missionEntries } from '../../src/progression/mission-state.js';
 
 test('first login completes the daily mission without auto-granting it, while campaigns remain automatic', () => {
   const first = applyLoginRewards(defaultEconomyState(), { loginDate: '2026-08-29' }, '2026-08-29T00:00:00.000Z');
@@ -33,6 +34,21 @@ test('first login completes the daily mission without auto-granting it, while ca
   }, '2026-08-29T01:00:00.000Z');
   assert.equal(claimed.diamonds, first.state.diamonds + 300);
   assert.deepEqual(claimed.missionProgress.daily.claimedIds, ['daily-login']);
+  assert.deepEqual(claimed.missionProgress.daily.counters, { login: 1 });
+  const dailyAfterClaim = missionEntries(claimed.missionProgress, { dateKey: '2026-08-29' })
+    .filter((mission) => mission.period === 'daily');
+  assert.deepEqual(dailyAfterClaim.map((mission) => ({
+    id: mission.id,
+    progress: mission.actualProgress,
+    claimable: mission.claimable,
+  })), [
+    { id: 'daily-login', progress: 1, claimable: false },
+    { id: 'daily-play', progress: 0, claimable: false },
+    { id: 'daily-win', progress: 0, claimable: false },
+  ]);
+  assert.throws(() => applyProgressionOperation(claimed, {
+    type: 'claim-mission', operationId: 'claim:daily-play:2026-08-29', missionId: 'daily-play', dateKey: '2026-08-29',
+  }, '2026-08-29T01:01:00.000Z'), /まだ達成されていません/);
 
   const repeated = applyLoginRewards(first.state, { loginDate: '2026-08-29' }, '2026-08-29T01:00:00.000Z');
   assert.equal(repeated.state.diamonds, first.state.diamonds);

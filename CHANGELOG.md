@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.33.8 — 2026-09-05
+
+### Daily mission claim isolation
+- Restrict mission reward claims to claimed-ID updates while preserving login, battle, and win counters exactly as they were before the claim.
+- Add a regression test proving that claiming the daily login reward cannot complete or unlock the daily battle and victory rewards.
+
 ## 1.33.7 — 2026-09-04
 
 ### Continuous support-card travel

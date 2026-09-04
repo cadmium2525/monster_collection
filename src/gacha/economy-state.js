@@ -277,8 +277,19 @@ export function applyProgressionOperation(current, operation, now = new Date().t
       state.arenaProgress.updatedAt = now;
     }
   } else if (operation.type === 'claim-mission') {
-    const claimed = claimMission(state.missionProgress, operation.missionId, { dateKey });
-    state.missionProgress = claimed.progress;
+    const progressBeforeClaim = normalizeMissionProgress(state.missionProgress, { dateKey });
+    const claimed = claimMission(progressBeforeClaim, operation.missionId, { dateKey });
+    state.missionProgress = {
+      ...progressBeforeClaim,
+      daily: {
+        ...progressBeforeClaim.daily,
+        claimedIds: [...claimed.progress.daily.claimedIds],
+      },
+      weekly: {
+        ...progressBeforeClaim.weekly,
+        claimedIds: [...claimed.progress.weekly.claimedIds],
+      },
+    };
     if (claimed.reward?.type === 'diamonds') state.diamonds += claimed.reward.amount;
     if (claimed.reward?.type === 'arena-card') {
       const weekKey = japanWeekKey(dateKey);
