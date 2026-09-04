@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.33.3 — 2026-09-04
+
+### Brighter home artwork
+- Raise the home illustration's luminance and saturation while preserving its contrast.
+- Reduce the dark edge, top/bottom, radial, and inset overlays so both the leader and environment remain visible behind the readable UI panels.
+
 ## 1.33.2 — 2026-09-04
 
 ### My Page battle-record spacing

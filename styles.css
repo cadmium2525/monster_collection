@@ -2147,16 +2147,16 @@ body:has(.home-lobby) {
   display:block;
   object-fit:cover;
   object-position:center;
-  filter:saturate(.98) contrast(1.02) brightness(.96);
+  filter:saturate(1.04) contrast(1.01) brightness(1.08);
   animation:home-lobby-arrive 1.15s cubic-bezier(.2,.72,.2,1) both;
 }
 .home-lobby-art-shade {
   position:absolute;
   inset:0;
   background:
-    linear-gradient(90deg,rgba(1,6,13,.67) 0%,rgba(1,7,15,.2) 28%,rgba(2,8,17,.02) 50%,rgba(1,6,14,.23) 73%,rgba(1,5,12,.68) 100%),
-    linear-gradient(180deg,rgba(1,6,14,.54) 0%,transparent 19%,transparent 67%,rgba(1,5,12,.72) 100%),
-    radial-gradient(ellipse at 50% 42%,transparent 18%,rgba(0,4,10,.08) 62%,rgba(0,3,8,.3));
+    linear-gradient(90deg,rgba(1,6,13,.48) 0%,rgba(1,7,15,.13) 28%,transparent 50%,rgba(1,6,14,.15) 73%,rgba(1,5,12,.5) 100%),
+    linear-gradient(180deg,rgba(1,6,14,.34) 0%,transparent 18%,transparent 72%,rgba(1,5,12,.5) 100%),
+    radial-gradient(ellipse at 50% 42%,transparent 24%,rgba(0,4,10,.04) 66%,rgba(0,3,8,.16));
 }
 .home-lobby-artwork::after {
   content:"";
@@ -2164,7 +2164,7 @@ body:has(.home-lobby) {
   inset:0;
   pointer-events:none;
   border:1px solid rgba(139,222,225,.1);
-  box-shadow:inset 0 0 90px rgba(0,0,0,.56);
+  box-shadow:inset 0 0 72px rgba(0,0,0,.28);
 }
 .home-lobby-foil-shine {
   position:absolute;
