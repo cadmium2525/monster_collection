@@ -83,6 +83,9 @@ test('pack disclosures expose exact next-pack card and appearance rates for ever
       assert.ok(disclosure.cards.length > 0);
       assert.equal(disclosure.cards.some(({ definition }) => TROPHY_BREEDER_IDS.includes(definition.id)), false);
       assert.equal(disclosure.cards.every(({ probability }) => probability > 0 && probability <= 1), true);
+      assert.ok(Math.abs(disclosure.cards.reduce((sum, { probability }) => sum + probability, 0) - 1) < 1e-9, `${faction} regular disclosure totals 100%`);
+      assert.equal(disclosure.regularSlotCount, 3);
+      assert.equal(disclosure.cards.every(({ packProbability }) => packProbability > 0 && packProbability <= 1), true);
       for (const slot of disclosure.slots) {
         const total = [...slot.distribution.values()].reduce((sum, probability) => sum + probability, 0);
         assert.ok(Math.abs(total - 1) < 1e-9, `${faction} ${slot.label} totals 100%`);
@@ -101,7 +104,7 @@ test('pack disclosures expose exact next-pack card and appearance rates for ever
     assert.equal(twentieth.appearanceRates.foil, 1);
     assert.equal(normal.showcaseCards.length, 5);
     assert.equal(twentieth.showcaseCards.length, 5);
-    assert.ok(normal.showcaseCards.every(({ probability }) => Math.abs(probability - 0.008) < 1e-12));
+    assert.ok(normal.showcaseCards.every(({ probability, packProbability }) => Math.abs(probability - 0.2) < 1e-12 && Math.abs(packProbability - 0.008) < 1e-12));
     assert.ok(twentieth.showcaseCards.every(({ probability }) => Math.abs(probability - 0.2) < 1e-12));
   }
 });

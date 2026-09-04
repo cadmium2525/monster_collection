@@ -1859,10 +1859,12 @@ button:disabled { opacity: .38; cursor: not-allowed; }
 .pack-disclosure-summary > div:first-child { display:grid; gap:3px; }
 .pack-disclosure-summary small { color:var(--pack-color); font:800 8px/1 Georgia,serif; letter-spacing:.12em; }
 .pack-disclosure-summary strong { color:#fff0b8; font-size:16px; }
+.pack-guarantee-summary,.pack-next-rates { min-width:0; display:grid; gap:5px; }
+.pack-guarantee-summary > span:not(.pack-standard-draw) { color:#e9f1f3; font-size:9px; font-weight:800; }
 .pack-guarantee-chips { display:flex; flex-wrap:wrap; gap:4px; }
 .pack-guarantee-chips span,.pack-standard-draw { padding:5px 7px; border:1px solid color-mix(in srgb,var(--pack-color) 55%,#51606e); border-radius:13px; color:#eaffff; background:color-mix(in srgb,var(--pack-color) 13%,#0b1724); font-size:8px; font-weight:800; }
 .pack-standard-draw { justify-self:start; color:var(--muted); }
-.pack-appearance-rates { margin:0; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:5px; }
+.pack-appearance-rates { margin:0; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:5px; }
 .pack-appearance-rates div { min-width:0; padding:5px 7px; border-left:2px solid var(--pack-color); background:rgba(255,255,255,.035); }
 .pack-appearance-rates dt { color:var(--muted); font-size:7px; }
 .pack-appearance-rates dd { margin:2px 0 0; color:#f8e7ad; font:900 13px/1 Georgia,serif; }
@@ -1870,9 +1872,9 @@ button:disabled { opacity: .38; cursor: not-allowed; }
 .pack-card-rate-table-wrap { min-height:0; overflow:auto; border:1px solid var(--line); border-radius:10px; background:rgba(2,10,18,.68); }
 .pack-disclosure > .pack-card-rate-table-wrap { flex:1 0 180px; }
 .pack-showcase-rate-section { flex:0 0 auto; display:grid; gap:5px; }
-.pack-showcase-rate-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:0 3px; }
-.pack-showcase-rate-heading strong { color:#ffe49a; font-size:11px; }
-.pack-showcase-rate-heading span { color:#8fe6e3; font-size:9px; }
+.pack-showcase-rate-heading,.pack-regular-rate-heading { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:0 3px; }
+.pack-showcase-rate-heading strong,.pack-regular-rate-heading strong { color:#ffe49a; font-size:11px; }
+.pack-showcase-rate-heading span,.pack-regular-rate-heading span { color:#8fe6e3; font-size:9px; }
 .pack-showcase-rate-section .pack-card-rate-table-wrap { max-height:172px; }
 .pack-showcase-rate-table td:nth-child(2) { color:#d9baff; }
 .pack-card-rate-table { width:100%; border-collapse:collapse; font-size:10px; }

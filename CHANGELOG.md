@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.34.1 — 2026-09-05
+
+### Normal-draw rate disclosure
+- Replace overlapping “at least once per pack” card probabilities with the average composition of the three normal draw slots, excluding the guaranteed monster and Rare-or-better slots.
+- Make every regular card table total exactly 100% and label the figures as normal-draw composition rather than per-pack acquisition chances.
+- Separate special-art rates into the next-pack appearance chance and a conditional five-card illustration breakdown that totals 100%.
+
 ## 1.34.0 — 2026-09-05
 
 ### Monthly missions and monster exchange tickets

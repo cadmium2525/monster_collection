@@ -158,21 +158,28 @@ export function boosterPackDisclosure({ masterIndex, faction, openedCount = 0 })
     { label: '共通枠', distribution: common },
     { label: 'Rare以上枠', distribution: premium },
   ];
+  const regularSlots = slots.slice(1, 4);
   const cards = eligible.map((definition) => {
     const slotProbabilities = slots.map(({ distribution }) => distribution.get(definition.id) ?? 0);
-    const probability = 1 - slotProbabilities.reduce((remaining, chance) => remaining * (1 - chance), 1);
+    const packProbability = 1 - slotProbabilities.reduce((remaining, chance) => remaining * (1 - chance), 1);
+    const probability = regularSlots.reduce(
+      (total, { distribution }) => total + (distribution.get(definition.id) ?? 0),
+      0,
+    ) / regularSlots.length;
     return {
       definition,
       probability,
+      packProbability,
       slots: slots.filter(({ distribution }) => (distribution.get(definition.id) ?? 0) > 0).map(({ label }) => label),
     };
   }).filter((entry) => entry.probability > 0)
     .sort((a, b) => b.probability - a.probability || a.definition.name.localeCompare(b.definition.name, 'ja'));
-  const showcaseProbability = availableShowcases.length ? showcaseChance / availableShowcases.length : 0;
+  const showcaseProbability = availableShowcases.length ? 1 / availableShowcases.length : 0;
   const showcaseCards = availableShowcases.map((variant) => ({
     variant,
     definition: masterIndex.cards.get(variant.masterId),
     probability: showcaseProbability,
+    packProbability: showcaseChance * showcaseProbability,
   }));
 
   return {
@@ -181,6 +188,7 @@ export function boosterPackDisclosure({ masterIndex, faction, openedCount = 0 })
     cards,
     showcaseCards,
     slots,
+    regularSlotCount: regularSlots.length,
     guarantees: {
       boosterMonsterGuaranteed,
       newMonsterGuaranteed: boosterMonsterGuaranteed,

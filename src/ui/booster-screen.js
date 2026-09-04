@@ -22,6 +22,24 @@ function percentage(value) {
   return `${percent.toFixed(2)}%`;
 }
 
+export function percentageBreakdown(values = []) {
+  if (!values.length) return [];
+  const normalized = values.map((value) => Math.max(0, Number(value) || 0));
+  const total = normalized.reduce((sum, value) => sum + value, 0);
+  if (total <= 0) return normalized.map(() => '0.00%');
+
+  const exactUnits = normalized.map((value) => (value / total) * 10000);
+  const units = exactUnits.map(Math.floor);
+  const remainder = 10000 - units.reduce((sum, value) => sum + value, 0);
+  const priority = exactUnits
+    .map((value, index) => ({ index, fraction: value - units[index] }))
+    .sort((a, b) => b.fraction - a.fraction || a.index - b.index);
+  for (let index = 0; index < remainder; index += 1) {
+    units[priority[index % priority.length].index] += 1;
+  }
+  return units.map((value) => `${(value / 100).toFixed(2)}%`);
+}
+
 function cardTypeLabel(definition) {
   if (definition.kind === 'monster') return `${definition.faction}モンスター`;
   if (definition.kind === 'breeder') return definition.category === '分類専用' ? '分類ブリーダー' : '汎用ブリーダー';
@@ -163,6 +181,8 @@ export class BoosterShopScreen {
       openedCount: this.economy.packCounters?.[pack.faction] ?? 0,
     });
     const guaranteeLabel = boosterGuaranteeLabel(disclosure.guarantees);
+    const showcasePercentages = percentageBreakdown(disclosure.showcaseCards.map(({ probability }) => probability));
+    const regularPercentages = percentageBreakdown(disclosure.cards.map(({ probability }) => probability));
     return openModal({
       title: `${pack.name} 提供内容`,
       className: 'pack-disclosure-modal',
@@ -172,23 +192,29 @@ export class BoosterShopScreen {
             el('small', { text: `${pack.faction} BOOSTER` }),
             el('strong', { text: `次回は第${disclosure.nextPackNumber}パック` }),
           ]),
-          guaranteeLabel ? el('div', { className: 'pack-guarantee-chips' }, el('span', { text: guaranteeLabel })) : el('span', { className: 'pack-standard-draw', text: '確定枠なし' }),
-          el('dl', { className: 'pack-appearance-rates' }, [
-            el('div', {}, [el('dt', { text: 'Rare以上を1枚以上' }), el('dd', { text: percentage(disclosure.appearanceRates.rareOrBetter) })]),
-            el('div', {}, [el('dt', { text: 'Foilを1枚以上' }), el('dd', { text: percentage(disclosure.appearanceRates.foil) })]),
-            el('div', {}, [el('dt', { text: '特別絵を1枚以上' }), el('dd', { text: percentage(disclosure.appearanceRates.showcase) })]),
+          el('div', { className: 'pack-guarantee-summary' }, [
+            el('small', { text: '常設の確定枠' }),
+            el('span', { text: 'モンスター1枚以上・Rare以上1枚以上' }),
+            guaranteeLabel ? el('div', { className: 'pack-guarantee-chips' }, el('span', { text: guaranteeLabel })) : el('span', { className: 'pack-standard-draw', text: '追加保証なし' }),
+          ]),
+          el('div', { className: 'pack-next-rates' }, [
+            el('small', { text: '次の1パックで1枚以上出る確率' }),
+            el('dl', { className: 'pack-appearance-rates' }, [
+              el('div', {}, [el('dt', { text: 'Foil' }), el('dd', { text: percentage(disclosure.appearanceRates.foil) })]),
+              el('div', {}, [el('dt', { text: '特別イラスト' }), el('dd', { text: percentage(disclosure.appearanceRates.showcase) })]),
+            ]),
           ]),
         ]),
-        el('p', { className: 'pack-rate-note', text: '表示している提供割合は、すべて「次の1パック（5枚）を開けたとき」の確率です。カード名別は、通常絵と特別絵を合わせて、そのカードが5枚のうち1枚以上含まれる確率です。同じカードが複数の抽選対象になるため、カード別確率の合計は100%になりません。' }),
+        el('p', { className: 'pack-rate-note', text: `カード一覧は、確定モンスター枠とRare以上枠を除く通常抽選${disclosure.regularSlotCount}枠を均等に合算した構成比です。表示上の端数も調整し、カード別の提供割合は合計100%になります。この数字は、1パックでそのカードを1枚以上入手できる確率ではありません。` }),
         disclosure.showcaseCards.length ? el('section', { className: 'pack-showcase-rate-section' }, [
           el('div', { className: 'pack-showcase-rate-heading' }, [
-            el('strong', { text: '特別イラスト候補' }),
-            el('span', { text: `${pack.faction}${disclosure.showcaseCards.length}種 / 奪取不可` }),
+            el('strong', { text: '特別イラスト抽選時の内訳' }),
+            el('span', { text: `合計100% / ${pack.faction}${disclosure.showcaseCards.length}種 / 奪取不可` }),
           ]),
           el('div', { className: 'pack-card-rate-table-wrap' }, [
             el('table', { className: 'pack-card-rate-table pack-showcase-rate-table' }, [
-              el('thead', {}, el('tr', {}, ['カード名', '外観', '1パックでの入手確率'].map((label) => el('th', { text: label })))),
-              el('tbody', {}, disclosure.showcaseCards.map(({ definition, variant, probability }) => {
+              el('thead', {}, el('tr', {}, ['カード名', '外観', '抽選時の割合'].map((label) => el('th', { text: label })))),
+              el('tbody', {}, disclosure.showcaseCards.map(({ definition, variant }, index) => {
                 const cardAsset = {
                   masterId: variant.masterId,
                   artVariantId: variant.artVariantId,
@@ -203,23 +229,27 @@ export class BoosterShopScreen {
                     onclick: () => openCardDetails({ definition, masterIndex: this.masterIndex, cardAsset }),
                   }, [el('strong', { text: definition.name }), el('small', { text: 'ブースター限定外観' })])),
                   el('td', { text: '特別イラスト' }),
-                  el('td', { text: percentage(probability) }),
+                  el('td', { text: showcasePercentages[index] }),
                 ]);
               })),
             ]),
           ]),
         ]) : null,
+        el('div', { className: 'pack-regular-rate-heading' }, [
+          el('strong', { text: `通常抽選${disclosure.regularSlotCount}枠の提供割合` }),
+          el('span', { text: '合計100%' }),
+        ]),
         el('div', { className: 'pack-card-rate-table-wrap' }, [
           el('table', { className: 'pack-card-rate-table' }, [
-            el('thead', {}, el('tr', {}, ['カード名', '種類', '1パックでの入手確率'].map((label) => el('th', { text: label })))),
-            el('tbody', {}, disclosure.cards.map(({ definition, probability }) => el('tr', {}, [
+            el('thead', {}, el('tr', {}, ['カード名', '種類', '通常抽選での提供割合'].map((label) => el('th', { text: label })))),
+            el('tbody', {}, disclosure.cards.map(({ definition }, index) => el('tr', {}, [
               el('td', {}, el('button', {
                 className: 'pack-card-detail-button',
                 attrs: { type: 'button', 'aria-label': `${definition.name}のカード詳細を表示` },
                 onclick: () => openCardDetails({ definition, masterIndex: this.masterIndex }),
               }, [el('strong', { text: definition.name }), el('small', { text: acquisitionLabel(definition) })])),
               el('td', { text: cardTypeLabel(definition) }),
-              el('td', { text: percentage(probability) }),
+              el('td', { text: regularPercentages[index] }),
             ]))),
           ]),
         ]),
