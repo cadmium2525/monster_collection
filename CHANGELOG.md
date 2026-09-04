@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.33.6 — 2026-09-04
+
+### Support-card copy fade sequencing
+- Release the completed copy entrance animation before starting its fade so the effect description can actually disappear.
+- Wait for the opacity transition to finish, then guarantee the copy is hidden before the card pauses and travels into its target.
+
 ## 1.33.5 — 2026-09-04
 
 ### Support-card copy timing correction

@@ -32,6 +32,23 @@ const CHANNEL_PRESENTATION = Object.freeze({
 
 function delay(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 
+function waitForTransition(node, propertyName, duration) {
+  if (!node?.addEventListener || duration <= 0) return delay(Math.max(0, duration));
+  return new Promise((resolve) => {
+    let timer = null;
+    const finish = () => {
+      if (timer !== null) clearTimeout(timer);
+      node.removeEventListener('transitionend', onTransitionEnd);
+      resolve();
+    };
+    const onTransitionEnd = (event) => {
+      if (event.target === node && event.propertyName === propertyName) finish();
+    };
+    node.addEventListener('transitionend', onTransitionEnd);
+    timer = setTimeout(finish, duration);
+  });
+}
+
 function timingMode(speed, reducedMotion) {
   if (reducedMotion) return 'reduced';
   return speed === 'fast' ? 'fast' : 'standard';
@@ -181,6 +198,12 @@ export async function playCardUseAnimation({ model, speed = 'standard', targetNo
   const reducedMotion = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
   const timing = cardUseAnimationTimings({ speed, reducedMotion });
   const shell = el('div', { className: 'card-use-card-shell' }, cinematicCard(model));
+  const copy = el('div', { className: 'card-use-copy' }, [
+    el('small', { text: model.actorLabel }),
+    el('strong', { text: model.name }),
+    el('p', { text: model.effect }),
+    el('span', { text: `TARGET  ${model.target.label}` }),
+  ]);
   const overlay = el('div', {
     className: `card-use-cinematic ${model.tone} channel-${model.channel}${speed === 'fast' ? ' fast' : ''}${reducedMotion ? ' reduced-motion' : ''}`,
     attrs: {
@@ -194,19 +217,17 @@ export async function playCardUseAnimation({ model, speed = 'standard', targetNo
     el('div', { className: 'card-use-radiance', attrs: { 'aria-hidden': 'true' } }),
     el('section', { className: 'card-use-stage' }, [
       shell,
-      el('div', { className: 'card-use-copy' }, [
-        el('small', { text: model.actorLabel }),
-        el('strong', { text: model.name }),
-        el('p', { text: model.effect }),
-        el('span', { text: `TARGET  ${model.target.label}` }),
-      ]),
+      copy,
     ]),
   ]);
 
   document.body.append(overlay);
   await delay(timing.reveal);
+  overlay.classList.add('copy-ready');
+  copy.getAnimations?.().forEach((animation) => animation.cancel());
+  copy.getBoundingClientRect?.();
   overlay.classList.add('copy-clearing');
-  await delay(timing.copyOut);
+  await waitForTransition(copy, 'opacity', timing.copyOut);
   overlay.classList.add('copy-cleared');
   await delay(timing.preTravel);
   overlay.classList.add('travelling');

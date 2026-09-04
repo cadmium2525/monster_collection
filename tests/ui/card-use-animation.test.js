@@ -116,7 +116,9 @@ test('battle flow uses one shared card-use cinematic and suppresses the duplicat
   assert.match(styles, /\.card-use-impact\.tp/);
   assert.match(styles, /@keyframes card-use-card-reveal/);
   assert.match(styles, /\.card-use-cinematic\.copy-clearing \.card-use-copy/);
-  assert.match(animation, /await delay\(timing\.reveal\);\s*overlay\.classList\.add\('copy-clearing'\)/s);
+  assert.match(animation, /await delay\(timing\.reveal\);\s*overlay\.classList\.add\('copy-ready'\);\s*copy\.getAnimations\?\.\(\)\.forEach\(\(animation\) => animation\.cancel\(\)\);\s*copy\.getBoundingClientRect\?\.\(\);\s*overlay\.classList\.add\('copy-clearing'\)/s);
   assert.doesNotMatch(animation, /descriptionHold/);
-  assert.match(animation, /classList\.add\('copy-clearing'\);\s*await delay\(timing\.copyOut\);\s*overlay\.classList\.add\('copy-cleared'\);\s*await delay\(timing\.preTravel\);\s*overlay\.classList\.add\('travelling'\)/s);
+  assert.match(animation, /classList\.add\('copy-clearing'\);\s*await waitForTransition\(copy, 'opacity', timing\.copyOut\);\s*overlay\.classList\.add\('copy-cleared'\);\s*await delay\(timing\.preTravel\);\s*overlay\.classList\.add\('travelling'\)/s);
+  assert.match(styles, /\.card-use-cinematic\.copy-ready \.card-use-copy\s*\{\s*animation:none/);
+  assert.match(styles, /\.card-use-cinematic\.copy-cleared \.card-use-copy[^{}]*\{[^}]*visibility:hidden/s);
 });

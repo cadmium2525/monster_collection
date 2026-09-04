@@ -589,7 +589,9 @@ body:has(.battle-screen) {
 .card-use-copy strong { overflow:hidden; color:#fff0bd; font:900 clamp(22px,3.6vw,42px)/1.05 Georgia,"Yu Mincho",serif; text-overflow:ellipsis; white-space:nowrap; text-shadow:0 2px 6px #000,0 0 15px color-mix(in srgb,var(--card-use-accent) 55%,transparent); }
 .card-use-copy p { max-width:460px; margin:0; color:#ecf5f7; font-size:clamp(10px,1.25vw,14px); font-weight:700; line-height:1.55; }
 .card-use-copy span { justify-self:start; padding:4px 10px; border:1px solid color-mix(in srgb,var(--card-use-accent) 58%,transparent); border-radius:20px; color:var(--card-use-accent); background:rgba(1,8,16,.7); font:800 clamp(8px,1vw,11px)/1 Georgia,serif; letter-spacing:.12em; }
+.card-use-cinematic.copy-ready .card-use-copy { animation:none; }
 .card-use-cinematic.copy-clearing .card-use-copy,.card-use-cinematic.copy-cleared .card-use-copy,.card-use-cinematic.travelling .card-use-copy { opacity:0; transform:translateX(14px); }
+.card-use-cinematic.copy-cleared .card-use-copy,.card-use-cinematic.travelling .card-use-copy { visibility:hidden; }
 .card-use-cinematic.travelling .card-use-radiance,.card-use-cinematic.resolved .card-use-backdrop { opacity:0; }
 .hand-panel,.opponent-hand-panel { position:relative; }
 .card-use-impact { position:absolute; z-index:60; left:50%; top:50%; width:min(82%,clamp(70px,10vw,116px)); aspect-ratio:1; translate:-50% -50%; display:grid; place-items:center; border:2px solid var(--card-use-accent,#ffe18a); border-radius:50%; color:var(--card-use-accent,#ffe18a); background:radial-gradient(circle,#fff 0 3%,color-mix(in srgb,currentColor 60%,transparent) 8%,rgba(3,12,20,.88) 34%,transparent 67%); box-shadow:0 0 12px #fff,0 0 30px currentColor,inset 0 0 20px currentColor; text-shadow:0 0 7px #fff,0 0 15px currentColor; pointer-events:none; animation:card-use-impact-pop .48s cubic-bezier(.12,.78,.2,1) both; }
