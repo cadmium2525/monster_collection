@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.33.2 — 2026-09-04
+
+### My Page battle-record spacing
+- Cap the dashboard's top row so champion and signed-in account copy can no longer consume the battle-record height.
+- Keep profile status copy on one ellipsized line and reserve the remaining lower row for readable battle metrics.
+
 ## 1.33.1 — 2026-09-04
 
 ### My Page layout renewal

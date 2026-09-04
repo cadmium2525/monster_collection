@@ -1,6 +1,6 @@
 {
   "name": "monster-construction-sim8-7",
-  "version": "1.33.1",
+  "version": "1.33.2",
   "private": true,
   "type": "module",
   "description": "モンスターコンストラクション Sim8.7 playable static web game",

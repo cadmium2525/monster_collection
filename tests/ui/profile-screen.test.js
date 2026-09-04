@@ -55,6 +55,8 @@ test('my page keeps account recovery visible in a one-screen dashboard', () => {
   const css = fs.readFileSync(new URL('../../styles.css', import.meta.url), 'utf8');
   assert.ok(source.indexOf('accountPanel(this, account)') < source.indexOf("className: 'profile-home-art panel'"));
   assert.match(css, /\.profile-layout\s*\{[^}]*overflow:hidden;[^}]*grid-template-areas:"identity account catalog" "homeart homeart record";/s);
+  assert.match(css, /\.profile-layout\s*\{[^}]*grid-template-rows:clamp\(84px,18dvh,112px\) minmax\(0,1fr\);/s);
+  assert.match(css, /\.profile-name-copy \.eyebrow,\.profile-name-copy span\s*\{[^}]*white-space:nowrap;/s);
   assert.match(css, /\.profile-metric-grid\s*\{[^}]*grid-template-columns:repeat\(2,minmax\(0,1fr\)\);[^}]*grid-template-rows:repeat\(3,minmax\(0,1fr\)\);/s);
 });
 
