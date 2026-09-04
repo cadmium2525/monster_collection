@@ -1,5 +1,12 @@
 # Changelog
 
+## 1.35.1 — 2026-09-05
+
+### Special-fusion field hint
+- When a monster card is selected after fusion unlock, distinguish compatible special-fusion mains on the player field with a cyan, violet, and gold animated aura.
+- Mark the matching card as `SPECIAL` and change its compact SP preview to `特殊合体`, while leaving normal-fusion targets on the existing standard highlight.
+- Derive the hint only from currently legal special-fusion actions, so it respects turn unlocks, fusion locks, TP costs, and unit eligibility.
+
 ## 1.35.0 — 2026-09-05
 
 ### Title screen

@@ -104,3 +104,14 @@ test('mulligan is presented after the opening deal and animates return before re
   assert.match(styles, /@keyframes mulligan-card-deal/);
   assert.match(styles, /@keyframes mulligan-card-return/);
 });
+
+test('a selected monster material gives special-fusion targets a distinct field glow', () => {
+  const battleSource = fs.readFileSync(new URL('../../src/ui/battle-screen.js', import.meta.url), 'utf8');
+  const styles = fs.readFileSync(new URL('../../styles.css', import.meta.url), 'utf8');
+  assert.match(battleSource, /specialFusionAction = fusionActions\.find\(\(action\) => action\.type === 'fusion-special'\)/);
+  assert.match(battleSource, /specialFusionAction \? ' special-fusion-ready' : ''/);
+  assert.match(battleSource, /specialFusionAction \? '特殊合体' : '合体'/);
+  assert.match(styles, /\.board-slot\.special-fusion-ready > \.game-card/);
+  assert.match(styles, /@keyframes special-fusion-aura/);
+  assert.match(styles, /@keyframes special-fusion-card-glow/);
+});

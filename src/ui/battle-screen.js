@@ -586,7 +586,8 @@ export class BattleScreen {
       const definition = this.engine.masterIndex.monsters.get(unit.sourceMasterId);
       const handActions = this.actionsForUnit(unit.id);
       const fusionActions = handActions.filter((action) => action.type.startsWith('fusion-'));
-      const fusionPreview = (fusionActions.find((action) => action.type === 'fusion-special') ?? fusionActions[0])?.preview;
+      const specialFusionAction = fusionActions.find((action) => action.type === 'fusion-special') ?? null;
+      const fusionPreview = (specialFusionAction ?? fusionActions[0])?.preview;
       const attackTarget = this.pendingMove && this.legalActions().some((action) => action.type === 'move'
         && action.unitId === this.pendingMove.unitId
         && action.moveId === this.pendingMove.moveId
@@ -598,14 +599,14 @@ export class BattleScreen {
         definition,
         unit,
         selected: sourceSelected,
-        label: `${isOpponent ? '相手' : '自分'}の${unit.specialForm ?? unit.name} LIFE ${life.current}/${life.max} ${life.percentage}%${targetEffects.length ? ` 50%条件成立 ${targetEffects.join('、')}` : attackTarget ? ' 攻撃対象' : ' 詳細'}`,
+        label: `${isOpponent ? '相手' : '自分'}の${unit.specialForm ?? unit.name} LIFE ${life.current}/${life.max} ${life.percentage}%${specialFusionAction ? ' 特殊合体可能' : ''}${targetEffects.length ? ` 50%条件成立 ${targetEffects.join('、')}` : attackTarget ? ' 攻撃対象' : ' 詳細'}`,
         onClick: (event) => {
           event.stopPropagation();
           this.handleBoardUnitClick(unit, definition, isOpponent);
         },
       });
       return el('div', {
-        className: `board-slot${handActions.length ? ' drop-valid' : ''}${attackTarget ? ' attack-target' : ''}${targetEffects.length ? ' condition-ready' : ''}`,
+        className: `board-slot${handActions.length ? ' drop-valid' : ''}${specialFusionAction ? ' special-fusion-ready' : ''}${attackTarget ? ' attack-target' : ''}${targetEffects.length ? ' condition-ready' : ''}`,
         dataset: { unitId: unit.id, slot: String(slot), ownerId: player.id },
       }, [
         cardNode,
@@ -613,7 +614,10 @@ export class BattleScreen {
           el('strong', { text: '50%条件成立' }),
           el('small', { text: targetEffects.join('・') }),
         ]) : null,
-        fusionPreview ? el('span', { className: 'fusion-drop-preview', text: `合体 SP +${fusionPreview.deltaSp}` }) : null,
+        fusionPreview ? el('span', {
+          className: `fusion-drop-preview${specialFusionAction ? ' special' : ''}`,
+          text: `${specialFusionAction ? '特殊合体' : '合体'} SP +${fusionPreview.deltaSp}`,
+        }) : null,
       ]);
     }));
   }

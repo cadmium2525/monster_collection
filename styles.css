@@ -330,12 +330,18 @@ body:has(.battle-screen) {
 }
 .board-slot.drop-valid::before { content: "DROP"; position: absolute; z-index: 3; inset: 3px; display: grid; place-items: center; border: 1px dashed rgba(133,240,235,.58); border-radius: 5px; color: rgba(189,255,250,.68); font: 800 7px/1 Georgia,serif; letter-spacing: .12em; pointer-events: none; }
 .board-slot.drop-valid:not(.empty)::before { align-items: end; padding-bottom: 4px; background: linear-gradient(transparent 65%,rgba(5,40,48,.76)); }
+.board-slot.special-fusion-ready { border-color:#f0cf72; background:radial-gradient(circle at 50% 48%,rgba(112,63,180,.2),transparent 67%),rgba(5,13,20,.22); box-shadow:inset 0 0 21px rgba(121,76,210,.3),0 0 11px rgba(91,226,232,.66),0 0 23px rgba(221,174,80,.46); }
+.board-slot.special-fusion-ready::before { content:"SPECIAL"; border-color:rgba(255,226,137,.9); color:#fff0b7; background:linear-gradient(transparent 60%,rgba(50,22,77,.92)); text-shadow:0 0 7px #bafaff,0 1px 3px #000; }
+.board-slot.special-fusion-ready::after { content:""; position:absolute; z-index:2; inset:-5px; border:2px solid rgba(126,240,242,.68); border-radius:10px; box-shadow:0 0 8px rgba(112,235,238,.86),0 0 19px rgba(155,92,226,.72),inset 0 0 10px rgba(240,196,100,.28); pointer-events:none; animation:special-fusion-aura 1.15s ease-in-out infinite alternate; }
+.board-slot.special-fusion-ready > .game-card { animation:special-fusion-card-glow 1.15s ease-in-out infinite alternate; }
 .board-slot.drop-hover { border-color: #fff0ad; transform: scale(1.035); box-shadow: 0 0 18px rgba(232,186,98,.55); }
 .board-slot.attack-target, .fighter-hud.attack-target { cursor: crosshair; animation: target-pulse .9s ease-in-out infinite alternate; }
 .board-slot.attack-target { border-color: #ef7b72; box-shadow: 0 0 15px rgba(239,106,112,.5); }
 .board-slot.condition-ready { border-color: #ffd76c; box-shadow: 0 0 18px rgba(255,202,76,.72), inset 0 0 14px rgba(255,207,91,.13); }
 .fighter-hud.attack-target { border-color: #ef7b72; box-shadow: inset 0 0 20px rgba(239,106,112,.18), 0 0 15px rgba(239,106,112,.5); }
 @keyframes target-pulse { to { filter: brightness(1.2); } }
+@keyframes special-fusion-aura { from { opacity:.48; scale:.985; filter:hue-rotate(-9deg); } to { opacity:1; scale:1.035; filter:hue-rotate(14deg) brightness(1.2); } }
+@keyframes special-fusion-card-glow { from { filter:brightness(1.04) saturate(1.08); box-shadow:0 0 8px rgba(104,230,235,.48); } to { filter:brightness(1.2) saturate(1.3); box-shadow:0 0 15px rgba(106,234,240,.9),0 0 28px rgba(170,92,231,.64),0 0 36px rgba(238,191,87,.42); } }
 .target-condition-bonus { position:absolute; z-index:18; top:3px; left:50%; width:max-content; max-width:78%; translate:-50% 0; display:grid; gap:1px; padding:3px 5px; border:1px solid #ffe08a; border-radius:7px; color:#fff6c9; background:rgba(62,34,2,.94); box-shadow:0 2px 9px rgba(0,0,0,.62),0 0 10px rgba(255,210,92,.35); text-align:center; pointer-events:none; }
 .target-condition-bonus strong { font-size:7px; line-height:1; white-space:nowrap; }
 .target-condition-bonus small { overflow:hidden; font-size:5px; line-height:1.15; white-space:nowrap; text-overflow:ellipsis; }
@@ -563,6 +569,7 @@ body:has(.battle-screen) {
 .board-slot .game-card { width: calc(100% - 6px); height: auto; max-height: none; aspect-ratio: .72; }
 .board-slot .game-card .card-top { display: none; }
 .fusion-drop-preview { position: absolute; z-index: 16; right: 3px; bottom: 3px; padding: 2px 5px; border: 1px solid #f0ce7b; border-radius: 9px; color: #fff1b6; background: rgba(49,29,4,.94); font-size: 6px; font-weight: 900; pointer-events: none; box-shadow: 0 2px 8px rgba(0,0,0,.5); }
+.fusion-drop-preview.special { border-color:#a8ffff; color:#fff2b7; background:linear-gradient(135deg,rgba(63,25,91,.96),rgba(9,60,67,.96)); box-shadow:0 0 9px rgba(106,234,240,.52),0 2px 8px rgba(0,0,0,.58); }
 .effect-burst { position: absolute; z-index: 12; inset: 12%; display: grid; place-items: center; border: 2px solid currentColor; border-radius: 50%; color: #ffe39a; background: radial-gradient(circle,rgba(255,226,141,.42),transparent 65%); box-shadow:0 0 13px currentColor,inset 0 0 12px color-mix(in srgb,currentColor 46%,transparent); text-shadow: 0 0 8px #fff; font: 800 clamp(20px,4vw,42px)/1 Georgia,serif; pointer-events: none; animation: cast-burst .66s ease-out both; }
 .effect-burst::before,.effect-burst::after { content:""; position:absolute; inset:-12%; border:1px dashed currentColor; border-radius:50%; opacity:.8; animation:cast-ring .66s ease-out both; }
 .effect-burst::after { inset:12%; border-style:solid; opacity:.55; animation-direction:reverse; }
@@ -2763,7 +2770,7 @@ body:has(.home-lobby) {
 }
 
 @media (prefers-reduced-motion:reduce) {
-  .opening-pack,.opening-aura,.opening-aura i,.pack-particle-field i,.pack-foil-sheen,.pack-break-flash,.pack-break-flash::before,.pack-break-flash i,.pack-card-slot,.pack-card-reveal-shell,.pack-rarity-burst,.rarity-burst-rings i,.pack-rarity-burst strong,.game-card.finish-foil::before,.fusion-catalog-card.finish-foil::before,.monster-portrait.finish-foil::after,.card-art.finish-foil-art::after,.game-card.life-critical .card-life,.login-bonus-diamond-art,.mulligan-motion-cue,.mulligan-motion-sigil i,.game-card.mulligan-draw-enter,.game-card.mulligan-return-to-deck,.game-card.turn-draw-enter,.turn-draw-cue,.boot-progress.is-indeterminate > i,.title-start-button span,.home-lobby-hero-art,.home-lobby-foil-shine,.home-artwork-fullscreen-foil,.home-artwork-fullscreen > small,.profile-home-art-preview > i { animation:none !important; }
+  .opening-pack,.opening-aura,.opening-aura i,.pack-particle-field i,.pack-foil-sheen,.pack-break-flash,.pack-break-flash::before,.pack-break-flash i,.pack-card-slot,.pack-card-reveal-shell,.pack-rarity-burst,.rarity-burst-rings i,.pack-rarity-burst strong,.game-card.finish-foil::before,.fusion-catalog-card.finish-foil::before,.monster-portrait.finish-foil::after,.card-art.finish-foil-art::after,.game-card.life-critical .card-life,.login-bonus-diamond-art,.mulligan-motion-cue,.mulligan-motion-sigil i,.game-card.mulligan-draw-enter,.game-card.mulligan-return-to-deck,.game-card.turn-draw-enter,.turn-draw-cue,.boot-progress.is-indeterminate > i,.title-start-button span,.board-slot.special-fusion-ready::after,.board-slot.special-fusion-ready > .game-card,.home-lobby-hero-art,.home-lobby-foil-shine,.home-artwork-fullscreen-foil,.home-artwork-fullscreen > small,.profile-home-art-preview > i { animation:none !important; }
   .title-start-button span { opacity:1; filter:none; }
   .pack-particle-field { display:none; }
 }
