@@ -21,11 +21,11 @@ function index(...definitions) {
 }
 
 test('player and CPU card use share exactly the same standard and fast timings', () => {
-  assert.deepEqual(cardUseAnimationTimings({ speed: 'standard' }), { reveal: 420, travel: 360, impact: 240 });
-  assert.deepEqual(cardUseAnimationTimings({ speed: 'fast' }), { reveal: 130, travel: 120, impact: 85 });
-  assert.equal(cardUseAnimationDuration(), 1020);
-  assert.equal(cardUseAnimationDuration({ speed: 'fast' }), 335);
-  assert.equal(cardUseAnimationDuration({ reducedMotion: true }), 280);
+  assert.deepEqual(cardUseAnimationTimings({ speed: 'standard' }), { reveal: 420, copyOut: 150, travel: 360, impact: 240 });
+  assert.deepEqual(cardUseAnimationTimings({ speed: 'fast' }), { reveal: 130, copyOut: 55, travel: 120, impact: 85 });
+  assert.equal(cardUseAnimationDuration(), 1170);
+  assert.equal(cardUseAnimationDuration({ speed: 'fast' }), 390);
+  assert.equal(cardUseAnimationDuration({ reducedMotion: true }), 325);
 });
 
 test('targeted Training and shugyo resolve into the selected monster', () => {
@@ -106,6 +106,7 @@ test('non support actions do not create card-use animation models', () => {
 
 test('battle flow uses one shared card-use cinematic and suppresses the duplicate generic banner', () => {
   const source = fs.readFileSync(new URL('../../src/ui/battle-screen.js', import.meta.url), 'utf8');
+  const animation = fs.readFileSync(new URL('../../src/ui/card-use-animation.js', import.meta.url), 'utf8');
   const styles = fs.readFileSync(new URL('../../styles.css', import.meta.url), 'utf8');
   assert.match(source, /createCardUseAnimationModel/);
   assert.match(source, /if \(cardUseModel\) await playCardUseAnimation/);
@@ -114,4 +115,6 @@ test('battle flow uses one shared card-use cinematic and suppresses the duplicat
   assert.match(styles, /\.card-use-cinematic\s*\{/);
   assert.match(styles, /\.card-use-impact\.tp/);
   assert.match(styles, /@keyframes card-use-card-reveal/);
+  assert.match(styles, /\.card-use-cinematic\.copy-clearing \.card-use-copy/);
+  assert.match(animation, /classList\.add\('copy-clearing'\);\s*await delay\(timing\.copyOut\);\s*overlay\.classList\.add\('travelling'\)/s);
 });

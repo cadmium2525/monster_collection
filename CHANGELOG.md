@@ -1,5 +1,11 @@
 # Changelog
 
+## 1.32.4 — 2026-09-04
+
+### Support-card cinematic timing
+- Wait for the card name and effect description to finish fading out before Training, shugyo, and breeder cards begin travelling into their target.
+- Preserve the same presentation order for players and CPU opponents at both normal and fast battle speeds.
+
 ## 1.32.3 — 2026-09-04
 
 ### Arena representative thumbnail

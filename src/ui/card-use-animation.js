@@ -11,9 +11,9 @@ const OPPONENT_BOARD_EFFECTS = new Set(['breeder-042', 'breeder-043']);
 const OPPONENT_PLAYER_EFFECTS = new Set(['breeder-002']);
 
 const TIMINGS = Object.freeze({
-  standard: Object.freeze({ reveal: 420, travel: 360, impact: 240 }),
-  fast: Object.freeze({ reveal: 130, travel: 120, impact: 85 }),
-  reduced: Object.freeze({ reveal: 100, travel: 105, impact: 75 }),
+  standard: Object.freeze({ reveal: 420, copyOut: 150, travel: 360, impact: 240 }),
+  fast: Object.freeze({ reveal: 130, copyOut: 55, travel: 120, impact: 85 }),
+  reduced: Object.freeze({ reveal: 100, copyOut: 45, travel: 105, impact: 75 }),
 });
 
 const CHANNEL_PRESENTATION = Object.freeze({
@@ -187,7 +187,7 @@ export async function playCardUseAnimation({ model, speed = 'standard', targetNo
       role: 'status',
       'aria-live': 'assertive',
       'aria-label': `${model.actorLabel}、${model.name}を使用。${model.effect}。対象、${model.target.label}`,
-      style: `--card-use-reveal:${timing.reveal}ms`,
+      style: `--card-use-reveal:${timing.reveal}ms;--card-use-copy-out:${timing.copyOut}ms`,
     },
   }, [
     el('div', { className: 'card-use-backdrop', attrs: { 'aria-hidden': 'true' } }),
@@ -205,6 +205,8 @@ export async function playCardUseAnimation({ model, speed = 'standard', targetNo
 
   document.body.append(overlay);
   await delay(timing.reveal);
+  overlay.classList.add('copy-clearing');
+  await delay(timing.copyOut);
   overlay.classList.add('travelling');
 
   const sourceRect = shell.getBoundingClientRect();
