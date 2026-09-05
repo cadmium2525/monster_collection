@@ -96,6 +96,41 @@ test('claiming a mission can only change claim state and its reward, never progr
   assert.ok(claimed.processedOperationIds.includes('claim:daily-login:2026-09-06'));
 });
 
+test('a registered-account cloud desync repairs today login without double-counting the month', () => {
+  const cloudState = defaultEconomyState('2026-09-06T00:00:00.000Z');
+  cloudState.lastDailyLoginDate = '2026-09-06';
+  cloudState.missionProgress.daily.counters = {};
+  cloudState.missionProgress.monthly.counters = { loginDays: 4 };
+  cloudState.missionProgress.processedOperationIds = ['mission:login:2026-09-06'];
+
+  const repaired = applyLoginRewards(cloudState, {
+    loginDate: '2026-09-06', campaignId: null,
+  }, '2026-09-06T01:00:00.000Z');
+  assert.deepEqual(repaired.rewards, []);
+  assert.equal(repaired.state.missionProgress.daily.counters.login, 1);
+  assert.equal(repaired.state.missionProgress.monthly.counters.loginDays, 4);
+
+  const claimed = applyProgressionOperation(repaired.state, {
+    type: 'claim-mission', operationId: 'mission-claim:daily-login:2026-09-06',
+    missionId: 'daily-login', dateKey: '2026-09-06',
+  }, '2026-09-06T01:01:00.000Z');
+  assert.equal(claimed.diamonds, repaired.state.diamonds + 300);
+  assert.deepEqual(claimed.missionProgress.daily.claimedIds, ['daily-login']);
+});
+
+test('a stale claim operation id cannot block an otherwise valid login reward', () => {
+  const login = applyLoginRewards(defaultEconomyState('2026-09-06T00:00:00.000Z'), {
+    loginDate: '2026-09-06', campaignId: null,
+  }, '2026-09-06T00:00:00.000Z').state;
+  login.processedOperationIds.push('mission-claim:daily-login:2026-09-06');
+  const claimed = applyProgressionOperation(login, {
+    type: 'claim-mission', operationId: 'mission-claim:daily-login:2026-09-06',
+    missionId: 'daily-login', dateKey: '2026-09-06',
+  }, '2026-09-06T01:00:00.000Z');
+  assert.equal(claimed.diamonds, login.diamonds + 300);
+  assert.deepEqual(claimed.missionProgress.daily.claimedIds, ['daily-login']);
+});
+
 test('summer bonus is not granted before its start date', () => {
   const result = applyLoginRewards(defaultEconomyState(), { loginDate: '2026-08-28' });
   assert.equal(result.state.diamonds, STARTER_DIAMONDS);

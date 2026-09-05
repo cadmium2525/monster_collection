@@ -10,11 +10,11 @@
     <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
     <meta name="apple-mobile-web-app-title" content="モンコン">
     <title>モンスターコンストラクション</title>
-    <link rel="manifest" href="./manifest.webmanifest?v=1.35.13">
-    <link rel="icon" type="image/png" sizes="192x192" href="./assets/icons/icon-192.png?v=1.35.13">
-    <link rel="apple-touch-icon" sizes="180x180" href="./assets/icons/apple-touch-icon.png?v=1.35.13">
-    <link rel="preload" as="image" type="image/webp" href="./assets/images/title/title-screen.webp?v=1.35.13">
-    <link rel="stylesheet" href="./styles.css?v=1.35.13">
+    <link rel="manifest" href="./manifest.webmanifest?v=1.35.14">
+    <link rel="icon" type="image/png" sizes="192x192" href="./assets/icons/icon-192.png?v=1.35.14">
+    <link rel="apple-touch-icon" sizes="180x180" href="./assets/icons/apple-touch-icon.png?v=1.35.14">
+    <link rel="preload" as="image" type="image/webp" href="./assets/images/title/title-screen.webp?v=1.35.14">
+    <link rel="stylesheet" href="./styles.css?v=1.35.14">
   </head>
   <body>
     <div id="app" class="app-shell" aria-live="polite">
@@ -34,7 +34,7 @@
     </div>
     <script>
       if ('serviceWorker' in navigator) {
-        const updateKey = 'mc-sw-reload-1.35.13';
+        const updateKey = 'mc-sw-reload-1.35.14';
         const hadController = Boolean(navigator.serviceWorker.controller);
         let reloadingForUpdate = false;
         navigator.serviceWorker.addEventListener('controllerchange', () => {
@@ -43,9 +43,9 @@
           sessionStorage.setItem(updateKey, '1');
           location.reload();
         });
-        navigator.serviceWorker.register('./sw.js?v=1.35.13', { scope: './', updateViaCache: 'none' }).catch(() => {});
+        navigator.serviceWorker.register('./sw.js?v=1.35.14', { scope: './', updateViaCache: 'none' }).catch(() => {});
       }
     </script>
-    <script type="module" src="./src/app.js?v=1.35.13"></script>
+    <script type="module" src="./src/app.js?v=1.35.14"></script>
   </body>
 </html>

@@ -163,18 +163,41 @@ export function applyLoginRewards(current, {
   if (!/^\d{4}-\d{2}-\d{2}$/.test(loginDate)) throw new Error('ログイン日が不正です');
   const state = normalizeEconomyState(current, now);
   const rewards = [];
-  if (!state.lastDailyLoginDate || loginDate > state.lastDailyLoginDate) {
+  const isFirstLoginForDate = !state.lastDailyLoginDate || loginDate > state.lastDailyLoginDate;
+  if (isFirstLoginForDate) {
     state.lastDailyLoginDate = loginDate;
     state.missionProgress = recordMissionEvent(state.missionProgress, {
       type: 'login', operationId: `mission:login:${loginDate}`,
     }, { dateKey: loginDate });
+  }
+  // A registered account can occasionally retain the cloud login date while
+  // its mission payload is older (for example after an interrupted sync).
+  // Reconcile the two records on every same-day startup without incrementing
+  // the monthly login count a second time.
+  let repairedLoginProgress = false;
+  if (state.lastDailyLoginDate === loginDate) {
+    const progress = normalizeMissionProgress(state.missionProgress, { dateKey: loginDate });
+    if (Math.trunc(Number(progress.daily.counters.login) || 0) < 1) {
+      progress.daily.counters.login = 1;
+      repairedLoginProgress = true;
+    }
+    if (Math.trunc(Number(progress.monthly.counters.loginDays) || 0) < 1) {
+      progress.monthly.counters.loginDays = 1;
+      repairedLoginProgress = true;
+    }
+    const operationId = `mission:login:${loginDate}`;
+    if (!progress.processedOperationIds.includes(operationId)) {
+      progress.processedOperationIds = [...progress.processedOperationIds, operationId].slice(-320);
+      repairedLoginProgress = true;
+    }
+    state.missionProgress = progress;
   }
   if (loginDate >= campaignStart && loginDate <= campaignEnd && campaignId && !state.claimedCampaignIds.includes(campaignId)) {
     state.diamonds += SUMMER_BONUS_DIAMONDS;
     state.claimedCampaignIds = [...state.claimedCampaignIds, campaignId].slice(-32);
     rewards.push({ type: 'campaign', amount: SUMMER_BONUS_DIAMONDS, label: '夏休みボーナス' });
   }
-  if (rewards.length) state.updatedAt = now;
+  if (isFirstLoginForDate || repairedLoginProgress || rewards.length) state.updatedAt = now;
   return { state, rewards };
 }
 
@@ -284,7 +307,6 @@ export function applyProgressionOperation(current, operation, now = new Date().t
       state.arenaProgress.updatedAt = now;
     }
   } else if (operation.type === 'claim-mission') {
-    if (state.processedOperationIds.includes(operationId)) return state;
     const progressBeforeClaim = normalizeMissionProgress(state.missionProgress, { dateKey });
     const countersBeforeClaim = Object.fromEntries(['daily', 'weekly', 'monthly'].map((period) => [
       period,

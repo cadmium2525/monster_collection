@@ -115,6 +115,35 @@ test('local and Firebase login rewards are atomic and idempotent for the same Ja
   assert.ok(fake.transactionCount >= 2);
 });
 
+test('registered Firebase accounts repair a missing same-day login mission before it is claimed', async () => {
+  const fake = fakeFirebaseSdk();
+  fake.auth.currentUser = {
+    uid: 'firebase-user', isAnonymous: false,
+    email: 'mc.registered@accounts.monster-construction.invalid',
+    emailVerified: true, providerData: [{ providerId: 'password' }],
+  };
+  const firebase = new FirebaseGameRepository({ config: { projectId: 'test' }, sdkLoader: async () => fake.sdk });
+  await firebase.initialize();
+  const cloudState = defaultEconomyState('2026-09-06T00:00:00.000Z');
+  cloudState.lastDailyLoginDate = '2026-09-06';
+  cloudState.missionProgress.daily.counters = {};
+  cloudState.missionProgress.monthly.counters = { loginDays: 7 };
+  cloudState.missionProgress.processedOperationIds = ['mission:login:2026-09-06'];
+  fake.docs.set('users/firebase-user', {
+    ...fake.docs.get('users/firebase-user'), economy: cloudState,
+  });
+
+  const repaired = await firebase.claimLoginRewards({ loginDate: '2026-09-06', campaignId: null });
+  assert.equal(repaired.state.missionProgress.daily.counters.login, 1);
+  assert.equal(repaired.state.missionProgress.monthly.counters.loginDays, 7);
+  const claimed = await firebase.commitProgression({
+    type: 'claim-mission', operationId: 'mission-claim:daily-login:2026-09-06',
+    missionId: 'daily-login', dateKey: '2026-09-06',
+  });
+  assert.equal(claimed.diamonds, cloudState.diamonds + 300);
+  assert.deepEqual(claimed.missionProgress.daily.claimedIds, ['daily-login']);
+});
+
 test('local and Firebase repositories claim the home renewal gift atomically once', async () => {
   const config = { giftId: HOME_RENEWAL_GIFT_ID, claimDate: '2026-09-01' };
   const local = new LocalGameRepository({ storage: new MemoryStorage(), idFactory: () => 'gift-local' });
