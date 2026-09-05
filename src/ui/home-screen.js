@@ -13,7 +13,7 @@ import { playerIconContent } from './player-icon.js';
 import { claimableMissionCount } from '../progression/mission-state.js';
 import { normalizeHomeArtworkSelection } from '../profile/home-artwork.js';
 import { homeArtworkImagePath } from './home-artwork.js';
-import { HOME_BGM_DEFAULT_VOLUME, normalizeBgmVolume } from '../audio/home-bgm.js';
+import { BGM_DEFAULT_VOLUME, SE_DEFAULT_VOLUME, normalizeAudioVolume } from '../audio/game-audio.js';
 
 export const TUTORIAL_STEPS = Object.freeze([
   {
@@ -245,55 +245,60 @@ function openHomeNotices(champion) {
   });
 }
 
-export function openBgmVolumeSettings({ volume = HOME_BGM_DEFAULT_VOLUME, onChange = null, trigger = null } = {}) {
-  let current = normalizeBgmVolume(volume);
-  let lastAudible = current > 0 ? current : HOME_BGM_DEFAULT_VOLUME;
-  const output = el('output', { text: String(current), attrs: { for: 'home-bgm-volume' } });
-  const range = el('input', {
-    value: String(current),
-    attrs: {
-      id: 'home-bgm-volume', type: 'range', min: '0', max: '100', step: '1',
-      'aria-label': 'ホームBGM音量', 'aria-valuetext': `${current}%`,
-    },
-  });
-  const mute = el('button', { className: 'utility-button' });
-  const apply = (value) => {
-    current = normalizeBgmVolume(value);
-    if (current > 0) lastAudible = current;
-    range.value = String(current);
-    range.setAttribute('aria-valuetext', `${current}%`);
-    output.textContent = String(current);
-    mute.textContent = current === 0 ? '音量を戻す' : 'ミュート';
-    trigger?.classList.toggle('is-muted', current === 0);
-    trigger?.setAttribute('aria-label', `ホームBGM音量 ${current}%`);
-    const triggerValue = trigger?.querySelector('strong');
-    if (triggerValue) triggerValue.textContent = current === 0 ? 'OFF' : `${current}%`;
-    onChange?.(current);
-  };
-  range.addEventListener('input', () => apply(range.value));
-  mute.addEventListener('click', () => apply(current === 0 ? lastAudible : 0));
-  apply(current);
-  return openModal({
-    title: 'サウンド設定',
-    className: 'bgm-volume-modal',
-    content: el('div', { className: 'bgm-volume-settings' }, [
+export function openAudioSettings({ bgmVolume = BGM_DEFAULT_VOLUME, seVolume = SE_DEFAULT_VOLUME, onBgmChange = null, onSeChange = null, trigger = null } = {}) {
+  const createChannel = ({ id, eyebrow, label, value, onChange, onDisplayChange = null }) => {
+    let current = normalizeAudioVolume(value);
+    let lastAudible = current > 0 ? current : 100;
+    const output = el('output', { text: String(current), attrs: { for: id } });
+    const range = el('input', {
+      value: String(current),
+      attrs: {
+        id, type: 'range', min: '0', max: '100', step: '1',
+        'aria-label': `${label}音量`, 'aria-valuetext': `${current}%`,
+      },
+    });
+    const mute = el('button', { className: 'utility-button', text: current === 0 ? '音量を戻す' : 'ミュート' });
+    const apply = (nextValue) => {
+      current = normalizeAudioVolume(nextValue);
+      if (current > 0) lastAudible = current;
+      range.value = String(current);
+      range.setAttribute('aria-valuetext', `${current}%`);
+      output.textContent = String(current);
+      mute.textContent = current === 0 ? '音量を戻す' : 'ミュート';
+      onDisplayChange?.(current);
+      onChange?.(current);
+    };
+    range.addEventListener('input', () => apply(range.value));
+    mute.addEventListener('click', () => apply(current === 0 ? lastAudible : 0));
+    return el('section', { className: 'audio-channel-setting' }, [
       el('div', { className: 'bgm-volume-heading' }, [
-        el('span', {}, [el('small', { text: 'HOME BGM' }), el('strong', { text: 'ホーム画面の音量' })]),
+        el('span', {}, [el('small', { text: eyebrow }), el('strong', { text: label })]),
         el('span', { className: 'bgm-volume-value' }, [output, el('small', { text: '%' })]),
       ]),
       range,
       el('div', { className: 'bgm-volume-scale', attrs: { 'aria-hidden': 'true' } }, [el('span', { text: '0' }), el('span', { text: '50' }), el('span', { text: '100' })]),
-      el('div', { className: 'bgm-volume-actions' }, [
-        mute,
-        el('span', { text: '初期設定 50' }),
-      ]),
-      el('p', { text: 'iPhoneのマナーモードに連動して消音します。アプリを非表示にすると停止し、表示すると続きから再生します。' }),
+      el('div', { className: 'bgm-volume-actions' }, [mute, el('span', { text: '初期設定 100' })]),
+    ]);
+  };
+  const updateTrigger = (volume) => {
+    trigger?.classList.toggle('is-muted', volume === 0);
+    trigger?.setAttribute('aria-label', `BGM音量 ${volume}%`);
+    const triggerValue = trigger?.querySelector('strong');
+    if (triggerValue) triggerValue.textContent = volume === 0 ? 'OFF' : `${volume}%`;
+  };
+  return openModal({
+    title: 'サウンド設定',
+    className: 'sound-settings-modal',
+    content: el('div', { className: 'bgm-volume-settings' }, [
+      createChannel({ id: 'game-bgm-volume', eyebrow: 'HOME / BATTLE BGM', label: 'BGM', value: bgmVolume, onChange: onBgmChange, onDisplayChange: updateTrigger }),
+      createChannel({ id: 'game-se-volume', eyebrow: 'SOUND EFFECT', label: 'SE', value: seVolume, onChange: onSeChange }),
+      el('p', { text: 'マスター出力は50%に固定されています。設定100で元音源を50%の音量で再生します。iPhoneのマナーモードとアプリの表示状態にも連動します。' }),
     ]),
   });
 }
 
 export class HomeScreen {
-  constructor({ root, masterIndex, user, champion, repositoryStatus, decks, catalog = null, economy, seed, debugMode = false, adminMode = false, activeRun = null, bgmVolume = HOME_BGM_DEFAULT_VOLUME, onBgmVolumeChange = null, onResume = null, onTournament, onArena, onMissions, onDecks, onBoosters, onAdmin = null, onProfile, onClaimGift = null, installAvailable = false, onInstall = null }) {
+  constructor({ root, masterIndex, user, champion, repositoryStatus, decks, catalog = null, economy, seed, debugMode = false, adminMode = false, activeRun = null, bgmVolume = BGM_DEFAULT_VOLUME, seVolume = SE_DEFAULT_VOLUME, onBgmVolumeChange = null, onSeVolumeChange = null, onResume = null, onTournament, onArena, onMissions, onDecks, onBoosters, onAdmin = null, onProfile, onClaimGift = null, installAvailable = false, onInstall = null }) {
     this.root = root;
     this.masterIndex = masterIndex;
     this.user = user;
@@ -306,8 +311,10 @@ export class HomeScreen {
     this.debugMode = debugMode;
     this.adminMode = adminMode;
     this.activeRun = activeRun;
-    this.bgmVolume = normalizeBgmVolume(bgmVolume);
+    this.bgmVolume = normalizeAudioVolume(bgmVolume);
+    this.seVolume = normalizeAudioVolume(seVolume);
     this.onBgmVolumeChange = onBgmVolumeChange;
+    this.onSeVolumeChange = onSeVolumeChange;
     this.onResume = onResume;
     this.onTournament = onTournament;
     this.onArena = onArena;
@@ -424,15 +431,20 @@ export class HomeScreen {
         el('div', { className: 'home-lobby-top-actions' }, [
           el('button', {
             className: `home-lobby-sound${this.bgmVolume === 0 ? ' is-muted' : ''}`,
-            onclick: (event) => openBgmVolumeSettings({
-              volume: this.bgmVolume,
+            onclick: (event) => openAudioSettings({
+              bgmVolume: this.bgmVolume,
+              seVolume: this.seVolume,
               trigger: event.currentTarget,
-              onChange: (value) => {
+              onBgmChange: (value) => {
                 this.bgmVolume = value;
                 this.onBgmVolumeChange?.(value);
               },
+              onSeChange: (value) => {
+                this.seVolume = value;
+                this.onSeVolumeChange?.(value);
+              },
             }),
-            attrs: { 'aria-label': `ホームBGM音量 ${this.bgmVolume}%` },
+            attrs: { 'aria-label': `BGM音量 ${this.bgmVolume}%` },
           }, [homeIcon('audio'), el('strong', { text: this.bgmVolume === 0 ? 'OFF' : `${this.bgmVolume}%` })]),
           el('button', { className: 'home-lobby-wallet', onclick: this.onBoosters, attrs: { 'aria-label': `所持ダイヤ ${this.economy?.diamonds ?? 0}。ショップを開く` } }, [
             diamondIcon('home-lobby-diamond'),

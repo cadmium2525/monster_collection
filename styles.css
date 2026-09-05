@@ -2351,8 +2351,10 @@ body:has(.home-lobby) {
 .home-lobby-sound strong { color:#f0e1af; font:800 8px/1 system-ui,sans-serif; letter-spacing:.04em; }
 .home-lobby-sound:hover,.home-lobby-sound:focus-visible { border-color:#86f0ec; color:#b7ffff; background:rgba(13,45,58,.96); }
 .home-lobby-sound.is-muted { color:#84939b; border-color:rgba(132,147,155,.38); }
-.bgm-volume-modal { width:min(560px,92vw); }
-.bgm-volume-settings { display:grid; gap:9px; padding-top:8px; }
+.sound-settings-modal { width:min(620px,92vw); }
+.bgm-volume-settings { display:grid; gap:7px; padding-top:5px; }
+.audio-channel-setting { display:grid; gap:5px; padding:4px 0 7px; }
+.audio-channel-setting + .audio-channel-setting { padding-top:9px; border-top:1px solid rgba(114,196,201,.2); }
 .bgm-volume-heading { display:flex; align-items:end; justify-content:space-between; gap:15px; }
 .bgm-volume-heading > span:first-child { display:grid; gap:3px; }
 .bgm-volume-heading > span:first-child small { color:#78deda; font:800 8px/1 Georgia,serif; letter-spacing:.2em; }
