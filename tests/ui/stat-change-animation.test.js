@@ -78,15 +78,19 @@ test('turn-start events expose TP debt and maximum-TP modifiers to the presentat
   assert.deepEqual(turnStartTpTransition(penaltyTurn), { from: 10, to: 9, maxFrom: 10, maxTo: 9 });
 });
 
-test('battle presentation resolves card or move effects before animated stat changes', () => {
+test('battle presentation resolves effects before unobstructed fixed-position stat changes', () => {
   const battleSource = fs.readFileSync(new URL('../../src/ui/battle-screen.js', import.meta.url), 'utf8');
   const styles = fs.readFileSync(new URL('../../styles.css', import.meta.url), 'utf8');
   assert.match(battleSource, /playCardUseAnimation\([\s\S]*?showStatDirections/);
   assert.match(battleSource, /if \(turnStarted\) await this\.showCurrentTurnTransition\(\);\s*await this\.showStatDirections/);
   assert.match(battleSource, /className: state === 'empty' \? '' : state/);
   assert.match(styles, /\.tp-gems i\.overcharged/);
-  assert.match(styles, /\.stat-change span\.up \{ color:#ff8a70/);
-  assert.match(styles, /\.stat-change span\.down \{ color:#79d8ff/);
-  assert.match(styles, /@keyframes stat-value-rise/);
-  assert.match(styles, /@keyframes stat-value-fall/);
+  assert.doesNotMatch(battleSource, /className: `stat-change/);
+  assert.doesNotMatch(styles, /\.stat-change\s*\{/);
+  const riseAnimation = styles.match(/@keyframes stat-value-rise\s*\{[^\n]+\}/)?.[0] ?? '';
+  const fallAnimation = styles.match(/@keyframes stat-value-fall\s*\{[^\n]+\}/)?.[0] ?? '';
+  assert.match(riseAnimation, /drop-shadow/);
+  assert.match(fallAnimation, /drop-shadow/);
+  assert.doesNotMatch(riseAnimation, /transform/);
+  assert.doesNotMatch(fallAnimation, /transform/);
 });

@@ -1556,28 +1556,10 @@ export class BattleScreen {
   async animateChange(change, timing) {
     const target = this.changeTargetNode(change);
     if (!target) return;
-    const rect = target.getBoundingClientRect();
-    const directions = new Set(change.values.map((value) => value.direction));
     change.values.forEach((value) => this.setChangedValueFrame(target, change, value, 0));
-    const indicator = el('div', {
-      className: `stat-change ${directions.size > 1 ? 'mixed' : [...directions][0]}`,
-      attrs: {
-        role: 'status',
-        'aria-live': 'polite',
-        style: `left:${rect.left + rect.width / 2}px;top:${rect.top + rect.height / 2}px`,
-      },
-    }, change.values.map((value) => {
-      const delta = value.to - value.from;
-      return el('span', {
-        className: value.direction,
-        text: `${value.label} ${value.from} → ${value.to}  (${delta > 0 ? '+' : ''}${delta})`,
-      });
-    }));
-    document.body.append(indicator);
     await delay(timing.lead);
     await Promise.all(change.values.map((value) => this.animateChangedValue(target, change, value, timing)));
     await delay(timing.settle);
-    indicator.remove();
     for (const node of target.querySelectorAll('.stat-value-changing')) {
       node.classList.remove('stat-value-changing', 'up', 'down');
       node.style.removeProperty('--stat-count-duration');
