@@ -667,13 +667,14 @@ body:has(.battle-screen) {
 .combat-impact::after { content:""; position:absolute; inset:-14%; border:1px dashed currentColor; border-radius:50%; }
 .combat-impact.direct { width:min(64%,88px); color:#ff9b75; border-color:#ffe4c7; box-shadow:0 0 12px #fff,0 0 27px #ff675d,inset 0 0 14px #ffad79; }
 @keyframes combat-impact-pop { 0% { opacity:0; transform:scale(.25) rotate(-18deg); } 35% { opacity:1; transform:scale(1.06) rotate(2deg); } 100% { opacity:0; transform:scale(1.38) rotate(14deg); } }
-.card-corner.stat-value-changing,.life-copy.stat-value-changing,.tp-copy.stat-value-changing,.tp-gems.stat-value-changing { position:relative; z-index:24; }
+.card-corner.stat-value-changing { z-index:24; transform-origin:center center; }
+.life-copy.stat-value-changing,.tp-copy.stat-value-changing,.tp-gems.stat-value-changing { position:relative; z-index:24; transform-origin:center center; }
 .card-corner.stat-value-changing.up,.life-copy.stat-value-changing.up,.tp-copy.stat-value-changing.up,.tp-gems.stat-value-changing.up { animation:stat-value-rise var(--stat-count-duration,.52s) ease-in-out both; }
 .card-corner.stat-value-changing.down,.life-copy.stat-value-changing.down,.tp-copy.stat-value-changing.down,.tp-gems.stat-value-changing.down { animation:stat-value-fall var(--stat-count-duration,.52s) ease-in-out both; }
 .stat-value-changing.up b,.stat-value-changing.up strong { color:#fff2de; text-shadow:0 0 5px #fff,0 0 12px #ff503b,0 2px 3px #000; }
 .stat-value-changing.down b,.stat-value-changing.down strong { color:#e8f9ff; text-shadow:0 0 5px #fff,0 0 12px #258dff,0 2px 3px #000; }
-@keyframes stat-value-rise { 0%,100% { filter:brightness(1) drop-shadow(0 0 0 transparent); } 42% { filter:brightness(1.75) drop-shadow(0 0 8px #ff3f2e); } }
-@keyframes stat-value-fall { 0%,100% { filter:brightness(1) drop-shadow(0 0 0 transparent); } 42% { filter:brightness(1.7) drop-shadow(0 0 8px #238cff); } }
+@keyframes stat-value-rise { 0%,100% { filter:brightness(1) drop-shadow(0 0 0 transparent); transform:scale(1); } 42% { filter:brightness(1.75) drop-shadow(0 0 8px #ff3f2e); transform:scale(1.06); } }
+@keyframes stat-value-fall { 0%,100% { filter:brightness(1) drop-shadow(0 0 0 transparent); transform:scale(1); } 42% { filter:brightness(1.7) drop-shadow(0 0 8px #238cff); transform:scale(1.06); } }
 
 .turn-transition {
   --turn-accent:#4ac8ff;

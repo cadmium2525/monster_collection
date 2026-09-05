@@ -89,8 +89,12 @@ test('battle presentation resolves effects before unobstructed fixed-position st
   assert.doesNotMatch(styles, /\.stat-change\s*\{/);
   const riseAnimation = styles.match(/@keyframes stat-value-rise\s*\{[^\n]+\}/)?.[0] ?? '';
   const fallAnimation = styles.match(/@keyframes stat-value-fall\s*\{[^\n]+\}/)?.[0] ?? '';
+  const cornerAnimation = styles.match(/\.card-corner\.stat-value-changing\s*\{[^\n]+\}/)?.[0] ?? '';
+  assert.match(styles, /\.card-corner\s*\{\s*\n\s*position: absolute/);
+  assert.match(cornerAnimation, /transform-origin:center center/);
+  assert.doesNotMatch(cornerAnimation, /position:relative/);
   assert.match(riseAnimation, /drop-shadow/);
   assert.match(fallAnimation, /drop-shadow/);
-  assert.doesNotMatch(riseAnimation, /transform/);
-  assert.doesNotMatch(fallAnimation, /transform/);
+  assert.match(riseAnimation, /transform:scale\(1\.06\)/);
+  assert.match(fallAnimation, /transform:scale\(1\.06\)/);
 });
