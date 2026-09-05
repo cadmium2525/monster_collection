@@ -585,11 +585,16 @@ export class BattleEngine {
 
     const activeBonuses = player.effects.nextOwnMaxTpBonuses.filter((effect) => effect.activeFromTurn <= player.turnNumber && effect.remaining > 0);
     const activePenalties = player.effects.nextTurnMaxTpPenalties.filter((effect) => effect.activeFromTurn <= player.turnNumber && effect.remaining > 0);
+    const maxTpBeforeModifiers = player.baseMaxTp;
+    const tpBeforeModifiers = player.baseMaxTp;
+    const maxTpBonusApplied = activeBonuses.reduce((sum, effect) => sum + effect.amount, 0);
+    const maxTpPenaltyApplied = activePenalties.reduce((sum, effect) => sum + effect.amount, 0);
     player.maxTp = Math.max(1,
       player.baseMaxTp
-      + activeBonuses.reduce((sum, effect) => sum + effect.amount, 0)
-      - activePenalties.reduce((sum, effect) => sum + effect.amount, 0));
+      + maxTpBonusApplied
+      - maxTpPenaltyApplied);
     player.tp = player.maxTp;
+    const tpDebtApplied = Math.min(player.tp, Math.max(0, player.effects.tpDebt ?? 0));
     if ((player.effects.tpDebt ?? 0) > 0) {
       player.tp = Math.max(0, player.tp - player.effects.tpDebt);
       player.effects.tpDebt = 0;
@@ -618,6 +623,12 @@ export class BattleEngine {
     this._log('turn-start', `${player.displayName} ターン${player.turnNumber}`, {
       playerId,
       tp: player.tp,
+      maxTp: player.maxTp,
+      tpBeforeModifiers,
+      maxTpBeforeModifiers,
+      maxTpBonusApplied,
+      maxTpPenaltyApplied,
+      tpDebtApplied,
       drawSkipped: skipDraw,
     });
     if (!player.isFirst && player.turnNumber === RULES.secondFusionTurn) {

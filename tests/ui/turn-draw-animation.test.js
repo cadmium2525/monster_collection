@@ -23,7 +23,7 @@ test('normal human turn draws are identified without animating card effects or e
 test('turn draw follows the turn transition and reveals cards one at a time', () => {
   const battleSource = fs.readFileSync(new URL('../../src/ui/battle-screen.js', import.meta.url), 'utf8');
   const styles = fs.readFileSync(new URL('../../styles.css', import.meta.url), 'utf8');
-  assert.match(battleSource, /await this\.showCurrentTurnTransition\(\);\s*await this\.playPreparedNormalTurnDraw\(\);/);
+  assert.match(battleSource, /if \(turnStarted\) await this\.showCurrentTurnTransition\(\);[\s\S]*?await this\.showStatDirections[\s\S]*?await this\.playPreparedNormalTurnDraw\(\);/);
   assert.match(battleSource, /turnDrawHiddenIds\.delete\(instanceId\);\s*this\.render\(\);\s*await delay\(timing\.deal\);/);
   assert.match(styles, /\.game-card\.turn-draw-enter/);
   assert.match(styles, /@keyframes turn-card-draw/);

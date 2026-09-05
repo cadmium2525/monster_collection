@@ -9,6 +9,7 @@ import { createAwakeningAnimationModel, playAwakeningAnimation } from './awakeni
 import { playTurnTransition } from './turn-transition-animation.js';
 import { normalTurnDrawCards, turnDrawTimings } from './turn-draw-animation.js';
 import { createCardUseAnimationModel, isCardUseAction, playCardUseAnimation } from './card-use-animation.js';
+import { interpolatedStatValue, statChangeTimings, tpGemStates, turnStartTpTransition } from './stat-change-animation.js';
 import { openModal } from './modal.js';
 import { lowLifeTargetEffects, unitLifePresentation } from './status-presentation.js';
 import { automaticMulliganIds } from '../battle/mulligan.js';
@@ -555,7 +556,8 @@ export class BattleScreen {
           el('span', { text: 'TP' }),
           el('strong', { text: `${player.tp} / ${player.maxTp}` }),
         ]),
-        el('div', { className: 'tp-gems', attrs: { 'aria-hidden': 'true' } }, Array.from({ length: player.maxTp }, (_, index) => el('i', { className: index < player.tp ? 'active' : '' }))),
+        el('div', { className: 'tp-gems', attrs: { 'aria-hidden': 'true' } }, tpGemStates(player.tp)
+          .map((state) => el('i', { className: state === 'empty' ? '' : state }))),
         el('div', { className: 'pile-strip' }, [
           el('span', {}, [el('small', { text: '手札' }), el('strong', { text: handCount })]),
           el('span', {}, [el('small', { text: '山札' }), el('strong', { text: deckCount })]),
@@ -1327,7 +1329,7 @@ export class BattleScreen {
         });
       }
     }
-    return { units, players };
+    return { units, players, currentPlayerId: this.engine.state.currentPlayerId };
   }
 
   findUnitSlotNode(unitId) {
@@ -1431,69 +1433,168 @@ export class BattleScreen {
     cue.remove();
   }
 
-  statChanges(before, action = null) {
+  statChanges(before, action = null, newLogs = []) {
     const changes = [];
     for (const [unitId, previous] of before.units) {
       const current = this.engine.state.playerOrder
         .flatMap((playerId) => this.engine.player(playerId).board)
         .find((unit) => unit?.id === unitId);
       const now = current ? {
-        life: current.life,
+        life: Math.max(0, current.life),
         maxLife: current.maxLife,
         atk: effectiveAtk(current),
         def: effectiveDef(current),
       } : { life: 0, maxLife: previous.maxLife, atk: previous.atk, def: previous.def };
-      const labels = [];
+      const values = [];
       for (const [key, label] of [['life', 'LIFE'], ['atk', 'ATK'], ['def', 'DEF']]) {
         const delta = now[key] - previous[key];
-        if (delta > 0) labels.push({ direction: 'up', text: `⬆︎ ${label} +${delta}` });
-        if (delta < 0) labels.push({ direction: 'down', text: `⬇︎ ${label} ${delta}` });
+        if (delta !== 0) values.push({
+          key,
+          label,
+          from: previous[key],
+          to: now[key],
+          direction: delta > 0 ? 'up' : 'down',
+        });
       }
-      if (labels.length) changes.push({ node: this.findUnitSlotNode(unitId), labels });
+      if (values.length) changes.push({ kind: 'unit', id: unitId, removed: !current, values });
     }
     for (const [playerId, previous] of before.players) {
       const current = this.engine.player(playerId);
-      const labels = [];
-      if (current.life !== previous.life) labels.push({
-        direction: current.life > previous.life ? 'up' : 'down',
-        text: `${current.life > previous.life ? '⬆︎' : '⬇︎'} LIFE ${current.life > previous.life ? '+' : ''}${current.life - previous.life}`,
+      const values = [];
+      const currentLife = Math.max(0, current.life);
+      if (currentLife !== previous.life) values.push({
+        key: 'life',
+        label: 'LIFE',
+        from: previous.life,
+        to: currentLife,
+        direction: currentLife > previous.life ? 'up' : 'down',
       });
-      if (isCardUseAction(action) && current.tp > previous.tp) labels.push({
-        direction: 'up',
-        text: `⬆︎ TP +${current.tp - previous.tp}`,
+      const turnStarted = before.currentPlayerId !== this.engine.state.currentPlayerId;
+      const turnStartEvent = turnStarted && playerId === this.engine.state.currentPlayerId
+        ? [...newLogs].reverse().find((event) => event.type === 'turn-start' && event.playerId === playerId)
+        : null;
+      const turnTp = turnStartTpTransition(turnStartEvent);
+      if (turnTp) values.push({
+        key: 'tp',
+        label: 'TP',
+        ...turnTp,
+        direction: turnTp.to > turnTp.from ? 'up' : 'down',
       });
-      if (isCardUseAction(action) && current.maxTp > previous.maxTp) labels.push({
-        direction: 'up',
-        text: `⬆︎ 最大TP +${current.maxTp - previous.maxTp}`,
+      else if (!turnStarted && (isCardUseAction(action) || action?.type === 'move') && current.tp !== previous.tp) values.push({
+        key: 'tp',
+        label: 'TP',
+        from: previous.tp,
+        to: current.tp,
+        maxFrom: previous.maxTp,
+        maxTo: current.maxTp,
+        direction: current.tp > previous.tp ? 'up' : 'down',
       });
-      if (isCardUseAction(action) && current.hand.length > previous.hand) labels.push({
-        direction: 'up',
-        text: `⬆︎ 手札 +${current.hand.length - previous.hand}`,
-      });
-      if (labels.length) changes.push({ node: this.findPlayerNode(playerId), labels });
+      if (values.length) changes.push({ kind: 'player', id: playerId, removed: false, values });
     }
-    return changes.filter((entry) => entry.node);
+    return changes;
   }
 
-  async showStatDirections(before, commitNumbers, action = null) {
-    const changes = this.statChanges(before, action);
+  changeTargetNode(change) {
+    return change.kind === 'unit' ? this.findUnitSlotNode(change.id) : this.findPlayerNode(change.id);
+  }
+
+  changeValueNode(target, change, value) {
+    if (change.kind === 'unit') return target.querySelector(`.card-${value.key}`);
+    if (value.key === 'life') return target.querySelector('.life-copy');
+    if (value.key === 'tp') return target.querySelector('.tp-copy');
+    return null;
+  }
+
+  setTpGemValue(target, value) {
+    const gems = target?.querySelector('.tp-gems');
+    if (!gems) return;
+    const states = tpGemStates(value);
+    [...gems.children].forEach((gem, index) => {
+      const state = states[index] ?? 'empty';
+      gem.className = state === 'empty' ? '' : state;
+    });
+  }
+
+  setChangedValueFrame(target, change, value, progress) {
+    const visual = this.changeValueNode(target, change, value);
+    if (!visual) return false;
+    const number = visual.querySelector(change.kind === 'unit' ? 'b' : 'strong');
+    if (!number) return false;
+    const current = interpolatedStatValue(value.from, value.to, progress);
+    if (value.key === 'tp') {
+      const maximum = interpolatedStatValue(value.maxFrom, value.maxTo, progress);
+      number.textContent = `${current} / ${maximum}`;
+      this.setTpGemValue(target, current);
+    } else number.textContent = String(current);
+    return true;
+  }
+
+  async animateChangedValue(target, change, value, timing) {
+    const visual = this.changeValueNode(target, change, value);
+    if (!visual || !this.setChangedValueFrame(target, change, value, 0)) return;
+    const gemVisual = value.key === 'tp' ? target.querySelector('.tp-gems') : null;
+    for (const node of [visual, gemVisual].filter(Boolean)) {
+      node.classList.add('stat-value-changing', value.direction);
+      node.style.setProperty('--stat-count-duration', `${timing.count}ms`);
+    }
+    const schedule = globalThis.requestAnimationFrame
+      ? (callback) => globalThis.requestAnimationFrame(callback)
+      : (callback) => setTimeout(() => callback(performance.now()), 16);
+    await new Promise((resolve) => {
+      const startedAt = performance.now();
+      const frame = (now) => {
+        const progress = timing.count <= 0 ? 1 : Math.min(1, (now - startedAt) / timing.count);
+        this.setChangedValueFrame(target, change, value, progress);
+        if (progress >= 1) resolve();
+        else schedule(frame);
+      };
+      schedule(frame);
+    });
+    this.setChangedValueFrame(target, change, value, 1);
+  }
+
+  async animateChange(change, timing) {
+    const target = this.changeTargetNode(change);
+    if (!target) return;
+    const rect = target.getBoundingClientRect();
+    const directions = new Set(change.values.map((value) => value.direction));
+    change.values.forEach((value) => this.setChangedValueFrame(target, change, value, 0));
+    const indicator = el('div', {
+      className: `stat-change ${directions.size > 1 ? 'mixed' : [...directions][0]}`,
+      attrs: {
+        role: 'status',
+        'aria-live': 'polite',
+        style: `left:${rect.left + rect.width / 2}px;top:${rect.top + rect.height / 2}px`,
+      },
+    }, change.values.map((value) => {
+      const delta = value.to - value.from;
+      return el('span', {
+        className: value.direction,
+        text: `${value.label} ${value.from} → ${value.to}  (${delta > 0 ? '+' : ''}${delta})`,
+      });
+    }));
+    document.body.append(indicator);
+    await delay(timing.lead);
+    await Promise.all(change.values.map((value) => this.animateChangedValue(target, change, value, timing)));
+    await delay(timing.settle);
+    indicator.remove();
+    for (const node of target.querySelectorAll('.stat-value-changing')) {
+      node.classList.remove('stat-value-changing', 'up', 'down');
+      node.style.removeProperty('--stat-count-duration');
+    }
+  }
+
+  async showStatDirections(before, commitNumbers, action = null, newLogs = []) {
+    const changes = this.statChanges(before, action, newLogs);
     if (!changes.length) {
       commitNumbers();
       return;
     }
-    const indicators = changes.map(({ node, labels }) => {
-      const rect = node.getBoundingClientRect();
-      const indicator = el('div', {
-        className: `stat-change ${labels.some((entry) => entry.direction === 'down') ? 'down' : 'up'}`,
-        attrs: { style: `left:${rect.left + rect.width / 2}px;top:${rect.top + rect.height / 2}px` },
-      }, labels.map((entry) => el('span', { className: entry.direction, text: entry.text })));
-      document.body.append(indicator);
-      return indicator;
-    });
-    await delay(this.speed === 'fast' ? 45 : 320);
+    const timing = statChangeTimings({ speed: this.speed, reducedMotion: this.prefersReducedMotion() });
+    const removed = changes.filter((change) => change.removed);
+    if (removed.length) await Promise.all(removed.map((change) => this.animateChange(change, timing)));
     commitNumbers();
-    await delay(this.speed === 'fast' ? 95 : 900);
-    indicators.forEach((indicator) => indicator.remove());
+    await Promise.all(changes.filter((change) => !change.removed).map((change) => this.animateChange(change, timing)));
   }
 
   async executeEngineAction(action) {
@@ -1530,7 +1631,8 @@ export class BattleScreen {
     if (hadInteractionSelection && !frontlineAction) this.render();
     if (!cardUseModel) await this.animateActionStart(action);
     this.engine.applyAction(action);
-    this.prepareNormalTurnDraw(action, beforeHumanHandIds, this.engine.state.log.slice(beforeLogLength));
+    const newLogs = this.engine.state.log.slice(beforeLogLength);
+    this.prepareNormalTurnDraw(action, beforeHumanHandIds, newLogs);
     this.prepareFrontlineRedraw(action, beforeHumanHandIds);
     this.emitCheckpoint();
     if (cardUseModel) await playCardUseAnimation({
@@ -1560,9 +1662,11 @@ export class BattleScreen {
     };
     if (fusionModel) await playFusionAnimation({ model: fusionModel, speed: this.speed, onReveal: commitNumbers });
     if (awakeningModel) await playAwakeningAnimation({ model: awakeningModel, speed: this.speed, onReveal: commitNumbers });
-    await this.showStatDirections(before, commitNumbers, action);
+    const turnStarted = before.currentPlayerId !== this.engine.state.currentPlayerId;
+    if (turnStarted) await this.showCurrentTurnTransition();
+    await this.showStatDirections(before, commitNumbers, action, newLogs);
     commitNumbers();
-    await this.showCurrentTurnTransition();
+    if (!turnStarted) await this.showCurrentTurnTransition();
     await this.playPreparedNormalTurnDraw();
     await this.showLatestEvent(action);
   }

@@ -212,8 +212,9 @@ body:has(.battle-screen) {
 .tp-copy { display: flex; align-items: baseline; justify-content: space-between; margin-top: auto; }
 .tp-copy strong { color: #d8fffb; font-size: 12px; font-variant-numeric: tabular-nums; }
 .tp-gems { display: flex; gap: 3px; }
-.tp-gems i { flex: 1 1 0; max-width: 14px; aspect-ratio: 1; transform: rotate(45deg) scale(.72); border: 1px solid #406171; background: #081521; box-shadow: inset 0 0 3px #000; }
+.tp-gems i { flex: 1 1 0; max-width: 14px; aspect-ratio: 1; transform: rotate(45deg) scale(.72); border: 1px solid #406171; background: #081521; box-shadow: inset 0 0 3px #000; transition: border-color .16s ease,background .16s ease,box-shadow .16s ease,filter .16s ease; }
 .tp-gems i.active { border-color: #77ecf1; background: linear-gradient(135deg,#8dffff,#069abe 62%,#154b7e); box-shadow: 0 0 6px rgba(66,216,239,.72); }
+.tp-gems i.overcharged { border-color:#ffb36a; background:linear-gradient(135deg,#fff1af,#ff7653 56%,#a51838); box-shadow:0 0 4px #fff3bf,0 0 9px rgba(255,73,55,.88); }
 .pile-strip { display: grid; grid-template-columns: repeat(3, 1fr); gap: 3px; }
 .pile-strip > span { display: flex; align-items: baseline; justify-content: center; gap: 3px; padding: 4px 2px; border: 1px solid rgba(255,255,255,.08); border-radius: 4px; background: rgba(0,0,0,.25); }
 .pile-strip small { color: var(--muted); font-size: 9px; }
@@ -666,10 +667,21 @@ body:has(.battle-screen) {
 .combat-impact::after { content:""; position:absolute; inset:-14%; border:1px dashed currentColor; border-radius:50%; }
 .combat-impact.direct { width:min(64%,88px); color:#ff9b75; border-color:#ffe4c7; box-shadow:0 0 12px #fff,0 0 27px #ff675d,inset 0 0 14px #ffad79; }
 @keyframes combat-impact-pop { 0% { opacity:0; transform:scale(.25) rotate(-18deg); } 35% { opacity:1; transform:scale(1.06) rotate(2deg); } 100% { opacity:0; transform:scale(1.38) rotate(14deg); } }
-.stat-change { position: fixed; z-index: 170; transform: translate(-50%,-50%); display: grid; gap: 2px; padding: 6px 11px; border: 1px solid currentColor; border-radius: 20px; color: #91f2bc; background: rgba(3,14,18,.96); box-shadow: 0 5px 20px rgba(0,0,0,.55); pointer-events: none; animation: stat-pop .34s ease-out both; }
+.stat-change { position: fixed; z-index: 170; transform: translate(-50%,-50%); display: grid; gap: 2px; padding: 6px 11px; border: 1px solid currentColor; border-radius: 20px; color: #ffe1a3; background: rgba(3,14,18,.96); box-shadow: 0 5px 20px rgba(0,0,0,.55); pointer-events: none; animation: stat-pop .34s ease-out both; }
+.stat-change.up { color:#ff735f; box-shadow:0 0 18px rgba(255,75,57,.42),0 5px 20px rgba(0,0,0,.55); }
+.stat-change.down { color:#61cfff; box-shadow:0 0 18px rgba(49,156,255,.42),0 5px 20px rgba(0,0,0,.55); }
+.stat-change.mixed { color:#d9c7ff; }
 .stat-change span { display: block; font-size: 12px; font-weight: 900; text-align: center; text-shadow: 0 1px 3px #000; }
-.stat-change span.down { color: #ff8b91; }
+.stat-change span.up { color:#ff8a70; text-shadow:0 0 8px rgba(255,66,43,.82),0 1px 3px #000; }
+.stat-change span.down { color:#79d8ff; text-shadow:0 0 8px rgba(40,139,255,.82),0 1px 3px #000; }
+.card-corner.stat-value-changing,.life-copy.stat-value-changing,.tp-copy.stat-value-changing,.tp-gems.stat-value-changing { position:relative; z-index:24; }
+.card-corner.stat-value-changing.up,.life-copy.stat-value-changing.up,.tp-copy.stat-value-changing.up,.tp-gems.stat-value-changing.up { animation:stat-value-rise var(--stat-count-duration,.52s) ease-in-out both; }
+.card-corner.stat-value-changing.down,.life-copy.stat-value-changing.down,.tp-copy.stat-value-changing.down,.tp-gems.stat-value-changing.down { animation:stat-value-fall var(--stat-count-duration,.52s) ease-in-out both; }
+.stat-value-changing.up b,.stat-value-changing.up strong { color:#fff2de; text-shadow:0 0 5px #fff,0 0 12px #ff503b,0 2px 3px #000; }
+.stat-value-changing.down b,.stat-value-changing.down strong { color:#e8f9ff; text-shadow:0 0 5px #fff,0 0 12px #258dff,0 2px 3px #000; }
 @keyframes stat-pop { from { opacity: 0; transform: translate(-50%,-25%) scale(.65); } to { opacity: 1; transform: translate(-50%,-65%) scale(1); } }
+@keyframes stat-value-rise { 0%,100% { filter:brightness(1); transform:scale(1); } 42% { filter:brightness(1.75) drop-shadow(0 0 8px #ff3f2e); transform:scale(1.18); } }
+@keyframes stat-value-fall { 0%,100% { filter:brightness(1); transform:scale(1); } 42% { filter:brightness(1.7) drop-shadow(0 0 8px #238cff); transform:scale(1.15); } }
 
 .turn-transition {
   --turn-accent:#4ac8ff;
