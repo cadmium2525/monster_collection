@@ -29,6 +29,14 @@ test('turn draw follows the turn transition and reveals cards one at a time', ()
   assert.match(styles, /@keyframes turn-card-draw/);
 });
 
+test('normal turn draw keeps the card motion without an explanatory cue', () => {
+  const battleSource = fs.readFileSync(new URL('../../src/ui/battle-screen.js', import.meta.url), 'utf8');
+  assert.match(battleSource, /!this\.turnDrawCount \|\| this\.turnDrawReason !== 'frontline'/);
+  assert.doesNotMatch(battleSource, /山札から\$\{this\.turnDrawCount\}枚引きます/);
+  assert.doesNotMatch(battleSource, /ターン開始時のカードを引いています/);
+  assert.match(battleSource, /戦線整理で\$\{this\.turnDrawCount\}枚引き直します/);
+});
+
 test('standard, fast and reduced turn draws retain distinct practical timings', () => {
   assert.deepEqual(turnDrawTimings(), { lead: 90, deal: 235, settle: 130 });
   assert.deepEqual(turnDrawTimings({ speed: 'fast' }), { lead: 45, deal: 115, settle: 65 });

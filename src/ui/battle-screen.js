@@ -261,7 +261,7 @@ export class BattleScreen {
   }
 
   renderTurnDrawCue() {
-    if (!this.turnDrawActive || !this.turnDrawCount) return null;
+    if (!this.turnDrawActive || !this.turnDrawCount || this.turnDrawReason !== 'frontline') return null;
     return el('div', {
       className: 'turn-draw-cue',
       attrs: { role: 'status', 'aria-live': 'polite' },
@@ -269,9 +269,7 @@ export class BattleScreen {
       el('span', { className: 'turn-draw-cue-sigil', text: '札', attrs: { 'aria-hidden': 'true' } }),
       el('span', {}, [
         el('strong', { text: 'CARD DRAW' }),
-        el('small', { text: this.turnDrawReason === 'frontline'
-          ? `戦線整理で${this.turnDrawCount}枚引き直します`
-          : `山札から${this.turnDrawCount}枚引きます` }),
+        el('small', { text: `戦線整理で${this.turnDrawCount}枚引き直します` }),
       ]),
     ]);
   }
@@ -475,9 +473,10 @@ export class BattleScreen {
     if (this.mulliganPresentationPhase === 'selecting') return '交換するカードを選択してください';
     if (this.mulliganPresentationPhase === 'returning') return '選択したカードを山札へ戻しています';
     if (this.mulliganPresentationPhase === 'redrawing') return '新しいカードを引いています';
-    if (this.turnDrawActive || this.turnDrawHiddenIds.size) return this.turnDrawReason === 'frontline'
-      ? '戦線整理で新しいカードを引いています'
-      : 'ターン開始時のカードを引いています';
+    if (this.turnDrawActive || this.turnDrawHiddenIds.size) {
+      if (this.turnDrawReason === 'frontline') return '戦線整理で新しいカードを引いています';
+      return '';
+    }
     if (this.breederSelection?.kind === 'frontline') return '戦線整理：山札へ戻す手札を1〜2枚選択';
     if (this.engine.state.pendingMoveChoice?.playerId === this.humanPlayerId) {
       return '新しく覚えた技の入替を選択';
