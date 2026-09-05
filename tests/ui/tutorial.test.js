@@ -13,6 +13,10 @@ test('beginner tutorial covers the complete first tournament interaction loop', 
   const homeSource = fs.readFileSync(new URL('../../src/ui/home-screen.js', import.meta.url), 'utf8');
   assert.doesNotMatch(homeSource, /距離廃止版ルール/);
   assert.match(homeSource, /戴冠した大会の決勝開始時点の40枚と育成状態を再現/);
+  assert.match(homeSource, /成長値と習得技は、墓地から山札へ戻っても保持/);
+  assert.match(homeSource, /残りLIFE・一時効果・合体・覚醒状態はリセット/);
+  assert.match(homeSource, /後攻が10Tに到達すると両者の覚醒が解禁/);
+  assert.match(copy, /覚醒は各プレイヤー1試合に1回/);
 });
 
 test('technical home footer stays hidden for players and shows only in debug mode', () => {
