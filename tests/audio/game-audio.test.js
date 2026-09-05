@@ -3,6 +3,7 @@ import assert from 'node:assert/strict';
 import {
   AUDIO_MASTER_GAIN,
   BATTLE_BGM_PATH,
+  BATTLE_BGM_TRIM_GAIN,
   BGM_DEFAULT_VOLUME,
   BGM_VOLUME_STORAGE_KEY,
   GameAudioController,
@@ -114,6 +115,9 @@ test('master gain halves both tracks while BGM and SE controls default to 100', 
   assert.equal(controller.masterGainNode.gain.value, AUDIO_MASTER_GAIN);
   assert.equal(controller.bgmGainNode.gain.value, 1);
   assert.equal(controller.seGainNode.gain.value, 1);
+  assert.equal(controller.trackGainNodes.home.gain.value, 1);
+  assert.equal(controller.trackGainNodes.battle.gain.value, BATTLE_BGM_TRIM_GAIN);
+  assert.equal(AUDIO_MASTER_GAIN * BATTLE_BGM_TRIM_GAIN, 0.25);
   assert.equal(navigatorRef.audioSession.type, 'ambient');
 
   assert.equal(controller.setBgmVolume(73.4), 73);

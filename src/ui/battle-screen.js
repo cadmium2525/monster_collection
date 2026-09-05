@@ -32,6 +32,8 @@ export class BattleScreen {
     this.speed = speed;
     this.selection = null;
     this.pendingMove = null;
+    this.breederSelection = null;
+    this.pendingMaterialSearchResolution = null;
     this.mulliganSelection = new Set();
     const pendingHumanMulligan = engine.state.mulligan?.status === 'selecting'
       && !engine.state.mulligan.submitted[humanPlayerId];
@@ -54,6 +56,7 @@ export class BattleScreen {
     this.turnDrawAnimatingCardId = null;
     this.turnDrawActive = false;
     this.turnDrawCount = 0;
+    this.turnDrawReason = 'turn';
     this.busy = engine.state.status === 'active' && !engine.state.pendingMoveChoice;
     this.turnAnnouncementKey = null;
     this.queuedCardSelectionId = null;
@@ -188,6 +191,7 @@ export class BattleScreen {
     const humanTurn = this.isHumanTurn();
     this._renderLegalActions = humanTurn ? this.engine.getLegalActions(this.humanPlayerId) : [];
     if (this.selection && !own.hand.some((card) => card.instanceId === this.selection.id)) this.selection = null;
+    if (this.breederSelection && !own.hand.some((card) => card.instanceId === this.breederSelection.sourceCardInstanceId)) this.breederSelection = null;
     if (this.pendingMove && !this.pendingMoveStillLegal()) this.pendingMove = null;
 
     const screen = el('main', { className: 'battle-screen' }, [
@@ -264,7 +268,9 @@ export class BattleScreen {
       el('span', { className: 'turn-draw-cue-sigil', text: '札', attrs: { 'aria-hidden': 'true' } }),
       el('span', {}, [
         el('strong', { text: 'CARD DRAW' }),
-        el('small', { text: `山札から${this.turnDrawCount}枚引きます` }),
+        el('small', { text: this.turnDrawReason === 'frontline'
+          ? `戦線整理で${this.turnDrawCount}枚引き直します`
+          : `山札から${this.turnDrawCount}枚引きます` }),
       ]),
     ]);
   }
@@ -283,6 +289,19 @@ export class BattleScreen {
     this.turnDrawQueue = cards.map((card) => card.instanceId);
     this.turnDrawHiddenIds = new Set(this.turnDrawQueue);
     this.turnDrawCount = cards.length;
+    this.turnDrawReason = 'turn';
+  }
+
+  prepareFrontlineRedraw(action, beforeHandIds) {
+    if (action.type !== 'breeder') return;
+    const definition = this.engine.masterIndex.cards.get(action.breederId);
+    if (definition?.name !== '戦線整理') return;
+    const cards = this.engine.player(this.humanPlayerId).hand
+      .filter((card) => !beforeHandIds.has(card.instanceId));
+    this.turnDrawQueue = cards.map((card) => card.instanceId);
+    this.turnDrawHiddenIds = new Set(this.turnDrawQueue);
+    this.turnDrawCount = cards.length;
+    this.turnDrawReason = 'frontline';
   }
 
   async playPreparedNormalTurnDraw() {
@@ -304,6 +323,7 @@ export class BattleScreen {
     this.turnDrawQueue = [];
     this.turnDrawHiddenIds.clear();
     this.turnDrawCount = 0;
+    this.turnDrawReason = 'turn';
     this.render();
   }
 
@@ -454,7 +474,10 @@ export class BattleScreen {
     if (this.mulliganPresentationPhase === 'selecting') return '交換するカードを選択してください';
     if (this.mulliganPresentationPhase === 'returning') return '選択したカードを山札へ戻しています';
     if (this.mulliganPresentationPhase === 'redrawing') return '新しいカードを引いています';
-    if (this.turnDrawActive || this.turnDrawHiddenIds.size) return 'ターン開始時のカードを引いています';
+    if (this.turnDrawActive || this.turnDrawHiddenIds.size) return this.turnDrawReason === 'frontline'
+      ? '戦線整理で新しいカードを引いています'
+      : 'ターン開始時のカードを引いています';
+    if (this.breederSelection?.kind === 'frontline') return '戦線整理：山札へ戻す手札を1〜2枚選択';
     if (this.engine.state.pendingMoveChoice?.playerId === this.humanPlayerId) {
       return '新しく覚えた技の入替を選択';
     }
@@ -624,20 +647,30 @@ export class BattleScreen {
 
   renderHandCard(card, player, humanTurn) {
     const definition = this.definitionForCard(card);
-    const selected = this.selection?.id === card.instanceId;
+    const frontline = this.breederSelection?.kind === 'frontline' ? this.breederSelection : null;
+    const frontlineSource = frontline?.sourceCardInstanceId === card.instanceId;
+    const frontlineDiscard = frontline?.selectedIds.has(card.instanceId) ?? false;
+    const frontlineCandidate = Boolean(frontline && !frontlineSource);
+    const selected = this.selection?.id === card.instanceId || frontlineSource || frontlineDiscard;
     const hasAction = this.legalActions().some((action) => cardAction(action, card.instanceId));
     const node = renderCard({
       definition,
       growth: player.tournamentGrowth[card.instanceId],
       cardAsset: card,
       selected,
-      disabled: humanTurn && !hasAction && !this.busy,
-      dragReady: selected && humanTurn && hasAction,
+      disabled: !frontlineCandidate && humanTurn && !hasAction && !this.busy,
+      dragReady: !frontline && selected && humanTurn && hasAction,
       showMonsterEffect: definition.kind !== 'monster',
-      label: `手札の${definition.name}${selected ? ' 選択中。もう一度タップで詳細、盤面へスワイプで使用' : ' 選択'}`,
-      onPointerDown: selected && humanTurn && hasAction ? (event) => this.beginHandDrag(event, card, definition) : null,
+      label: frontline
+        ? `手札の${definition.name}${frontlineSource ? ' 戦線整理を使用中' : frontlineDiscard ? ' 山札へ戻すカードとして選択中' : ' 山札へ戻す候補'}`
+        : `手札の${definition.name}${selected ? ' 選択中。もう一度タップで詳細、盤面へスワイプで使用' : ' 選択'}`,
+      onPointerDown: !frontline && selected && humanTurn && hasAction ? (event) => this.beginHandDrag(event, card, definition) : null,
       onClick: (event) => {
         if (performance.now() < this.suppressCardClickUntil) return;
+        if (frontline) {
+          if (!frontlineSource) this.toggleFrontlineCard(card.instanceId);
+          return;
+        }
         if (this.busy || !this.isHumanTurn()) {
           this.queueHandCardSelection(card.instanceId, event.currentTarget);
           return;
@@ -658,6 +691,9 @@ export class BattleScreen {
       },
     });
     node.dataset.cardInstanceId = card.instanceId;
+    if (frontlineSource) node.classList.add('frontline-source-card');
+    if (frontlineCandidate) node.classList.add('frontline-discard-candidate');
+    if (frontlineDiscard) node.classList.add('frontline-discard-selected');
     if (this.mulliganAnimatingCardId === card.instanceId) {
       node.classList.add('mulligan-draw-enter');
       node.style.setProperty('--mulligan-card-duration', `${this.mulliganTimings().deal}ms`);
@@ -701,7 +737,7 @@ export class BattleScreen {
   }
 
   actionsForSelectedCard() {
-    if (!this.selection || !this.isHumanTurn()) return [];
+    if (!this.selection || !this.isHumanTurn() || this.breederSelection) return [];
     return this.legalActions().filter((action) => cardAction(action, this.selection.id));
   }
 
@@ -723,19 +759,19 @@ export class BattleScreen {
   hasUntargetedFieldAction() { return this.untargetedFieldActions().length > 0; }
 
   handleEmptySlotClick(slot) {
-    if (this.busy) return;
+    if (this.busy || this.breederSelection) return;
     const actions = this.actionsForEmptySlot(slot);
     if (actions.length) this.dispatchHandActions(actions);
   }
 
   handleFieldClick(event) {
-    if (this.busy || event.target.closest('.board-slot')) return;
+    if (this.busy || this.breederSelection || event.target.closest('.board-slot')) return;
     const actions = this.untargetedFieldActions();
     if (actions.length) this.dispatchHandActions(actions);
   }
 
   handleBoardUnitClick(unit, definition, isOpponent) {
-    if (this.busy) return;
+    if (this.busy || this.breederSelection) return;
     if (this.pendingMove) {
       const action = this.legalActions().find((candidate) => candidate.type === 'move'
         && candidate.unitId === this.pendingMove.unitId
@@ -811,7 +847,7 @@ export class BattleScreen {
   }
 
   selectMove(unitId, moveId) {
-    if (this.busy || !this.isHumanTurn()) return;
+    if (this.busy || this.breederSelection || !this.isHumanTurn()) return;
     const actions = this.legalActions().filter((action) => action.type === 'move' && action.unitId === unitId && action.moveId === moveId);
     if (!actions.length) {
       openModal({ title: '技を使えません', content: el('p', { text: 'TPまたは行動権が不足しています。' }) });
@@ -837,6 +873,20 @@ export class BattleScreen {
   }
 
   renderTurnControls(humanTurn) {
+    if (this.breederSelection?.kind === 'frontline') {
+      const count = this.breederSelection.selectedIds.size;
+      return el('div', { className: 'turn-controls frontline-controls' }, [
+        el('p', { className: 'gesture-hint', text: '戦線整理：山札へ戻す手札を1〜2枚選択' }),
+        el('span', { className: 'frontline-selection-count', text: `${count} / 2枚選択` }),
+        el('button', { className: 'utility-button', text: 'キャンセル', onclick: () => this.cancelFrontlineSelection() }),
+        el('button', {
+          className: 'primary-button frontline-confirm',
+          text: '確定',
+          disabled: count < 1,
+          onclick: () => { void this.confirmFrontlineSelection(); },
+        }),
+      ]);
+    }
     const end = humanTurn ? this.legalActions().find((action) => action.type === 'end-turn') : null;
     const choosingMove = this.engine.state.pendingMoveChoice?.playerId === this.humanPlayerId;
     return el('div', { className: 'turn-controls' }, [
@@ -853,6 +903,164 @@ export class BattleScreen {
     ]);
   }
 
+  beginFrontlineSelection(actions) {
+    if (!actions.length || this.busy) return;
+    this.pendingMove = null;
+    this.selection = { kind: 'hand', id: actions[0].cardInstanceId };
+    this.breederSelection = {
+      kind: 'frontline',
+      sourceCardInstanceId: actions[0].cardInstanceId,
+      selectedIds: new Set(),
+    };
+    this.render();
+  }
+
+  toggleFrontlineCard(instanceId) {
+    const selection = this.breederSelection;
+    if (selection?.kind !== 'frontline' || this.busy || instanceId === selection.sourceCardInstanceId) return;
+    if (selection.selectedIds.has(instanceId)) selection.selectedIds.delete(instanceId);
+    else if (selection.selectedIds.size < 2) selection.selectedIds.add(instanceId);
+    else {
+      openModal({ title: '選択枚数の上限', content: el('p', { text: '戦線整理で山札へ戻せるカードは最大2枚です。' }) });
+      return;
+    }
+    this.render();
+  }
+
+  cancelFrontlineSelection() {
+    this.breederSelection = null;
+    this.selection = null;
+    this.render();
+  }
+
+  async confirmFrontlineSelection() {
+    const selection = this.breederSelection;
+    if (selection?.kind !== 'frontline' || this.busy || selection.selectedIds.size < 1) return;
+    const selected = [...selection.selectedIds].sort();
+    const action = this.engine.getLegalActions(this.humanPlayerId).find((candidate) => candidate.type === 'breeder'
+      && candidate.cardInstanceId === selection.sourceCardInstanceId
+      && [...(candidate.returnCardInstanceIds ?? [])].sort().join('|') === selected.join('|'));
+    if (!action) {
+      this.cancelFrontlineSelection();
+      openModal({ title: '戦線整理を実行できません', content: el('p', { text: '手札の状態が変わりました。もう一度選択してください。' }) });
+      return;
+    }
+    await this.performHumanAction(action);
+  }
+
+  openMaterialSearchChoice(actions) {
+    if (!actions.length || this.busy) return;
+    const player = this.engine.player(this.humanPlayerId);
+    const inspected = [...player.deck.slice(-5)].reverse();
+    const monsterIds = new Set(inspected
+      .filter((card) => this.definitionForCard(card)?.kind === 'monster')
+      .map((card) => card.instanceId));
+    let selectedId = monsterIds.size === 1 ? [...monsterIds][0] : null;
+    let resolving = false;
+    let modal = null;
+    let confirmButton = null;
+    const cardNodes = new Map();
+    const setSelected = (instanceId) => {
+      if (!monsterIds.has(instanceId) || resolving) return;
+      selectedId = instanceId;
+      for (const [id, node] of cardNodes) {
+        node.classList.toggle('selected', id === selectedId);
+        node.setAttribute('aria-pressed', String(id === selectedId));
+      }
+      if (confirmButton) confirmButton.disabled = !selectedId;
+    };
+    const cards = inspected.map((card, index) => {
+      const definition = this.definitionForCard(card);
+      const selectable = monsterIds.has(card.instanceId);
+      const node = renderCard({
+        definition,
+        cardAsset: card,
+        growth: player.tournamentGrowth[card.instanceId],
+        selected: card.instanceId === selectedId,
+        disabled: !selectable,
+        showMonsterEffect: definition.kind !== 'monster',
+        label: `山札の上から${index + 1}枚目 ${definition.name}${selectable ? ' 手札に加える候補' : ' 確認後に山札へ戻す'}`,
+        onClick: selectable ? () => setSelected(card.instanceId) : null,
+      });
+      node.dataset.inspectedCardId = card.instanceId;
+      node.setAttribute('aria-pressed', String(card.instanceId === selectedId));
+      cardNodes.set(card.instanceId, node);
+      return node;
+    });
+    const resultCopy = el('p', {
+      className: `material-search-result${monsterIds.size ? '' : ' empty'}`,
+      text: monsterIds.size
+        ? `モンスターカードが${monsterIds.size}枚見つかりました。手札に加える1枚を選択してください。`
+        : `モンスターカードはありません。確認した${inspected.length}枚を山札の下へ戻します。`,
+    });
+    const animateResolution = async (chosenId) => {
+      resultCopy.textContent = chosenId
+        ? '選んだモンスターを手札へ、残りを山札へ戻します。'
+        : `モンスターなし。${inspected.length}枚を山札へ戻します。`;
+      const duration = this.prefersReducedMotion() ? 80 : this.speed === 'fast' ? 220 : 620;
+      const animations = [...cardNodes].map(([id, node], index) => {
+        node.classList.add(id === chosenId ? 'material-search-to-hand' : 'material-search-returning');
+        if (!node.animate || this.prefersReducedMotion()) return Promise.resolve();
+        const chosen = id === chosenId;
+        const animation = node.animate([
+          { transform: 'translate(0,0) scale(1)', opacity: 1 },
+          { transform: chosen
+            ? 'translate(0,62px) scale(.42)'
+            : `translate(${(2 - index) * 18}px,-68px) scale(.28) rotate(${(index - 2) * 4}deg)`, opacity: 0 },
+        ], { duration, delay: chosen ? 0 : index * Math.round(duration * .06), easing: 'cubic-bezier(.35,.05,.7,1)', fill: 'forwards' });
+        return animation.finished.catch(() => {});
+      });
+      await Promise.all(animations);
+      if (this.prefersReducedMotion()) await delay(duration);
+    };
+    const finish = async (action) => {
+      if (resolving || !action) return;
+      resolving = true;
+      if (confirmButton) confirmButton.disabled = true;
+      let resolutionShown = false;
+      const showResolution = async () => {
+        resolutionShown = true;
+        modal?.backdrop.classList.remove('material-search-suspended');
+        await animateResolution(action.chosenCardInstanceId ?? null);
+        modal?.close();
+      };
+      this.pendingMaterialSearchResolution = showResolution;
+      modal?.backdrop.classList.add('material-search-suspended');
+      try {
+        await this.performHumanAction(action);
+      } finally {
+        if (this.pendingMaterialSearchResolution === showResolution) this.pendingMaterialSearchResolution = null;
+        if (!resolutionShown) modal?.close();
+      }
+    };
+    confirmButton = el('button', {
+      className: 'primary-button',
+      text: '選択したカードを手札へ',
+      disabled: !selectedId,
+      onclick: () => {
+        const action = actions.find((candidate) => candidate.chosenCardInstanceId === selectedId);
+        void finish(action);
+      },
+    });
+    const content = el('div', { className: 'material-search-choice' }, [
+      el('header', {}, [
+        el('small', { text: `TOP ${inspected.length} CARDS` }),
+        el('strong', { text: `山札の上から${inspected.length}枚を確認` }),
+      ]),
+      el('div', { className: 'material-search-card-row' }, cards),
+      resultCopy,
+      monsterIds.size ? el('div', { className: 'modal-actions' }, [
+        el('button', { className: 'text-button', text: 'キャンセル', onclick: () => modal?.close() }),
+        confirmButton,
+      ]) : el('small', { className: 'material-search-auto-copy', text: '確認後、自動的に山札へ戻します…' }),
+    ]);
+    modal = openModal({ title: '素材探索', content, className: 'material-search-modal', dismissible: monsterIds.size > 0 });
+    if (!monsterIds.size) {
+      const emptyAction = actions.find((candidate) => candidate.chosenCardInstanceId == null);
+      setTimeout(() => { void finish(emptyAction); }, this.prefersReducedMotion() ? 180 : this.speed === 'fast' ? 650 : 1500);
+    }
+  }
+
   dispatchHandActions(actions) {
     if (!actions.length || this.busy) return;
     const shugyo = actions.find((action) => action.type === 'shugyo');
@@ -866,6 +1074,17 @@ export class BattleScreen {
       return;
     }
     const breederActions = actions.filter((action) => action.type === 'breeder');
+    if (breederActions.length) {
+      const definition = this.engine.masterIndex.cards.get(breederActions[0].breederId);
+      if (definition?.name === '戦線整理') {
+        this.beginFrontlineSelection(breederActions);
+        return;
+      }
+      if (definition?.name === '素材探索') {
+        this.openMaterialSearchChoice(breederActions);
+        return;
+      }
+    }
     if (breederActions.length > 1) {
       this.openBreederChoice(breederActions);
       return;
@@ -1132,11 +1351,23 @@ export class BattleScreen {
       : this.root.querySelector('.opponent-hand-panel');
   }
 
+  findDeckNode(playerId) {
+    return [...this.root.querySelectorAll('.fighter-hud[data-player-id]')]
+      .find((node) => node.dataset.playerId === playerId)
+      ?.querySelector('.pile-strip span:nth-child(2)') ?? null;
+  }
+
+  findHandCardNode(instanceId) {
+    return [...this.root.querySelectorAll('.hand-panel .game-card[data-card-instance-id]')]
+      .find((node) => node.dataset.cardInstanceId === instanceId) ?? null;
+  }
+
   cardUseTargetNode(model) {
     if (!model?.target) return null;
     if (model.target.kind === 'unit') return this.findUnitSlotNode(model.target.unitId);
     if (model.target.kind === 'board') return this.findBoardNode(model.target.playerId);
     if (model.target.kind === 'hand') return this.findHandNode(model.target.playerId);
+    if (model.target.kind === 'deck') return this.findDeckNode(model.target.playerId);
     return this.findPlayerNode(model.target.playerId);
   }
 
@@ -1169,6 +1400,35 @@ export class BattleScreen {
       impact?.remove();
       return;
     }
+  }
+
+  async animateFrontlineReturns(nodes) {
+    const cards = nodes.filter((node) => node?.isConnected);
+    if (!cards.length) return;
+    const duration = this.prefersReducedMotion() ? 80 : this.speed === 'fast' ? 230 : 580;
+    const deckTarget = this.root.querySelector('.fighter-hud.player .pile-strip span:nth-child(2)');
+    const targetRect = deckTarget?.getBoundingClientRect();
+    const cue = el('div', { className: 'frontline-return-cue', attrs: { role: 'status', 'aria-live': 'polite' } }, [
+      el('strong', { text: 'RETURN & REDRAW' }),
+      el('small', { text: `${cards.length}枚を山札へ戻します` }),
+    ]);
+    document.body.append(cue);
+    const animations = cards.map((node, index) => {
+      node.classList.add('frontline-card-returning');
+      if (!node.animate || this.prefersReducedMotion()) return Promise.resolve();
+      const rect = node.getBoundingClientRect();
+      const dx = targetRect ? targetRect.left + targetRect.width / 2 - rect.left - rect.width / 2 : 120;
+      const dy = targetRect ? targetRect.top + targetRect.height / 2 - rect.top - rect.height / 2 : -90;
+      const animation = node.animate([
+        { transform: 'translate(0,0) scale(1)', opacity: 1 },
+        { transform: `translate(${dx * .28}px,${dy * .28}px) scale(1.08)`, opacity: 1, offset: .28 },
+        { transform: `translate(${dx}px,${dy}px) scale(.18) rotate(${index ? 9 : -9}deg)`, opacity: 0 },
+      ], { duration, delay: index * Math.round(duration * .08), easing: 'cubic-bezier(.35,.05,.7,1)', fill: 'forwards' });
+      return animation.finished.catch(() => {});
+    });
+    await Promise.all(animations);
+    if (this.prefersReducedMotion()) await delay(duration);
+    cue.remove();
   }
 
   statChanges(before, action = null) {
@@ -1254,19 +1514,32 @@ export class BattleScreen {
       masterIndex: this.engine.masterIndex,
       humanPlayerId: this.humanPlayerId,
     });
-    const hadInteractionSelection = Boolean(this.selection || this.pendingMove);
+    const materialSearchResolution = action.type === 'breeder'
+      && action.breederId === 'breeder-022'
+      ? this.pendingMaterialSearchResolution
+      : null;
+    if (materialSearchResolution) this.pendingMaterialSearchResolution = null;
+    const frontlineReturnNodes = (action.returnCardInstanceIds ?? [])
+      .map((instanceId) => this.findHandCardNode(instanceId))
+      .filter(Boolean);
+    const frontlineAction = frontlineReturnNodes.length > 0;
+    const hadInteractionSelection = Boolean(this.selection || this.pendingMove || this.breederSelection);
     this.selection = null;
     this.pendingMove = null;
-    if (hadInteractionSelection) this.render();
+    this.breederSelection = null;
+    if (hadInteractionSelection && !frontlineAction) this.render();
     if (!cardUseModel) await this.animateActionStart(action);
     this.engine.applyAction(action);
     this.prepareNormalTurnDraw(action, beforeHumanHandIds, this.engine.state.log.slice(beforeLogLength));
+    this.prepareFrontlineRedraw(action, beforeHumanHandIds);
     this.emitCheckpoint();
     if (cardUseModel) await playCardUseAnimation({
       model: cardUseModel,
       speed: this.speed,
       targetNode: this.cardUseTargetNode(cardUseModel),
     });
+    if (materialSearchResolution) await materialSearchResolution();
+    if (frontlineAction) await this.animateFrontlineReturns(frontlineReturnNodes);
     const fusionModel = beforeState ? createFusionAnimationModel({
       action,
       beforePlayer: beforeState.players[action.playerId ?? beforeState.currentPlayerId],

@@ -22,7 +22,7 @@ test('all 30 base monsters and all 60 special fusions have a unique awakening ab
   }
 });
 
-test('awakening unlock is announced only for the second player at turn 10', () => {
+test('awakening unlock opens for both players when the second player reaches turn 10 and is announced once', () => {
   const battle = engine({ firstPlayerId: 'p1', seed: 'awakening-unlock' });
   const second = battle.player('p2');
   battle.state.log = [];
@@ -31,6 +31,7 @@ test('awakening unlock is announced only for the second player at turn 10', () =
   const unlocks = battle.state.log.filter((event) => event.type === 'awakening-unlocked');
   assert.equal(unlocks.length, 1);
   assert.equal(unlocks[0].turnNumber, 10);
+  assert.equal(battle.state.awakeningUnlocked, true);
 
   const first = battle.player('p1');
   battle.state.log = [];
@@ -44,6 +45,7 @@ test('second player can awaken once by sending another non-summoning-sick ally t
   const player = battle.player('p2');
   battle.state.currentPlayerId = player.id;
   player.turnNumber = RULES.secondAwakeningTurn;
+  battle.state.awakeningUnlocked = true;
   const target = placeUnit(battle, player.id, 'ギアセンチネル', 0);
   const material = placeUnit(battle, player.id, 'ゴーレム', 1);
   const before = { life: target.life, maxLife: target.maxLife, atk: target.atkBase, def: target.defBase };
@@ -67,14 +69,44 @@ test('second player can awaken once by sending another non-summoning-sick ally t
   assert.equal(battle.getLegalActions(player.id).some((candidate) => candidate.type.startsWith('fusion-') && candidate.unitId === target.id), false);
 });
 
+test('each player may awaken once after the shared unlock', () => {
+  const battle = engine({ firstPlayerId: 'p1', seed: 'awakening-once-each' });
+  const first = battle.player('p1');
+  const second = battle.player('p2');
+  battle.state.awakeningUnlocked = true;
+  first.turnNumber = RULES.secondAwakeningTurn + 1;
+  second.turnNumber = RULES.secondAwakeningTurn;
+  const firstTarget = placeUnit(battle, first.id, 'ギアセンチネル', 0);
+  const firstMaterial = placeUnit(battle, first.id, 'ゴーレム', 1);
+  const secondTarget = placeUnit(battle, second.id, 'アストラノイド', 0);
+  const secondMaterial = placeUnit(battle, second.id, 'コンゴウ', 1);
+
+  battle.state.currentPlayerId = second.id;
+  const secondAction = battle.getLegalActions(second.id).find((candidate) => candidate.type === 'awaken'
+    && candidate.unitId === secondTarget.id && candidate.materialUnitId === secondMaterial.id);
+  assert.ok(secondAction);
+  battle.applyAction(secondAction);
+  assert.equal(second.awakeningUsed, true);
+
+  battle.state.currentPlayerId = first.id;
+  const firstAction = battle.getLegalActions(first.id).find((candidate) => candidate.type === 'awaken'
+    && candidate.unitId === firstTarget.id && candidate.materialUnitId === firstMaterial.id);
+  assert.ok(firstAction);
+  battle.applyAction(firstAction);
+  assert.equal(first.awakeningUsed, true);
+  assert.equal(first.metrics.awakenings, 1);
+  assert.equal(second.metrics.awakenings, 1);
+  assert.equal(battle.getLegalActions(first.id).some((candidate) => candidate.type === 'awaken'), false);
+});
+
 test('summoning-sick monsters are never offered as awakening material', () => {
   const battle = engine({ firstPlayerId: 'p1', seed: 'awakening-material-sickness' });
   const player = battle.player('p2');
   battle.state.currentPlayerId = player.id;
   player.turnNumber = RULES.secondAwakeningTurn;
+  battle.state.awakeningUnlocked = true;
   const target = placeUnit(battle, player.id, 'モノリス', 0);
   const sick = placeUnit(battle, player.id, 'ゴーレム', 1, { summonedThisTurn: true });
   assert.equal(battle.getLegalActions(player.id).some((candidate) => candidate.type === 'awaken'
     && candidate.unitId === target.id && candidate.materialUnitId === sick.id), false);
 });
-

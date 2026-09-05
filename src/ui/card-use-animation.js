@@ -89,13 +89,18 @@ function effectTarget(definition, action, beforePlayer, beforeOpponent) {
       label: found.unit.specialForm ?? found.unit.name,
     };
   }
+  if (definition.id === 'breeder-022') {
+    return {
+      kind: 'deck',
+      playerId: beforePlayer.id,
+      label: `${playerLabel(beforePlayer, '使用者')}の山札`,
+    };
+  }
   if (HAND_EFFECTS.has(definition.id)) {
     return {
       kind: 'hand',
       playerId: beforePlayer.id,
-      label: definition.id === 'breeder-022'
-        ? `${playerLabel(beforePlayer, '使用者')}の山札`
-        : `${playerLabel(beforePlayer, '使用者')}の手札`,
+      label: `${playerLabel(beforePlayer, '使用者')}の手札`,
     };
   }
   if (OWN_BOARD_EFFECTS.has(definition.id)) {

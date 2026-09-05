@@ -1,6 +1,7 @@
 export const HOME_BGM_PATH = './assets/audio/home-bgm.mp3';
 export const BATTLE_BGM_PATH = './assets/audio/battle.mp3';
 export const AUDIO_MASTER_GAIN = 0.5;
+export const BATTLE_BGM_TRIM_GAIN = 0.5;
 export const BGM_DEFAULT_VOLUME = 100;
 export const SE_DEFAULT_VOLUME = 100;
 export const BGM_VOLUME_STORAGE_KEY = 'mc-bgm-volume-v2';
@@ -77,6 +78,7 @@ export class GameAudioController {
     this.bgmGainNode = null;
     this.seGainNode = null;
     this.mediaSources = [];
+    this.trackGainNodes = {};
     this.activeEffects = new Set();
     this.tracks = {
       home: this._createAudio(homeSource, { loop: true }),
@@ -224,11 +226,15 @@ export class GameAudioController {
       this.bgmGainNode.connect(this.masterGainNode);
       this.seGainNode.connect(this.masterGainNode);
       this.masterGainNode.connect(this.audioContext.destination);
-      for (const audio of Object.values(this.tracks)) {
+      for (const [trackName, audio] of Object.entries(this.tracks)) {
         if (!audio) continue;
         const mediaSource = this.audioContext.createMediaElementSource(audio);
-        mediaSource.connect(this.bgmGainNode);
+        const trackGain = this.audioContext.createGain();
+        trackGain.gain.value = trackName === 'battle' ? BATTLE_BGM_TRIM_GAIN : 1;
+        mediaSource.connect(trackGain);
+        trackGain.connect(this.bgmGainNode);
         this.mediaSources.push(mediaSource);
+        this.trackGainNodes[trackName] = trackGain;
       }
     } catch {
       this.audioContext = null;
@@ -236,6 +242,7 @@ export class GameAudioController {
       this.bgmGainNode = null;
       this.seGainNode = null;
       this.mediaSources = [];
+      this.trackGainNodes = {};
       if (isIosDevice(this.navigatorRef)) {
         this.safetyMuted = true;
         for (const audio of Object.values(this.tracks)) if (audio) audio.muted = true;
@@ -250,9 +257,12 @@ export class GameAudioController {
     if (this.masterGainNode?.gain) this.masterGainNode.gain.value = AUDIO_MASTER_GAIN;
     if (this.bgmGainNode?.gain) this.bgmGainNode.gain.value = this.bgmVolume / 100;
     if (this.seGainNode?.gain) this.seGainNode.gain.value = this.seVolume / 100;
-    for (const audio of Object.values(this.tracks)) {
+    if (this.trackGainNodes.home?.gain) this.trackGainNodes.home.gain.value = 1;
+    if (this.trackGainNodes.battle?.gain) this.trackGainNodes.battle.gain.value = BATTLE_BGM_TRIM_GAIN;
+    for (const [trackName, audio] of Object.entries(this.tracks)) {
       if (!audio) continue;
-      audio.volume = this.directFallback ? AUDIO_MASTER_GAIN * (this.bgmVolume / 100) : 1;
+      const trackGain = trackName === 'battle' ? BATTLE_BGM_TRIM_GAIN : 1;
+      audio.volume = this.directFallback ? AUDIO_MASTER_GAIN * trackGain * (this.bgmVolume / 100) : 1;
       audio.muted = this.safetyMuted;
     }
   }

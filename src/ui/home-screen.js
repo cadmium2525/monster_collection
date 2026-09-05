@@ -292,7 +292,7 @@ export function openAudioSettings({ bgmVolume = BGM_DEFAULT_VOLUME, seVolume = S
     content: el('div', { className: 'bgm-volume-settings' }, [
       createChannel({ id: 'game-bgm-volume', eyebrow: 'HOME / BATTLE BGM', label: 'BGM', value: bgmVolume, onChange: onBgmChange, onDisplayChange: updateTrigger }),
       createChannel({ id: 'game-se-volume', eyebrow: 'SOUND EFFECT', label: 'SE', value: seVolume, onChange: onSeChange }),
-      el('p', { text: 'マスター出力は50%に固定されています。設定100で元音源を50%の音量で再生します。iPhoneのマナーモードとアプリの表示状態にも連動します。' }),
+      el('p', { text: 'マスター出力は50%に固定されています。設定100でホームBGMは50%、試合BGMは追加調整により25%で再生します。iPhoneのマナーモードとアプリの表示状態にも連動します。' }),
     ]),
   });
 }

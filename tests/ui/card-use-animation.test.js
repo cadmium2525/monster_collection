@@ -99,6 +99,20 @@ test('CPU cards are revealed as ENEMY CARD and untargeted effects land on their 
   assert.deepEqual(lockModel.target, { kind: 'board', playerId: 'human', label: '相手側全体' });
 });
 
+test('material search travels toward the acting player deck', () => {
+  const search = { id: 'breeder-022', kind: 'breeder', name: '素材探索', tp: 2, effect: '山札上から5枚を確認し、モンスター1枚を手札へ' };
+  const model = createCardUseAnimationModel({
+    action: { type: 'breeder', cardInstanceId: 'search-card' },
+    beforePlayer: player('human', [card('search-card', search.id)]),
+    beforeOpponent: player('cpu'),
+    masterIndex: index(search),
+    humanPlayerId: 'human',
+  });
+
+  assert.equal(model.channel, 'search');
+  assert.deepEqual(model.target, { kind: 'deck', playerId: 'human', label: '使用者の山札' });
+});
+
 test('non support actions do not create card-use animation models', () => {
   assert.equal(isCardUseAction({ type: 'move' }), false);
   assert.equal(createCardUseAnimationModel({ action: { type: 'move' } }), null);
@@ -111,6 +125,7 @@ test('battle flow uses one shared card-use cinematic and suppresses the duplicat
   assert.match(source, /createCardUseAnimationModel/);
   assert.match(source, /if \(cardUseModel\) await playCardUseAnimation/);
   assert.match(source, /targetNode: this\.cardUseTargetNode\(cardUseModel\)/);
+  assert.match(source, /model\.target\.kind === 'deck'/);
   assert.match(source, /if \(isCardUseAction\(action\)\) return;/);
   assert.match(styles, /\.card-use-cinematic\s*\{/);
   assert.match(styles, /\.card-use-impact\.tp/);

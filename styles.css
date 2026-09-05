@@ -402,6 +402,34 @@ body:has(.battle-screen) {
 .hand-panel { display: grid; grid-template-rows: minmax(0, 1fr); overflow: hidden; border-color: rgba(126,184,203,.42); border-radius: 7px 7px 3px 3px; }
 .card-strip { min-height: 0; display: flex; align-items: end; gap: 18px; overflow-x: auto; overflow-y: hidden; padding: 14px 17px 15px; scrollbar-width: thin; scroll-snap-type: x proximity; }
 .card-strip .game-card { height: 100%; width: auto; max-width: 145px; scroll-snap-align: start; }
+.card-strip .frontline-source-card { height:calc(100% - 10px); z-index:8; transform:translateY(-3px) scale(1.08); border-color:#ffe69a; filter:brightness(1.14); box-shadow:0 0 0 3px rgba(232,186,98,.3),0 0 22px rgba(232,186,98,.52),0 9px 18px rgba(0,0,0,.58); }
+.card-strip .frontline-source-card::after { content:"使用中"; position:absolute; z-index:25; right:7%; bottom:7%; left:7%; padding:4px 2px; border:1px solid #ffe099; border-radius:7px; color:#fff2c0; background:rgba(72,45,8,.92); font-size:7px; font-weight:900; letter-spacing:.12em; text-align:center; }
+.card-strip .frontline-discard-candidate { border-color:rgba(104,218,214,.72); filter:brightness(1.02); }
+.card-strip .frontline-discard-candidate::after { content:"戻す候補"; position:absolute; z-index:25; inset:auto 7% 7%; padding:4px 2px; border:1px solid rgba(104,218,214,.65); border-radius:7px; color:#c5fffa; background:rgba(4,44,52,.9); font-size:7px; font-weight:900; text-align:center; }
+.card-strip .frontline-discard-selected { translate:0 -7px; border-color:#ffce72; filter:brightness(1.18); box-shadow:0 0 0 3px rgba(255,194,81,.3),0 0 18px rgba(255,177,59,.54); }
+.card-strip .frontline-discard-selected::after { content:"選択済"; color:#fff2c0; border-color:#ffcf71; background:rgba(98,47,5,.94); }
+.frontline-controls { grid-template-columns:1fr 1fr; }
+.frontline-selection-count { grid-column:1/-1; color:#ffe4a2; font-size:9px; font-weight:900; text-align:center; }
+.frontline-controls .frontline-confirm { min-width:0; min-height:34px; padding:4px 7px; }
+.frontline-return-cue { position:fixed; z-index:235; left:50%; bottom:20%; translate:-50% 0; display:grid; gap:3px; min-width:210px; padding:9px 16px; border:1px solid rgba(113,227,220,.74); border-radius:12px 4px; color:#d8fffb; background:linear-gradient(100deg,rgba(6,35,47,.96),rgba(34,24,12,.95)); box-shadow:0 0 26px rgba(78,220,214,.28),0 10px 28px rgba(0,0,0,.6); text-align:center; pointer-events:none; }
+.frontline-return-cue strong { color:#fff0b9; font:900 13px/1 Georgia,serif; letter-spacing:.12em; }
+.frontline-return-cue small { color:#a8e9e5; font-size:9px; }
+.frontline-card-returning { z-index:30; pointer-events:none; }
+
+.modal.material-search-modal { width:min(900px,96vw); overflow:hidden; }
+.modal-backdrop.material-search-suspended { visibility:hidden; opacity:0; pointer-events:none; }
+.material-search-choice { min-height:0; display:grid; gap:8px; padding-top:4px; }
+.material-search-choice > header { display:flex; align-items:baseline; justify-content:space-between; gap:12px; }
+.material-search-choice > header small { color:#76ded9; font:800 8px/1 Georgia,serif; letter-spacing:.16em; }
+.material-search-choice > header strong { color:#f3d68f; font-size:16px; }
+.material-search-card-row { min-height:0; display:grid; grid-template-columns:repeat(5,minmax(72px,1fr)); align-items:center; gap:clamp(12px,2vw,24px); padding:9px 15px; border:1px solid rgba(83,169,181,.34); border-radius:11px; background:linear-gradient(180deg,rgba(10,30,43,.9),rgba(3,12,20,.95)); }
+.material-search-card-row .game-card { width:100%; max-width:125px; justify-self:center; }
+.material-search-card-row .game-card.selected { translate:0 -5px; border-color:#ffe18b; filter:brightness(1.15); box-shadow:0 0 0 3px rgba(232,186,98,.25),0 0 20px rgba(232,186,98,.5); }
+.material-search-card-row .game-card.disabled { filter:grayscale(.45) brightness(.7); cursor:default; }
+.material-search-card-row .material-search-returning,.material-search-card-row .material-search-to-hand { pointer-events:none; }
+.material-search-result { margin:0; min-height:31px; display:grid; place-items:center; padding:6px 10px; border:1px solid rgba(232,186,98,.3); border-radius:8px; color:#f6e2ae; background:rgba(232,186,98,.06); font-size:10px; text-align:center; }
+.material-search-result.empty { border-color:rgba(127,154,167,.3); color:#bdcbd1; background:rgba(255,255,255,.025); }
+.material-search-auto-copy { color:#9ec4ca; font-size:9px; text-align:center; }
 
 .action-hint { grid-column: 1 / -1; margin: 6px; color: var(--muted); font-size: 10px; line-height: 1.45; text-align: center; }
 

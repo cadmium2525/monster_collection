@@ -86,6 +86,8 @@ export class BattleEngine {
         player.isFirst ? RULES.firstMulliganMax : RULES.secondMulliganMax,
       ])),
     };
+    engine.state.awakeningUnlocked ??= Object.values(engine.state.players)
+      .some((player) => !player.isFirst && player.turnNumber >= RULES.secondAwakeningTurn);
     for (const player of Object.values(engine.state.players)) {
       player.awakeningUsed ??= false;
       player.metrics.awakenings ??= 0;
@@ -182,6 +184,7 @@ export class BattleEngine {
       halfTurn: 0,
       round: 1,
       pendingMoveChoice: null,
+      awakeningUnlocked: false,
       mulligan: null,
       players: {},
       log: [],
@@ -474,7 +477,7 @@ export class BattleEngine {
       }
     }
 
-    if (!player.isFirst && player.turnNumber >= RULES.secondAwakeningTurn && !player.awakeningUsed) {
+    if (this.state.awakeningUnlocked && !player.awakeningUsed) {
       const materials = livingUnits(player).filter((unit) => !unit.summonedThisTurn);
       const targets = livingUnits(player).filter((unit) => !unit.awakened
         && unit.actionPoints > 0 && !unit.summonedThisTurn && !unit.stunnedThisTurn
@@ -624,6 +627,7 @@ export class BattleEngine {
       });
     }
     if (!player.isFirst && player.turnNumber === RULES.secondAwakeningTurn) {
+      this.state.awakeningUnlocked = true;
       this._log('awakening-unlocked', `${player.displayName}の覚醒が解禁された`, {
         playerId,
         turnNumber: player.turnNumber,

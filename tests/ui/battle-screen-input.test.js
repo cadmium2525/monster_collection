@@ -115,3 +115,49 @@ test('a selected monster material gives special-fusion targets a distinct field 
   assert.match(styles, /@keyframes special-fusion-aura/);
   assert.match(styles, /@keyframes special-fusion-card-glow/);
 });
+
+test('frontline reorganization selects one or two cards directly from the hand before confirmation', async () => {
+  const action = {
+    type: 'breeder', breederId: 'breeder-021', cardInstanceId: 'organize',
+    returnCardInstanceIds: ['hand-a', 'hand-b'],
+  };
+  const screen = Object.create(BattleScreen.prototype);
+  screen.busy = false;
+  screen.selection = null;
+  screen.pendingMove = null;
+  screen.breederSelection = null;
+  screen.render = () => {};
+  screen.humanPlayerId = 'human';
+  screen.engine = { getLegalActions: () => [action] };
+  let performed = null;
+  screen.performHumanAction = async (candidate) => { performed = candidate; };
+
+  screen.beginFrontlineSelection([action]);
+  screen.toggleFrontlineCard('hand-a');
+  screen.toggleFrontlineCard('hand-b');
+  assert.deepEqual([...screen.breederSelection.selectedIds], ['hand-a', 'hand-b']);
+  await screen.confirmFrontlineSelection();
+  assert.equal(performed, action);
+});
+
+test('frontline redraw and material search use dedicated hand and top-five presentation', () => {
+  const battleSource = fs.readFileSync(new URL('../../src/ui/battle-screen.js', import.meta.url), 'utf8');
+  const styles = fs.readFileSync(new URL('../../styles.css', import.meta.url), 'utf8');
+  assert.match(battleSource, /frontline-source-card/);
+  assert.match(battleSource, /戦線整理：山札へ戻す手札を1〜2枚選択/);
+  assert.match(battleSource, /prepareFrontlineRedraw/);
+  assert.match(battleSource, /animateFrontlineReturns/);
+  assert.match(battleSource, /text: '確定'/);
+  assert.match(styles, /\.frontline-discard-selected/);
+  assert.match(styles, /\.frontline-return-cue/);
+
+  assert.match(battleSource, /openMaterialSearchChoice/);
+  assert.match(battleSource, /player\.deck\.slice\(-5\)/);
+  assert.match(battleSource, /monsterIds\.has\(card\.instanceId\)/);
+  assert.match(battleSource, /material-search-returning/);
+  assert.match(battleSource, /pendingMaterialSearchResolution/);
+  assert.match(battleSource, /if \(materialSearchResolution\) await materialSearchResolution\(\)/);
+  assert.match(battleSource, /setTimeout\(\(\) => \{ void finish\(emptyAction\); \}/);
+  assert.match(styles, /\.material-search-card-row\s*\{[^}]*grid-template-columns:repeat\(5/);
+  assert.match(styles, /\.modal-backdrop\.material-search-suspended/);
+});
