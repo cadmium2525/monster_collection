@@ -11,6 +11,19 @@ test('arena has six ranks, 36 official opponents and Master-only legend archives
   assert.deepEqual(ARENA_RANKS, ['D', 'C', 'B', 'A', 'S', 'MASTER']);
   assert.equal(OFFICIAL_ARENA_SPECS.length, 36);
   assert.equal(new Set(OFFICIAL_ARENA_SPECS.map((entry) => `${entry.rank}:${entry.theme}`)).size, 36);
+  const expectedAiByRank = {
+    D: { deck: 'bronze', behavior: 'bronze' },
+    C: { deck: 'silver', behavior: 'silver' },
+    B: { deck: 'silver', behavior: 'gold' },
+    A: { deck: 'gold', behavior: 'gold' },
+    S: { deck: 'legend', behavior: 'legend' },
+    MASTER: { deck: 'legend', behavior: 'champion' },
+  };
+  for (const [rank, expected] of Object.entries(expectedAiByRank)) {
+    const opponents = OFFICIAL_ARENA_SPECS.filter((entry) => entry.rank === rank);
+    assert.ok(opponents.every((entry) => entry.aiRank === expected.deck));
+    assert.ok(opponents.every((entry) => entry.aiLevel === expected.behavior));
+  }
   assert.equal(arenaRankForRating(1999), 'S');
   assert.equal(arenaRankForRating(2000), 'MASTER');
 

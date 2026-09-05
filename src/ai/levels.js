@@ -23,6 +23,63 @@ function stableBest(scored) {
   return scored.sort((a, b) => b.score - a.score || actionKey(a.action).localeCompare(actionKey(b.action)))[0].action;
 }
 
+function cardDefinitionForAction(engine, playerId, action) {
+  const card = engine.player(playerId).hand.find((candidate) => candidate.instanceId === action.cardInstanceId);
+  return card ? engine.masterIndex.cards.get(card.masterId) : null;
+}
+
+function isImmediateWinOrKnockout(engine, playerId, action) {
+  const opponentId = engine.state.playerOrder.find((candidate) => candidate !== playerId);
+  const beforeUnits = new Set(engine.player(opponentId).board.filter(Boolean).map((unit) => unit.id));
+  const next = engine.clone();
+  next.applyAction(action);
+  if (next.state.status === 'finished' && next.state.winnerId === playerId) return true;
+  const afterUnits = new Set(next.player(opponentId).board.filter(Boolean).map((unit) => unit.id));
+  return [...beforeUnits].some((unitId) => !afterUnits.has(unitId));
+}
+
+function damagingMoves(engine, actions) {
+  return actions.filter((action) => action.type === 'move'
+    && engine.masterIndex.moves.get(action.moveId)?.power != null);
+}
+
+function setupCandidatesForAttack(engine, playerId, attack, actions) {
+  const player = engine.player(playerId);
+  return actions.filter((action) => {
+    if (!['training', 'shugyo'].includes(action.type) || action.unitId !== attack.unitId) return false;
+    const definition = cardDefinitionForAction(engine, playerId, action);
+    return definition?.stat === 'atk' && (action.cost ?? 0) + (attack.cost ?? 0) <= player.tp;
+  });
+}
+
+function correctObviousActionOrder(engine, playerId, selected, options = {}) {
+  const actions = engine.getLegalActions(playerId);
+  const attacks = damagingMoves(engine, actions);
+  const decisive = attacks.filter((action) => isImmediateWinOrKnockout(engine, playerId, action));
+  if (decisive.length) {
+    return stableBest(decisive.map((action) => ({
+      action,
+      score: quickActionScore(engine, playerId, action, options),
+    })));
+  }
+  let plannedAttack = selected;
+  if (selected?.type === 'end-turn') {
+    const setupAttacks = attacks.filter((attack) => setupCandidatesForAttack(engine, playerId, attack, actions).length);
+    if (!setupAttacks.length) return selected;
+    plannedAttack = stableBest(setupAttacks.map((action) => ({
+      action,
+      score: quickActionScore(engine, playerId, action, options),
+    })));
+  }
+  if (plannedAttack?.type !== 'move') return selected;
+  const candidates = setupCandidatesForAttack(engine, playerId, plannedAttack, actions);
+  if (!candidates.length) return selected;
+  return stableBest(candidates.map((action) => ({
+    action,
+    score: quickActionScore(engine, playerId, action, options),
+  })));
+}
+
 function bronze(engine, playerId, rng) {
   const actions = legal(engine, playerId);
   const scored = actions.map((action) => {
@@ -165,14 +222,16 @@ function champion(engine, playerId, options = {}) {
 }
 
 export function chooseAiAction(level, engine, playerId, rng, options = {}) {
+  let selected;
   switch (level) {
-    case 'bronze': return bronze(engine, playerId, rng);
-    case 'silver': return silver(engine, playerId, rng);
-    case 'gold': return gold(engine, playerId, options);
-    case 'legend': return legend(engine, playerId, options);
-    case 'champion': return champion(engine, playerId, options);
+    case 'bronze': selected = bronze(engine, playerId, rng); break;
+    case 'silver': selected = silver(engine, playerId, rng); break;
+    case 'gold': selected = gold(engine, playerId, options); break;
+    case 'legend': selected = legend(engine, playerId, options); break;
+    case 'champion': selected = champion(engine, playerId, options); break;
     default: throw new Error(`Unknown AI level: ${level}`);
   }
+  return correctObviousActionOrder(engine, playerId, selected, options);
 }
 
 export function createAiPolicy(level, options = {}) {

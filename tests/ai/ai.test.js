@@ -162,3 +162,60 @@ test('Silver takes a free attack instead of ending a favorable turn', () => {
   assert.equal(action.type, 'move');
   assert.equal(action.targetPlayerId, 'p2');
 });
+
+test('every AI level applies affordable ATK growth before a nonlethal attack by the same monster', () => {
+  for (const level of AI_LEVELS) {
+    for (const growthCardId of ['training-atk', 'shugyo-attack']) {
+      const battle = engine({ seed: `growth-before-attack-${level}-${growthCardId}`, firstPlayerId: 'p1' });
+      const unit = placeUnit(battle, 'p1', 'ヒノトリ', 0);
+      unit.equippedMoveIds = [moveByName('ヒノトリ', '火炎').id];
+      battle.player('p2').board = [null, null, null];
+      setHand(battle, 'p1', [card(growthCardId, `${growthCardId}-${level}`)]);
+
+      const first = chooseAiAction(level, battle, 'p1', new SeededRng(`growth-order-${level}-${growthCardId}`), {
+        deterministicSearch: true,
+        beamWidth: 6,
+        branchLimit: 5,
+        maxDepth: 4,
+        replyDepth: 2,
+        continuationDepth: 1,
+      });
+      assert.equal(first.type, growthCardId === 'training-atk' ? 'training' : 'shugyo', `${level}:${growthCardId}`);
+      assert.equal(first.unitId, unit.id);
+    }
+  }
+});
+
+test('AI keeps an immediate win or knockout ahead of ATK growth', () => {
+  for (const level of AI_LEVELS) {
+    const winning = engine({ seed: `win-before-growth-${level}`, firstPlayerId: 'p1' });
+    const attacker = placeUnit(winning, 'p1', 'ヒノトリ', 0);
+    attacker.equippedMoveIds = [moveByName('ヒノトリ', '火炎').id];
+    winning.player('p2').board = [null, null, null];
+    winning.player('p2').life = 1;
+    setHand(winning, 'p1', [card('training-atk', `winning-growth-${level}`)]);
+    const winningAction = chooseAiAction(level, winning, 'p1', new SeededRng(`winning-growth-${level}`), { deterministicSearch: true });
+    assert.equal(winningAction.type, 'move', `${level} should take the win`);
+
+    const knockout = engine({ seed: `knockout-before-growth-${level}`, firstPlayerId: 'p1' });
+    const knockoutAttacker = placeUnit(knockout, 'p1', 'ヒノトリ', 0);
+    knockoutAttacker.equippedMoveIds = [moveByName('ヒノトリ', '火炎').id];
+    placeUnit(knockout, 'p2', 'ピクシー', 0, { life: 1, actionPoints: 0 });
+    setHand(knockout, 'p1', [card('training-atk', `knockout-growth-${level}`)]);
+    const knockoutAction = chooseAiAction(level, knockout, 'p1', new SeededRng(`knockout-growth-${level}`), { deterministicSearch: true });
+    assert.equal(knockoutAction.type, 'move', `${level} should take the knockout`);
+  }
+});
+
+test('AI does not spend TP on ATK growth when the selected attack would become unaffordable', () => {
+  for (const level of AI_LEVELS) {
+    const battle = engine({ seed: `tp-before-growth-${level}`, firstPlayerId: 'p1' });
+    const unit = placeUnit(battle, 'p1', 'ヒノトリ', 0);
+    unit.equippedMoveIds = [moveByName('ヒノトリ', '火炎').id];
+    battle.player('p2').board = [null, null, null];
+    battle.player('p1').tp = 2;
+    setHand(battle, 'p1', [card('training-atk', `expensive-growth-${level}`)]);
+    const action = chooseAiAction(level, battle, 'p1', new SeededRng(`tp-growth-${level}`), { deterministicSearch: true });
+    assert.equal(action.type, 'move', `${level} should preserve attack TP`);
+  }
+});
