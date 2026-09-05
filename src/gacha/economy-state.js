@@ -284,23 +284,17 @@ export function applyProgressionOperation(current, operation, now = new Date().t
       state.arenaProgress.updatedAt = now;
     }
   } else if (operation.type === 'claim-mission') {
+    if (state.processedOperationIds.includes(operationId)) return state;
     const progressBeforeClaim = normalizeMissionProgress(state.missionProgress, { dateKey });
+    const countersBeforeClaim = Object.fromEntries(['daily', 'weekly', 'monthly'].map((period) => [
+      period,
+      clone(progressBeforeClaim[period].counters),
+    ]));
     const claimed = claimMission(progressBeforeClaim, operation.missionId, { dateKey });
-    state.missionProgress = {
-      ...progressBeforeClaim,
-      daily: {
-        ...progressBeforeClaim.daily,
-        claimedIds: [...claimed.progress.daily.claimedIds],
-      },
-      weekly: {
-        ...progressBeforeClaim.weekly,
-        claimedIds: [...claimed.progress.weekly.claimedIds],
-      },
-      monthly: {
-        ...progressBeforeClaim.monthly,
-        claimedIds: [...claimed.progress.monthly.claimedIds],
-      },
-    };
+    state.missionProgress = claimed.progress;
+    for (const period of ['daily', 'weekly', 'monthly']) {
+      state.missionProgress[period].counters = countersBeforeClaim[period];
+    }
     if (claimed.reward?.type === 'diamonds') state.diamonds += claimed.reward.amount;
     if (claimed.reward?.type === 'monster-exchange-ticket') {
       state.monsterExchangeTickets += claimed.reward.amount;
@@ -315,6 +309,7 @@ export function applyProgressionOperation(current, operation, now = new Date().t
       }]);
       state.arenaProgress.lootStock = state.arenaProgress.lootStock.filter((entry) => entry.weekKey !== weekKey);
     }
+    rememberOperation(state, operationId);
   } else if (operation.type === 'exchange-monster-ticket') {
     if (state.processedOperationIds.includes(operationId)) return state;
     if (state.monsterExchangeTickets <= 0) throw new Error('モンスターカード交換券を所持していません');

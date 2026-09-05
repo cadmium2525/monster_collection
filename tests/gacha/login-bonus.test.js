@@ -60,6 +60,42 @@ test('first login completes the daily mission without auto-granting it, while ca
   assert.deepEqual(nextDay.state.claimedCampaignIds, [SUMMER_BONUS_ID]);
 });
 
+test('legacy false unclaimed battle completions are repaired without reopening claimed rewards', () => {
+  const legacy = defaultEconomyState('2026-09-06T00:00:00.000Z');
+  legacy.missionProgress.schemaVersion = 2;
+  legacy.missionProgress.daily.counters = { login: 1, battles: 1, wins: 1 };
+  legacy.missionProgress.daily.claimedIds = ['daily-login', 'daily-play'];
+  const entries = missionEntries(legacy.missionProgress, { dateKey: '2026-09-06' })
+    .filter((mission) => mission.period === 'daily');
+  assert.deepEqual(entries.map((mission) => ({
+    id: mission.id, progress: mission.actualProgress, claimed: mission.claimed, claimable: mission.claimable,
+  })), [
+    { id: 'daily-login', progress: 1, claimed: true, claimable: false },
+    { id: 'daily-play', progress: 1, claimed: true, claimable: false },
+    { id: 'daily-win', progress: 0, claimed: false, claimable: false },
+  ]);
+});
+
+test('claiming a mission can only change claim state and its reward, never progress counters', () => {
+  const login = applyLoginRewards(defaultEconomyState('2026-09-06T00:00:00.000Z'), {
+    loginDate: '2026-09-06',
+  }, '2026-09-06T00:00:00.000Z').state;
+  const countersBefore = structuredClone(login.missionProgress);
+  const claimed = applyProgressionOperation(login, {
+    type: 'claim-mission',
+    operationId: 'claim:daily-login:2026-09-06',
+    missionId: 'daily-login',
+    dateKey: '2026-09-06',
+    event: { type: 'battle-result', mode: 'arena', won: true },
+  }, '2026-09-06T01:00:00.000Z');
+  for (const period of ['daily', 'weekly', 'monthly']) {
+    assert.deepEqual(claimed.missionProgress[period].counters, countersBefore[period].counters);
+  }
+  assert.deepEqual(claimed.missionProgress.daily.counters, { login: 1 });
+  assert.deepEqual(claimed.missionProgress.daily.claimedIds, ['daily-login']);
+  assert.ok(claimed.processedOperationIds.includes('claim:daily-login:2026-09-06'));
+});
+
 test('summer bonus is not granted before its start date', () => {
   const result = applyLoginRewards(defaultEconomyState(), { loginDate: '2026-08-28' });
   assert.equal(result.state.diamonds, STARTER_DIAMONDS);

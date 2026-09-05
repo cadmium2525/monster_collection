@@ -1,4 +1,4 @@
-export const MISSION_SCHEMA_VERSION = 2;
+export const MISSION_SCHEMA_VERSION = 3;
 
 const MONTHLY_OBJECTIVE_IDS = Object.freeze([
   'monthly-login',
@@ -71,9 +71,18 @@ function normalizePeriod(value, key) {
 export function normalizeMissionProgress(value = {}, { dateKey = japanDateKey() } = {}) {
   const weekKey = japanWeekKey(dateKey);
   const monthKey = japanMonthKey(dateKey);
+  const sourceSchemaVersion = integer(value.schemaVersion);
+  const daily = normalizePeriod(value.daily, dateKey);
+  // Versions before v3 could persist a false unclaimed battle/win completion
+  // after claiming the login reward. Claimed rewards remain untouched, while
+  // only unclaimed daily counters are repaired during this one-time migration.
+  if (sourceSchemaVersion < 3) {
+    if (!daily.claimedIds.includes('daily-play')) delete daily.counters.battles;
+    if (!daily.claimedIds.includes('daily-win')) delete daily.counters.wins;
+  }
   return {
     schemaVersion: MISSION_SCHEMA_VERSION,
-    daily: normalizePeriod(value.daily, dateKey),
+    daily,
     weekly: normalizePeriod(value.weekly, weekKey),
     monthly: normalizePeriod(value.monthly, monthKey),
     processedOperationIds: [...new Set((value.processedOperationIds ?? []).map(String))].slice(-320),
