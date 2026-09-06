@@ -219,3 +219,80 @@ test('AI does not spend TP on ATK growth when the selected attack would become u
     assert.equal(action.type, 'move', `${level} should preserve attack TP`);
   }
 });
+
+test('upper-rank AI does not create an easy lethal overflow target beside a durable monster', () => {
+  for (const level of ['gold', 'legend', 'champion']) {
+    const battle = engine({ seed: `unsafe-wall-${level}`, firstPlayerId: 'p1' });
+    const durable = placeUnit(battle, 'p1', 'ゴーレム', 0, { actionPoints: 0 });
+    durable.maxLife = 140;
+    durable.life = 140;
+    durable.defBase = 110;
+    const threat = placeUnit(battle, 'p2', 'ドラゴン', 0, { actionPoints: 0 });
+    threat.atkBase = 180;
+    threat.equippedMoveIds = [...threat.equippedMoveIds]
+      .sort((a, b) => (masterIndex.moves.get(b)?.power ?? 0) - (masterIndex.moves.get(a)?.power ?? 0))
+      .slice(0, 1);
+    battle.player('p1').life = 25;
+    battle.player('p1').tp = 10;
+    setHand(battle, 'p1', [card('monster-024', `unsafe-wall-card-${level}`)]);
+
+    const action = chooseAiAction(level, battle, 'p1', new SeededRng(`unsafe-wall-${level}`), {
+      deterministicSearch: true,
+      beamWidth: 6,
+      branchLimit: 5,
+      maxDepth: 4,
+      replyDepth: 3,
+      continuationDepth: 1,
+    });
+    assert.equal(action.type, 'end-turn', `${level} exposed its player LIFE through a weak summon`);
+  }
+});
+
+test('upper-rank AI may still summon its only blocker against an otherwise direct attack', () => {
+  for (const level of ['gold', 'legend', 'champion']) {
+    const battle = engine({ seed: `necessary-wall-${level}`, firstPlayerId: 'p1' });
+    battle.player('p1').board = [null, null, null];
+    const threat = placeUnit(battle, 'p2', 'ドラゴン', 0, { actionPoints: 0 });
+    threat.atkBase = 180;
+    threat.equippedMoveIds = ['move-052'];
+    battle.player('p1').life = 25;
+    battle.player('p1').tp = 10;
+    setHand(battle, 'p1', [card('monster-024', `necessary-wall-card-${level}`)]);
+
+    const action = chooseAiAction(level, battle, 'p1', new SeededRng(`necessary-wall-${level}`), {
+      deterministicSearch: true,
+      beamWidth: 6,
+      branchLimit: 5,
+      maxDepth: 4,
+      replyDepth: 3,
+      continuationDepth: 1,
+    });
+    assert.equal(action.type, 'summon', `${level} refused its only visible defense`);
+  }
+});
+
+test('upper-rank AI avoids a weak target that would leak substantial nonlethal overflow', () => {
+  for (const level of ['gold', 'legend', 'champion']) {
+    const battle = engine({ seed: `overflow-leak-${level}`, firstPlayerId: 'p1' });
+    const durable = placeUnit(battle, 'p1', 'ゴーレム', 0, { actionPoints: 0 });
+    durable.maxLife = 140;
+    durable.life = 140;
+    durable.defBase = 110;
+    const threat = placeUnit(battle, 'p2', 'ドラゴン', 0, { actionPoints: 0 });
+    threat.atkBase = 80;
+    threat.equippedMoveIds = ['move-052'];
+    battle.player('p1').life = 100;
+    battle.player('p1').tp = 10;
+    setHand(battle, 'p1', [card('monster-024', `overflow-leak-card-${level}`)]);
+
+    const action = chooseAiAction(level, battle, 'p1', new SeededRng(`overflow-leak-${level}`), {
+      deterministicSearch: true,
+      beamWidth: 6,
+      branchLimit: 5,
+      maxDepth: 4,
+      replyDepth: 3,
+      continuationDepth: 1,
+    });
+    assert.equal(action.type, 'end-turn', `${level} accepted avoidable overflow damage`);
+  }
+});

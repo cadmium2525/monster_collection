@@ -1,7 +1,8 @@
-import { actionKey } from '../battle/state.js';
+import { actionKey, effectiveAtk, effectiveDef } from '../battle/state.js';
 import { analyzePlayerStrategy, applyStrategyGuardrails } from './deck-strategy.js';
 import { evaluatePublicPosition, estimateCounterThreat } from './public-evaluator.js';
 import { championLineScore, quickActionScore, searchTurnSequences } from './search.js';
+import { forecastVisibleAttackReply } from './visible-threat.js';
 
 export const AI_LEVELS = Object.freeze(['bronze', 'silver', 'gold', 'legend', 'champion']);
 
@@ -79,6 +80,70 @@ function correctObviousActionOrder(engine, playerId, selected, options = {}) {
     action,
     score: quickActionScore(engine, playerId, action, options),
   })));
+}
+
+function createsSafeImmediateFusion(engine, playerId, action, baseline) {
+  const next = engine.clone();
+  next.applyAction(action);
+  const summoned = next.player(playerId).board[action.slot];
+  if (!summoned) return false;
+  const fusions = next.getLegalActions(playerId).filter((candidate) => (
+    ['fusion-normal', 'fusion-special'].includes(candidate.type) && candidate.unitId === summoned.id
+  ));
+  const damageTolerance = Math.max(10, next.player(playerId).life * 0.15);
+  return fusions.some((fusion) => {
+    const protectedReply = forecastVisibleAttackReply(next, playerId, { action: fusion });
+    return !protectedReply.lethal
+      && protectedReply.playerDamage - baseline.playerDamage < damageTolerance;
+  });
+}
+
+function mightExposeOverflow(engine, playerId, action) {
+  const player = engine.player(playerId);
+  const card = player.hand.find((candidate) => candidate.instanceId === action.cardInstanceId);
+  const monster = engine.masterIndex.monsters.get(card?.masterId);
+  if (!monster) return false;
+  const growth = player.tournamentGrowth[card.instanceId] ?? {};
+  const summonedDurability = monster.base.life + (Number(growth.life) || 0)
+    + monster.base.def + (Number(growth.def) || 0);
+  const existingDurability = player.board.filter(Boolean)
+    .map((unit) => Math.max(0, unit.life) + effectiveDef(unit));
+  const weakestExisting = Math.min(...existingDurability);
+  const damageTolerance = Math.max(10, player.life * 0.15);
+  if (weakestExisting - summonedDurability < damageTolerance) return false;
+
+  const visibleDamage = engine.opponent(playerId).board.filter(Boolean).reduce((sum, unit) => {
+    const bestPower = unit.equippedMoveIds.reduce((best, moveId) => {
+      const power = engine.masterIndex.moves.get(moveId)?.power;
+      return power == null ? best : Math.max(best, power);
+    }, 0);
+    return sum + effectiveAtk(unit) * bestPower / 100;
+  }, 0);
+  return visibleDamage - summonedDurability >= damageTolerance;
+}
+
+function avoidUnsafeSummon(engine, playerId, selected, options = {}) {
+  if (selected?.type !== 'summon' || !livingOwnBoard(engine, playerId)) return selected;
+  if (!mightExposeOverflow(engine, playerId, selected)) return selected;
+  const baseline = forecastVisibleAttackReply(engine, playerId);
+  const exposed = forecastVisibleAttackReply(engine, playerId, { action: selected });
+  const summonedCardLost = exposed.destroyedSourceCardInstanceIds.includes(selected.cardInstanceId);
+  const addedDamage = exposed.playerDamage - baseline.playerDamage;
+  const materialRisk = summonedCardLost && addedDamage >= Math.max(10, engine.player(playerId).life * 0.15);
+  if (!summonedCardLost || baseline.lethal || (!exposed.lethal && !materialRisk)) return selected;
+  if (createsSafeImmediateFusion(engine, playerId, selected, baseline)) return selected;
+
+  const alternatives = engine.getLegalActions(playerId)
+    .filter((action) => action.type !== 'summon' && !action.meta?.aiAvoid);
+  if (!alternatives.length) return selected;
+  return stableBest(alternatives.map((action) => ({
+    action,
+    score: quickActionScore(engine, playerId, action, options),
+  })));
+}
+
+function livingOwnBoard(engine, playerId) {
+  return engine.player(playerId).board.some(Boolean);
 }
 
 function bronze(engine, playerId, rng) {
@@ -244,6 +309,7 @@ export function chooseAiAction(level, engine, playerId, rng, options = {}) {
       strategicOptions.strategy,
       (action) => quickActionScore(engine, playerId, action, strategicOptions),
     );
+    selected = avoidUnsafeSummon(engine, playerId, selected, strategicOptions);
   }
   return correctObviousActionOrder(engine, playerId, selected, strategicOptions);
 }
