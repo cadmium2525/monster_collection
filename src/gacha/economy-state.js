@@ -2,6 +2,7 @@ import { FACTIONS, canonicalFaction, legacyFactionFor } from './acquisition.js';
 import { normalizeCardAppearance } from '../cards/card-appearance.js';
 import { TOURNAMENTS } from '../battle/rules.js';
 import {
+  MISSION_DEFINITIONS,
   claimMission,
   japanDateKey,
   japanWeekKey,
@@ -231,6 +232,14 @@ function rememberOperation(state, operationId) {
   state.processedOperationIds = [...new Set([...state.processedOperationIds, operationId])].slice(-160);
 }
 
+function visibleMissionCounters(operation, period, periodKey) {
+  const snapshot = operation?.counterSnapshot;
+  if (snapshot?.period !== period || snapshot?.key !== periodKey || !snapshot.counters || typeof snapshot.counters !== 'object') return null;
+  return Object.fromEntries(Object.entries(snapshot.counters).map(([name, value]) => [
+    String(name), Math.max(0, Math.trunc(Number(value) || 0)),
+  ]));
+}
+
 export function applyPackPurchase(current, purchase, now = new Date().toISOString()) {
   const state = normalizeEconomyState(current, now);
   const operationId = cleanString(purchase?.operationId);
@@ -286,8 +295,11 @@ export function applyDiamondReward(current, reward, now = new Date().toISOString
 }
 
 export function applyProgressionOperation(current, operation, now = new Date().toISOString()) {
-  const state = normalizeEconomyState(current, now);
   const dateKey = operation?.dateKey ?? japanDateKey(now);
+  // Normalize daily/weekly/monthly periods against the operation's explicit
+  // Japan date. Using the wall-clock date here can reset a delayed cloud
+  // transaction at midnight before the requested operation is applied.
+  const state = normalizeEconomyState(current, dateKey);
   const operationId = String(operation?.operationId ?? '').trim();
   if (!operationId) throw new Error('進行更新IDがありません');
 
@@ -308,6 +320,15 @@ export function applyProgressionOperation(current, operation, now = new Date().t
     }
   } else if (operation.type === 'claim-mission') {
     const progressBeforeClaim = normalizeMissionProgress(state.missionProgress, { dateKey });
+    const definition = MISSION_DEFINITIONS.find(({ id }) => id === operation.missionId);
+    const targetPeriod = definition?.period;
+    const snapshotCounters = targetPeriod
+      ? visibleMissionCounters(operation, targetPeriod, progressBeforeClaim[targetPeriod].key)
+      : null;
+    // Registered accounts can have a newer client-visible mission payload than
+    // the Firestore transaction snapshot. A reward claim must never resurrect
+    // counters that were not visible when the player pressed the claim button.
+    if (snapshotCounters) progressBeforeClaim[targetPeriod].counters = snapshotCounters;
     const countersBeforeClaim = Object.fromEntries(['daily', 'weekly', 'monthly'].map((period) => [
       period,
       clone(progressBeforeClaim[period].counters),

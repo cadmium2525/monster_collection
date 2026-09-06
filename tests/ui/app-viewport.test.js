@@ -82,4 +82,6 @@ test('home lobby uses the synchronized app viewport height instead of raw 100dvh
     const escaped = selector.replace(/[.*+?^${}()|[\]\\]/g, '\\$&');
     assert.match(css, new RegExp(`${escaped}\\s*\\{[^}]*height:var\\(--app-viewport-height,100dvh\\)`, 's'));
   }
+  assert.match(css, /html:has\(\.home-lobby\),\s*body:has\(\.home-lobby\)\s*\{[^}]*overflow:hidden/s);
+  assert.doesNotMatch(css, /body:has\(\.home-lobby\)\s*\{[^}]*position:fixed/s);
 });

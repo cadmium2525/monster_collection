@@ -709,6 +709,7 @@ class MonsterConstructionApp {
 
   async claimMission(mission, lootId = null) {
     try {
+      const periodState = this.economy.missionProgress?.[mission.period];
       const selectedLoot = lootId ? this.economy.arenaProgress?.lootStock?.find((entry) => entry.lootId === lootId) : null;
       this.economy = await this.repository.commitProgression({
         type: 'claim-mission',
@@ -716,6 +717,11 @@ class MonsterConstructionApp {
         missionId: mission.id,
         lootId,
         dateKey: japanDateKey(),
+        counterSnapshot: periodState ? {
+          period: mission.period,
+          key: periodState.key,
+          counters: structuredClone(periodState.counters ?? {}),
+        } : null,
       });
       if (selectedLoot) {
         this.catalog = await this.repository.recordCardCatalog({ ownedCardMasterIds: [selectedLoot.masterId] });

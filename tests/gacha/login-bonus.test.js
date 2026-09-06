@@ -96,6 +96,31 @@ test('claiming a mission can only change claim state and its reward, never progr
   assert.ok(claimed.processedOperationIds.includes('claim:daily-login:2026-09-06'));
 });
 
+test('a registered-account claim keeps the counters shown before the Firestore transaction', () => {
+  const cloudTransactionState = applyLoginRewards(defaultEconomyState('2026-09-07T00:00:00.000Z'), {
+    loginDate: '2026-09-07', campaignId: null,
+  }, '2026-09-07T00:00:00.000Z').state;
+  // Reproduce an older cloud snapshot contaminated by the player's cumulative record.
+  cloudTransactionState.missionProgress.daily.counters = { login: 1, battles: 28, wins: 17 };
+  const claimed = applyProgressionOperation(cloudTransactionState, {
+    type: 'claim-mission',
+    operationId: 'mission-claim:daily-login:2026-09-07',
+    missionId: 'daily-login',
+    dateKey: '2026-09-07',
+    counterSnapshot: { period: 'daily', key: '2026-09-07', counters: { login: 1 } },
+  }, '2026-09-07T01:00:00.000Z');
+
+  assert.deepEqual(claimed.missionProgress.daily.counters, { login: 1 });
+  assert.deepEqual(claimed.missionProgress.daily.claimedIds, ['daily-login']);
+  const daily = missionEntries(claimed.missionProgress, { dateKey: '2026-09-07' })
+    .filter(({ period }) => period === 'daily');
+  assert.deepEqual(daily.map(({ id, completed }) => ({ id, completed })), [
+    { id: 'daily-login', completed: true },
+    { id: 'daily-play', completed: false },
+    { id: 'daily-win', completed: false },
+  ]);
+});
+
 test('a registered-account cloud desync repairs today login without double-counting the month', () => {
   const cloudState = defaultEconomyState('2026-09-06T00:00:00.000Z');
   cloudState.lastDailyLoginDate = '2026-09-06';
