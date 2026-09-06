@@ -32,6 +32,7 @@ import { MissionScreen } from './ui/mission-screen.js';
 import { defaultHomeArtworkSelection, homeArtworkSelectionKey, normalizeHomeArtworkSelection, ownedHomeArtworkSelections } from './profile/home-artwork.js';
 import { renderTitleScreen } from './ui/title-screen.js';
 import { GameAudioController } from './audio/game-audio.js';
+import { installAppViewportSync } from './ui/app-viewport.js';
 
 const AI_BUDGET = Object.freeze({ bronze: 4, silver: 8, gold: 22, legend: 85, champion: 240 });
 
@@ -1172,6 +1173,8 @@ class MonsterConstructionApp {
     openModal({ title, content: el('p', { text: error?.message ?? String(error) }) });
   }
 }
+
+installAppViewportSync();
 
 async function boot() {
   const root = document.querySelector('#app');
