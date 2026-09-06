@@ -1,4 +1,4 @@
-import { FACTION_ADVANTAGE, RULES } from './rules.js';
+import { RULES } from './rules.js';
 import { effectiveAtk, effectiveDef, lifeRatio, livingUnits } from './state.js';
 
 export function hasNormalTrait(unit, monsterName) {
@@ -145,8 +145,6 @@ export function defenseIgnore(player, unit, target, move, opponent = null) {
 export function combatStats(unit, target) {
   let attack = effectiveAtk(unit);
   let defense = effectiveDef(target);
-  if (FACTION_ADVANTAGE[unit.faction] === target.faction) attack = Math.floor(attack * RULES.factionAdvantageMultiplier);
-  if (FACTION_ADVANTAGE[target.faction] === unit.faction) defense = Math.floor(defense * RULES.factionAdvantageMultiplier);
   if (hasNormalTrait(unit, 'ゴーレム') && effectiveDef(target) >= 30) attack += 10;
   return { attack, defense };
 }

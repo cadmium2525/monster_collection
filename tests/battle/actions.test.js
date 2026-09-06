@@ -25,7 +25,7 @@ test('summoning costs TP and summoned monster cannot act that turn', () => {
   assert.equal(battle.getLegalActions().some((candidate) => candidate.type === 'move' && candidate.unitId === unit.id), false);
 });
 
-test('attack consumes one action point and applies faction advantage damage', () => {
+test('attack consumes one action point without a hidden classification multiplier', () => {
   const battle = engine();
   const attacker = placeUnit(battle, 'p1', 'ゴーレム', 0);
   const target = placeUnit(battle, 'p2', 'アストラノイド', 0);
@@ -35,7 +35,8 @@ test('attack consumes one action point and applies faction advantage damage', ()
   const action = battle.getLegalActions().find((candidate) => candidate.type === 'move' && candidate.moveId === move.id);
   battle.applyAction(action);
   assert.equal(attacker.actionPoints, 0);
-  assert.ok(target.life < before || battle.player('p2').board[0] == null);
+  const expected = Math.max(0, Math.floor(attacker.atkBase * (move.power / 100) - target.defBase));
+  assert.equal(target.life, before - expected);
 });
 
 test('direct attack is legal only when opposing board is empty', () => {

@@ -25,18 +25,8 @@ export const RULES = Object.freeze({
   maxLearnedMoves: 9,
   equippedMoveSlots: 4,
   tournamentGrowthLifetime: 'tournament',
-  factionAdvantageMultiplier: 1.25,
   maxRounds: 40,
   distanceSystemEnabled: false,
-});
-
-export const FACTION_ADVANTAGE = Object.freeze({
-  '機鋼': '神造',
-  '神造': '幻霊',
-  '幻霊': '魔族',
-  '魔族': '獣族',
-  '獣族': '怪物',
-  '怪物': '機鋼',
 });
 
 export const COPY_LIMITS = Object.freeze({

@@ -1,4 +1,5 @@
 import { actionKey } from '../battle/state.js';
+import { analyzePlayerStrategy, applyStrategyGuardrails } from './deck-strategy.js';
 import { evaluatePublicPosition, estimateCounterThreat } from './public-evaluator.js';
 import { championLineScore, quickActionScore, searchTurnSequences } from './search.js';
 
@@ -222,19 +223,42 @@ function champion(engine, playerId, options = {}) {
 }
 
 export function chooseAiAction(level, engine, playerId, rng, options = {}) {
+  const usesDeckStrategy = ['gold', 'legend', 'champion'].includes(level);
+  const strategicOptions = !usesDeckStrategy || options.strategy === false
+    ? { ...options, strategy: null }
+    : { ...options, strategy: options.strategy ?? analyzePlayerStrategy(engine, playerId) };
   let selected;
   switch (level) {
     case 'bronze': selected = bronze(engine, playerId, rng); break;
     case 'silver': selected = silver(engine, playerId, rng); break;
-    case 'gold': selected = gold(engine, playerId, options); break;
-    case 'legend': selected = legend(engine, playerId, options); break;
-    case 'champion': selected = champion(engine, playerId, options); break;
+    case 'gold': selected = gold(engine, playerId, strategicOptions); break;
+    case 'legend': selected = legend(engine, playerId, strategicOptions); break;
+    case 'champion': selected = champion(engine, playerId, strategicOptions); break;
     default: throw new Error(`Unknown AI level: ${level}`);
   }
-  return correctObviousActionOrder(engine, playerId, selected, options);
+  if (usesDeckStrategy) {
+    selected = applyStrategyGuardrails(
+      engine,
+      playerId,
+      selected,
+      strategicOptions.strategy,
+      (action) => quickActionScore(engine, playerId, action, strategicOptions),
+    );
+  }
+  return correctObviousActionOrder(engine, playerId, selected, strategicOptions);
 }
 
 export function createAiPolicy(level, options = {}) {
   if (!AI_LEVELS.includes(level)) throw new Error(`Unknown AI level: ${level}`);
-  return (engine, playerId, rng) => chooseAiAction(level, engine, playerId, rng, options);
+  const strategyByPlayer = new WeakMap();
+  const usesDeckStrategy = ['gold', 'legend', 'champion'].includes(level) && options.strategy !== false;
+  return (engine, playerId, rng) => {
+    if (!usesDeckStrategy || options.strategy) return chooseAiAction(level, engine, playerId, rng, options);
+    const player = engine.player(playerId);
+    if (!strategyByPlayer.has(player)) strategyByPlayer.set(player, analyzePlayerStrategy(engine, playerId));
+    return chooseAiAction(level, engine, playerId, rng, {
+      ...options,
+      strategy: strategyByPlayer.get(player),
+    });
+  };
 }

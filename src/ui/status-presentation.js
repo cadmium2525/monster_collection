@@ -129,7 +129,7 @@ export function unitComboStatusEntries(unit) {
   if (statuses.ghostLink) add('ghost-link', 'spirit', '幽', '幽界 連結中', '回避成功で1枚ドロー・残像獲得');
   if (statuses.afterimageReady) add('afterimage-ready', 'spirit', '残', '残像 READY', '残像追撃で消費');
   if (number(statuses.nextMoveTpDiscount) > 0) add('blood-ignition', 'demon', '血', '点火 TP-1', '次の攻撃技で消費');
-  if (statuses.nextDamageLifesteal) add('blood-debt', 'demon', '債', '血債 25%', `次の攻撃技で最大${number(statuses.nextDamageLifesteal.cap)}回復`);
+  if (statuses.nextDamageLifesteal) add('blood-debt', 'demon', '債', `血債 ${Math.round(number(statuses.nextDamageLifesteal.ratio) * 100)}%`, `次の攻撃技で最大${number(statuses.nextDamageLifesteal.cap)}回復`);
   if (statuses.huntingMark) {
     const count = Math.min(3, Object.keys(statuses.huntingMark.attackerBonuses ?? {}).length);
     add('hunting-mark', 'beast', '狩', `狩場 ${count}/3`, '異なる獣族の攻撃で倍率上昇');

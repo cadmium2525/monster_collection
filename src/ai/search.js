@@ -1,4 +1,5 @@
 import { actionKey } from '../battle/state.js';
+import { strategyActionAdjustment } from './deck-strategy.js';
 import {
   actionEventDelta,
   evaluatePublicPosition,
@@ -49,7 +50,8 @@ export function quickActionScore(engine, playerId, action, options = {}) {
   const after = evaluatePublicPosition(next, playerId, options);
   const costEfficiency = -(action.cost ?? 0) * (options.costWeight ?? 1.5);
   return after - before + actionEventDelta(beforeLogLength, next, playerId)
-    + (ACTION_PRIOR[action.type] ?? 4) + costEfficiency;
+    + (ACTION_PRIOR[action.type] ?? 4) + costEfficiency
+    + strategyActionAdjustment(engine, playerId, action, options.strategy);
 }
 
 function uniqueActions(actions) {
@@ -62,7 +64,7 @@ function uniqueActions(actions) {
   });
 }
 
-function cheapActionOrder(engine, action) {
+function cheapActionOrder(engine, action, playerId = null, options = {}) {
   let value = (ACTION_PRIOR[action.type] ?? 4) - (action.cost ?? 0);
   if (action.type === 'move') {
     const move = engine.masterIndex.moves.get(action.moveId);
@@ -75,6 +77,7 @@ function cheapActionOrder(engine, action) {
       ? moveValue(engine.masterIndex, action.learnedMoveId) - moveValue(engine.masterIndex, action.replaceMoveId)
       : 0;
   }
+  if (playerId) value += strategyActionAdjustment(engine, playerId, action, options.strategy) * 0.3;
   return value;
 }
 
@@ -84,7 +87,8 @@ function topCandidateActions(engine, playerId, limit, options, deadline) {
     .filter((action) => action.type !== 'end-turn')
     .filter((action) => !action.meta?.aiAvoid)
     .filter((action) => typeof options.actionFilter !== 'function' || options.actionFilter(action))
-    .sort((a, b) => cheapActionOrder(engine, b) - cheapActionOrder(engine, a) || actionKey(a).localeCompare(actionKey(b)))
+    .sort((a, b) => cheapActionOrder(engine, b, playerId, options) - cheapActionOrder(engine, a, playerId, options)
+      || actionKey(a).localeCompare(actionKey(b)))
     .slice(0, evaluationLimit);
   const scored = [];
   for (const action of shortlist) {
@@ -147,7 +151,8 @@ function visibleResponseActions(engine, opponentId, limit, options, deadline) {
   // that neither their identity nor deck order can affect the branch set.
   const shortlist = uniqueActions(engine.getLegalActions(opponentId))
     .filter((action) => action.type === 'move')
-    .sort((a, b) => cheapActionOrder(engine, b) - cheapActionOrder(engine, a) || actionKey(a).localeCompare(actionKey(b)))
+    .sort((a, b) => cheapActionOrder(engine, b, opponentId, options) - cheapActionOrder(engine, a, opponentId, options)
+      || actionKey(a).localeCompare(actionKey(b)))
     .slice(0, Math.max(limit, limit * 2));
   const scored = [];
   for (const action of shortlist) {

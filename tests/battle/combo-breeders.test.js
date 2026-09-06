@@ -66,7 +66,7 @@ test('spirit link draws on a successful evade and afterimage pursuit consumes th
   assert.equal(spirit.actionPoints, 2);
 });
 
-test('bloodline ignition checks LIFE after paying its cost and enables blood-debt recovery', () => {
+test('bloodline ignition always discounts the attack and enables enhanced blood-debt recovery', () => {
   const battle = engine();
   const demon = placeUnit(battle, 'p1', 'ドラゴン', 0);
   const target = placeUnit(battle, 'p2', 'ゴーレム', 0);
@@ -74,21 +74,21 @@ test('bloodline ignition checks LIFE after paying its cost and enables blood-deb
   target.defBase = 1;
   target.maxLife = 500;
   target.life = 500;
-  battle.player('p1').life = 55;
+  battle.player('p1').life = 100;
 
   playOn(battle, 'breeder-062', demon);
-  assert.equal(battle.player('p1').life, 50);
+  assert.equal(battle.player('p1').life, 97);
   assert.equal(demon.statuses.nextMoveTpDiscount, 1);
   setHand(battle, 'p1', [card('breeder-063', 'blood-debt')]);
   battle.applyAction(breederAction(battle, 'breeder-063', (action) => action.targetUnitId === demon.id));
-  assert.equal(demon.statuses.nextDamageBonus, 0.35);
-  assert.deepEqual(demon.statuses.nextDamageLifesteal, { ratio: 0.25, cap: 10 });
+  assert.equal(demon.statuses.nextDamageBonus, 0.45);
+  assert.deepEqual(demon.statuses.nextDamageLifesteal, { ratio: 0.3, cap: 12 });
 
   const action = battle.getLegalActions().find((candidate) => candidate.type === 'move'
     && candidate.unitId === demon.id && candidate.targetUnitId === target.id);
   assert.ok(action);
   battle.applyAction(action);
-  assert.equal(battle.player('p1').life, 60);
+  assert.equal(battle.player('p1').life, 100);
   assert.equal(demon.statuses.nextMoveTpDiscount, 0);
 });
 

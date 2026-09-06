@@ -2045,7 +2045,7 @@ export class BattleEngine {
       case '幻霊・残像追撃':
         return comboUnused('afterimage-pursuit') ? factionTargets('幻霊') : [];
       case '魔族・血脈点火':
-        return player.life > 5 && comboUnused('blood-ignition') ? factionTargets('魔族') : [];
+        return player.life > 3 && comboUnused('blood-ignition') ? factionTargets('魔族') : [];
       case '魔族・血債回収':
         return factionTargets('魔族');
       case '獣族・狩場指定':
@@ -2331,16 +2331,14 @@ export class BattleEngine {
         break;
       }
       case '魔族・血脈点火':
-        this._losePlayerLife(player, 5);
-        ownTarget.statuses.nextDamageBonus += 0.15;
-        if (player.life * 2 <= RULES.playerLife) {
-          ownTarget.statuses.nextMoveTpDiscount = Math.max(1, ownTarget.statuses.nextMoveTpDiscount ?? 0);
-        }
+        this._losePlayerLife(player, 3);
+        ownTarget.statuses.nextDamageBonus += 0.2;
+        ownTarget.statuses.nextMoveTpDiscount = Math.max(1, ownTarget.statuses.nextMoveTpDiscount ?? 0);
         this._markComboUsed(player, 'blood-ignition');
         break;
       case '魔族・血債回収':
-        ownTarget.statuses.nextDamageLifesteal = { ratio: 0.25, cap: 10 };
-        if ((player.effects.comboTurn?.selfLifeLost ?? 0) > 0) ownTarget.statuses.nextDamageBonus += 0.2;
+        ownTarget.statuses.nextDamageLifesteal = { ratio: 0.3, cap: 12 };
+        if ((player.effects.comboTurn?.selfLifeLost ?? 0) > 0) ownTarget.statuses.nextDamageBonus += 0.25;
         break;
       case '獣族・狩場指定':
         enemyTarget.statuses.huntingMark = {
