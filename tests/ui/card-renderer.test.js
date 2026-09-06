@@ -246,8 +246,8 @@ test('all thirty monster showcase illustrations stay within the on-demand mobile
   assert.ok(totalBytes < 4_100_000, 'all monster showcase illustrations stay below a 4.1 MB aggregate budget');
 });
 
-test('all thirty-five expansion breeder illustrations are optimized WebP project assets', () => {
-  for (let number = 21; number <= 55; number += 1) {
+test('all forty-seven expansion breeder illustrations are optimized WebP project assets', () => {
+  for (let number = 21; number <= 67; number += 1) {
     const id = String(number).padStart(3, '0');
     const url = new URL(`../../assets/images/breeders/breeder-${id}.webp`, import.meta.url);
     const bytes = readFileSync(url);
@@ -359,6 +359,14 @@ test('opposing fields use a visual half-slot stagger without changing slot seman
   assert.match(css, /\.board-row\.opponent\s*\{[^}]*transform:\s*translateX\(var\(--field-stagger\)\)/s);
   assert.match(css, /\.board-row\.player\s*\{\s*align-items:\s*start;\s*\}/s);
   assert.match(battleSource, /dataset:\s*\{\s*unitId:\s*unit\.id,\s*slot:\s*String\(slot\),\s*ownerId:\s*player\.id\s*\}/);
+});
+
+test('combo states use a fixed right-side rail without moving the field card', () => {
+  const css = readFileSync(new URL('../../styles.css', import.meta.url), 'utf8');
+  const renderer = readFileSync(new URL('../../src/ui/card-renderer.js', import.meta.url), 'utf8');
+  assert.match(css, /\.board-slot \.combo-status-rail\s*\{[^}]*position:absolute;[^}]*right:-43px;[^}]*width:40px;/s);
+  assert.match(renderer, /comboStatuses\.slice\(0, 3\)/);
+  assert.match(renderer, /comboStatuses\.length > 3[\s\S]*`\+\$\{comboStatuses\.length - 3\}`/);
 });
 
 test('atlas artwork renders exactly once while standalone details preserve the full image', () => {

@@ -35,3 +35,21 @@ test('upper-rank candidate selection improves average quality without cost-only 
   assert.ok(legend.score > bronze.score);
   assert.ok(Math.abs(legend.tp - bronze.tp) < 50, 'strength must not be produced by extreme total TP inflation');
 });
+
+test('Gold and Legend faction decks carry both halves of their new combo package', () => {
+  const pairs = {
+    '機鋼': ['breeder-056', 'breeder-057'],
+    '神造': ['breeder-058', 'breeder-059'],
+    '幻霊': ['breeder-060', 'breeder-061'],
+    '魔族': ['breeder-062', 'breeder-063'],
+    '獣族': ['breeder-064', 'breeder-065'],
+    '怪物': ['breeder-066', 'breeder-067'],
+  };
+  for (const rank of ['gold', 'legend']) {
+    for (const [theme, expected] of Object.entries(pairs)) {
+      const generated = generateCpuDeck({ masterIndex, rank, theme, rng: new SeededRng(`combo:${rank}:${theme}`) });
+      const ids = new Set(generated.cards.map((entry) => entry.masterId));
+      assert.equal(expected.every((id) => ids.has(id)), true, `${rank}/${theme} should include ${expected.join(' + ')}`);
+    }
+  }
+});

@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'monster-construction-';
-const CACHE_VERSION = '1.35.14';
+const CACHE_VERSION = '1.36.0';
 const CACHE_NAME = `${CACHE_PREFIX}${CACHE_VERSION}`;
 const SCOPE_URL = new URL('./', self.registration.scope);
 const INDEX_URL = new URL('./index.html', SCOPE_URL).toString();

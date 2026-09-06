@@ -8,7 +8,7 @@
     "legacyDistanceFieldsAreNonGameplay": true,
     "expectedMonsterCount": 30,
     "expectedMoveCount": 270,
-    "expectedBreederCount": 55,
+    "expectedBreederCount": 67,
     "expectedFusionCount": 60,
     "boosterExpansion": "Six Heroines 2026-08-31",
     "thirdGenerationFusions": "Six Heroines 12 recipes 2026-08-31"
@@ -4388,6 +4388,114 @@
       "name": "道連れの契約",
       "tp": 2,
       "effect": "指定した自分のモンスターが次の相手ターンに破壊された場合、破壊した敵も墓地へ"
+    },
+    {
+      "id": "breeder-056",
+      "kind": "breeder",
+      "category": "分類専用",
+      "faction": "機鋼",
+      "name": "機鋼・蓄圧装甲",
+      "tp": 2,
+      "effect": "機鋼1体のDEF+5を2ターン。効果中に次に攻撃されたとき、この強化で軽減したダメージを最大10まで蓄圧する"
+    },
+    {
+      "id": "breeder-057",
+      "kind": "breeder",
+      "category": "分類専用",
+      "faction": "機鋼",
+      "name": "機鋼・装甲解放",
+      "tp": 1,
+      "effect": "機鋼1体の次の攻撃技ダメージ+10%。蓄圧をすべて消費して同じ値を固定ダメージに加え、蓄圧10ならその技のTP-1（最低1）"
+    },
+    {
+      "id": "breeder-058",
+      "kind": "breeder",
+      "category": "分類専用",
+      "faction": "神造",
+      "name": "神造・聖域調律",
+      "tp": 2,
+      "effect": "神造1体のLIFEを10回復。5以上回復して最大LIFEになった場合、調律完了状態にする"
+    },
+    {
+      "id": "breeder-059",
+      "kind": "breeder",
+      "category": "分類専用",
+      "faction": "神造",
+      "name": "神造・完全顕現",
+      "tp": 1,
+      "effect": "召喚ターンでない神造1体の次の攻撃技ダメージ+15%。調律完了を消費した場合は+30%となり、行動権+1。1ターン1回"
+    },
+    {
+      "id": "breeder-060",
+      "kind": "breeder",
+      "category": "分類専用",
+      "faction": "幻霊",
+      "name": "幻霊・幽界連結",
+      "tp": 2,
+      "effect": "幻霊1体が次に受ける攻撃を回避する。その回避に成功したとき1枚ドローし、残像状態にする"
+    },
+    {
+      "id": "breeder-061",
+      "kind": "breeder",
+      "category": "分類専用",
+      "faction": "幻霊",
+      "name": "幻霊・残像追撃",
+      "tp": 2,
+      "effect": "幻霊1体の次の攻撃技ダメージ+15%。残像を消費した場合は+30%となり、行動権+1。1ターン1回"
+    },
+    {
+      "id": "breeder-062",
+      "kind": "breeder",
+      "category": "分類専用",
+      "faction": "魔族",
+      "name": "魔族・血脈点火",
+      "tp": 1,
+      "effect": "自分のプレイヤーLIFEを5失い、魔族1体の次の攻撃技ダメージ+15%。使用後のプレイヤーLIFEが最大値の50%以下ならその技のTP-1（最低1）。LIFE5以下では使用不可・1ターン1回"
+    },
+    {
+      "id": "breeder-063",
+      "kind": "breeder",
+      "category": "分類専用",
+      "faction": "魔族",
+      "name": "魔族・血債回収",
+      "tp": 2,
+      "effect": "魔族1体の次の攻撃技が与えたダメージの25%だけプレイヤーLIFEを回復（最大10）。このターン自分の効果でプレイヤーLIFEを失っていれば、さらにその技ダメージ+20%"
+    },
+    {
+      "id": "breeder-064",
+      "kind": "breeder",
+      "category": "分類専用",
+      "faction": "獣族",
+      "name": "獣族・狩場指定",
+      "tp": 1,
+      "effect": "敵1体をこのターン狩場に指定。異なる味方獣族がその敵を攻撃するたび、各攻撃のダメージを順に+10%・+20%・+30%"
+    },
+    {
+      "id": "breeder-065",
+      "kind": "breeder",
+      "category": "分類専用",
+      "faction": "獣族",
+      "name": "獣族・戦果分配",
+      "tp": 1,
+      "effect": "このターン味方獣族が敵を撃破している場合、TP2回復し、味方獣族全員のLIFEを5回復。1ターン1回"
+    },
+    {
+      "id": "breeder-066",
+      "kind": "breeder",
+      "category": "分類専用",
+      "faction": "怪物",
+      "name": "怪物・異形継承",
+      "tp": 2,
+      "effect": "手札のモンスター1枚を捨て、怪物1体の次の攻撃技に素材の召喚TP×5の固定ダメージを追加（最大20）。さらにDEF+5を2ターン"
+    },
+    {
+      "id": "breeder-067",
+      "kind": "breeder",
+      "category": "分類専用",
+      "faction": "怪物",
+      "name": "怪物・残滓回収",
+      "tp": 1,
+      "effect": "このターン手札からモンスターを捨てている場合、1枚ドローし、怪物1体のLIFEを5回復。1ターン1回"
     }
   ],
   "growthCards": [

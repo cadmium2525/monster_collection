@@ -17,11 +17,11 @@ function useOnUnit(battle, breederId, unit, extraHand = []) {
   return action;
 }
 
-test('all thirty-five expansion breeder cards are canonical and have explanatory copy', () => {
+test('all forty-seven expansion breeder cards are canonical and have explanatory copy', () => {
   const battle = engine();
   const additions = battle.masterData.breeders.filter((entry) => Number(entry.id.slice(-3)) >= 21);
-  assert.equal(additions.length, 35);
-  assert.deepEqual(additions.map((entry) => entry.id), Array.from({ length: 35 }, (_, index) => `breeder-${String(index + 21).padStart(3, '0')}`));
+  assert.equal(additions.length, 47);
+  assert.deepEqual(additions.map((entry) => entry.id), Array.from({ length: 47 }, (_, index) => `breeder-${String(index + 21).padStart(3, '0')}`));
   assert.equal(additions.every((entry) => entry.effect && entry.tp >= 1), true);
 });
 
@@ -328,6 +328,8 @@ test('all breeder cards expose and resolve an action when their written conditio
     enemy.atkMod = 5;
     enemy.timedDefBuffs.push({ amount: 5, remaining: 2 });
     enemy.statuses.nextDamageReduction = 0.25;
+    if (definition.name === '獣族・戦果分配') player.effects.comboTurn.beastKill = true;
+    if (definition.name === '怪物・残滓回収') player.effects.comboTurn.monsterDiscarded = true;
 
     const material = card(factionMonsters[2].id, `audit-material-${definition.id}`);
     player.deck.push(card(factionMonsters[0].id, `audit-search-${definition.id}`));

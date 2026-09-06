@@ -594,6 +594,19 @@ body:has(.battle-screen) {
 .status-indicator.positive { color:#9af0bd; background:rgba(5,55,33,.9); }
 .status-indicator.negative { color:#ff9aa1; background:rgba(77,14,24,.92); }
 .status-indicator.special { color:#ffe18c; background:rgba(65,42,5,.92); }
+.combo-status-rail { display:none; }
+.board-slot .combo-status-rail { position:absolute; z-index:12; top:12%; right:-43px; width:40px; display:grid; align-content:start; gap:3px; pointer-events:none; }
+.combo-status-chip,.combo-status-overflow { min-width:0; min-height:20px; display:grid; grid-template-columns:12px minmax(0,1fr); align-items:center; gap:2px; padding:2px 3px; border:1px solid currentColor; border-radius:4px 8px 8px 4px; color:#d7f8fa; background:rgba(4,19,30,.94); box-shadow:0 2px 7px rgba(0,0,0,.72),0 0 7px color-mix(in srgb,currentColor 24%,transparent); font-style:normal; text-shadow:0 1px 2px #000; animation:combo-status-arrive .38s ease-out both; }
+.combo-status-chip b { display:grid; place-items:center; width:12px; height:12px; border:1px solid currentColor; border-radius:50%; font-size:6px; line-height:1; }
+.combo-status-chip small { min-width:0; overflow:hidden; font-size:5px; font-weight:900; line-height:1.05; white-space:normal; }
+.combo-status-chip.machine { color:#70e6ed; }
+.combo-status-chip.creation { color:#ffe38d; }
+.combo-status-chip.spirit { color:#d0a1ff; }
+.combo-status-chip.demon { color:#ff8996; }
+.combo-status-chip.beast { color:#9dea8a; }
+.combo-status-chip.monster { color:#efb66e; }
+.combo-status-overflow { min-height:14px; display:grid; grid-template-columns:1fr; place-items:center; color:#dce9ee; font-size:7px; font-weight:900; }
+@keyframes combo-status-arrive { from { opacity:0; transform:translateX(-6px) scale(.88); } to { opacity:1; transform:translateX(0) scale(1); } }
 
 .board-slot .game-card { width: calc(100% - 6px); height: auto; max-height: none; aspect-ratio: .72; }
 .board-slot .game-card .card-top { display: none; }
@@ -2846,7 +2859,7 @@ body:has(.home-lobby) {
 }
 
 @media (prefers-reduced-motion:reduce) {
-  .opening-pack,.opening-aura,.opening-aura i,.pack-particle-field i,.pack-foil-sheen,.pack-break-flash,.pack-break-flash::before,.pack-break-flash i,.pack-card-slot,.pack-card-reveal-shell,.pack-rarity-burst,.rarity-burst-rings i,.pack-rarity-burst strong,.game-card.finish-foil::before,.fusion-catalog-card.finish-foil::before,.monster-portrait.finish-foil::after,.card-art.finish-foil-art::after,.game-card.life-critical .card-life,.login-bonus-diamond-art,.mulligan-motion-cue,.mulligan-motion-sigil i,.game-card.mulligan-draw-enter,.game-card.mulligan-return-to-deck,.game-card.turn-draw-enter,.turn-draw-cue,.boot-progress.is-indeterminate > i,.title-start-button span,.board-slot.special-fusion-ready::after,.board-slot.special-fusion-ready > .game-card,.home-lobby-hero-art,.home-lobby-foil-shine,.home-artwork-fullscreen-foil,.home-artwork-fullscreen > small,.profile-home-art-preview > i { animation:none !important; }
+  .opening-pack,.opening-aura,.opening-aura i,.pack-particle-field i,.pack-foil-sheen,.pack-break-flash,.pack-break-flash::before,.pack-break-flash i,.pack-card-slot,.pack-card-reveal-shell,.pack-rarity-burst,.rarity-burst-rings i,.pack-rarity-burst strong,.game-card.finish-foil::before,.fusion-catalog-card.finish-foil::before,.monster-portrait.finish-foil::after,.card-art.finish-foil-art::after,.game-card.life-critical .card-life,.login-bonus-diamond-art,.mulligan-motion-cue,.mulligan-motion-sigil i,.game-card.mulligan-draw-enter,.game-card.mulligan-return-to-deck,.game-card.turn-draw-enter,.turn-draw-cue,.boot-progress.is-indeterminate > i,.title-start-button span,.board-slot.special-fusion-ready::after,.board-slot.special-fusion-ready > .game-card,.combo-status-chip,.home-lobby-hero-art,.home-lobby-foil-shine,.home-artwork-fullscreen-foil,.home-artwork-fullscreen > small,.profile-home-art-preview > i { animation:none !important; }
   .title-start-button span { opacity:1; filter:none; }
   .pack-particle-field { display:none; }
 }

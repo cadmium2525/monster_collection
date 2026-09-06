@@ -40,5 +40,17 @@
 24. `breeder-050` 魔族・終末契約 — a high diagonal view over a ruined obsidian amphitheater, where an empty split altar feeds narrow crimson life-energy streams into a total eclipse above; no visible human or demon, with broken chains and floating black-glass shards emphasizing the catastrophic bargain
 25. `breeder-051` 獣族・王者の咆哮 — a winged lion alpha in side profile roaring a broad golden shockwave from a storm cliff toward an antlered stag, saber cat, and armored boar charging through the valley below, with a ranger raising a torn standard
 26. `breeder-052` 怪物・完全捕食 — an enormous many-eyed mantis-centipede aberration in side profile curling through ruined jungle arches, crushing and absorbing a summoned-monster crystal while emerald-gold armor grows along its segmented body
+27. `breeder-056` 機鋼・蓄圧装甲 — an ancient teal-steel humanoid clockwork guardian bracing behind locked layered armor while cyan pressure chambers store the force of an enemy impact
+28. `breeder-057` 機鋼・装甲解放 — a low-angle mechanical colossus opening its armor vents and releasing stored pressure as a focused cyan-white shockwave
+29. `breeder-058` 神造・聖域調律 — an ivory porcelain-and-gold celestial construct being healed and tuned to perfect harmony by a robed artificer inside a geometric sanctuary
+30. `breeder-059` 神造・完全顕現 — the restored celestial construct rising above a radiant dais with four wing-like rings fully unfolded and a complete golden halo
+31. `breeder-060` 幻霊・幽界連結 — a moonlit spectral guardian stepping through a violet portal while a mystic anchors silver threads and an incoming blade passes harmlessly through
+32. `breeder-061` 幻霊・残像追撃 — a translucent spirit warrior lunging forward with a crescent blade while two distinct afterimages repeat its pursuit behind it
+33. `breeder-062` 魔族・血脈点火 — a horned obsidian demon ignited by narrow crimson life-energy streams from a summoner, powerful and non-graphic
+34. `breeder-063` 魔族・血債回収 — crimson battle energy flowing backward from a demon's completed strike into a summoner's glowing heart sigil as recovered life
+35. `breeder-064` 獣族・狩場指定 — a ranger marking one distant prey while a lightning wolf, golden ape, and feathered raptor approach on three converging paths
+36. `breeder-065` 獣族・戦果分配 — three distinct allied beasts sharing captured emerald-gold energy and a restored turquoise energy crystal after a hunt
+37. `breeder-066` 怪物・異形継承 — a dominant many-eyed aberrant guardian absorbing an offered monster crystal as amber-green fragments form new armored ridges
+38. `breeder-067` 怪物・残滓回収 — a hooded breeder gathering amber-green transformation fragments into a luminous card-shaped relic while a wounded aberration heals behind
 
-生成PNGを目視確認後、ゲーム配信用コピーは768×768へ高品質縮小し、WebP quality 90・effort 6で保存した。元の生成PNGはCodex生成画像保管場所に残している。
+生成PNGを目視確認後、ゲーム配信用コピーは768×768へ高品質縮小し、WebP quality 84〜90・effort 6で保存した。図鑑用には96×128の独立WebPサムネイルも作成し、固定アトラスを肥大化させずオンデマンド読込する。元の生成PNGはCodex生成画像保管場所に残している。

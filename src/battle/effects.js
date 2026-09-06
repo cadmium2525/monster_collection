@@ -60,6 +60,7 @@ export function resolvedMoveTp(player, unit, target, move, opponent = null) {
     cost -= Math.max(0, Number(unit.traitEngine?.lowLifeMoveDiscount) || 0);
   }
   cost -= player.effects.factionMoveDiscount[unit.faction] ?? 0;
+  if (move.power != null) cost -= Math.max(0, Number(unit.statuses.nextMoveTpDiscount) || 0);
 
   if (unit.specialForm === 'コズミックミューズ' && firstMove) cost -= 1;
   if (['アルケノクロック', 'ソルフェニキア', 'アストラレイ', 'フェアリアーク', 'アストラカスミヨ', 'ルナリリヴェル'].includes(unit.specialForm) && firstMove) cost -= 1;
@@ -159,6 +160,7 @@ export function outgoingDamageMultiplier(unit, target, move, opponent) {
   if (unit.statuses.nextDamageBonus) multiplier *= 1 + unit.statuses.nextDamageBonus;
   if (unit.statuses.nextDamagePenalty) multiplier *= Math.max(0, 1 - unit.statuses.nextDamagePenalty);
   if (unit.statuses.temporaryTurnDamageBonus) multiplier *= 1 + unit.statuses.temporaryTurnDamageBonus;
+  if (unit.statuses.huntingMoveBonus) multiplier *= 1 + unit.statuses.huntingMoveBonus;
   if (!special && unit.movesUsedThisTurn === 0) {
     multiplier *= 1 + Math.max(0, Number(unit.traitEngine?.firstMoveDamageBonus) || 0);
   }

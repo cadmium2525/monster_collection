@@ -571,6 +571,12 @@ export class BattleEngine {
     this.state.currentPlayerId = playerId;
     this.state.halfTurn += 1;
     player.turnNumber += 1;
+    player.effects.comboTurn = {
+      selfLifeLost: 0,
+      monsterDiscarded: false,
+      beastKill: false,
+      used: {},
+    };
     this.state.round = Math.max(...this.state.playerOrder.map((id) => this.player(id).turnNumber));
 
     for (const id of this.state.playerOrder) {
@@ -968,6 +974,7 @@ export class BattleEngine {
     }
     let target = action.targetUnitId ? findUnit(opponent, action.targetUnitId) : null;
     if (target) target = this._redirectMonolith(opponent, target);
+    unit.statuses.huntingMoveBonus = move.power == null ? 0 : this._activateHuntingBonus(player, unit, target);
     const cost = resolvedMoveTp(player, unit, target, move, opponent);
     player.tp -= cost;
     consumeMoveSurcharge(player);
@@ -975,7 +982,9 @@ export class BattleEngine {
     player.metrics.attacks += 1;
     const echoRatio = unit.statuses.echoNext ?? 0;
     const recoilDamage = unit.statuses.recoilOnNextAttack ?? 0;
-    const flatDamageBonus = specialFlatDamageBonus(unit);
+    const flatDamageBonus = specialFlatDamageBonus(unit)
+      + Math.max(0, Number(unit.statuses.pressureRelease) || 0)
+      + Math.max(0, Number(unit.statuses.inheritedRemnant) || 0);
 
     if (move.power == null) {
       unit.statuses.formAlphaUsed = true;
@@ -1019,7 +1028,14 @@ export class BattleEngine {
     const baseDamage = Math.max(0, Math.floor(attack * (power / 100) - effectiveDefense));
     const multiplier = outgoingDamageMultiplier(unit, target, move, opponent);
     const rawDamage = Math.max(0, Math.floor(baseDamage * multiplier) + flatDamageBonus);
-    const damageResult = this._damageUnit(opponent, target, rawDamage, unit);
+    const pressureDef = target.statuses.pressureArmor?.armed
+      ? Math.max(0, Number(target.statuses.pressureArmor.defAmount) || 0)
+      : 0;
+    const unarmoredDefense = Math.max(1, effectiveDefense - pressureDef);
+    const unarmoredBaseDamage = Math.max(0, Math.floor(attack * (power / 100) - unarmoredDefense));
+    const unarmoredRawDamage = Math.max(0, Math.floor(unarmoredBaseDamage * multiplier) + flatDamageBonus);
+    const pressurePrevented = Math.max(0, unarmoredRawDamage - rawDamage);
+    const damageResult = this._damageUnit(opponent, target, rawDamage, unit, { pressurePrevented });
     let echoDamage = 0;
     if (echoRatio > 0 && !damageResult.defeated && damageResult.actual > 0) {
       const echoResult = this._damageUnit(opponent, target, Math.floor(damageResult.actual * echoRatio), unit);
@@ -1066,9 +1082,19 @@ export class BattleEngine {
     this._checkPlayerLife(opponent, player.id, 'overflow');
   }
 
-  _damageUnit(owner, unit, rawDamage, attacker, { triggerAttacked = true } = {}) {
+  _damageUnit(owner, unit, rawDamage, attacker, { triggerAttacked = true, pressurePrevented = 0 } = {}) {
     if (unit.statuses.evadeNext) {
       unit.statuses.evadeNext = false;
+      if (unit.statuses.ghostLink) {
+        unit.statuses.ghostLink = false;
+        unit.statuses.afterimageReady = true;
+        this._drawCards(owner, 1, 'ghost-link');
+        this._log('combo', `${unit.name}が攻撃を回避し、幽界連結で1枚ドロー`, {
+          playerId: owner.id,
+          unitId: unit.id,
+          combo: 'ghost-link',
+        });
+      }
       if (hasAwakening(unit, 'base:ゴースト') && unit.statuses.awakening.deferred) {
         unit.statuses.awakening.deferred = false;
         unit.statuses.awakening.regrantNextTurn = true;
@@ -1089,6 +1115,18 @@ export class BattleEngine {
       if (flatMark.remaining <= 0) unit.statuses.incomingFlatDamage = null;
     }
     const { damage, triggers } = applyIncomingModifiers(unit, adjustedRawDamage);
+    if (triggerAttacked && unit.statuses.pressureArmor?.armed) {
+      const stored = Math.min(10, Math.max(0, Math.floor(Number(pressurePrevented) || 0)));
+      unit.statuses.pressureCharge = Math.min(10, Math.max(0, Number(unit.statuses.pressureCharge) || 0) + stored);
+      unit.statuses.pressureArmor.armed = false;
+      triggers.push(`蓄圧+${stored}`);
+      this._log('combo', `${unit.name}が軽減した${stored}ダメージを蓄圧`, {
+        playerId: owner.id,
+        unitId: unit.id,
+        combo: 'pressure-charge',
+        amount: stored,
+      });
+    }
     if (markTriggered) triggers.push(`呪印+${flatMark.amount}`);
     const before = unit.life;
     const beforeRatio = lifeRatio(unit);
@@ -1325,6 +1363,10 @@ export class BattleEngine {
 
     if (result.defeated) {
       player.metrics.knockouts += 1;
+      if (unit.faction === '獣族') {
+        player.effects.comboTurn ??= { selfLifeLost: 0, monsterDiscarded: false, beastKill: false, used: {} };
+        player.effects.comboTurn.beastKill = true;
+      }
       if ((unit.statuses.tpOnNextKill ?? 0) > 0) {
         player.tp = Math.min(player.maxTp, player.tp + unit.statuses.tpOnNextKill);
       }
@@ -1425,6 +1467,15 @@ export class BattleEngine {
         unit.statuses.awakening.battleUsed = true;
       }
     }
+    const lifesteal = unit.statuses.nextDamageLifesteal;
+    const dealtDamage = Math.max(0, Number(result.actual) || 0) + Math.max(0, Number(result.overflow) || 0);
+    if (lifesteal && dealtDamage > 0) {
+      const amount = Math.min(
+        Math.max(0, Number(lifesteal.cap) || 0),
+        Math.floor(dealtDamage * Math.max(0, Number(lifesteal.ratio) || 0)),
+      );
+      player.life = Math.min(RULES.playerLife, player.life + amount);
+    }
   }
 
   _afterMoveUse(player, unit, move, defeatedTarget) {
@@ -1496,6 +1547,11 @@ export class BattleEngine {
     unit.statuses.echoNext = 0;
     unit.statuses.recoilOnNextAttack = 0;
     unit.statuses.tpOnNextKill = 0;
+    unit.statuses.pressureRelease = 0;
+    unit.statuses.inheritedRemnant = 0;
+    unit.statuses.nextMoveTpDiscount = 0;
+    unit.statuses.nextDamageLifesteal = null;
+    unit.statuses.huntingMoveBonus = 0;
     if (unit.specialForm === 'ガイアヴォルフ') unit.statuses.specialCounters.gaiaRetaliation = 0;
     if (unit.specialForm === 'オベリスクグラトン') unit.statuses.specialCounters.obeliskCharge = 0;
     if (unit.specialForm === 'ボルトセラフィア') unit.statuses.specialCounters.boltSeraphCharge = false;
@@ -1703,7 +1759,49 @@ export class BattleEngine {
       unit.timedDefBuffs = unit.timedDefBuffs
         .map((buff) => ({ ...buff, remaining: buff.remaining - 1 }))
         .filter((buff) => buff.remaining > 0);
+      if (unit.statuses.pressureArmor) {
+        unit.statuses.pressureArmor.remaining -= 1;
+        if (unit.statuses.pressureArmor.remaining <= 0) unit.statuses.pressureArmor = null;
+      }
+      unit.statuses.afterimageReady = false;
     }
+    for (const ownerId of this.state.playerOrder) {
+      for (const unit of livingUnits(this.player(ownerId))) {
+        const mark = unit.statuses.huntingMark;
+        if (mark?.sourcePlayerId === player.id && mark.activeTurn <= player.turnNumber) unit.statuses.huntingMark = null;
+      }
+    }
+  }
+
+  _activateHuntingBonus(player, unit, target) {
+    if (!target || unit.faction !== '獣族') return 0;
+    const mark = target.statuses.huntingMark;
+    if (!mark || mark.sourcePlayerId !== player.id || mark.activeTurn !== player.turnNumber) return 0;
+    mark.attackerBonuses ??= {};
+    if (mark.attackerBonuses[unit.id]) return mark.attackerBonuses[unit.id];
+    const distinct = Object.keys(mark.attackerBonuses).length;
+    const bonus = Math.min(0.3, (distinct + 1) * 0.1);
+    mark.attackerBonuses[unit.id] = bonus;
+    return bonus;
+  }
+
+  _markComboUsed(player, key) {
+    player.effects.comboTurn ??= { selfLifeLost: 0, monsterDiscarded: false, beastKill: false, used: {} };
+    player.effects.comboTurn.used ??= {};
+    player.effects.comboTurn.used[key] = true;
+  }
+
+  _losePlayerLife(player, amount) {
+    const loss = Math.max(0, Math.min(player.life, Number(amount) || 0));
+    player.life -= loss;
+    player.effects.comboTurn ??= { selfLifeLost: 0, monsterDiscarded: false, beastKill: false, used: {} };
+    player.effects.comboTurn.selfLifeLost += loss;
+    return loss;
+  }
+
+  _markMonsterDiscarded(player) {
+    player.effects.comboTurn ??= { selfLifeLost: 0, monsterDiscarded: false, beastKill: false, used: {} };
+    player.effects.comboTurn.monsterDiscarded = true;
   }
 
   _decrementTurnModifiers(player) {
@@ -1769,6 +1867,8 @@ export class BattleEngine {
     const enemy = livingUnits(opponent);
     const targetActions = (units) => units.map((unit) => ({ ...base, targetUnitId: unit.id, label: `${definition.name} → ${unit.name}` }));
     const factionTargets = (faction) => targetActions(own.filter((unit) => unit.faction === faction));
+    const comboTurn = player.effects.comboTurn ?? { selfLifeLost: 0, monsterDiscarded: false, beastKill: false, used: {} };
+    const comboUnused = (key) => !comboTurn.used?.[key];
     const breederKey = /^breeder-0(?:09|1\d|20)$/.test(definition.id) ? definition.id : definition.name;
     switch (breederKey) {
       case 'ベテランブリーダー':
@@ -1931,6 +2031,41 @@ export class BattleEngine {
           label: `怪物・完全捕食：${unit.name}が${cardDefinition(this.masterIndex, material).name}を捕食`,
         })));
       }
+      case '機鋼・蓄圧装甲':
+      case '機鋼・装甲解放':
+        return factionTargets('機鋼');
+      case '神造・聖域調律':
+        return factionTargets('神造');
+      case '神造・完全顕現':
+        return comboUnused('complete-manifestation')
+          ? targetActions(own.filter((unit) => unit.faction === '神造' && !unit.summonedThisTurn))
+          : [];
+      case '幻霊・幽界連結':
+        return factionTargets('幻霊');
+      case '幻霊・残像追撃':
+        return comboUnused('afterimage-pursuit') ? factionTargets('幻霊') : [];
+      case '魔族・血脈点火':
+        return player.life > 5 && comboUnused('blood-ignition') ? factionTargets('魔族') : [];
+      case '魔族・血債回収':
+        return factionTargets('魔族');
+      case '獣族・狩場指定':
+        return targetActions(enemy);
+      case '獣族・戦果分配':
+        return comboTurn.beastKill && comboUnused('spoils-sharing')
+          ? [{ ...base, targetUnitId: null, label: definition.name }]
+          : [];
+      case '怪物・異形継承': {
+        const materials = player.hand.filter((candidate) => candidate.instanceId !== card.instanceId
+          && cardDefinition(this.masterIndex, candidate)?.kind === 'monster');
+        return own.filter((unit) => unit.faction === '怪物').flatMap((unit) => materials.map((material) => ({
+          ...base,
+          targetUnitId: unit.id,
+          materialCardInstanceId: material.instanceId,
+          label: `怪物・異形継承：${unit.name}へ${cardDefinition(this.masterIndex, material).name}の残滓を継承`,
+        })));
+      }
+      case '怪物・残滓回収':
+        return comboTurn.monsterDiscarded && comboUnused('remnant-recovery') ? factionTargets('怪物') : [];
       default:
         return [];
     }
@@ -2094,7 +2229,7 @@ export class BattleEngine {
         ownTarget.statuses.returnToHandOnDefeat = true;
         break;
       case '魔族・血の契約':
-        player.life -= 10;
+        this._losePlayerLife(player, 10);
         player.tp = Math.min(player.maxTp, player.tp + 3);
         break;
       case '魔族・呪印':
@@ -2112,7 +2247,10 @@ export class BattleEngine {
       case '怪物・暴食': {
         const material = removeFrom(player.hand, (candidate) => candidate.instanceId === action.materialCardInstanceId);
         const materialDef = material ? cardDefinition(this.masterIndex, material) : null;
-        if (material) player.graveyard.push(material);
+        if (material) {
+          player.graveyard.push(material);
+          this._markMonsterDiscarded(player);
+        }
         this._heal(ownTarget, Math.min(20, (materialDef?.summonTp ?? 0) * 5));
         break;
       }
@@ -2132,7 +2270,7 @@ export class BattleEngine {
         ownTarget.statuses.returnToHandOnDefeat = true;
         break;
       case '魔族・終末契約':
-        player.life -= 15;
+        this._losePlayerLife(player, 15);
         ownTarget.statuses.nextDamageBonus += 0.5;
         break;
       case '獣族・王者の咆哮':
@@ -2143,11 +2281,95 @@ export class BattleEngine {
         break;
       case '怪物・完全捕食': {
         const material = removeFrom(player.hand, (candidate) => candidate.instanceId === action.materialCardInstanceId);
-        if (material) player.graveyard.push(material);
+        if (material) {
+          player.graveyard.push(material);
+          this._markMonsterDiscarded(player);
+        }
         this._heal(ownTarget, 20);
         applyAtkBuff(ownTarget, 10);
         break;
       }
+      case '機鋼・蓄圧装甲':
+        ownTarget.timedDefBuffs.push({ amount: 5, remaining: 2 });
+        ownTarget.statuses.pressureArmor = { armed: true, defAmount: 5, remaining: 2 };
+        break;
+      case '機鋼・装甲解放': {
+        const pressure = Math.min(10, Math.max(0, Number(ownTarget.statuses.pressureCharge) || 0));
+        ownTarget.statuses.nextDamageBonus += 0.1;
+        ownTarget.statuses.pressureRelease = pressure;
+        ownTarget.statuses.pressureCharge = 0;
+        if (pressure >= 10) ownTarget.statuses.nextMoveTpDiscount = Math.max(1, ownTarget.statuses.nextMoveTpDiscount ?? 0);
+        break;
+      }
+      case '神造・聖域調律': {
+        const healed = this._heal(ownTarget, 10);
+        if (healed >= 5 && ownTarget.life >= ownTarget.maxLife) ownTarget.statuses.tuningReady = true;
+        break;
+      }
+      case '神造・完全顕現': {
+        const tuned = Boolean(ownTarget.statuses.tuningReady);
+        ownTarget.statuses.nextDamageBonus += tuned ? 0.3 : 0.15;
+        if (tuned) {
+          ownTarget.statuses.tuningReady = false;
+          ownTarget.actionPoints += 1;
+        }
+        this._markComboUsed(player, 'complete-manifestation');
+        break;
+      }
+      case '幻霊・幽界連結':
+        ownTarget.statuses.evadeNext = true;
+        ownTarget.statuses.ghostLink = true;
+        break;
+      case '幻霊・残像追撃': {
+        const afterimage = Boolean(ownTarget.statuses.afterimageReady);
+        ownTarget.statuses.nextDamageBonus += afterimage ? 0.3 : 0.15;
+        if (afterimage) {
+          ownTarget.statuses.afterimageReady = false;
+          ownTarget.actionPoints += 1;
+        }
+        this._markComboUsed(player, 'afterimage-pursuit');
+        break;
+      }
+      case '魔族・血脈点火':
+        this._losePlayerLife(player, 5);
+        ownTarget.statuses.nextDamageBonus += 0.15;
+        if (player.life * 2 <= RULES.playerLife) {
+          ownTarget.statuses.nextMoveTpDiscount = Math.max(1, ownTarget.statuses.nextMoveTpDiscount ?? 0);
+        }
+        this._markComboUsed(player, 'blood-ignition');
+        break;
+      case '魔族・血債回収':
+        ownTarget.statuses.nextDamageLifesteal = { ratio: 0.25, cap: 10 };
+        if ((player.effects.comboTurn?.selfLifeLost ?? 0) > 0) ownTarget.statuses.nextDamageBonus += 0.2;
+        break;
+      case '獣族・狩場指定':
+        enemyTarget.statuses.huntingMark = {
+          sourcePlayerId: player.id,
+          activeTurn: player.turnNumber,
+          attackerBonuses: {},
+        };
+        break;
+      case '獣族・戦果分配':
+        player.tp = Math.min(player.maxTp, player.tp + 2);
+        for (const unit of livingUnits(player).filter((candidate) => candidate.faction === '獣族')) this._heal(unit, 5);
+        this._markComboUsed(player, 'spoils-sharing');
+        break;
+      case '怪物・異形継承': {
+        const material = removeFrom(player.hand, (candidate) => candidate.instanceId === action.materialCardInstanceId);
+        const materialDef = material ? cardDefinition(this.masterIndex, material) : null;
+        if (material) {
+          player.graveyard.push(material);
+          this._markMonsterDiscarded(player);
+        }
+        ownTarget.statuses.inheritedRemnant = Math.min(20, Math.max(0, Number(materialDef?.summonTp) || 0) * 5);
+        ownTarget.timedDefBuffs.push({ amount: 5, remaining: 2 });
+        break;
+      }
+      case '怪物・残滓回収':
+        this._drawCards(player, 1, 'breeder');
+        this._heal(ownTarget, 5);
+        this._markComboUsed(player, 'remnant-recovery');
+        break;
       default: throw new Error(`Unsupported breeder: ${definition.name}`);
     }
     this._log('breeder', `${player.displayName}は${definition.name}を使用`, {
@@ -2165,7 +2387,11 @@ export class BattleEngine {
       || unit.statuses.nextDamageBonus > 0 || unit.statuses.nextDamageReduction > 0
       || unit.statuses.spareParts || unit.statuses.echoNext > 0
       || unit.statuses.autoRepairRemaining > 0 || unit.statuses.tpOnNextKill > 0
-      || unit.statuses.predationEvolution || Boolean(unit.statuses.deathPact);
+      || unit.statuses.predationEvolution || Boolean(unit.statuses.deathPact)
+      || Boolean(unit.statuses.pressureArmor) || unit.statuses.pressureCharge > 0
+      || unit.statuses.tuningReady || unit.statuses.ghostLink || unit.statuses.afterimageReady
+      || unit.statuses.nextMoveTpDiscount > 0 || Boolean(unit.statuses.nextDamageLifesteal)
+      || unit.statuses.pressureRelease > 0 || unit.statuses.inheritedRemnant > 0;
   }
 
   _clearPositiveBattleEffects(unit) {
@@ -2183,6 +2409,15 @@ export class BattleEngine {
     unit.statuses.tpOnNextKill = 0;
     unit.statuses.predationEvolution = false;
     unit.statuses.deathPact = null;
+    unit.statuses.pressureArmor = null;
+    unit.statuses.pressureCharge = 0;
+    unit.statuses.pressureRelease = 0;
+    unit.statuses.tuningReady = false;
+    unit.statuses.ghostLink = false;
+    unit.statuses.afterimageReady = false;
+    unit.statuses.nextMoveTpDiscount = 0;
+    unit.statuses.nextDamageLifesteal = null;
+    unit.statuses.inheritedRemnant = 0;
   }
 
   _hasRemovableDebuff(unit) {
@@ -2190,7 +2425,7 @@ export class BattleEngine {
       || unit.statuses.nextDamagePenalty > 0 || unit.statuses.stunOnNextTurn > 0 || unit.stunnedThisTurn
       || Boolean(unit.statuses.parasite) || Boolean(unit.statuses.incomingFlatDamage)
       || unit.statuses.overclockPendingDefPenalty > 0 || unit.statuses.recoilOnNextAttack > 0
-      || Boolean(unit.statuses.attackSeal);
+      || Boolean(unit.statuses.attackSeal) || Boolean(unit.statuses.huntingMark);
   }
 
   _clearNegativeBattleEffects(unit) {
@@ -2205,6 +2440,7 @@ export class BattleEngine {
     unit.statuses.overclockPendingDefPenalty = 0;
     unit.statuses.recoilOnNextAttack = 0;
     unit.statuses.attackSeal = null;
+    unit.statuses.huntingMark = null;
     if (unit.stunnedThisTurn && !unit.summonedThisTurn) {
       unit.stunnedThisTurn = false;
       unit.actionPoints = Math.max(1, unit.actionPoints);

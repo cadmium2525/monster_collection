@@ -113,6 +113,31 @@ export function unitStatusGroups(unit) {
   }).filter(Boolean);
 }
 
+export function unitComboStatusEntries(unit) {
+  if (!unit) return [];
+  const statuses = unit.statuses ?? {};
+  const entries = [];
+  const add = (key, tone, icon, label, detail) => entries.push({ key, tone, icon, label, detail });
+
+  if (number(statuses.pressureCharge) > 0) {
+    add('pressure-charge', 'machine', '圧', `蓄圧 ${Math.min(10, number(statuses.pressureCharge))}/10`, '装甲解放で次の攻撃技へ加算');
+  } else if (statuses.pressureArmor?.armed) {
+    add('pressure-armor', 'machine', '圧', '蓄圧 待機', '次に攻撃されたとき軽減値を保存');
+  }
+  if (number(statuses.pressureRelease) > 0) add('pressure-release', 'machine', '解', `解放 +${number(statuses.pressureRelease)}`, '次の攻撃技で消費');
+  if (statuses.tuningReady) add('tuning-ready', 'creation', '調', '調律 READY', '完全顕現で消費');
+  if (statuses.ghostLink) add('ghost-link', 'spirit', '幽', '幽界 連結中', '回避成功で1枚ドロー・残像獲得');
+  if (statuses.afterimageReady) add('afterimage-ready', 'spirit', '残', '残像 READY', '残像追撃で消費');
+  if (number(statuses.nextMoveTpDiscount) > 0) add('blood-ignition', 'demon', '血', '点火 TP-1', '次の攻撃技で消費');
+  if (statuses.nextDamageLifesteal) add('blood-debt', 'demon', '債', '血債 25%', `次の攻撃技で最大${number(statuses.nextDamageLifesteal.cap)}回復`);
+  if (statuses.huntingMark) {
+    const count = Math.min(3, Object.keys(statuses.huntingMark.attackerBonuses ?? {}).length);
+    add('hunting-mark', 'beast', '狩', `狩場 ${count}/3`, '異なる獣族の攻撃で倍率上昇');
+  }
+  if (number(statuses.inheritedRemnant) > 0) add('inherited-remnant', 'monster', '滓', `残滓 +${number(statuses.inheritedRemnant)}`, '次の攻撃技へ固定ダメージを加算');
+  return entries;
+}
+
 export function lowLifeTargetEffects(source, target, move) {
   if (!source || !target || !move || !unitLifePresentation(target).low) return [];
   const effects = [];

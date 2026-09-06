@@ -14,6 +14,16 @@ function statusValue(unit) {
   value -= unit.statuses.incomingFlatDamage ? (unit.statuses.incomingFlatDamage.remaining ?? 1) * 4 : 0;
   value -= unit.statuses.attackSeal ? 30 : 0;
   value += unit.statuses.deathPact ? 24 : 0;
+  value += unit.statuses.pressureArmor?.armed ? 8 : 0;
+  value += (unit.statuses.pressureCharge ?? 0) * 1.2;
+  value += (unit.statuses.pressureRelease ?? 0) * 1.5;
+  value += unit.statuses.tuningReady ? 12 : 0;
+  value += unit.statuses.ghostLink ? 5 : 0;
+  value += unit.statuses.afterimageReady ? 12 : 0;
+  value += (unit.statuses.nextMoveTpDiscount ?? 0) * 5;
+  value += unit.statuses.nextDamageLifesteal ? 8 : 0;
+  value += (unit.statuses.inheritedRemnant ?? 0) * 1.4;
+  value -= unit.statuses.huntingMark ? 9 : 0;
   return value;
 }
 

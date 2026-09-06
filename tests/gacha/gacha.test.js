@@ -253,6 +253,17 @@ test('all nine counter commands are available from boosters, normal CPUs and pos
   assert.equal(offered, true);
 });
 
+test('all twelve combo breeders are available from boosters and normal CPU pools', () => {
+  const comboIds = Array.from({ length: 12 }, (_, index) => `breeder-${String(index + 56).padStart(3, '0')}`);
+  assert.equal(comboIds.every((id) => isPackEligible(masterIndex.cards.get(id))), true);
+  assert.equal(comboIds.every((id) => isNormalCpuEligible(masterIndex.cards.get(id))), true);
+  for (const faction of ['機鋼', '神造', '幻霊', '魔族', '獣族', '怪物']) {
+    const disclosure = boosterPackDisclosure({ masterIndex, faction, openedCount: 1 });
+    const factionIds = comboIds.filter((id) => masterIndex.cards.get(id).faction === faction);
+    assert.equal(factionIds.every((id) => disclosure.cards.some(({ definition }) => definition.id === id)), true);
+  }
+});
+
 test('pack purchase persists five assets before reveal and operation ids prevent double spending or rewards', () => {
   const pack = generateBoosterPack({ masterIndex, faction: '機鋼', seed: 'atomic-pack', openedCount: 0 });
   const purchase = { operationId: 'pack-op-1', faction: '機鋼', packId: pack.packId, cards: pack.cards, cost: 300, useFreeCredit: false };

@@ -19,6 +19,15 @@ const GENERIC_BREEDERS = [
   'breeder-053', 'breeder-054', 'breeder-055',
 ];
 
+const COMBO_BREEDER_PAIRS = Object.freeze({
+  '機鋼': ['breeder-056', 'breeder-057'],
+  '神造': ['breeder-058', 'breeder-059'],
+  '幻霊': ['breeder-060', 'breeder-061'],
+  '魔族': ['breeder-062', 'breeder-063'],
+  '獣族': ['breeder-064', 'breeder-065'],
+  '怪物': ['breeder-066', 'breeder-067'],
+});
+
 function addCopy(counts, id, max = 3) {
   const current = counts.get(id) ?? 0;
   if (current >= max) return false;
@@ -122,6 +131,13 @@ function selectBreeders(masterIndex, theme, rng, rank) {
     .sort((a, b) => genericBreederScore(masterIndex, b, theme, rank) - genericBreederScore(masterIndex, a, theme, rank));
   if (rank === 'bronze') return rng.shuffle([...factionBreeders, ...generic]).slice(0, 4);
   if (theme === '混合') return generic.slice(0, 4);
+  if (['gold', 'legend'].includes(rank)) {
+    const comboPair = (COMBO_BREEDER_PAIRS[theme] ?? []).filter((id) => masterIndex.cards.has(id));
+    if (comboPair.length === 2) {
+      const legacyFaction = factionBreeders.filter((id) => !comboPair.includes(id));
+      return [...comboPair, ...rng.shuffle(legacyFaction).slice(0, 1), ...generic.slice(0, 1)];
+    }
+  }
   return [...rng.shuffle(factionBreeders).slice(0, 2), ...generic.slice(0, 2)];
 }
 

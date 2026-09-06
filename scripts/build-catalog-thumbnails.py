@@ -74,6 +74,17 @@ def main() -> None:
     card_ids.extend(f"breeder-{number:03d}" for number in range(1, 53))
     build_atlas([open_card_art(card_id) for card_id in card_ids], 9, 9, OUTPUT / "cards.webp")
 
+    # Cards added after the fixed 9x9 atlas remain separate so the existing
+    # atlas coordinates and long-lived browser cache never shift.
+    for number in range(53, 68):
+        card_id = f"breeder-{number:03d}"
+        destination = OUTPUT / f"{card_id}.webp"
+        destination.parent.mkdir(parents=True, exist_ok=True)
+        thumbnail(open_card_art(card_id)).save(
+            destination, "WEBP", quality=62, method=6, exact=True, exif=b"", xmp=b"",
+        )
+        print(f"{destination.relative_to(ROOT).as_posix()}: {CELL[0]}x{CELL[1]}, {destination.stat().st_size} bytes")
+
     fusion_images: list[Image.Image] = []
     for number in range(1, 49):
         with Image.open(IMAGES / "special-fusions" / f"fusion-{number:03d}.webp") as source:

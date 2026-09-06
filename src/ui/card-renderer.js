@@ -2,7 +2,12 @@ import { effectiveAtk, effectiveDef } from '../battle/state.js';
 import { shugyoMovePoolType } from '../battle/shugyo.js';
 import { el } from './dom.js';
 import { openModal } from './modal.js';
-import { unitLifePresentation, unitStatusEntries, unitStatusGroups } from './status-presentation.js';
+import {
+  unitComboStatusEntries,
+  unitLifePresentation,
+  unitStatusEntries,
+  unitStatusGroups,
+} from './status-presentation.js';
 
 const FACTION_CLASS = Object.freeze({
   '機鋼': 'faction-inorganic',
@@ -251,6 +256,8 @@ export function renderCard({
     : cardArtPlacement(definition, unit, cardAsset);
   const life = unit ? unitLifePresentation(unit) : null;
   const statusGroups = unitStatusGroups(unit);
+  const comboStatuses = unitComboStatusEntries(unit);
+  const visibleComboStatuses = comboStatuses.slice(0, 3);
   const name = unit?.specialForm ?? definition.name;
   const classes = [
     'game-card',
@@ -300,6 +307,23 @@ export function renderCard({
       el('b', { text: group.icon }),
       group.count > 1 ? el('small', { text: group.count }) : null,
     ]))) : null,
+    comboStatuses.length ? el('span', {
+      className: 'combo-status-rail',
+      attrs: { 'aria-label': comboStatuses.map((entry) => `${entry.label}。${entry.detail}`).join('。') },
+    }, [
+      ...visibleComboStatuses.map((entry) => el('i', {
+        className: `combo-status-chip ${entry.tone}`,
+        attrs: { title: `${entry.label}：${entry.detail}`, 'aria-hidden': 'true' },
+      }, [
+        el('b', { text: entry.icon }),
+        el('small', { text: entry.label }),
+      ])),
+      comboStatuses.length > 3 ? el('i', {
+        className: 'combo-status-overflow',
+        attrs: { 'aria-hidden': 'true' },
+        text: `+${comboStatuses.length - 3}`,
+      }) : null,
+    ]) : null,
   ]);
   return lazyArt ? deferCardArt(node) : node;
 }

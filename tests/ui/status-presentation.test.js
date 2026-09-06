@@ -1,6 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { lowLifeTargetEffects, unitLifePresentation, unitStatusEntries, unitStatusGroups } from '../../src/ui/status-presentation.js';
+import {
+  lowLifeTargetEffects,
+  unitComboStatusEntries,
+  unitLifePresentation,
+  unitStatusEntries,
+  unitStatusGroups,
+} from '../../src/ui/status-presentation.js';
 
 function unit(overrides = {}) {
   return {
@@ -30,6 +36,23 @@ test('LIFE percentage uses the current grown maximum and includes exactly fifty 
   });
   assert.equal(unitLifePresentation(unit({ life: 21 })).low, false);
   assert.equal(unitLifePresentation(unit({ life: 12, maxLife: 35 })).percentage, 34);
+});
+
+test('combo states expose concise right-rail labels with stack values', () => {
+  const target = unit({
+    statuses: {
+      pressureCharge: 7,
+      tuningReady: true,
+      afterimageReady: true,
+      huntingMark: { attackerBonuses: { one: 0.1, two: 0.2 } },
+    },
+  });
+  assert.deepEqual(unitComboStatusEntries(target).map((entry) => entry.label), [
+    '蓄圧 7/10',
+    '調律 READY',
+    '残像 READY',
+    '狩場 2/3',
+  ]);
 });
 
 test('visible status entries describe meaningful effects and exclude consumed internal flags', () => {
