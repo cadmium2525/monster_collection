@@ -884,6 +884,7 @@ class MonsterConstructionApp {
       chooseCpuAction: createAiPolicy(level, { timeBudgetMs: AI_BUDGET[level] ?? AI_BUDGET.gold }),
       onComplete: (_result, completedEngine) => this.handleArenaBattleComplete(completedEngine),
       onCheckpoint: (battleRuntime) => this.persistArenaCheckpoint(battleRuntime),
+      onPlaySe: (source, options) => this.audio.playSe(source, options),
       cpuRngState: runtime.cpuRng ?? null,
       speed: runtime.speed ?? 'standard',
     });
@@ -1054,6 +1055,7 @@ class MonsterConstructionApp {
       chooseCpuAction: createAiPolicy(level, { timeBudgetMs: AI_BUDGET[level] }),
       onComplete: (_result, completedEngine) => this.handleBattleComplete(completedEngine),
       onCheckpoint: (battleRuntime) => this.persistBattleCheckpoint(battleRuntime),
+      onPlaySe: (source, options) => this.audio.playSe(source, options),
       cpuRngState: runtime.cpuRng ?? null,
       speed: runtime.speed ?? 'standard',
     });

@@ -1,6 +1,9 @@
 export const HOME_BGM_PATH = './assets/audio/home-bgm.mp3';
 export const ARENA_BGM_PATH = './assets/audio/arena.mp3';
 export const BATTLE_BGM_PATH = './assets/audio/battle.mp3';
+export const HIT_SE_PATH = './assets/audio/hit.mp3';
+export const TURN_SE_PATH = './assets/audio/turn.mp3';
+export const CARD_DRAW_SE_PATH = './assets/audio/card-se.mp3';
 export const AUDIO_MASTER_GAIN = 0.5;
 export const BATTLE_BGM_TRIM_GAIN = 0.5;
 export const BGM_DEFAULT_VOLUME = 100;
@@ -9,6 +12,16 @@ export const BGM_VOLUME_STORAGE_KEY = 'mc-bgm-volume-v2';
 export const SE_VOLUME_STORAGE_KEY = 'mc-se-volume-v1';
 
 const LEGACY_HOME_BGM_VOLUME_STORAGE_KEY = 'mc-home-bgm-volume-v1';
+const HOME_BGM_SCREENS = new Set([
+  'home',
+  'boosters',
+  'pack-opening',
+  'decks',
+  'deck-detail',
+  'deck-builder',
+  'assets',
+  'card-catalog',
+]);
 const PREBATTLE_SCREENS = new Set(['setup', 'tournament', 'arena']);
 const BATTLE_SCREENS = new Set(['battle', 'arena-battle']);
 
@@ -44,7 +57,7 @@ export function isIosDevice(navigatorRef = globalThis.navigator) {
 }
 
 function sceneForScreen(screen) {
-  if (screen === 'home') return 'home';
+  if (HOME_BGM_SCREENS.has(screen)) return 'home';
   if (PREBATTLE_SCREENS.has(screen)) return 'arena';
   if (BATTLE_SCREENS.has(screen)) return 'battle';
   return null;

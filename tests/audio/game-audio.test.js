@@ -9,6 +9,9 @@ import {
   BGM_VOLUME_STORAGE_KEY,
   GameAudioController,
   HOME_BGM_PATH,
+  HIT_SE_PATH,
+  TURN_SE_PATH,
+  CARD_DRAW_SE_PATH,
   SE_DEFAULT_VOLUME,
   SE_VOLUME_STORAGE_KEY,
   isIosDevice,
@@ -110,6 +113,9 @@ test('master gain halves every BGM scene and SE while both controls default to 1
   assert.equal(HOME_BGM_PATH, './assets/audio/home-bgm.mp3');
   assert.equal(ARENA_BGM_PATH, './assets/audio/arena.mp3');
   assert.equal(BATTLE_BGM_PATH, './assets/audio/battle.mp3');
+  assert.equal(HIT_SE_PATH, './assets/audio/hit.mp3');
+  assert.equal(TURN_SE_PATH, './assets/audio/turn.mp3');
+  assert.equal(CARD_DRAW_SE_PATH, './assets/audio/card-se.mp3');
   assert.equal(controller.bgmVolume, BGM_DEFAULT_VOLUME);
   assert.equal(controller.seVolume, SE_DEFAULT_VOLUME);
   controller.setScreen('home');
@@ -170,6 +176,22 @@ test('home, tournament/arena prebattle and battle screens switch tracks at their
   assert.equal(controller.tracks.home.paused, true);
   assert.equal(controller.tracks.arena.paused, true);
   assert.equal(controller.tracks.battle.paused, true);
+});
+
+test('shop and card management keep the home BGM playing continuously', async () => {
+  const controller = new GameAudioController({
+    storage: memoryStorage(), documentRef: new FakeEvents(), windowRef: new FakeEvents(), navigatorRef: { userAgent: 'Desktop' },
+    AudioCtor: FakeAudio, AudioContextCtor: FakeAudioContext,
+  });
+  controller.setScreen('home');
+  await controller.unlockFromGesture();
+  const playCalls = controller.tracks.home.playCalls;
+  for (const screen of ['boosters', 'pack-opening', 'decks', 'deck-detail', 'deck-builder', 'assets', 'card-catalog']) {
+    controller.setScreen(screen);
+    await tick();
+    assert.equal(controller.tracks.home.paused, false, `${screen} should retain home BGM`);
+  }
+  assert.equal(controller.tracks.home.playCalls, playCalls);
 });
 
 test('visibility pauses the active track and resumes it without resetting its position', async () => {

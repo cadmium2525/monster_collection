@@ -13,6 +13,7 @@ import { interpolatedStatValue, statChangeTimings, tpGemStates, turnStartTpTrans
 import { openModal } from './modal.js';
 import { lowLifeTargetEffects, unitLifePresentation } from './status-presentation.js';
 import { automaticMulliganIds } from '../battle/mulligan.js';
+import { CARD_DRAW_SE_PATH, HIT_SE_PATH, TURN_SE_PATH } from '../audio/game-audio.js';
 
 function delay(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 
@@ -22,14 +23,22 @@ function cardAction(action, cardInstanceId) {
 
 function unique(values) { return [...new Set(values)]; }
 
+export function hasDamagingAttack(logs = []) {
+  return logs.some((event) => (
+    (event.type === 'attack' || event.type === 'direct-attack')
+    && Number(event.damage) > 0
+  ));
+}
+
 export class BattleScreen {
-  constructor({ root, engine, humanPlayerId, chooseCpuAction, onComplete, onCheckpoint = null, cpuRngState = null, speed = 'standard' }) {
+  constructor({ root, engine, humanPlayerId, chooseCpuAction, onComplete, onCheckpoint = null, onPlaySe = null, cpuRngState = null, speed = 'standard' }) {
     this.root = root;
     this.engine = engine;
     this.humanPlayerId = humanPlayerId;
     this.chooseCpuAction = chooseCpuAction;
     this.onComplete = onComplete;
     this.onCheckpoint = onCheckpoint;
+    this.onPlaySe = onPlaySe;
     this.speed = speed;
     this.selection = null;
     this.pendingMove = null;
@@ -58,6 +67,7 @@ export class BattleScreen {
     this.turnDrawActive = false;
     this.turnDrawCount = 0;
     this.turnDrawReason = 'turn';
+    this.opponentDrawSoundCount = 0;
     this.busy = engine.state.status === 'active' && !engine.state.pendingMoveChoice;
     this.turnAnnouncementKey = null;
     this.queuedCardSelectionId = null;
@@ -117,6 +127,15 @@ export class BattleScreen {
     return globalThis.matchMedia?.('(prefers-reduced-motion: reduce)')?.matches ?? false;
   }
 
+  playSe(source, options = {}) {
+    try {
+      const pending = this.onPlaySe?.(source, options);
+      pending?.catch?.((error) => console.warn('Battle sound effect could not be played', error));
+    } catch (error) {
+      console.warn('Battle sound effect could not be played', error);
+    }
+  }
+
   mulliganTimings() {
     if (this.prefersReducedMotion()) {
       return { lead: 40, deal: 80, settle: 40, return: 100, redrawLead: 40 };
@@ -135,6 +154,7 @@ export class BattleScreen {
     this.render();
     await delay(timing.lead);
     for (const card of cards) {
+      this.playSe(CARD_DRAW_SE_PATH);
       this.mulliganAnimatingCardId = card.instanceId;
       this.presentedMulliganHandIds.add(card.instanceId);
       this.render();
@@ -153,6 +173,7 @@ export class BattleScreen {
     const key = `${current.id}:${current.turnNumber}`;
     if (this.turnAnnouncementKey === key) return;
     this.turnAnnouncementKey = key;
+    this.playSe(TURN_SE_PATH);
     await playTurnTransition({
       humanTurn: current.id === this.humanPlayerId,
       turnNumber: current.turnNumber,
@@ -303,6 +324,39 @@ export class BattleScreen {
     this.turnDrawReason = 'frontline';
   }
 
+  prepareEffectDraw(action, beforeHandIds, newLogs) {
+    if (this.turnDrawQueue.length || (action.type === 'breeder' && action.breederId === 'breeder-022')) return;
+    const drawCount = newLogs
+      .filter((event) => event.type === 'draw' && event.playerId === this.humanPlayerId)
+      .reduce((total, event) => total + Math.max(0, Number(event.drawn) || 0), 0);
+    if (!drawCount) return;
+    const cards = this.engine.player(this.humanPlayerId).hand
+      .filter((card) => !beforeHandIds.has(card.instanceId))
+      .slice(-drawCount);
+    if (!cards.length) return;
+    this.turnDrawQueue = cards.map((card) => card.instanceId);
+    this.turnDrawHiddenIds = new Set(this.turnDrawQueue);
+    this.turnDrawCount = cards.length;
+    this.turnDrawReason = 'effect';
+  }
+
+  prepareOpponentDrawSounds(newLogs) {
+    this.opponentDrawSoundCount += newLogs
+      .filter((event) => event.type === 'draw' && event.playerId !== this.humanPlayerId)
+      .reduce((total, event) => total + Math.max(0, Number(event.drawn) || 0), 0);
+  }
+
+  async playOpponentDrawSounds() {
+    const count = this.opponentDrawSoundCount;
+    this.opponentDrawSoundCount = 0;
+    if (!count) return;
+    const interval = this.speed === 'fast' ? 55 : 105;
+    for (let index = 0; index < count; index += 1) {
+      this.playSe(CARD_DRAW_SE_PATH);
+      if (index + 1 < count) await delay(interval);
+    }
+  }
+
   async playPreparedNormalTurnDraw() {
     if (!this.turnDrawQueue.length) return;
     const timing = turnDrawTimings({ speed: this.speed, reducedMotion: this.prefersReducedMotion() });
@@ -311,6 +365,7 @@ export class BattleScreen {
     this.render();
     await delay(timing.lead);
     for (const instanceId of queue) {
+      this.playSe(CARD_DRAW_SE_PATH);
       this.turnDrawAnimatingCardId = instanceId;
       this.turnDrawHiddenIds.delete(instanceId);
       this.render();
@@ -432,6 +487,7 @@ export class BattleScreen {
         this.render();
         await delay(timing.redrawLead);
         for (const card of replacementCards) {
+          this.playSe(CARD_DRAW_SE_PATH);
           this.mulliganAnimatingCardId = card.instanceId;
           this.presentedMulliganHandIds.add(card.instanceId);
           this.render();
@@ -999,6 +1055,7 @@ export class BattleScreen {
         ? '選んだモンスターを手札へ、残りを山札へ戻します。'
         : `モンスターなし。${inspected.length}枚を山札へ戻します。`;
       const duration = this.prefersReducedMotion() ? 80 : this.speed === 'fast' ? 220 : 620;
+      if (chosenId) this.playSe(CARD_DRAW_SE_PATH);
       const animations = [...cardNodes].map(([id, node], index) => {
         node.classList.add(id === chosenId ? 'material-search-to-hand' : 'material-search-returning');
         if (!node.animate || this.prefersReducedMotion()) return Promise.resolve();
@@ -1372,12 +1429,27 @@ export class BattleScreen {
     return this.findPlayerNode(model.target.playerId);
   }
 
-  async animateActionStart(action) {
+  moveWillDealDamage(action) {
+    if (action.type !== 'move') return false;
+    try {
+      const preview = this.engine.clone();
+      const logLength = preview.state.log.length;
+      preview.applyAction(action);
+      return hasDamagingAttack(preview.state.log.slice(logLength));
+    } catch {
+      return false;
+    }
+  }
+
+  async animateActionStart(action, { damagingMove = false } = {}) {
     const duration = this.speed === 'fast' ? 110 : 480;
     if (action.type === 'move') {
       const source = this.findUnitSlotNode(action.unitId);
       const target = action.targetUnitId ? this.findUnitSlotNode(action.targetUnitId) : this.findPlayerNode(action.targetPlayerId);
-      if (!source?.animate) return;
+      if (!source?.animate) {
+        if (damagingMove) this.playSe(HIT_SE_PATH);
+        return;
+      }
       const sourceRect = source.getBoundingClientRect();
       const targetRect = target?.getBoundingClientRect();
       const dx = targetRect ? Math.max(-68, Math.min(68, (targetRect.left + targetRect.width / 2 - sourceRect.left - sourceRect.width / 2) * .46)) : 0;
@@ -1390,6 +1462,7 @@ export class BattleScreen {
       let impact = null;
       const showImpact = (async () => {
         await delay(Math.round(duration * .46));
+        if (damagingMove) this.playSe(HIT_SE_PATH);
         if (!target?.isConnected) return;
         impact = el('span', {
           className: `combat-impact${action.targetPlayerId ? ' direct' : ''}`,
@@ -1605,16 +1678,19 @@ export class BattleScreen {
       .map((instanceId) => this.findHandCardNode(instanceId))
       .filter(Boolean);
     const frontlineAction = frontlineReturnNodes.length > 0;
+    const damagingMove = this.moveWillDealDamage(action);
     const hadInteractionSelection = Boolean(this.selection || this.pendingMove || this.breederSelection);
     this.selection = null;
     this.pendingMove = null;
     this.breederSelection = null;
     if (hadInteractionSelection && !frontlineAction) this.render();
-    if (!cardUseModel) await this.animateActionStart(action);
+    if (!cardUseModel) await this.animateActionStart(action, { damagingMove });
     this.engine.applyAction(action);
     const newLogs = this.engine.state.log.slice(beforeLogLength);
     this.prepareNormalTurnDraw(action, beforeHumanHandIds, newLogs);
     this.prepareFrontlineRedraw(action, beforeHumanHandIds);
+    this.prepareEffectDraw(action, beforeHumanHandIds, newLogs);
+    this.prepareOpponentDrawSounds(newLogs);
     this.emitCheckpoint();
     if (cardUseModel) await playCardUseAnimation({
       model: cardUseModel,
@@ -1649,6 +1725,7 @@ export class BattleScreen {
     commitNumbers();
     if (!turnStarted) await this.showCurrentTurnTransition();
     await this.playPreparedNormalTurnDraw();
+    await this.playOpponentDrawSounds();
     await this.showLatestEvent(action);
   }
 
