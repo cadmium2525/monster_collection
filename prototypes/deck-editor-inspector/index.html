@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#06111c">
   <title>効果を見ながら組むデッキ編集案 | Monster Construction</title>
-  <link rel="stylesheet" href="../../styles.css?v=deck-editor-inspector-3">
-  <link rel="stylesheet" href="./styles.css?v=deck-editor-inspector-3">
+  <link rel="stylesheet" href="../../styles.css?v=deck-editor-inspector-4">
+  <link rel="stylesheet" href="./styles.css?v=deck-editor-inspector-4">
 </head>
 <body>
   <div id="prototype-root">
@@ -39,10 +39,16 @@
               <p>ACTIVE DECK</p>
               <h2 id="deck-heading">使用中の40枚</h2>
             </div>
-            <div class="filter-group" role="group" aria-label="使用中カードの絞り込み">
-              <button class="is-active" type="button" data-filter="all">すべて</button>
-              <button type="button" data-filter="monster">モンスター</button>
-              <button type="button" data-filter="support">サポート</button>
+            <div class="pane-tools">
+              <div class="filter-group" role="group" aria-label="使用中カードの絞り込み">
+                <button class="is-active" type="button" data-filter="all">すべて</button>
+                <button type="button" data-filter="monster">モンスター</button>
+                <button type="button" data-filter="support">サポート</button>
+              </div>
+              <label class="sort-control">
+                <span>並び順</span>
+                <select id="deck-sort" aria-label="使用中カードの並び順"></select>
+              </label>
             </div>
           </div>
           <div class="deck-summary" id="deck-summary"></div>
@@ -72,13 +78,19 @@
             <button class="is-active" type="button" role="tab">このデッキの予備</button>
             <button type="button" role="tab">未所属</button>
           </div>
-          <p class="candidate-help">候補をタップすると、中央で効果を比較できます。</p>
+          <div class="candidate-tools">
+            <p class="candidate-help">候補をタップすると、中央で効果を比較できます。</p>
+            <label class="sort-control">
+              <span>並び順</span>
+              <select id="candidate-sort" aria-label="入替候補の並び順"></select>
+            </label>
+          </div>
           <div class="candidate-grid" id="candidate-grid" aria-label="入替候補カード一覧"></div>
         </section>
       </section>
     </main>
     <div class="prototype-toast" role="status" aria-live="polite"></div>
   </div>
-  <script type="module" src="./preview.js?v=deck-editor-inspector-3"></script>
+  <script type="module" src="./preview.js?v=deck-editor-inspector-4"></script>
 </body>
 </html>

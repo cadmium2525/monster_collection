@@ -1,17 +1,18 @@
 import { createMasterIndex, loadMasterData } from '../../src/data/master-loader.js';
-import { renderCard } from '../../src/ui/card-renderer.js';
+import { detailMoveEntries, renderCard } from '../../src/ui/card-renderer.js';
+import { DECK_CARD_SORT_OPTIONS, sortDeckCards } from '../../src/ui/deck-card-sort.js';
 
 const deckIds = [
-  ...Array.from({ length: 12 }, (_, index) => `monster-${String(index + 1).padStart(3, '0')}`),
-  ...Array.from({ length: 12 }, (_, index) => `monster-${String(index + 1).padStart(3, '0')}`),
+  ...Array.from({ length: 4 }, (_, index) => Array(3).fill(`monster-${String(index + 1).padStart(3, '0')}`)).flat(),
+  ...Array.from({ length: 6 }, (_, index) => Array(2).fill(`monster-${String(index + 5).padStart(3, '0')}`)).flat(),
   ...Array.from({ length: 8 }, (_, index) => `breeder-${String(index + 1).padStart(3, '0')}`),
   'training-life', 'training-atk', 'training-def', 'shugyo-attack', 'shugyo-defense',
   'breeder-009', 'breeder-010', 'breeder-011',
 ];
 
 const candidateIds = [
-  ...Array.from({ length: 6 }, (_, index) => `monster-${String(index + 13).padStart(3, '0')}`),
-  ...Array.from({ length: 9 }, (_, index) => `breeder-${String(index + 12).padStart(3, '0')}`),
+  ...Array.from({ length: 18 }, (_, index) => `monster-${String(index + 13).padStart(3, '0')}`),
+  ...Array.from({ length: 18 }, (_, index) => `breeder-${String(index + 12).padStart(3, '0')}`),
 ];
 
 const root = document.querySelector('#prototype-root');
@@ -23,6 +24,8 @@ const toast = document.querySelector('.prototype-toast');
 const guideItems = [...document.querySelectorAll('.edit-guide li')];
 let toastTimer = 0;
 let activeFilter = 'all';
+let deckSortMode = 'kind';
+let candidateSortMode = 'kind';
 let selectedDeckIndex = 0;
 let selectedCandidateIndex = null;
 let inspectorSource = 'deck';
@@ -71,6 +74,26 @@ function visibleForFilter(definition) {
   return true;
 }
 
+function populateSortControl(select, selectedValue) {
+  select.replaceChildren(...DECK_CARD_SORT_OPTIONS.map(({ id, label }) => {
+    const option = node('option', '', label);
+    option.value = id;
+    option.selected = id === selectedValue;
+    return option;
+  }));
+}
+
+function groupedCards(cards, sortMode) {
+  const sorted = sortDeckCards(cards, masterIndex, sortMode);
+  const groups = new Map();
+  for (const card of sorted) {
+    const existing = groups.get(card.masterId);
+    if (existing) existing.push(card);
+    else groups.set(card.masterId, [card]);
+  }
+  return [...groups.values()];
+}
+
 function selectDeckCard(index) {
   selectedDeckIndex = index;
   selectedCandidateIndex = null;
@@ -85,7 +108,10 @@ function selectCandidate(index) {
 }
 
 function renderDeck() {
-  deckGrid.replaceChildren(...deck.map((card, index) => {
+  const groups = groupedCards(deck, deckSortMode);
+  deckGrid.replaceChildren(...groups.map((cards) => {
+    const card = cards[0];
+    const index = deck.indexOf(card);
     const definition = cardDefinition(card);
     const shell = node('div', `deck-slot${index === selectedDeckIndex ? ' is-selected' : ''}${visibleForFilter(definition) ? '' : ' is-hidden'}`);
     shell.append(renderCard({
@@ -96,12 +122,15 @@ function renderDeck() {
       label: `${definition.name}を交換元として選択`,
       onClick: () => selectDeckCard(index),
     }));
+    if (cards.length > 1) shell.append(node('span', 'stack-count', `×${cards.length}`));
     return shell;
   }));
 }
 
 function renderCandidates() {
-  candidateGrid.replaceChildren(...candidates.map((card, index) => {
+  const sortedCandidates = sortDeckCards(candidates, masterIndex, candidateSortMode);
+  candidateGrid.replaceChildren(...sortedCandidates.map((card) => {
+    const index = candidates.indexOf(card);
     const definition = cardDefinition(card);
     const shell = node('article', `candidate-slot${index === selectedCandidateIndex ? ' is-previewing' : ''}`);
     shell.append(renderCard({
@@ -154,16 +183,16 @@ function movesPanel(definition) {
     return note;
   }
   const panel = node('section', 'moves-panel');
-  panel.append(node('h4', '', '初期習得技（3種）'));
+  panel.append(node('h4', '', '取得可能技（初期技・修行取得技）'));
   const list = node('div', 'move-list');
-  const moves = definition.moveIds
-    .map((moveId) => masterIndex.moves.get(moveId))
-    .filter((move) => move?.initial)
-    .slice(0, 3);
-  for (const move of moves) {
+  const moves = detailMoveEntries({ definition, masterIndex, moveView: 'catalog' });
+  for (const { move, label } of moves) {
     const row = node('div', 'move-row');
+    const methodClass = label === '初期習得' ? 'initial' : label === '攻撃修行' ? 'attack' : 'defense';
+    const methodLabel = label === '初期習得' ? '初期技' : label;
+    row.append(node('em', `move-method ${methodClass}`, methodLabel));
     row.append(node('strong', '', move.name));
-    row.append(node('span', '', `威力${move.power} · ${move.tp}TP`));
+    row.append(node('span', '', `威力${move.power ?? '—'} · ${move.tp}TP`));
     row.append(node('small', '', move.effect === '―' ? '追加効果なし' : move.effect));
     list.append(row);
   }
@@ -225,7 +254,7 @@ function renderSummary() {
     summaryChip('モンスター', monsters),
     summaryChip('サポート', supports),
     summaryChip(leadingFaction[0], leadingFaction[1]),
-    summaryChip('同名上限', '2枚'),
+    summaryChip('同名上限', '3枚'),
   );
 }
 
@@ -260,6 +289,19 @@ function render() {
   renderSummary();
   updateGuide();
 }
+
+const deckSortControl = document.querySelector('#deck-sort');
+const candidateSortControl = document.querySelector('#candidate-sort');
+populateSortControl(deckSortControl, deckSortMode);
+populateSortControl(candidateSortControl, candidateSortMode);
+deckSortControl.addEventListener('change', () => {
+  deckSortMode = deckSortControl.value;
+  renderDeck();
+});
+candidateSortControl.addEventListener('change', () => {
+  candidateSortMode = candidateSortControl.value;
+  renderCandidates();
+});
 
 document.querySelectorAll('[data-filter]').forEach((button) => {
   button.addEventListener('click', () => {
