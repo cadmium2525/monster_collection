@@ -150,6 +150,35 @@ test('registered Firebase accounts repair a missing same-day login mission befor
   assert.deepEqual(claimed.missionProgress.daily.claimedIds, ['daily-login']);
 });
 
+test('registered Firebase restart cannot restore v3 cumulative totals as today daily progress', async () => {
+  const fake = fakeFirebaseSdk();
+  fake.auth.currentUser = {
+    uid: 'firebase-user', isAnonymous: false,
+    email: 'mc.registered@accounts.monster-construction.invalid',
+    emailVerified: true, providerData: [{ providerId: 'password' }],
+  };
+  const polluted = defaultEconomyState('2026-09-08T00:00:00.000Z');
+  polluted.lastDailyLoginDate = '2026-09-08';
+  polluted.missionProgress.schemaVersion = 3;
+  polluted.missionProgress.daily.counters = { login: 1, battles: 72, wins: 41 };
+  polluted.missionProgress.daily.claimedIds = ['daily-login'];
+  fake.docs.set('users/firebase-user', {
+    displayName: '登録済み', isAnonymous: false, economy: polluted,
+  });
+
+  const firstLaunch = new FirebaseGameRepository({ config: { projectId: 'test' }, sdkLoader: async () => fake.sdk });
+  await firstLaunch.initialize();
+  const repaired = await firstLaunch.claimLoginRewards({ loginDate: '2026-09-08', campaignId: null });
+  assert.deepEqual(repaired.state.missionProgress.daily.counters, { login: 1 });
+  assert.equal(repaired.state.missionProgress.schemaVersion, 4);
+
+  const restarted = new FirebaseGameRepository({ config: { projectId: 'test' }, sdkLoader: async () => fake.sdk });
+  await restarted.initialize();
+  const reloaded = await restarted.getEconomy();
+  assert.deepEqual(reloaded.missionProgress.daily.counters, { login: 1 });
+  assert.deepEqual(reloaded.missionProgress.daily.claimedIds, ['daily-login']);
+});
+
 test('local and Firebase repositories claim the home renewal gift atomically once', async () => {
   const config = { giftId: HOME_RENEWAL_GIFT_ID, claimDate: '2026-09-01' };
   const local = new LocalGameRepository({ storage: new MemoryStorage(), idFactory: () => 'gift-local' });

@@ -76,6 +76,33 @@ test('legacy false unclaimed battle completions are repaired without reopening c
   ]);
 });
 
+test('v3 cloud pollution is repaired again before a registered player restarts', () => {
+  const polluted = defaultEconomyState('2026-09-08T00:00:00.000Z');
+  polluted.lastDailyLoginDate = '2026-09-08';
+  polluted.missionProgress.schemaVersion = 3;
+  polluted.missionProgress.daily.counters = { login: 1, battles: 46, wins: 29 };
+  polluted.missionProgress.daily.claimedIds = ['daily-login'];
+
+  const startup = applyLoginRewards(polluted, {
+    loginDate: '2026-09-08', campaignId: null,
+  }, '2026-09-08T01:00:00.000Z');
+  assert.deepEqual(startup.state.missionProgress.daily.counters, { login: 1 });
+  assert.deepEqual(startup.state.missionProgress.daily.claimedIds, ['daily-login']);
+  assert.equal(startup.state.missionProgress.schemaVersion, 4);
+
+  const restarted = applyLoginRewards(startup.state, {
+    loginDate: '2026-09-08', campaignId: null,
+  }, '2026-09-08T02:00:00.000Z');
+  assert.deepEqual(restarted.state.missionProgress.daily.counters, { login: 1 });
+  assert.deepEqual(missionEntries(restarted.state.missionProgress, { dateKey: '2026-09-08' })
+    .filter(({ period }) => period === 'daily')
+    .map(({ id, claimable }) => ({ id, claimable })), [
+    { id: 'daily-login', claimable: false },
+    { id: 'daily-play', claimable: false },
+    { id: 'daily-win', claimable: false },
+  ]);
+});
+
 test('claiming a mission can only change claim state and its reward, never progress counters', () => {
   const login = applyLoginRewards(defaultEconomyState('2026-09-06T00:00:00.000Z'), {
     loginDate: '2026-09-06',

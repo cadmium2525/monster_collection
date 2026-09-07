@@ -32,3 +32,18 @@ export function sortDeckCards(cards, masterIndex, mode = 'kind') {
   });
   return entries.map(({ card }) => card);
 }
+
+export function deckCardAppearanceKey(card) {
+  return [card?.masterId ?? '', card?.artVariantId ?? 'base', card?.finish ?? 'normal'].join('|');
+}
+
+export function groupDeckCardsByAppearance(cards, masterIndex, mode = 'kind') {
+  const groups = new Map();
+  for (const card of sortDeckCards(cards, masterIndex, mode)) {
+    const key = deckCardAppearanceKey(card);
+    const group = groups.get(key);
+    if (group) group.cards.push(card);
+    else groups.set(key, { key, card, cards: [card] });
+  }
+  return [...groups.values()].map((group) => ({ ...group, count: group.cards.length }));
+}

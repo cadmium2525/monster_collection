@@ -1,7 +1,12 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import { masterIndex } from '../helpers.js';
-import { DECK_CARD_SORT_OPTIONS, sortDeckCards } from '../../src/ui/deck-card-sort.js';
+import {
+  DECK_CARD_SORT_OPTIONS,
+  deckCardAppearanceKey,
+  groupDeckCardsByAppearance,
+  sortDeckCards,
+} from '../../src/ui/deck-card-sort.js';
 
 const card = (masterId, instanceId) => ({ masterId, instanceId });
 
@@ -34,4 +39,18 @@ test('deck sort exposes every player-facing option', () => {
   assert.deepEqual(DECK_CARD_SORT_OPTIONS.map((option) => option.label), [
     '種類順', 'TPが低い順', 'TPが高い順', '名前順', '登録順',
   ]);
+});
+
+test('deck editor groups identical appearances but keeps Foil and showcase cards visible', () => {
+  const cards = [
+    { ...card('monster-003', 'normal-1'), artVariantId: 'base', finish: 'normal' },
+    { ...card('monster-003', 'normal-2'), artVariantId: 'base', finish: 'normal' },
+    { ...card('monster-003', 'foil'), artVariantId: 'base', finish: 'foil' },
+    { ...card('monster-003', 'showcase'), artVariantId: 'showcase-monster-003', finish: 'foil' },
+  ];
+  const groups = groupDeckCardsByAppearance(cards, masterIndex, 'original');
+  assert.deepEqual(groups.map(({ count }) => count), [2, 1, 1]);
+  assert.deepEqual(groups[0].cards.map(({ instanceId }) => instanceId), ['normal-1', 'normal-2']);
+  assert.notEqual(deckCardAppearanceKey(cards[0]), deckCardAppearanceKey(cards[2]));
+  assert.notEqual(deckCardAppearanceKey(cards[2]), deckCardAppearanceKey(cards[3]));
 });

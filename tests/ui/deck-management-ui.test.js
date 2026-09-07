@@ -64,6 +64,23 @@ test('deck editing keeps tap-to-swap and adds long-press card details', () => {
   assert.match(css, /\.deck-builder-screen \.game-card,[\s\S]*\.deck-builder-screen \.game-card \*\s*\{[^}]*-webkit-user-select:none;[^}]*user-select:none;[^}]*-webkit-touch-callout:none;/s);
 });
 
+test('deck workshop keeps effects visible while confirming a grouped four-column swap', () => {
+  assert.match(deckScreens, /detailMoveEntries/);
+  assert.match(deckScreens, /取得可能技（初期技・修行取得技）/);
+  assert.match(deckScreens, /label === '初期習得' \? '初期技' : label/);
+  assert.match(deckScreens, /label === '攻撃修行' \? 'attack' : 'defense'/);
+  assert.match(deckScreens, /groupDeckCardsByAppearance/);
+  assert.match(deckScreens, /text: 'デッキ予備'/);
+  assert.match(deckScreens, /text: '未所属'/);
+  assert.match(deckScreens, /className: 'builder-inspector'/);
+  assert.match(deckScreens, /candidateEntry \? 'このカードと入れ替える'/);
+  assert.match(deckScreens, /confirmSwap\(\)/);
+  assert.match(css, /\.deck-builder-workspace\s*\{[^}]*grid-template-columns:repeat\(3,minmax\(0,1fr\)\)/s);
+  assert.match(css, /\.builder-card-grid,\.builder-candidate-grid\s*\{[^}]*grid-template-columns:repeat\(4,minmax\(46px,1fr\)\)/s);
+  assert.match(css, /\.deck-builder-screen \.game-card \.card-corner\s*\{\s*display:none;/);
+  assert.match(css, /\.deck-builder-screen \.game-card > \.card-art\s*\{[^}]*top:clamp\(21px,16\.5%,25px\)/s);
+});
+
 test('saved deck cards omit redundant player-wide qualification labels', () => {
   assert.doesNotMatch(deckScreens, /プレイヤー解禁/);
   assert.doesNotMatch(deckScreens, /全デッキ共通/);
@@ -77,10 +94,10 @@ test('saved deck details and editing expose display-only card sorting', () => {
   assert.match(deckScreens, /'aria-label': label/);
   assert.match(deckScreens, /表示順のみ変更・対戦時はシャッフル/);
   assert.match(deckScreens, /sortedCards\.map/);
-  assert.match(deckScreens, /sortedActiveCards\.map/);
+  assert.match(deckScreens, /activeGroups\.map/);
   assert.match(deckScreens, /candidateSortMode/);
   assert.match(deckScreens, /入替候補の並び順/);
-  assert.match(deckScreens, /sortedCandidates\.map/);
+  assert.match(deckScreens, /candidates\.map/);
   assert.match(css, /\.deck-sort-control select/);
 });
 

@@ -1,11 +1,11 @@
 import { TOURNAMENT_LABELS } from '../battle/rules.js';
 import { el, formatDate, replace } from './dom.js';
-import { openCardDetails, renderCard } from './card-renderer.js';
+import { detailMoveEntries, openCardDetails, renderCard } from './card-renderer.js';
 import { openModal } from './modal.js';
 import { validateDeck } from '../battle/deck.js';
 import { assetStackKey, takeUnassignedAsset } from '../gacha/economy-state.js';
 import { attachLongPress } from './long-press.js';
-import { DECK_CARD_SORT_OPTIONS, sortDeckCards } from './deck-card-sort.js';
+import { DECK_CARD_SORT_OPTIONS, groupDeckCardsByAppearance, sortDeckCards } from './deck-card-sort.js';
 import { representativeCardAsset } from './representative-card.js';
 
 function deckSortControl(value, onChange, className = '', label = 'デッキカードの並び順') {
@@ -20,6 +20,23 @@ function deckSortControl(value, onChange, className = '', label = 'デッキカ�
       text: option.label,
     }))),
   ]);
+}
+
+function deckCardKindLabel(definition) {
+  if (definition.kind === 'monster') return 'モンスター';
+  if (definition.kind === 'breeder') return 'ブリーダー';
+  if (definition.kind === 'training') return 'トレーニング';
+  return definition.kind === 'shugyo' ? '修行' : definition.kind;
+}
+
+function deckCardCost(definition) {
+  return definition.kind === 'monster' ? definition.summonTp : definition.tp;
+}
+
+function builderCandidateKey(entry) {
+  return entry.source === 'pool'
+    ? `pool:${entry.appearanceKey}`
+    : `unassigned:${assetStackKey(entry.card)}`;
 }
 
 export function openStarterDeckPicker({ masterIndex, options, onChoose }) {
@@ -324,7 +341,11 @@ export class DeckBuildScreen {
     this.onSave = onSave;
     this.deck = structuredClone(deck);
     this.economy = structuredClone(economy);
-    this.selectedActiveId = null;
+    this.selectedActiveId = this.deck.cards[0]?.instanceId ?? null;
+    this.selectedCandidateKey = null;
+    this.inspectorSource = 'active';
+    this.activeFilter = 'all';
+    this.candidateSource = this.deck.pool.length ? 'pool' : 'unassigned';
     this.sortMode = 'kind';
     this.candidateSortMode = 'kind';
     this.error = '';
@@ -332,7 +353,24 @@ export class DeckBuildScreen {
   }
 
   selectActive(instanceId) {
-    this.selectedActiveId = this.selectedActiveId === instanceId ? null : instanceId;
+    this.selectedActiveId = instanceId;
+    this.selectedCandidateKey = null;
+    this.inspectorSource = 'active';
+    this.error = '';
+    this.render();
+  }
+
+  selectCandidate(entry) {
+    this.selectedCandidateKey = builderCandidateKey(entry);
+    this.inspectorSource = 'candidate';
+    this.error = '';
+    this.render();
+  }
+
+  setCandidateSource(source) {
+    this.candidateSource = source;
+    this.selectedCandidateKey = null;
+    this.inspectorSource = 'active';
     this.error = '';
     this.render();
   }
@@ -349,7 +387,9 @@ export class DeckBuildScreen {
     if (!validation.valid) { this.error = validation.errors[0]; this.render(); return; }
     this.deck.cards = nextCards;
     this.deck.pool.splice(poolIndex, 1, outgoing);
-    this.selectedActiveId = null;
+    this.selectedActiveId = incoming.instanceId;
+    this.selectedCandidateKey = null;
+    this.inspectorSource = 'active';
     this.error = '';
     this.render();
   }
@@ -375,7 +415,9 @@ export class DeckBuildScreen {
     this.economy = taken.state;
     this.deck.cards = nextCards;
     this.deck.pool.push(outgoing);
-    this.selectedActiveId = null;
+    this.selectedActiveId = incoming.instanceId;
+    this.selectedCandidateKey = null;
+    this.inspectorSource = 'active';
     this.error = '';
     this.render();
   }
@@ -390,33 +432,185 @@ export class DeckBuildScreen {
     }));
   }
 
-  renderCandidate(card, source, count = null) {
-    const definition = this.masterIndex.cards.get(card.masterId);
-    const action = source === 'pool' ? () => this.swapWithPool(card.instanceId) : () => this.swapWithUnassigned(card);
-    return el('article', { className: `builder-candidate${this.selectedActiveId ? ' ready' : ''}` }, [
-      this.renderEditableCard({ definition, card, disabled: !this.selectedActiveId, onClick: action }),
-      count != null ? el('strong', { text: `×${count}` }) : null,
-      el('small', { text: source === 'pool' ? 'このデッキの予備' : '未所属資産' }),
+  activeGroups() {
+    return groupDeckCardsByAppearance(this.deck.cards, this.masterIndex, this.sortMode)
+      .filter(({ card }) => {
+        const definition = this.masterIndex.cards.get(card.masterId);
+        if (this.activeFilter === 'monster') return definition.kind === 'monster';
+        if (this.activeFilter === 'support') return definition.kind !== 'monster';
+        return true;
+      });
+  }
+
+  candidateEntries() {
+    if (this.candidateSource === 'pool') {
+      return groupDeckCardsByAppearance(this.deck.pool, this.masterIndex, this.candidateSortMode)
+        .map((group) => ({
+          card: group.card,
+          source: 'pool',
+          count: group.count,
+          appearanceKey: group.key,
+        }));
+    }
+    return sortDeckCards(this.economy.unassignedAssets, this.masterIndex, this.candidateSortMode)
+      .map((card) => ({ card, source: 'unassigned', count: card.quantity, appearanceKey: assetStackKey(card) }));
+  }
+
+  selectedCandidate(entries = this.candidateEntries()) {
+    return entries.find((entry) => builderCandidateKey(entry) === this.selectedCandidateKey) ?? null;
+  }
+
+  confirmSwap() {
+    const entry = this.selectedCandidate();
+    if (!this.selectedActiveId) {
+      this.error = '先に使用中の40枚から外すカードを選んでください';
+      this.render();
+      return;
+    }
+    if (!entry) {
+      this.error = '入替候補を選んでください';
+      this.render();
+      return;
+    }
+    if (entry.source === 'pool') this.swapWithPool(entry.card.instanceId);
+    else this.swapWithUnassigned(entry.card);
+  }
+
+  renderActiveGroup(group) {
+    const definition = this.masterIndex.cards.get(group.card.masterId);
+    const selected = group.cards.some((card) => card.instanceId === this.selectedActiveId);
+    return el('article', { className: `builder-active-stack${group.count > 1 ? ' has-stack' : ''}${selected ? ' is-selected' : ''}` }, [
+      this.renderEditableCard({
+        definition,
+        card: group.card,
+        selected,
+        onClick: () => this.selectActive(group.card.instanceId),
+      }),
+      group.count > 1 ? el('strong', { className: 'builder-card-count', text: `${group.count}枚` }) : null,
+    ]);
+  }
+
+  renderCandidate(entry) {
+    const definition = this.masterIndex.cards.get(entry.card.masterId);
+    const selected = builderCandidateKey(entry) === this.selectedCandidateKey;
+    return el('article', { className: `builder-candidate${this.selectedActiveId ? ' ready' : ''}${selected ? ' is-previewing' : ''}` }, [
+      this.renderEditableCard({
+        definition,
+        card: entry.card,
+        selected,
+        onClick: () => this.selectCandidate(entry),
+      }),
+      entry.count > 1 ? el('strong', { className: 'builder-card-count', text: `${entry.count}枚` }) : null,
+      el('small', { text: entry.source === 'pool' ? 'デッキ予備' : '未所属' }),
+    ]);
+  }
+
+  renderInspectorStats(definition) {
+    const stats = definition.kind === 'monster'
+      ? [['LIFE', definition.base.life], ['ATK', definition.base.atk], ['DEF', definition.base.def], ['TP', definition.summonTp]]
+      : [['種類', deckCardKindLabel(definition)], ['消費TP', definition.tp ?? '—']];
+    return el('div', { className: 'builder-inspector-stats' }, stats.map(([label, value]) => (
+      el('span', {}, [label, el('b', { text: String(value) })])
+    )));
+  }
+
+  renderInspectorEffect(definition) {
+    const isMonster = definition.kind === 'monster';
+    return el('section', { className: 'builder-inspector-effect' }, [
+      el('header', {}, [
+        el('small', { text: isMonster ? 'TRAIT' : 'CARD EFFECT' }),
+        el('strong', { text: isMonster ? definition.trait.name : '効果' }),
+      ]),
+      el('p', { text: isMonster ? definition.trait.effect : definition.effect }),
+    ]);
+  }
+
+  renderInspectorMoves(definition) {
+    if (definition.kind !== 'monster') return null;
+    const moves = detailMoveEntries({ definition, masterIndex: this.masterIndex, moveView: 'catalog' });
+    return el('section', { className: 'builder-inspector-moves' }, [
+      el('h3', { text: '取得可能技（初期技・修行取得技）' }),
+      el('div', { className: 'builder-move-list' }, moves.map(({ move, label }) => {
+        const tone = label === '初期習得' ? 'initial' : label === '攻撃修行' ? 'attack' : 'defense';
+        return el('div', { className: 'builder-move-row' }, [
+          el('em', { className: `builder-move-method ${tone}`, text: label === '初期習得' ? '初期技' : label }),
+          el('strong', { text: move.name }),
+          el('span', { text: `威力${move.power ?? '—'} · ${move.tp}TP` }),
+          el('small', { text: move.effect === '―' ? '追加効果なし' : move.effect }),
+        ]);
+      })),
+    ]);
+  }
+
+  renderInspector(candidateEntry) {
+    const activeCard = this.deck.cards.find((card) => card.instanceId === this.selectedActiveId) ?? this.deck.cards[0] ?? null;
+    const shownCard = this.inspectorSource === 'candidate' && candidateEntry ? candidateEntry.card : activeCard;
+    if (!shownCard) return el('section', { className: 'builder-inspector empty', text: 'カードがありません' });
+    const definition = this.masterIndex.cards.get(shownCard.masterId);
+    const activeDefinition = activeCard ? this.masterIndex.cards.get(activeCard.masterId) : null;
+    const candidateDefinition = candidateEntry ? this.masterIndex.cards.get(candidateEntry.card.masterId) : null;
+    return el('aside', { className: 'builder-inspector' }, [
+      el('div', { className: 'section-title' }, [
+        el('div', { className: 'builder-section-title-copy' }, [
+          el('small', { text: 'LIVE CARD INSPECTOR' }),
+          el('h2', { text: 'カード効果' }),
+        ]),
+        el('span', { className: 'builder-inspector-badge', text: '常時表示' }),
+      ]),
+      el('div', { className: 'builder-inspector-scroll' }, [
+        el('section', { className: 'builder-inspector-overview' }, [
+          el('div', { className: 'builder-inspector-card' }, renderCard({
+            definition,
+            cardAsset: shownCard,
+            interactive: false,
+            lazyArt: true,
+            label: definition.name,
+          })),
+          el('div', { className: 'builder-inspector-title' }, [
+            el('small', { text: this.inspectorSource === 'candidate' && candidateEntry ? '入替候補を確認中' : '現在の交換元' }),
+            el('h3', { text: definition.name }),
+            el('div', { className: 'builder-inspector-tags' }, [
+              el('span', { text: deckCardKindLabel(definition) }),
+              el('span', { text: definition.faction ?? '汎用' }),
+              el('span', { text: `${deckCardCost(definition)}TP` }),
+            ]),
+            this.renderInspectorStats(definition),
+          ]),
+        ]),
+        this.renderInspectorEffect(definition),
+        this.renderInspectorMoves(definition),
+      ]),
+      el('footer', { className: 'builder-inspector-action' }, [
+        el('div', {}, [
+          el('strong', { text: activeDefinition?.name ?? '交換元未選択' }),
+          el('b', { text: '→' }),
+          el('strong', { text: candidateDefinition?.name ?? '候補を選択' }),
+        ]),
+        el('button', {
+          className: 'primary-button',
+          text: candidateEntry ? 'このカードと入れ替える' : '右から入替候補を選択',
+          disabled: !activeCard || !candidateEntry,
+          onclick: () => this.confirmSwap(),
+        }),
+      ]),
     ]);
   }
 
   render() {
-    const sortedActiveCards = sortDeckCards(this.deck.cards, this.masterIndex, this.sortMode);
-    const candidateEntries = [
-      ...this.deck.pool.map((card) => ({ card, source: 'pool', count: null })),
-      ...this.economy.unassignedAssets.map((card) => ({ card, source: 'unassigned', count: card.quantity })),
-    ];
-    const entryByCard = new Map(candidateEntries.map((entry) => [entry.card, entry]));
-    const sortedCandidates = sortDeckCards(candidateEntries.map((entry) => entry.card), this.masterIndex, this.candidateSortMode)
-      .map((card) => entryByCard.get(card));
-    replace(this.root, el('main', { className: 'deck-builder-screen' }, [
+    const activeGroups = this.activeGroups();
+    const candidates = this.candidateEntries();
+    const candidateEntry = this.selectedCandidate(candidates);
+    const unassignedCount = this.economy.unassignedAssets.reduce((sum, stack) => sum + stack.quantity, 0);
+    const candidateCardCount = this.candidateSource === 'pool' ? this.deck.pool.length : unassignedCount;
+    replace(this.root, el('main', { className: `deck-builder-screen${this.error ? ' has-error' : ''}` }, [
       el('header', { className: 'screen-header deck-builder-header' }, [
         el('div', {}, [
-          el('p', { className: 'eyebrow', text: 'DECK-BOUND CARD POOL' }),
+          el('p', { className: 'eyebrow', text: 'DECK WORKSHOP' }),
           el('h1', { text: `${this.deck.deckName}を編集` }),
-          el('p', { text: 'タップで交換、長押しで詳細を確認できます。採用した未所属カードはこのデッキ専用になります。' }),
+          el('p', { text: '左右のカードを選び、中央で効果を確認してから入れ替えます。長押しで詳細を確認できます。' }),
         ]),
         el('div', { className: 'builder-header-actions' }, [
+          el('span', { className: 'builder-deck-total', text: `${this.deck.cards.length} / 40` }),
           el('button', { className: 'text-button', text: '変更を破棄', onclick: this.onBack }),
           el('button', { className: 'primary-button', text: '40枚を保存', onclick: () => this.onSave(this.deck, this.economy) }),
         ]),
@@ -425,31 +619,54 @@ export class DeckBuildScreen {
       el('section', { className: 'deck-builder-workspace' }, [
         el('section', { className: 'builder-active' }, [
           el('div', { className: 'section-title' }, [
-            el('h2', { text: '使用中の40枚' }),
+            el('div', { className: 'builder-section-title-copy' }, [
+              el('small', { text: 'ACTIVE DECK' }),
+              el('div', {}, [el('h2', { text: '使用中の40枚' }), el('span', { text: `${activeGroups.length}種類` })]),
+            ]),
             el('div', { className: 'builder-section-tools' }, [
-              el('span', { text: this.selectedActiveId ? '交換先を選択' : '外すカードを選択' }),
+              el('div', { className: 'builder-filter-group', attrs: { role: 'group', 'aria-label': '使用中カードの絞り込み' } }, [
+                ['all', 'すべて'], ['monster', 'モンスター'], ['support', 'サポート'],
+              ].map(([id, text]) => el('button', {
+                className: this.activeFilter === id ? 'selected' : '',
+                text,
+                attrs: { type: 'button', 'aria-pressed': String(this.activeFilter === id) },
+                onclick: () => { this.activeFilter = id; this.render(); },
+              }))),
               deckSortControl(this.sortMode, (value) => { this.sortMode = value; this.render(); }, 'compact'),
             ]),
           ]),
-          el('div', { className: 'builder-card-grid' }, sortedActiveCards.map((card) => {
-            const definition = this.masterIndex.cards.get(card.masterId);
-            return this.renderEditableCard({
-              definition,
-              card,
-              selected: card.instanceId === this.selectedActiveId,
-              onClick: () => this.selectActive(card.instanceId),
-            });
-          })),
+          el('div', { className: 'builder-card-grid', attrs: { 'aria-label': '使用中カード一覧' } }, activeGroups.length
+            ? activeGroups.map((group) => this.renderActiveGroup(group))
+            : el('p', { className: 'builder-grid-empty', text: 'この条件に該当するカードはありません' })),
         ]),
+        this.renderInspector(candidateEntry),
         el('section', { className: 'builder-reserve' }, [
           el('div', { className: 'section-title' }, [
-            el('h2', { text: '入替候補' }),
+            el('div', { className: 'builder-section-title-copy' }, [
+              el('small', { text: 'REPLACEMENT POOL' }),
+              el('div', {}, [el('h2', { text: '入替候補' }), el('span', { text: `${candidateCardCount}枚` })]),
+            ]),
             el('div', { className: 'builder-section-tools' }, [
-              el('span', { text: `予備${this.deck.pool.length} / 未所属${this.economy.unassignedAssets.reduce((sum, stack) => sum + stack.quantity, 0)}` }),
+              el('div', { className: 'builder-source-tabs', attrs: { role: 'tablist', 'aria-label': '入替候補の種類' } }, [
+                el('button', {
+                  className: this.candidateSource === 'pool' ? 'selected' : '',
+                  text: 'デッキ予備',
+                  attrs: { type: 'button', role: 'tab', 'aria-selected': String(this.candidateSource === 'pool'), 'aria-label': `デッキ予備 ${this.deck.pool.length}枚` },
+                  onclick: () => this.setCandidateSource('pool'),
+                }),
+                el('button', {
+                  className: this.candidateSource === 'unassigned' ? 'selected' : '',
+                  text: '未所属',
+                  attrs: { type: 'button', role: 'tab', 'aria-selected': String(this.candidateSource === 'unassigned'), 'aria-label': `未所属 ${unassignedCount}枚` },
+                  onclick: () => this.setCandidateSource('unassigned'),
+                }),
+              ]),
               deckSortControl(this.candidateSortMode, (value) => { this.candidateSortMode = value; this.render(); }, 'compact', '入替候補の並び順'),
             ]),
           ]),
-          el('div', { className: 'builder-candidate-grid' }, sortedCandidates.map((entry) => this.renderCandidate(entry.card, entry.source, entry.count))),
+          el('div', { className: 'builder-candidate-grid', attrs: { 'aria-label': '入替候補カード一覧' } }, candidates.length
+            ? candidates.map((entry) => this.renderCandidate(entry))
+            : el('p', { className: 'builder-grid-empty', text: this.candidateSource === 'pool' ? 'このデッキに予備カードはありません' : '未所属カードはありません' })),
         ]),
       ]),
     ]));
