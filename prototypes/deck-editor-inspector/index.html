@@ -5,8 +5,8 @@
   <meta name="viewport" content="width=device-width,initial-scale=1,viewport-fit=cover">
   <meta name="theme-color" content="#06111c">
   <title>効果を見ながら組むデッキ編集案 | Monster Construction</title>
-  <link rel="stylesheet" href="../../styles.css?v=deck-editor-inspector-5">
-  <link rel="stylesheet" href="./styles.css?v=deck-editor-inspector-5">
+  <link rel="stylesheet" href="../../styles.css?v=deck-editor-inspector-7">
+  <link rel="stylesheet" href="./styles.css?v=deck-editor-inspector-7">
 </head>
 <body>
   <div id="prototype-root">
@@ -68,22 +68,20 @@
 
         <section class="candidate-pane panel-frame" aria-labelledby="candidate-heading">
           <div class="pane-heading candidate-heading-row">
-            <div>
+            <div class="candidate-heading-title">
               <p>REPLACEMENT POOL</p>
-              <h2 id="candidate-heading">入替候補</h2>
+              <div><h2 id="candidate-heading">入替候補</h2><span id="candidate-count">36枚</span></div>
             </div>
-            <span id="candidate-count">15枚</span>
-          </div>
-          <div class="candidate-tabs" role="tablist" aria-label="候補の種類">
-            <button class="is-active" type="button" role="tab">このデッキの予備</button>
-            <button type="button" role="tab">未所属</button>
-          </div>
-          <div class="candidate-tools">
-            <p class="candidate-help">候補をタップすると、中央で効果を比較できます。</p>
-            <label class="sort-control">
-              <span>並び順</span>
-              <select id="candidate-sort" aria-label="入替候補の並び順"></select>
-            </label>
+            <div class="candidate-heading-tools">
+              <div class="candidate-tabs" role="tablist" aria-label="候補の種類">
+                <button class="is-active" type="button" role="tab">デッキ予備</button>
+                <button type="button" role="tab">未所属</button>
+              </div>
+              <label class="sort-control">
+                <span>並び順</span>
+                <select id="candidate-sort" aria-label="入替候補の並び順"></select>
+              </label>
+            </div>
           </div>
           <div class="candidate-grid" id="candidate-grid" aria-label="入替候補カード一覧"></div>
         </section>
@@ -91,6 +89,6 @@
     </main>
     <div class="prototype-toast" role="status" aria-live="polite"></div>
   </div>
-  <script type="module" src="./preview.js?v=deck-editor-inspector-5"></script>
+  <script type="module" src="./preview.js?v=deck-editor-inspector-7"></script>
 </body>
 </html>
