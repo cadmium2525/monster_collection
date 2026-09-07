@@ -63,6 +63,9 @@ button { font:inherit; }
 .deck-slot,.candidate-slot { position:relative; min-width:0; }
 .deck-slot .game-card,.candidate-slot .game-card { width:100%; height:auto; aspect-ratio:.72; }
 #prototype-root .game-card .card-corner { display:none; }
+#prototype-root .game-card > .card-art.catalog-thumbnail-art,
+#prototype-root .game-card > .card-art.catalog-standalone-thumbnail-art { top:clamp(21px,16.5%,25px); border-radius:0 0 7px 7px; }
+#prototype-root .game-card > .card-art.catalog-thumbnail-art { background-size:100% 100%,900% auto; }
 .deck-slot .game-card { position:relative; z-index:1; max-height:154px; }
 .deck-slot.has-stack::after { content:""; position:absolute; z-index:0; inset:5px -3px -4px 5px; border:1px solid rgba(132,177,194,.35); border-radius:inherit; background:rgba(8,20,31,.82); pointer-events:none; }
 .stack-count { position:absolute; z-index:22; right:4px; bottom:4px; min-width:30px; padding:4px 6px 3px; border:1px solid rgba(240,201,108,.62); border-radius:4px; color:#ffe6a2; background:linear-gradient(180deg,rgba(18,34,46,.97),rgba(5,15,24,.97)); box-shadow:0 3px 10px rgba(0,0,0,.72),inset 3px 0 rgba(111,232,234,.62); font:800 8px/1 sans-serif; letter-spacing:.04em; text-align:center; pointer-events:none; }
