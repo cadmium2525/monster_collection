@@ -13,7 +13,14 @@ import { interpolatedStatValue, statChangeTimings, tpGemStates, turnStartTpTrans
 import { openModal } from './modal.js';
 import { lowLifeTargetEffects, unitLifePresentation } from './status-presentation.js';
 import { automaticMulliganIds } from '../battle/mulligan.js';
-import { CARD_DRAW_SE_PATH, HIT_SE_PATH, TURN_SE_PATH } from '../audio/game-audio.js';
+import {
+  CARD_DRAW_SE_PATH,
+  HIT_SE_PATH,
+  STATUS_DOWN_SE_PATH,
+  STATUS_UP_SE_PATH,
+  TURN_SE_PATH,
+  ZERO_DAMAGE_SE_PATH,
+} from '../audio/game-audio.js';
 
 function delay(ms) { return new Promise((resolve) => setTimeout(resolve, ms)); }
 
@@ -28,6 +35,41 @@ export function hasDamagingAttack(logs = []) {
     (event.type === 'attack' || event.type === 'direct-attack')
     && Number(event.damage) > 0
   ));
+}
+
+export function attackImpactSound(logs = []) {
+  const attack = [...logs].reverse().find((event) => event.type === 'attack' || event.type === 'direct-attack');
+  if (!attack) return null;
+  return Number(attack.damage) > 0 ? HIT_SE_PATH : ZERO_DAMAGE_SE_PATH;
+}
+
+export function statChangeSoundDirection({ changes = [], action = null, newLogs = [], humanPlayerId = null, actingPlayerId = null } = {}) {
+  const parasite = newLogs.find((event) => event.type === 'trait' && event.traitName === '寄生根');
+  if (parasite) return parasite.playerId === humanPlayerId ? 'up' : 'down';
+
+  const attackLogs = newLogs.filter((event) => event.type === 'attack' || event.type === 'direct-attack');
+  const actionCost = Math.max(0, Number(action?.cost) || 0);
+  const directions = [];
+  for (const change of changes) {
+    for (const value of change.values ?? []) {
+      if (value.key === 'life' && value.direction === 'down') {
+        const isAttackTarget = attackLogs.some((event) => (
+          (change.kind === 'unit' && event.targetUnitId === change.id)
+          || (change.kind === 'player' && event.playerId !== change.id
+            && (event.type === 'direct-attack' || Number(event.overflow) > 0))
+        ));
+        if (isAttackTarget) continue;
+      }
+      if (value.key === 'tp' && change.id === actingPlayerId && value.direction === 'down') {
+        const spent = Math.max(0, Number(value.from) - Number(value.to));
+        if (spent <= actionCost) continue;
+      }
+      directions.push(value.direction);
+    }
+  }
+  if (directions.includes('up')) return 'up';
+  if (directions.includes('down')) return 'down';
+  return null;
 }
 
 export class BattleScreen {
@@ -1429,25 +1471,25 @@ export class BattleScreen {
     return this.findPlayerNode(model.target.playerId);
   }
 
-  moveWillDealDamage(action) {
-    if (action.type !== 'move') return false;
+  moveImpactSound(action) {
+    if (action.type !== 'move') return null;
     try {
       const preview = this.engine.clone();
       const logLength = preview.state.log.length;
       preview.applyAction(action);
-      return hasDamagingAttack(preview.state.log.slice(logLength));
+      return attackImpactSound(preview.state.log.slice(logLength));
     } catch {
-      return false;
+      return null;
     }
   }
 
-  async animateActionStart(action, { damagingMove = false } = {}) {
+  async animateActionStart(action, { impactSound = null } = {}) {
     const duration = this.speed === 'fast' ? 110 : 480;
     if (action.type === 'move') {
       const source = this.findUnitSlotNode(action.unitId);
       const target = action.targetUnitId ? this.findUnitSlotNode(action.targetUnitId) : this.findPlayerNode(action.targetPlayerId);
       if (!source?.animate) {
-        if (damagingMove) this.playSe(HIT_SE_PATH);
+        if (impactSound) this.playSe(impactSound);
         return;
       }
       const sourceRect = source.getBoundingClientRect();
@@ -1462,7 +1504,7 @@ export class BattleScreen {
       let impact = null;
       const showImpact = (async () => {
         await delay(Math.round(duration * .46));
-        if (damagingMove) this.playSe(HIT_SE_PATH);
+        if (impactSound) this.playSe(impactSound);
         if (!target?.isConnected) return;
         impact = el('span', {
           className: `combat-impact${action.targetPlayerId ? ' direct' : ''}`,
@@ -1645,6 +1687,15 @@ export class BattleScreen {
       return;
     }
     const timing = statChangeTimings({ speed: this.speed, reducedMotion: this.prefersReducedMotion() });
+    const direction = statChangeSoundDirection({
+      changes,
+      action,
+      newLogs,
+      humanPlayerId: this.humanPlayerId,
+      actingPlayerId: before.currentPlayerId,
+    });
+    const sound = direction === 'up' ? STATUS_UP_SE_PATH : direction === 'down' ? STATUS_DOWN_SE_PATH : null;
+    if (sound) setTimeout(() => this.playSe(sound), timing.lead);
     const removed = changes.filter((change) => change.removed);
     if (removed.length) await Promise.all(removed.map((change) => this.animateChange(change, timing)));
     commitNumbers();
@@ -1678,13 +1729,13 @@ export class BattleScreen {
       .map((instanceId) => this.findHandCardNode(instanceId))
       .filter(Boolean);
     const frontlineAction = frontlineReturnNodes.length > 0;
-    const damagingMove = this.moveWillDealDamage(action);
+    const impactSound = this.moveImpactSound(action);
     const hadInteractionSelection = Boolean(this.selection || this.pendingMove || this.breederSelection);
     this.selection = null;
     this.pendingMove = null;
     this.breederSelection = null;
     if (hadInteractionSelection && !frontlineAction) this.render();
-    if (!cardUseModel) await this.animateActionStart(action, { damagingMove });
+    if (!cardUseModel) await this.animateActionStart(action, { impactSound });
     this.engine.applyAction(action);
     const newLogs = this.engine.state.log.slice(beforeLogLength);
     this.prepareNormalTurnDraw(action, beforeHumanHandIds, newLogs);

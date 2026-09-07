@@ -10,8 +10,11 @@ import {
   GameAudioController,
   HOME_BGM_PATH,
   HIT_SE_PATH,
+  ZERO_DAMAGE_SE_PATH,
   TURN_SE_PATH,
   CARD_DRAW_SE_PATH,
+  STATUS_UP_SE_PATH,
+  STATUS_DOWN_SE_PATH,
   SE_DEFAULT_VOLUME,
   SE_VOLUME_STORAGE_KEY,
   isIosDevice,
@@ -114,8 +117,11 @@ test('master gain halves every BGM scene and SE while both controls default to 1
   assert.equal(ARENA_BGM_PATH, './assets/audio/arena.mp3');
   assert.equal(BATTLE_BGM_PATH, './assets/audio/battle.mp3');
   assert.equal(HIT_SE_PATH, './assets/audio/hit.mp3');
+  assert.equal(ZERO_DAMAGE_SE_PATH, './assets/audio/damage0.mp3');
   assert.equal(TURN_SE_PATH, './assets/audio/turn.mp3');
   assert.equal(CARD_DRAW_SE_PATH, './assets/audio/card-se.mp3');
+  assert.equal(STATUS_UP_SE_PATH, './assets/audio/status03.mp3');
+  assert.equal(STATUS_DOWN_SE_PATH, './assets/audio/status04.mp3');
   assert.equal(controller.bgmVolume, BGM_DEFAULT_VOLUME);
   assert.equal(controller.seVolume, SE_DEFAULT_VOLUME);
   controller.setScreen('home');
