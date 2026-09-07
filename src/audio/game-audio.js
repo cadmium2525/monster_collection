@@ -1,4 +1,5 @@
 export const HOME_BGM_PATH = './assets/audio/home-bgm.mp3';
+export const ARENA_BGM_PATH = './assets/audio/arena.mp3';
 export const BATTLE_BGM_PATH = './assets/audio/battle.mp3';
 export const AUDIO_MASTER_GAIN = 0.5;
 export const BATTLE_BGM_TRIM_GAIN = 0.5;
@@ -8,6 +9,7 @@ export const BGM_VOLUME_STORAGE_KEY = 'mc-bgm-volume-v2';
 export const SE_VOLUME_STORAGE_KEY = 'mc-se-volume-v1';
 
 const LEGACY_HOME_BGM_VOLUME_STORAGE_KEY = 'mc-home-bgm-volume-v1';
+const PREBATTLE_SCREENS = new Set(['setup', 'tournament', 'arena']);
 const BATTLE_SCREENS = new Set(['battle', 'arena-battle']);
 
 export function normalizeAudioVolume(value, fallback = BGM_DEFAULT_VOLUME) {
@@ -43,6 +45,7 @@ export function isIosDevice(navigatorRef = globalThis.navigator) {
 
 function sceneForScreen(screen) {
   if (screen === 'home') return 'home';
+  if (PREBATTLE_SCREENS.has(screen)) return 'arena';
   if (BATTLE_SCREENS.has(screen)) return 'battle';
   return null;
 }
@@ -50,6 +53,7 @@ function sceneForScreen(screen) {
 export class GameAudioController {
   constructor({
     homeSource = HOME_BGM_PATH,
+    arenaSource = ARENA_BGM_PATH,
     battleSource = BATTLE_BGM_PATH,
     storage = globalThis.localStorage,
     documentRef = globalThis.document,
@@ -82,6 +86,7 @@ export class GameAudioController {
     this.activeEffects = new Set();
     this.tracks = {
       home: this._createAudio(homeSource, { loop: true }),
+      arena: this._createAudio(arenaSource, { loop: true }),
       battle: this._createAudio(battleSource, { loop: true }),
     };
 

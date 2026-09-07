@@ -80,6 +80,7 @@ const cacheUrls = ['./', ...outputFiles
     // worker still caches it on first use, but a fresh PWA install does not
     // download every future card illustration up front.
     return !relative.startsWith('assets/images/booster/')
+      && !relative.startsWith('assets/audio/')
       && !relative.startsWith('assets/images/showcase/')
       && !relative.startsWith('assets/images/showcase-fusions/')
       && !relative.startsWith('assets/images/home/')

@@ -1,6 +1,7 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
 import {
+  ARENA_BGM_PATH,
   AUDIO_MASTER_GAIN,
   BATTLE_BGM_PATH,
   BATTLE_BGM_TRIM_GAIN,
@@ -98,7 +99,7 @@ function memoryStorage(initial = {}) {
 
 const tick = () => new Promise((resolve) => setTimeout(resolve, 0));
 
-test('master gain halves both tracks while BGM and SE controls default to 100', async () => {
+test('master gain halves every BGM scene and SE while both controls default to 100', async () => {
   const storage = memoryStorage();
   const navigatorRef = { userAgent: 'iPhone', audioSession: { type: 'auto' } };
   const controller = new GameAudioController({
@@ -107,6 +108,7 @@ test('master gain halves both tracks while BGM and SE controls default to 100', 
   });
 
   assert.equal(HOME_BGM_PATH, './assets/audio/home-bgm.mp3');
+  assert.equal(ARENA_BGM_PATH, './assets/audio/arena.mp3');
   assert.equal(BATTLE_BGM_PATH, './assets/audio/battle.mp3');
   assert.equal(controller.bgmVolume, BGM_DEFAULT_VOLUME);
   assert.equal(controller.seVolume, SE_DEFAULT_VOLUME);
@@ -116,7 +118,9 @@ test('master gain halves both tracks while BGM and SE controls default to 100', 
   assert.equal(controller.bgmGainNode.gain.value, 1);
   assert.equal(controller.seGainNode.gain.value, 1);
   assert.equal(controller.trackGainNodes.home.gain.value, 1);
+  assert.equal(controller.trackGainNodes.arena.gain.value, 1);
   assert.equal(controller.trackGainNodes.battle.gain.value, BATTLE_BGM_TRIM_GAIN);
+  assert.equal(AUDIO_MASTER_GAIN * controller.trackGainNodes.arena.gain.value, 0.5);
   assert.equal(AUDIO_MASTER_GAIN * BATTLE_BGM_TRIM_GAIN, 0.25);
   assert.equal(navigatorRef.audioSession.type, 'ambient');
 
@@ -129,7 +133,7 @@ test('master gain halves both tracks while BGM and SE controls default to 100', 
   assert.equal(controller.masterGainNode.gain.value, 0.5);
 });
 
-test('home and battle screens switch tracks and every other screen pauses BGM', async () => {
+test('home, tournament/arena prebattle and battle screens switch tracks at their scene boundaries', async () => {
   const controller = new GameAudioController({
     storage: memoryStorage(), documentRef: new FakeEvents(), windowRef: new FakeEvents(), navigatorRef: { userAgent: 'Desktop' },
     AudioCtor: FakeAudio, AudioContextCtor: FakeAudioContext,
@@ -137,17 +141,34 @@ test('home and battle screens switch tracks and every other screen pauses BGM', 
   controller.setScreen('home');
   await controller.unlockFromGesture();
   assert.equal(controller.tracks.home.paused, false);
+  assert.equal(controller.tracks.arena.paused, true);
   assert.equal(controller.tracks.battle.paused, true);
+
+  controller.setScreen('setup');
+  await tick();
+  assert.equal(controller.tracks.home.paused, true);
+  assert.equal(controller.tracks.arena.paused, false);
+  assert.equal(controller.tracks.battle.paused, true);
+
+  controller.setScreen('tournament');
+  await tick();
+  assert.equal(controller.tracks.arena.paused, false);
+
+  controller.setScreen('arena');
+  await tick();
+  assert.equal(controller.tracks.arena.paused, false);
 
   controller.setScreen('battle');
   await tick();
   assert.equal(controller.tracks.home.paused, true);
+  assert.equal(controller.tracks.arena.paused, true);
   assert.equal(controller.tracks.battle.paused, false);
   assert.equal(controller.tracks.battle.currentTime, 0);
 
   controller.setScreen('reward');
   await tick();
   assert.equal(controller.tracks.home.paused, true);
+  assert.equal(controller.tracks.arena.paused, true);
   assert.equal(controller.tracks.battle.paused, true);
 });
 

@@ -31,15 +31,21 @@ test('title gesture unlocks audio and screen changes select the scene BGM', () =
   assert.match(app, /onSeVolumeChange: \(volume\) => this\.audio\.setSeVolume\(volume\)/);
 });
 
-test('home and battle BGM are valid on-demand MP3 files outside startup precache', () => {
+test('home, arena and battle BGM are valid on-demand MP3 files outside startup precache', () => {
   const homeUrl = new URL('../../assets/audio/home-bgm.mp3', import.meta.url);
+  const arenaUrl = new URL('../../assets/audio/arena.mp3', import.meta.url);
   const battleUrl = new URL('../../assets/audio/battle.mp3', import.meta.url);
   assert.equal(readFileSync(homeUrl).subarray(0, 3).toString('ascii'), 'ID3');
+  assert.equal(readFileSync(arenaUrl).subarray(0, 3).toString('ascii'), 'ID3');
   assert.equal(readFileSync(battleUrl).subarray(0, 3).toString('ascii'), 'ID3');
   assert.ok(statSync(homeUrl).size < 2_500_000);
+  assert.ok(statSync(arenaUrl).size < 6_000_000);
   assert.ok(statSync(battleUrl).size < 10_000_000);
   const worker = read('../../sw.js');
   const precache = worker.match(/const PRECACHE_URLS = \[([\s\S]*?)\];/)?.[1] ?? '';
   assert.doesNotMatch(precache, /home-bgm\.mp3/);
+  assert.doesNotMatch(precache, /arena\.mp3/);
   assert.doesNotMatch(precache, /battle\.mp3/);
+  const build = read('../../scripts/build-pages.mjs');
+  assert.match(build, /!relative\.startsWith\('assets\/audio\/'\)/);
 });
