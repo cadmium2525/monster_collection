@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { FirebaseGameRepository, LocalGameRepository, MemoryStorage, ResilientGameRepository } from '../../src/persistence/index.js';
-import { HOME_RENEWAL_GIFT_ID, defaultEconomyState } from '../../src/gacha/economy-state.js';
+import { HOME_RENEWAL_GIFT_ID, defaultEconomyState, japanDateKey } from '../../src/gacha/economy-state.js';
 import { legalDeck } from '../helpers.js';
 
 function savedDeck(deckId = 'deck-1') {
@@ -33,6 +33,12 @@ function championPayload(expectedVersion = 0) {
     championSnapshotVersion: 2,
     representativeMonsterId: 'monster-003',
   };
+}
+
+function shiftDateKey(dateKey, days) {
+  const date = new Date(`${dateKey}T00:00:00.000Z`);
+  date.setUTCDate(date.getUTCDate() + days);
+  return date.toISOString().slice(0, 10);
 }
 
 test('local repository stores user decks and emits champion updates with version checks', async () => {
@@ -416,6 +422,68 @@ test('Firebase links a player ID without changing the user id and restores it th
 
   await repository.signInRecoveryAccount({ playerId: 'PLAYER_2525', password: 'secret12' });
   assert.deepEqual(fake.signInEmails, ['mc.player_2525@accounts.monster-construction.invalid']);
+});
+
+test('pre-registration battle history cannot satisfy a later day daily mission after linking an ID', async () => {
+  const battleDate = japanDateKey();
+  const nextDate = shiftDateKey(battleDate, 1);
+  let localNow = `${battleDate}T03:00:00.000Z`;
+  const storage = new MemoryStorage();
+  const local = new LocalGameRepository({
+    storage,
+    idFactory: () => 'pre-registration-local',
+    now: () => localNow,
+  });
+  const fake = fakeFirebaseSdk();
+  const cloud = new FirebaseGameRepository({ config: { projectId: 'test' }, sdkLoader: async () => fake.sdk });
+  const repository = new ResilientGameRepository({ local, cloud });
+  await repository.initialize();
+
+  await repository.claimLoginRewards({ loginDate: battleDate, campaignId: null });
+  await repository.commitProgression({
+    type: 'mission-event',
+    operationId: `mission:pre-registration-battle:${battleDate}`,
+    dateKey: battleDate,
+    event: { type: 'battle-result', mode: 'tournament', won: true },
+  });
+  await repository.recordPlayerStats({
+    type: 'battle-result',
+    operationId: `stats:pre-registration-battle:${battleDate}`,
+    result: 'win',
+    rank: 'bronze',
+  });
+  assert.deepEqual((await repository.getEconomy()).missionProgress.daily.counters, {
+    login: 1, battles: 1, wins: 1,
+  });
+
+  const account = await repository.linkRecoveryAccount({ playerId: 'before_id_battle', password: 'secret12' });
+  assert.equal(account.userId, 'firebase-user');
+  assert.equal(account.recoveryEnabled, true);
+  assert.deepEqual((await repository.getEconomy()).missionProgress.daily.counters, {
+    login: 1, battles: 1, wins: 1,
+  });
+
+  localNow = `${nextDate}T03:00:00.000Z`;
+  const login = await repository.claimLoginRewards({ loginDate: nextDate, campaignId: null });
+  assert.deepEqual(login.state.missionProgress.daily.counters, { login: 1 });
+  assert.equal((await repository.getPlayerStats()).battlesPlayed, 1);
+  assert.equal((await repository.getPlayerStats()).battleWins, 1);
+
+  const claimed = await repository.commitProgression({
+    type: 'claim-mission',
+    operationId: `mission-claim:daily-login:${nextDate}`,
+    missionId: 'daily-login',
+    dateKey: nextDate,
+    counterSnapshot: { period: 'daily', key: nextDate, counters: { login: 1 } },
+  });
+  assert.deepEqual(claimed.missionProgress.daily.counters, { login: 1 });
+  await assert.rejects(() => repository.commitProgression({
+    type: 'claim-mission',
+    operationId: `mission-claim:daily-play:${nextDate}`,
+    missionId: 'daily-play',
+    dateKey: nextDate,
+    counterSnapshot: { period: 'daily', key: nextDate, counters: { login: 1 } },
+  }), /まだ達成されていません/);
 });
 
 test('player statistics are transactionally idempotent in local and Firebase repositories', async () => {
