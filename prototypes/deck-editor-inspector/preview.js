@@ -113,7 +113,7 @@ function renderDeck() {
     const card = cards[0];
     const index = deck.indexOf(card);
     const definition = cardDefinition(card);
-    const shell = node('div', `deck-slot${index === selectedDeckIndex ? ' is-selected' : ''}${visibleForFilter(definition) ? '' : ' is-hidden'}`);
+    const shell = node('div', `deck-slot${cards.length > 1 ? ' has-stack' : ''}${index === selectedDeckIndex ? ' is-selected' : ''}${visibleForFilter(definition) ? '' : ' is-hidden'}`);
     shell.append(renderCard({
       definition,
       cardAsset: card,
@@ -122,7 +122,7 @@ function renderDeck() {
       label: `${definition.name}を交換元として選択`,
       onClick: () => selectDeckCard(index),
     }));
-    if (cards.length > 1) shell.append(node('span', 'stack-count', `×${cards.length}`));
+    if (cards.length > 1) shell.append(node('span', 'stack-count', `${cards.length}枚`));
     return shell;
   }));
 }
