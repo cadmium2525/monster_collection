@@ -63,6 +63,41 @@ export class LocalGameRepository {
   _activeRunKey(scope = this._scope()) { return `mc:v1:active-run:${scope}`; }
   _economyKey(scope = this._scope()) { return `mc:v1:economy:${scope}`; }
   _statsKey(scope = this._scope()) { return `mc:v1:stats:${scope}`; }
+  _syncQueueKey(scope = this._scope()) { return `mc:v1:sync-queue:${scope}`; }
+
+  async listPendingSyncOperations() {
+    const operations = parse(this.storage.getItem(this._syncQueueKey()), []);
+    return clone(Array.isArray(operations) ? operations : []);
+  }
+
+  async enqueueSyncOperation(operation) {
+    const id = String(operation?.id ?? '').trim();
+    const kind = String(operation?.kind ?? '').trim();
+    if (!id || !kind) throw new Error('同期保留データが不正です');
+    const operations = await this.listPendingSyncOperations();
+    const coalesceKey = String(operation?.coalesceKey ?? '').trim() || null;
+    const next = coalesceKey
+      ? operations.filter((entry) => entry.coalesceKey !== coalesceKey)
+      : operations.filter((entry) => entry.id !== id);
+    next.push({
+      id,
+      kind,
+      payload: clone(operation.payload ?? null),
+      coalesceKey,
+      queuedAt: operation.queuedAt ?? this.now(),
+    });
+    this.storage.setItem(this._syncQueueKey(), JSON.stringify(next.slice(-320)));
+    return clone(next.at(-1));
+  }
+
+  async removePendingSyncOperation(operationId) {
+    const id = String(operationId ?? '').trim();
+    if (!id) return;
+    const operations = await this.listPendingSyncOperations();
+    const next = operations.filter((entry) => entry.id !== id);
+    if (next.length) this.storage.setItem(this._syncQueueKey(), JSON.stringify(next));
+    else this.storage.removeItem(this._syncQueueKey());
+  }
 
   async useAccountScope(userId, { copyCurrent = false } = {}) {
     this._requireUser();
@@ -77,6 +112,7 @@ export class LocalGameRepository {
         [this._activeRunKey(current), this._activeRunKey(next)],
         [this._economyKey(current), this._economyKey(next)],
         [this._statsKey(current), this._statsKey(next)],
+        [this._syncQueueKey(current), this._syncQueueKey(next)],
       ];
       for (const [source, destination] of keyPairs) {
         const value = this.storage.getItem(source);

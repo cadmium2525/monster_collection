@@ -127,9 +127,11 @@ export class ArenaSession {
     return this.repository.saveActiveRun(this.createCheckpoint(phase, runtime));
   }
 
-  flushCheckpoint() {
+  async flushCheckpoint() {
     if (!this.checkpointPhase) return null;
-    return this.saveCheckpoint(this.checkpointPhase, this.checkpointRuntime);
+    const result = await this.saveCheckpoint(this.checkpointPhase, this.checkpointRuntime);
+    await this.repository.flushActiveRunSync?.();
+    return result;
   }
 
   clearCheckpoint() {

@@ -235,7 +235,7 @@ export class BattleEngine {
     return clone(this.state);
   }
 
-  getObservation(playerId) {
+  getObservation(playerId, { logLimit = null } = {}) {
     const own = clone(this.player(playerId));
     const opponent = clone(this.opponent(playerId));
     return {
@@ -272,7 +272,9 @@ export class BattleEngine {
         effects: opponent.effects,
         metrics: opponent.metrics,
       },
-      log: clone(this.state.log),
+      log: clone(Number.isInteger(logLimit) && logLimit >= 0
+        ? this.state.log.slice(logLimit === 0 ? this.state.log.length : -logLimit)
+        : this.state.log),
     };
   }
 

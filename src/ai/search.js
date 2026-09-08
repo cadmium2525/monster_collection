@@ -172,7 +172,7 @@ function visibleResponseActions(engine, opponentId, limit, options, deadline) {
 }
 
 function publicResponseStateKey(engine, perspectiveId) {
-  const observation = engine.getObservation(perspectiveId);
+  const observation = engine.getObservation(perspectiveId, { logLimit: 0 });
   const unitState = (unit) => unit ? {
     id: unit.id,
     life: unit.life,

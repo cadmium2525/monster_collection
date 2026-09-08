@@ -232,7 +232,7 @@ export class BattleScreen {
     } catch (error) { console.error('Battle checkpoint failed', error); }
   }
 
-  observation() { return this.engine.getObservation(this.humanPlayerId); }
+  observation() { return this.engine.getObservation(this.humanPlayerId, { logLimit: 18 }); }
 
   definitionForCard(card) { return this.engine.masterIndex.cards.get(card.masterId); }
 
@@ -249,7 +249,9 @@ export class BattleScreen {
 
   render() {
     const observation = this.observation();
-    const state = this.engine.getState();
+    // Rendering only reads the engine state. Avoid a second full structured
+    // clone after getObservation() on every battle action.
+    const state = this.engine.state;
     const own = observation.own;
     const opponent = observation.opponent;
     const humanTurn = this.isHumanTurn();

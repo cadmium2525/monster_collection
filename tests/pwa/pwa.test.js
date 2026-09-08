@@ -46,8 +46,7 @@ test('page metadata and service worker cover install, activation, navigation and
   assert.match(worker, /addEventListener\('fetch'/);
   assert.match(worker, /networkFirstNavigation/);
   assert.match(worker, /PWA_PRECACHE_START/);
-  assert.match(worker, /const versioned = url\.searchParams\.has\('v'\)/);
-  assert.match(worker, /cache\.match\(request, \{ ignoreSearch: !versioned \}\)/);
+  assert.match(worker, /cache\.match\(request, \{ ignoreSearch: true \}\)/);
   const registration = text('src/pwa/register-service-worker.js');
   assert.match(registration, /dataset\.pwaStatus = 'ready'/);
   assert.match(registration, /addEventListener\('controllerchange'/);
@@ -73,11 +72,14 @@ test('growing and on-demand catalog art is excluded from install-time precache a
   assert.match(buildScript, /assets\/images\/booster\//);
   assert.match(buildScript, /assets\/images\/showcase\//);
   assert.match(buildScript, /assets\/images\/showcase-fusions\//);
+  assert.match(buildScript, /assets\/images\/breeders\//);
+  assert.match(buildScript, /assets\/images\/special-fusions\//);
   assert.match(buildScript, /assets\/images\/catalog-thumbnails\//);
   assert.match(buildScript, /startsWith/);
   assert.match(buildScript, /special-fusion-atlas-v1\.webp/);
   assert.match(buildScript, /blue-drill-v2\.webp/);
   assert.match(buildScript, /assets\/images\/home\//);
   assert.match(buildScript, /assets\/images\/home-showcase\//);
+  assert.match(buildScript, /assets\/icons\/maskable-icon-1024\.png/);
   assert.match(buildScript, /deployIgnored/);
 });

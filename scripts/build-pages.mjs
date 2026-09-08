@@ -81,11 +81,14 @@ const cacheUrls = ['./', ...outputFiles
     // download every future card illustration up front.
     return !relative.startsWith('assets/images/booster/')
       && !relative.startsWith('assets/audio/')
+      && !relative.startsWith('assets/images/breeders/')
+      && !relative.startsWith('assets/images/special-fusions/')
       && !relative.startsWith('assets/images/showcase/')
       && !relative.startsWith('assets/images/showcase-fusions/')
       && !relative.startsWith('assets/images/home/')
       && !relative.startsWith('assets/images/home-showcase/')
       && !relative.startsWith('assets/images/catalog-thumbnails/')
+      && relative !== 'assets/icons/maskable-icon-1024.png'
       // Runtime uses the corrected standalone fusion cells. Keep the two
       // source atlases deployable for traceability without preloading them.
       && !['assets/images/special-fusion-atlas-v1.webp', 'assets/images/blue-drill-v2.webp'].includes(relative);

@@ -106,9 +106,11 @@ export class GameSession {
     });
   }
 
-  flushCheckpoint() {
+  async flushCheckpoint() {
     if (!this.checkpointPhase) return null;
-    return this.saveCheckpoint(this.checkpointPhase, this.checkpointRuntime);
+    const result = await this.saveCheckpoint(this.checkpointPhase, this.checkpointRuntime);
+    await this.repository.flushActiveRunSync?.();
+    return result;
   }
 
   async startTournament(deckId, rank) {

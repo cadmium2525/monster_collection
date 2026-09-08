@@ -284,17 +284,21 @@ export class FirebaseGameRepository {
   async saveActiveRun(checkpoint) {
     if (!checkpoint?.runId || !Number.isFinite(Number(checkpoint.updatedAtMs))) throw new Error('大会の再開データが不正です');
     const reference = this._profileRef();
+    let result = clone(checkpoint);
     await this.sdk.runTransaction(this.db, async (transaction) => {
       const snapshot = await transaction.get(reference);
       const current = snapshot.exists() ? snapshot.data().activeRun : null;
-      if (current && Number(current.updatedAtMs) > Number(checkpoint.updatedAtMs)) return;
+      if (current && Number(current.updatedAtMs) > Number(checkpoint.updatedAtMs)) {
+        result = clone(current);
+        return;
+      }
       transaction.set(reference, {
         activeRun: clone(checkpoint),
         activeRunUpdatedAt: this.sdk.serverTimestamp(),
         updatedAt: this.sdk.serverTimestamp(),
       }, { merge: true });
     });
-    return this.getActiveRun();
+    return normalizeRecord(result);
   }
 
   async clearActiveRun(tombstone) {

@@ -2,7 +2,7 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { FirebaseGameRepository, LocalGameRepository, MemoryStorage, ResilientGameRepository } from '../../src/persistence/index.js';
-import { HOME_RENEWAL_GIFT_ID, defaultEconomyState, japanDateKey } from '../../src/gacha/economy-state.js';
+import { HOME_RENEWAL_GIFT_ID, applyDiamondReward, defaultEconomyState, japanDateKey } from '../../src/gacha/economy-state.js';
 import { legalDeck } from '../helpers.js';
 
 function savedDeck(deckId = 'deck-1') {
@@ -255,6 +255,102 @@ test('resilient repository preserves local deck when cloud write fails', async (
   await repository.saveDeck(savedDeck('safe-copy'));
   assert.equal((await local.listDecks())[0].deckId, 'safe-copy');
   assert.match(repository.getStatus().error, /network down/);
+});
+
+test('a failed cloud deck write is replayed before an older cloud copy can replace it', async () => {
+  const local = new LocalGameRepository({ storage: new MemoryStorage(), idFactory: () => 'deck-replay' });
+  let failing = true;
+  let cloudDeck = { ...savedDeck('same-deck'), deckName: '古いクラウド版' };
+  const cloud = {
+    async initialize() { return { id: 'deck-replay-cloud', mode: 'firebase' }; },
+    async saveDeck(deck) {
+      if (failing) throw new Error('network down');
+      cloudDeck = structuredClone(deck);
+      return structuredClone(deck);
+    },
+    async listDecks() { return [structuredClone(cloudDeck)]; },
+  };
+  const repository = new ResilientGameRepository({ local, cloud });
+  await repository.initialize();
+  await repository.saveDeck({
+    ...savedDeck('same-deck'), deckName: '新しい端末版', updatedAt: '2026-09-08T00:00:00.000Z',
+  });
+  assert.equal((await local.listDecks())[0].deckName, '新しい端末版');
+
+  failing = false;
+  const decks = await repository.listDecks();
+  assert.equal(decks[0].deckName, '新しい端末版');
+  assert.equal(cloudDeck.deckName, '新しい端末版');
+  assert.deepEqual(await local.listPendingSyncOperations(), []);
+});
+
+test('pending economy operations survive a restart and replay idempotently before cloud reads', async () => {
+  const storage = new MemoryStorage();
+  let failing = true;
+  let cloudEconomy = defaultEconomyState('2026-09-08T00:00:00.000Z');
+  const cloud = {
+    async initialize() { return { id: 'economy-replay-cloud', mode: 'firebase' }; },
+    async creditDiamonds(reward) {
+      if (failing) throw new Error('offline');
+      cloudEconomy = applyDiamondReward(cloudEconomy, reward, '2026-09-08T00:01:00.000Z');
+      return structuredClone(cloudEconomy);
+    },
+    async getEconomy() { return structuredClone(cloudEconomy); },
+  };
+  const reward = { operationId: 'offline-reward-1', amount: 100, reason: 'test' };
+  const firstLocal = new LocalGameRepository({ storage, idFactory: () => 'economy-replay' });
+  const first = new ResilientGameRepository({ local: firstLocal, cloud });
+  await first.initialize();
+  assert.equal((await first.creditDiamonds(reward)).diamonds, 700);
+  assert.equal((await firstLocal.listPendingSyncOperations()).length, 1);
+
+  failing = false;
+  const secondLocal = new LocalGameRepository({ storage, idFactory: () => 'unused' });
+  const second = new ResilientGameRepository({ local: secondLocal, cloud });
+  await second.initialize();
+  assert.equal((await second.getEconomy()).diamonds, 700);
+  assert.deepEqual(await secondLocal.listPendingSyncOperations(), []);
+});
+
+test('newer local active-run upload is bounded by the repository timeout', async () => {
+  const local = new LocalGameRepository({ storage: new MemoryStorage(), idFactory: () => 'active-run-timeout' });
+  const cloud = {
+    async initialize() { return { id: 'active-run-timeout-cloud', mode: 'firebase' }; },
+    async getActiveRun() { return { runId: 'run-timeout', updatedAtMs: 1, phase: 'battle' }; },
+    async saveActiveRun() { return new Promise(() => {}); },
+  };
+  const repository = new ResilientGameRepository({ local, cloud, cloudTimeoutMs: 5 });
+  await repository.initialize();
+  const localRun = { runId: 'run-timeout', updatedAtMs: 2, phase: 'battle' };
+  await local.saveActiveRun(localRun);
+  assert.deepEqual(await repository.getActiveRun(), localRun);
+  assert.equal(repository.getStatus().mode, 'local');
+  assert.match(repository.getStatus().error, /試合データの同期/);
+});
+
+test('rapid active-run checkpoints keep every local revision but upload only the newest cloud copy', async () => {
+  const local = new LocalGameRepository({ storage: new MemoryStorage(), idFactory: () => 'checkpoint-coalesce' });
+  const cloudSaves = [];
+  const cloud = {
+    async initialize() { return { id: 'cloud-checkpoint-coalesce', displayName: '同期確認', isAnonymous: false }; },
+    async getProfile() { return { id: 'cloud-checkpoint-coalesce', displayName: '同期確認', isAnonymous: false }; },
+    async saveActiveRun(checkpoint) { cloudSaves.push(structuredClone(checkpoint)); return structuredClone(checkpoint); },
+    async getActiveRun() { return cloudSaves.at(-1) ?? null; },
+  };
+  const repository = new ResilientGameRepository({ local, cloud, activeRunDebounceMs: 20 });
+  await repository.initialize();
+
+  for (let revision = 1; revision <= 4; revision += 1) {
+    await repository.saveActiveRun({
+      schemaVersion: 1, runId: 'run-coalesce', revision,
+      updatedAtMs: revision * 100, phase: 'battle',
+    });
+  }
+  assert.equal((await local.getActiveRun()).revision, 4);
+  assert.equal(cloudSaves.length, 0);
+
+  await repository.flushActiveRunSync();
+  assert.deepEqual(cloudSaves.map(({ revision }) => revision), [4]);
 });
 
 test('resilient startup falls back to local data when cloud initialization stalls', async () => {

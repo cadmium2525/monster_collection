@@ -1,5 +1,5 @@
 const CACHE_PREFIX = 'monster-construction-';
-const CACHE_VERSION = '1.38.3';
+const CACHE_VERSION = '1.38.4';
 const CACHE_NAME = `${CACHE_PREFIX}${CACHE_VERSION}`;
 const SCOPE_URL = new URL('./', self.registration.scope);
 const INDEX_URL = new URL('./index.html', SCOPE_URL).toString();
@@ -51,18 +51,16 @@ async function networkFirstNavigation(request) {
 async function cacheFirst(request) {
   const cache = await caches.open(CACHE_NAME);
   const url = new URL(request.url);
-  const versioned = url.searchParams.has('v');
-  const cached = await cache.match(request, { ignoreSearch: !versioned });
+  // CACHE_NAME already identifies one exact release. Versioned ES-module URLs
+  // can therefore reuse the unversioned install-time copy without downloading
+  // and storing every source module twice.
+  const cached = await cache.match(request, { ignoreSearch: true });
   if (cached) return cached;
   try {
     const response = await fetch(request);
     if (response.ok) await cache.put(request, response.clone());
     return response;
   } catch {
-    if (versioned) {
-      const unversioned = new URL(url.pathname, SCOPE_URL).toString();
-      return (await cache.match(unversioned)) ?? Response.error();
-    }
     return Response.error();
   }
 }

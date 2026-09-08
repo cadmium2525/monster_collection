@@ -70,7 +70,7 @@ function scheduledEffectValue(player) {
 }
 
 export function publicStateFor(engine, perspectiveId) {
-  const observation = engine.getObservation(perspectiveId);
+  const observation = engine.getObservation(perspectiveId, { logLimit: 0 });
   return { own: observation.own, opponent: observation.opponent, observation };
 }
 

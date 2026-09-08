@@ -73,3 +73,11 @@ test('seeded UI-less simulation always completes a match', () => {
   assert.ok(output.actions > 0 && output.actions < 5000);
   assert.ok(['direct-attack', 'overflow', 'turn-limit-life', 'turn-limit-draw'].includes(output.result.reason));
 });
+
+test('observations can omit or bound battle logs for hot render and AI paths', () => {
+  const battle = engine();
+  battle.state.log = Array.from({ length: 30 }, (_, index) => ({ type: 'test', round: index + 1 }));
+  assert.equal(battle.getObservation('p1').log.length, 30);
+  assert.deepEqual(battle.getObservation('p1', { logLimit: 0 }).log, []);
+  assert.deepEqual(battle.getObservation('p1', { logLimit: 4 }).log.map(({ round }) => round), [27, 28, 29, 30]);
+});
