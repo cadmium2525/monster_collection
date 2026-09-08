@@ -2,7 +2,15 @@ import test from 'node:test';
 import assert from 'node:assert/strict';
 import fs from 'node:fs';
 import { FirebaseGameRepository, LocalGameRepository, MemoryStorage, ResilientGameRepository } from '../../src/persistence/index.js';
-import { HOME_RENEWAL_GIFT_ID, applyDiamondReward, defaultEconomyState, japanDateKey } from '../../src/gacha/economy-state.js';
+import {
+  HOME_RENEWAL_GIFT_ID,
+  applyDiamondReward,
+  applyLoginRewards,
+  applyProgressionOperation,
+  defaultEconomyState,
+  japanDateKey,
+  normalizeEconomyState,
+} from '../../src/gacha/economy-state.js';
 import { legalDeck } from '../helpers.js';
 
 function savedDeck(deckId = 'deck-1') {
@@ -170,14 +178,15 @@ test('registered Firebase accounts repair a missing same-day login mission befor
 });
 
 test('registered Firebase restart cannot restore v3 cumulative totals as today daily progress', async () => {
+  const today = japanDateKey();
   const fake = fakeFirebaseSdk();
   fake.auth.currentUser = {
     uid: 'firebase-user', isAnonymous: false,
     email: 'mc.registered@accounts.monster-construction.invalid',
     emailVerified: true, providerData: [{ providerId: 'password' }],
   };
-  const polluted = defaultEconomyState('2026-09-08T00:00:00.000Z');
-  polluted.lastDailyLoginDate = '2026-09-08';
+  const polluted = defaultEconomyState(`${today}T00:00:00.000Z`);
+  polluted.lastDailyLoginDate = today;
   polluted.missionProgress.schemaVersion = 3;
   polluted.missionProgress.daily.counters = { login: 1, battles: 72, wins: 41 };
   polluted.missionProgress.daily.claimedIds = ['daily-login'];
@@ -187,9 +196,9 @@ test('registered Firebase restart cannot restore v3 cumulative totals as today d
 
   const firstLaunch = new FirebaseGameRepository({ config: { projectId: 'test' }, sdkLoader: async () => fake.sdk });
   await firstLaunch.initialize();
-  const repaired = await firstLaunch.claimLoginRewards({ loginDate: '2026-09-08', campaignId: null });
+  const repaired = await firstLaunch.claimLoginRewards({ loginDate: today, campaignId: null });
   assert.deepEqual(repaired.state.missionProgress.daily.counters, { login: 1 });
-  assert.equal(repaired.state.missionProgress.schemaVersion, 4);
+  assert.equal(repaired.state.missionProgress.schemaVersion, 5);
 
   const restarted = new FirebaseGameRepository({ config: { projectId: 'test' }, sdkLoader: async () => fake.sdk });
   await restarted.initialize();
@@ -329,6 +338,49 @@ test('pending economy operations survive a restart and replay idempotently befor
   await second.initialize();
   assert.equal((await second.getEconomy()).diamonds, 700);
   assert.deepEqual(await secondLocal.listPendingSyncOperations(), []);
+});
+
+test('an offline battle replay keeps its original date and cannot complete next-day daily missions', async () => {
+  const storage = new MemoryStorage();
+  let localNow = '2026-09-08T10:00:00.000Z';
+  let cloudNow = localNow;
+  let failing = true;
+  let replayedOperation = null;
+  let cloudEconomy = defaultEconomyState(localNow);
+  const cloud = {
+    async initialize() { return { id: 'dated-replay-cloud', mode: 'firebase' }; },
+    async commitProgression(operation) {
+      if (failing) throw new Error('offline');
+      replayedOperation = structuredClone(operation);
+      cloudEconomy = applyProgressionOperation(cloudEconomy, operation, cloudNow);
+      return structuredClone(cloudEconomy);
+    },
+    async claimLoginRewards(config) {
+      const result = applyLoginRewards(cloudEconomy, config, cloudNow);
+      cloudEconomy = result.state;
+      return structuredClone(result);
+    },
+    async getEconomy() { return normalizeEconomyState(cloudEconomy, cloudNow); },
+  };
+  const firstLocal = new LocalGameRepository({ storage, idFactory: () => 'dated-replay', now: () => localNow });
+  const first = new ResilientGameRepository({ local: firstLocal, cloud });
+  await first.initialize();
+  await first.commitProgression({
+    type: 'mission-event', operationId: 'mission:offline-battle',
+    event: { type: 'battle-result', mode: 'tournament', won: true },
+  });
+  assert.equal((await firstLocal.listPendingSyncOperations()).length, 1);
+
+  localNow = '2026-09-09T10:00:00.000Z';
+  cloudNow = localNow;
+  failing = false;
+  const secondLocal = new LocalGameRepository({ storage, idFactory: () => 'unused', now: () => localNow });
+  const second = new ResilientGameRepository({ local: secondLocal, cloud });
+  await second.initialize();
+  assert.equal(replayedOperation.dateKey, '2026-09-08');
+
+  const login = await second.claimLoginRewards({ loginDate: '2026-09-09', campaignId: null });
+  assert.deepEqual(login.state.missionProgress.daily.counters, { login: 1 });
 });
 
 test('newer local active-run upload is bounded by the repository timeout', async () => {

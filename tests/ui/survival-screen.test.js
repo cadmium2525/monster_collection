@@ -12,7 +12,7 @@ test('survival communicates the completed-deck challenge and all carry-over rule
   assert.match(screen, /Training・修行・習得技を継続中/);
   assert.match(screen, /5勝ごと LIFE全回復/);
   assert.match(screen, /カード奪取なし/);
-  assert.match(screen, /ここでランを終了/);
+  assert.doesNotMatch(screen, /ここでランを終了/);
 });
 
 test('home separates survival, arena and throne tournament entry points', () => {
@@ -29,4 +29,12 @@ test('survival uses the shared engine and fits the synchronized landscape viewpo
   assert.match(css, /\.app-shell:has\(> \.survival-screen\)[\s\S]*?padding:0;/);
   assert.match(css, /\.survival-screen,\.survival-result-screen\s*\{[\s\S]*?height:var\(--app-viewport-height,100dvh\);[\s\S]*?overflow:hidden;/);
   assert.match(css, /@media \(max-height:500px\)[\s\S]*?\.survival-screen/);
+});
+
+test('all battle modes suspend to home while survival has no voluntary run settlement', () => {
+  assert.match(app, /suspendBattle\('tournament', 'battle'/);
+  assert.match(app, /suspendBattle\('arena', 'arena-battle'/);
+  assert.match(app, /suspendBattle\('survival', 'survival-battle'/);
+  assert.doesNotMatch(app, /confirmEndSurvival/);
+  assert.match(css, /\.survival-deck-choice \.game-card \.card-corner \{ display:none; \}/);
 });

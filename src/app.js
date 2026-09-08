@@ -895,6 +895,7 @@ class MonsterConstructionApp {
       chooseCpuAction: createAiPolicy(level, { timeBudgetMs: AI_BUDGET[level] ?? AI_BUDGET.gold }),
       onComplete: (_result, completedEngine) => this.handleArenaBattleComplete(completedEngine),
       onCheckpoint: (battleRuntime) => this.persistArenaCheckpoint(battleRuntime),
+      onSuspend: (battleRuntime) => this.suspendBattle('arena', 'arena-battle', battleRuntime),
       onPlaySe: (source, options) => this.audio.playSe(source, options),
       cpuRngState: runtime.cpuRng ?? null,
       speed: runtime.speed ?? 'standard',
@@ -1021,7 +1022,6 @@ class MonsterConstructionApp {
       onBack: () => this.showHome(),
       onStart: (deck) => this.startSurvival(deck),
       onStartBattle: () => this.startSurvivalBattle(),
-      onEndRun: () => this.confirmEndSurvival(),
       onOpenRanking: () => this.openSurvivalLeaderboard(),
     });
     const rankingKey = `${progress.bestStreak}:${progress.totalRuns}:${this.user?.displayName}:${this.user?.playerIconMasterId ?? ''}`;
@@ -1103,7 +1103,7 @@ class MonsterConstructionApp {
       chooseCpuAction: createAiPolicy(level, { timeBudgetMs: AI_BUDGET[level] ?? AI_BUDGET.legend }),
       onComplete: (_result, completedEngine) => this.handleSurvivalBattleComplete(completedEngine),
       onCheckpoint: (battleRuntime) => this.persistSurvivalCheckpoint(battleRuntime),
-      onRetire: () => this.confirmEndSurvival(),
+      onSuspend: (battleRuntime) => this.suspendBattle('survival', 'survival-battle', battleRuntime),
       onPlaySe: (source, options) => this.audio.playSe(source, options),
       cpuRngState: runtime.cpuRng ?? null,
       speed: runtime.speed ?? 'standard',
@@ -1145,24 +1145,6 @@ class MonsterConstructionApp {
       this.showError(error, 'サバイバル結果を保存できません');
       this.showHome();
     }
-  }
-
-  confirmEndSurvival() {
-    if (!(this.session instanceof SurvivalSession)) return;
-    let modal = null;
-    const content = el('div', {}, [
-      el('p', { text: `現在の${this.session.run.state.currentStreak}連勝でランを終了し、到達報酬を受け取ります。` }),
-      el('p', { className: 'account-switch-warning', text: '終了すると、このランの育成状態と残りLIFEには戻れません。' }),
-      el('div', { className: 'modal-actions' }, [
-        el('button', { className: 'text-button', text: '続ける', onclick: () => modal.close() }),
-        el('button', { className: 'primary-button', text: 'ランを終了', onclick: async () => {
-          modal.close();
-          this.session.retire();
-          await this.settleSurvivalRun();
-        } }),
-      ]),
-    ]);
-    modal = openModal({ title: 'サバイバルを終了しますか？', content });
   }
 
   async settleSurvivalRun() {
@@ -1314,6 +1296,7 @@ class MonsterConstructionApp {
       chooseCpuAction: createAiPolicy(level, { timeBudgetMs: AI_BUDGET[level] }),
       onComplete: (_result, completedEngine) => this.handleBattleComplete(completedEngine),
       onCheckpoint: (battleRuntime) => this.persistBattleCheckpoint(battleRuntime),
+      onSuspend: (battleRuntime) => this.suspendBattle('tournament', 'battle', battleRuntime),
       onPlaySe: (source, options) => this.audio.playSe(source, options),
       cpuRngState: runtime.cpuRng ?? null,
       speed: runtime.speed ?? 'standard',
@@ -1324,6 +1307,22 @@ class MonsterConstructionApp {
     void this.session?.saveCheckpoint('battle', runtime)
       .then((checkpoint) => { if (checkpoint?.phase === 'battle') this.activeRuns.tournament = checkpoint; })
       .catch((error) => console.error('Battle checkpoint failed', error));
+  }
+
+  async suspendBattle(mode, phase, runtime) {
+    const session = this.session;
+    if (!session?.saveCheckpoint) return;
+    this.showLoading('試合を中断しています…');
+    try {
+      const checkpoint = await session.saveCheckpoint(phase, runtime);
+      if (checkpoint?.phase === phase) this.activeRuns[mode] = checkpoint;
+      await this.repository.flushActiveRunSync?.(mode);
+      this.session = null;
+      this.showHome();
+    } catch (error) {
+      this.showError(error, '試合の中断状態を保存できません');
+      this.showHome();
+    }
   }
 
   async resumeTournament() {

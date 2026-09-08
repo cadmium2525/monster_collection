@@ -90,7 +90,7 @@ test('v3 cloud pollution is repaired again before a registered player restarts',
   }, '2026-09-08T01:00:00.000Z');
   assert.deepEqual(startup.state.missionProgress.daily.counters, { login: 1 });
   assert.deepEqual(startup.state.missionProgress.daily.claimedIds, ['daily-login']);
-  assert.equal(startup.state.missionProgress.schemaVersion, 4);
+  assert.equal(startup.state.missionProgress.schemaVersion, 5);
 
   const restarted = applyLoginRewards(startup.state, {
     loginDate: '2026-09-08', campaignId: null,
@@ -100,6 +100,27 @@ test('v3 cloud pollution is repaired again before a registered player restarts',
     .filter(({ period }) => period === 'daily')
     .map(({ id, claimable }) => ({ id, claimable })), [
     { id: 'daily-login', claimable: false },
+    { id: 'daily-play', claimable: false },
+    { id: 'daily-win', claimable: false },
+  ]);
+});
+
+test('v4 next-day replay pollution cannot complete unclaimed play and win missions', () => {
+  const polluted = defaultEconomyState('2026-09-09T00:00:00.000Z');
+  polluted.lastDailyLoginDate = '2026-09-09';
+  polluted.missionProgress.schemaVersion = 4;
+  polluted.missionProgress.daily.counters = { login: 1, battles: 1, wins: 1 };
+  polluted.missionProgress.daily.claimedIds = [];
+
+  const startup = applyLoginRewards(polluted, {
+    loginDate: '2026-09-09', campaignId: null,
+  }, '2026-09-09T01:00:00.000Z');
+
+  assert.deepEqual(startup.state.missionProgress.daily.counters, { login: 1 });
+  assert.deepEqual(missionEntries(startup.state.missionProgress, { dateKey: '2026-09-09' })
+    .filter(({ period }) => period === 'daily')
+    .map(({ id, claimable }) => ({ id, claimable })), [
+    { id: 'daily-login', claimable: true },
     { id: 'daily-play', claimable: false },
     { id: 'daily-win', claimable: false },
   ]);

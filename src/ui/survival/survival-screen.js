@@ -62,7 +62,7 @@ export function openSurvivalRankingModal({ leaderboard, masterIndex }) {
 }
 
 export class SurvivalScreen {
-  constructor({ root, collection, masterIndex, progress, run = null, leaderboard = null, leaderboardLoading = false, onBack, onStart, onStartBattle, onEndRun, onOpenRanking }) {
+  constructor({ root, collection, masterIndex, progress, run = null, leaderboard = null, leaderboardLoading = false, onBack, onStart, onStartBattle, onOpenRanking }) {
     this.root = root;
     this.collection = collection;
     this.masterIndex = masterIndex;
@@ -73,7 +73,6 @@ export class SurvivalScreen {
     this.onBack = onBack;
     this.onStart = onStart;
     this.onStartBattle = onStartBattle;
-    this.onEndRun = onEndRun;
     this.onOpenRanking = onOpenRanking;
     this.selectedDeckId = collection.list()[0]?.deckId ?? null;
     this.render();
@@ -156,7 +155,6 @@ export class SurvivalScreen {
           el('strong', { text: `累積 +${growthTotal(state.carryOverGrowth)}` }),
           el('span', { text: 'Training・修行・習得技を継続中' }),
         ]),
-        el('button', { className: 'text-button survival-end-button', text: 'ここでランを終了', onclick: this.onEndRun }),
       ]),
       el('section', { className: 'survival-next-panel' }, [
         el('div', { className: 'survival-next-heading' }, [

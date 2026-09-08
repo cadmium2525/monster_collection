@@ -1,4 +1,4 @@
-export const MISSION_SCHEMA_VERSION = 4;
+export const MISSION_SCHEMA_VERSION = 5;
 
 const MONTHLY_OBJECTIVE_IDS = Object.freeze([
   'monthly-login',
@@ -73,11 +73,11 @@ export function normalizeMissionProgress(value = {}, { dateKey = japanDateKey() 
   const monthKey = japanMonthKey(dateKey);
   const sourceSchemaVersion = integer(value.schemaVersion);
   const daily = normalizePeriod(value.daily, dateKey);
-  // Versions through v3 could leave cumulative account battle totals in the
-  // current daily period. The first v3 repair did not cover records that had
-  // already been normalized and later restored from Firestore. Run the repair
-  // once more for v4; already-claimed rewards remain untouched.
-  if (sourceSchemaVersion < 4) {
+  // Versions through v4 could replay an offline battle-result operation on the
+  // next login date because the queued operation had no explicit dateKey. That
+  // made a registered player's first login incorrectly complete play/win. Run
+  // one final repair for unclaimed counters; already-paid rewards stay claimed.
+  if (sourceSchemaVersion < 5) {
     if (!daily.claimedIds.includes('daily-play')) delete daily.counters.battles;
     if (!daily.claimedIds.includes('daily-win')) delete daily.counters.wins;
   }

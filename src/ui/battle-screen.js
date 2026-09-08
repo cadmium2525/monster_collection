@@ -74,14 +74,14 @@ export function statChangeSoundDirection({ changes = [], action = null, newLogs 
 }
 
 export class BattleScreen {
-  constructor({ root, engine, humanPlayerId, chooseCpuAction, onComplete, onCheckpoint = null, onRetire = null, onPlaySe = null, cpuRngState = null, speed = 'standard' }) {
+  constructor({ root, engine, humanPlayerId, chooseCpuAction, onComplete, onCheckpoint = null, onSuspend = null, onPlaySe = null, cpuRngState = null, speed = 'standard' }) {
     this.root = root;
     this.engine = engine;
     this.humanPlayerId = humanPlayerId;
     this.chooseCpuAction = chooseCpuAction;
     this.onComplete = onComplete;
     this.onCheckpoint = onCheckpoint;
-    this.onRetire = onRetire;
+    this.onSuspend = onSuspend;
     this.onPlaySe = onPlaySe;
     this.speed = speed;
     this.selection = null;
@@ -137,7 +137,7 @@ export class BattleScreen {
       await this.showCurrentTurnTransition();
     } finally {
       this.busy = false;
-      this.applyQueuedCardSelection();
+      if (!this.applyQueuedCardSelection()) this.render();
     }
     await this.runCpuIfNeeded();
   }
@@ -163,6 +163,7 @@ export class BattleScreen {
       await this.showCurrentTurnTransition();
     } finally {
       this.busy = false;
+      this.render();
     }
     await this.runCpuIfNeeded();
   }
@@ -289,11 +290,11 @@ export class BattleScreen {
             text: this.speed === 'fast' ? '▶▶ 高速' : '▶ 標準',
             onclick: () => { this.speed = this.speed === 'fast' ? 'standard' : 'fast'; this.emitCheckpoint(); this.render(); },
           }),
-          this.onRetire ? el('button', {
-            className: 'utility-button survival-retire-button',
-            text: 'ラン終了',
+          this.onSuspend ? el('button', {
+            className: 'utility-button battle-suspend-button',
+            text: '中断してホーム',
             disabled: this.busy || state.status !== 'active',
-            onclick: this.onRetire,
+            onclick: () => this.onSuspend(this.checkpointRuntime()),
           }) : null,
           globalThis.__MC_DEBUG_MODE__ ? el('button', {
             className: 'utility-button seed-button',
@@ -555,7 +556,7 @@ export class BattleScreen {
       this.render();
       await this.showCurrentTurnTransition();
       this.busy = false;
-      this.applyQueuedCardSelection();
+      if (!this.applyQueuedCardSelection()) this.render();
       await this.runCpuIfNeeded();
     } catch (error) {
       this.mulliganPresentationPhase = 'selecting';
@@ -1818,7 +1819,7 @@ export class BattleScreen {
       openModal({ title: '行動できません', content: el('p', { text: error.message }) });
     } finally {
       this.busy = false;
-      this.applyQueuedCardSelection();
+      if (!this.applyQueuedCardSelection()) this.render();
     }
   }
 
@@ -1836,7 +1837,7 @@ export class BattleScreen {
       openModal({ title: '行動できません', content: el('p', { text: error.message }) });
     } finally {
       this.busy = false;
-      this.applyQueuedCardSelection();
+      if (!this.applyQueuedCardSelection()) this.render();
     }
   }
 

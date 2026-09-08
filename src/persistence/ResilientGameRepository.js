@@ -1,5 +1,6 @@
 import { RepositoryUnavailableError } from './errors.js';
 import { mergeCardCatalogs } from './card-catalog.js';
+import { japanDateKey } from '../gacha/economy-state.js';
 
 export const DEFAULT_CLOUD_TIMEOUT_MS = 10_000;
 
@@ -113,7 +114,11 @@ export class ResilientGameRepository {
       case 'tournament-unlock': return this.activeCloud.unlockTournamentRank(payload.rank);
       case 'login-rewards': return this.activeCloud.claimLoginRewards(payload.config);
       case 'campaign-gift': return this.activeCloud.claimCampaignGift(payload.config);
-      case 'progression': return this.activeCloud.commitProgression(payload.operation);
+      case 'progression': {
+        const operationDate = payload.operation?.dateKey
+          ?? (operation.queuedAt ? japanDateKey(operation.queuedAt) : japanDateKey());
+        return this.activeCloud.commitProgression({ ...payload.operation, dateKey: operationDate });
+      }
       case 'catalog': return this.activeCloud.recordCardCatalog(payload.update);
       case 'deck-save': return this.activeCloud.saveDeck(payload.deck);
       case 'deck-economy': return this.activeCloud.saveDeckAndEconomy(payload.deck, payload.economy);
@@ -464,11 +469,16 @@ export class ResilientGameRepository {
   }
 
   async commitProgression(operation) {
-    const localResult = await this.local.commitProgression(operation);
+    // Mission periods must be fixed when the action happens. Without this date,
+    // a failed cloud write replayed after midnight can count yesterday's battle
+    // as today's first match/win.
+    const operationDate = operation?.dateKey ?? japanDateKey(this.local.now?.() ?? new Date());
+    const datedOperation = { ...operation, dateKey: operationDate };
+    const localResult = await this.local.commitProgression(datedOperation);
     const synced = await this._syncMutation({
-      kind: 'progression', payload: { operation }, label: '進行状況の同期', fallback: localResult,
-      id: operation?.operationId ? `progression:${operation.operationId}` : null,
-      call: () => this.activeCloud.commitProgression(operation),
+      kind: 'progression', payload: { operation: datedOperation }, label: '進行状況の同期', fallback: localResult,
+      id: datedOperation.operationId ? `progression:${datedOperation.operationId}` : null,
+      call: () => this.activeCloud.commitProgression(datedOperation),
     });
     if (synced.synced) {
       const cloudResult = synced.result;
