@@ -105,6 +105,7 @@ function howToPlayContent(onTutorial) {
       el('li', { text: '修行は候補一覧を確認してから実行し、覚える技はランダムです。通常/特殊合体は先攻6T・後攻5Tからです。' }),
       el('li', { text: '後攻が10Tに到達すると両者の覚醒が解禁。各プレイヤー1試合に1回、召喚酔いしていない別の味方1体を墓地へ送り、全能力+15と専用能力を得ます。' }),
       el('li', { text: 'Training・修行の成長値と習得技は、墓地から山札へ戻っても保持され、同じ大会の次試合にも引き継がれます。大会終了時に元へ戻ります。' }),
+      el('li', { text: 'サバイバルは保存デッキでCPUと連戦し、成長・習得技と残りプレイヤーLIFEを次戦へ引き継ぎます。5勝ごとにLIFEが全回復し、敗北または任意終了でランが終了します。' }),
       el('li', { text: '墓地から戻ったモンスターを再召喚すると、残りLIFE・一時効果・合体・覚醒状態はリセットされます。' }),
       el('li', { text: '分類同士に共通の有利・不利や隠れた攻撃倍率はありません。分類は対応する特性やコンボカードを示し、個別の相性効果はカード本文に記載されます。' }),
       el('li', { text: 'レジェンド決勝の現チャンピオンは、戴冠した大会の決勝開始時点の40枚と育成状態を再現して登場します。' }),
@@ -159,6 +160,7 @@ export function homeCollectionLevel(catalog, masterIndex) {
 
 const HOME_ICON_PATHS = Object.freeze({
   tournament: ['M15 7h18v8c0 7-3 13-9 13s-9-6-9-13V7Z', 'M15 12H8c0 8 3 12 10 13M33 12h7c0 8-3 12-10 13M24 28v7M16 42h16M19 35h10v7'],
+  survival: ['M24 5c9 0 16 7 16 16 0 7-4 12-10 15v6h-4v-7h-4v7h-4v-6C12 33 8 28 8 21 8 12 15 5 24 5Z', 'M16 21h5M27 21h5M19 28c3 2 7 2 10 0'],
   arena: ['m11 8 26 32M37 8 11 40M8 8l8 2-6 6-2-8Zm32 0-8 2 6 6 2-8ZM8 40l8-2-6-6-2 8Zm32 0-8-2 6-6 2 8Z'],
   home: ['m7 23 17-15 17 15M12 20v21h24V20M20 41V28h8v13'],
   cards: ['M9 7h25v34H9z', 'm18 19 7-5 4 6 8-3 2 17H18V19ZM34 11l5 1v25l-5 1'],
@@ -300,7 +302,7 @@ export function openAudioSettings({ bgmVolume = BGM_DEFAULT_VOLUME, seVolume = S
 }
 
 export class HomeScreen {
-  constructor({ root, masterIndex, user, champion, repositoryStatus, decks, catalog = null, economy, seed, debugMode = false, adminMode = false, activeRun = null, bgmVolume = BGM_DEFAULT_VOLUME, seVolume = SE_DEFAULT_VOLUME, onBgmVolumeChange = null, onSeVolumeChange = null, onResume = null, onTournament, onArena, onMissions, onDecks, onBoosters, onAdmin = null, onProfile, onClaimGift = null, installAvailable = false, onInstall = null }) {
+  constructor({ root, masterIndex, user, champion, repositoryStatus, decks, catalog = null, economy, seed, debugMode = false, adminMode = false, activeRuns = {}, bgmVolume = BGM_DEFAULT_VOLUME, seVolume = SE_DEFAULT_VOLUME, onBgmVolumeChange = null, onSeVolumeChange = null, onResumeTournament = null, onTournament, onSurvival, onArena, onMissions, onDecks, onBoosters, onAdmin = null, onProfile, onClaimGift = null, installAvailable = false, onInstall = null }) {
     this.root = root;
     this.masterIndex = masterIndex;
     this.user = user;
@@ -312,13 +314,14 @@ export class HomeScreen {
     this.seed = seed;
     this.debugMode = debugMode;
     this.adminMode = adminMode;
-    this.activeRun = activeRun;
+    this.activeRuns = activeRuns ?? {};
     this.bgmVolume = normalizeAudioVolume(bgmVolume);
     this.seVolume = normalizeAudioVolume(seVolume);
     this.onBgmVolumeChange = onBgmVolumeChange;
     this.onSeVolumeChange = onSeVolumeChange;
-    this.onResume = onResume;
+    this.onResumeTournament = onResumeTournament;
     this.onTournament = onTournament;
+    this.onSurvival = onSurvival;
     this.onArena = onArena;
     this.onDecks = onDecks;
     this.onBoosters = onBoosters;
@@ -377,7 +380,9 @@ export class HomeScreen {
     const highest = this.economy?.tournamentQualification ?? 'bronze';
     const footerMode = homeFooterMode({ debugMode: this.debugMode, syncError: this.repositoryStatus.error });
     const showFooter = footerMode !== 'hidden';
-    const resume = activeRunSummary(this.activeRun);
+    const resume = activeRunSummary(this.activeRuns.tournament);
+    const arenaResume = ['arena-battle', 'arena-result'].includes(this.activeRuns.arena?.phase);
+    const survivalResume = ['survival', 'survival-battle', 'survival-result'].includes(this.activeRuns.survival?.phase);
     const selectedDeck = this.decks[0] ?? null;
     const leader = selectedDeck?.representativeMonsterId
       ? this.masterIndex.monsters.get(selectedDeck.representativeMonsterId)
@@ -391,7 +396,7 @@ export class HomeScreen {
     const collectionLevel = homeCollectionLevel(this.catalog, this.masterIndex);
     const gifts = availableCampaignGifts(this.economy);
     const online = this.repositoryStatus.mode === 'firebase';
-    const tournamentAction = resume ? this.onResume : this.onTournament;
+    const tournamentAction = resume ? this.onResumeTournament : this.onTournament;
     const missionCount = claimableMissionCount(this.economy?.missionProgress);
     const hero = el('img', {
       className: `home-lobby-hero-art${artworkAppearance?.finish === 'foil' ? ' is-foil' : ''}`,
@@ -474,13 +479,13 @@ export class HomeScreen {
           homeIcon('mission'), el('span', { text: 'ミッション' }), missionCount ? el('i', { className: 'home-lobby-notification', text: String(missionCount) }) : null,
         ]),
         el('button', { onclick: () => openHomeNotices(this.champion), attrs: { 'aria-label': 'お知らせ' } }, [homeIcon('notice'), el('span', { text: 'お知らせ' })]),
-        el('button', { onclick: () => openHowToPlay(this.onTournament), attrs: { 'aria-label': '遊び方' } }, [homeIcon('help'), el('span', { text: '遊び方' })]),
+        el('button', { onclick: () => openHowToPlay(tournamentAction), attrs: { 'aria-label': '遊び方' } }, [homeIcon('help'), el('span', { text: '遊び方' })]),
         this.installAvailable ? el('button', { className: 'home-lobby-install', onclick: this.onInstall, attrs: { 'aria-label': 'アプリに追加' } }, [homeIcon('install'), el('span', { text: 'アプリ' })]) : null,
         this.adminMode ? el('button', { className: 'home-lobby-admin admin-entry-button', onclick: this.onAdmin, attrs: { 'aria-label': '管理者ツール' } }, [homeIcon('admin'), el('span', { text: '管理' }), el('span', { className: 'sr-only', text: '管理者ツール' })]) : null,
       ]),
       el('nav', { className: 'home-lobby-bottom-nav', attrs: { 'aria-label': 'メインメニュー' } }, [
-        homeNavButton({ icon: 'tournament', label: 'トーナメント', sublabel: resume ? '続きから再開' : 'TOURNAMENT', onclick: tournamentAction, className: resume ? 'has-resume' : '' }),
-        homeNavButton({ icon: 'arena', label: 'アリーナ', sublabel: ['arena-battle', 'arena-result'].includes(this.activeRun?.phase) ? '続きから再開' : `RANK ${this.economy?.arenaProgress?.rank ?? 'D'}`, onclick: this.onArena, className: ['arena-battle', 'arena-result'].includes(this.activeRun?.phase) ? 'has-resume' : '' }),
+        homeNavButton({ icon: 'survival', label: 'サバイバル', sublabel: survivalResume ? '続きから再開' : `BEST ${this.economy?.survivalProgress?.bestStreak ?? 0}`, onclick: this.onSurvival, className: survivalResume ? 'has-resume' : '' }),
+        homeNavButton({ icon: 'arena', label: 'アリーナ', sublabel: arenaResume ? '続きから再開' : `RANK ${this.economy?.arenaProgress?.rank ?? 'D'}`, onclick: this.onArena, className: arenaResume ? 'has-resume' : '' }),
         homeNavButton({ icon: 'home', label: 'ホーム', sublabel: 'HOME', current: true, className: 'is-active' }),
         homeNavButton({ icon: 'cards', label: 'カード', sublabel: `${this.decks.length}/5 DECKS`, onclick: this.onDecks }),
         homeNavButton({ icon: 'shop', label: 'ショップ', sublabel: this.economy?.pendingPack ? '未確認パックあり' : 'BOOSTER', onclick: this.onBoosters, className: this.economy?.pendingPack ? 'has-notice' : '' }),

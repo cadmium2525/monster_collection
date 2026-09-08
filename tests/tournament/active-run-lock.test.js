@@ -26,12 +26,12 @@ test('finished, cleared and malformed checkpoints never leave a deck locked', ()
   assert.equal(isDeckLockedByActiveRun(null, 'deck-in-run'), false);
 });
 
-test('an in-progress arena battle locks only its selected deck', () => {
+test('arena and survival snapshots do not lock editable saved decks', () => {
   const run = { phase: 'arena-battle', arena: { playerDeck: { deckId: 'arena-deck' } } };
-  assert.equal(activeRunDeckId(run), 'arena-deck');
-  assert.equal(isDeckLockedByActiveRun(run, 'arena-deck'), true);
+  assert.equal(activeRunDeckId(run), null);
+  assert.equal(isDeckLockedByActiveRun(run, 'arena-deck'), false);
   assert.equal(isDeckLockedByActiveRun(run, 'another-deck'), false);
-  assert.equal(activeRunDeckId({ ...run, phase: 'arena-result' }), 'arena-deck');
+  assert.equal(activeRunDeckId({ phase: 'survival', survival: { state: { playerDeck: { deckId: 'survival-deck' } } } }), null);
 });
 
 test('deck management UI and app both enforce the tournament lock', () => {

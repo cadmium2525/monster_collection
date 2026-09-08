@@ -1,5 +1,4 @@
 const ACTIVE_RUN_PHASES = new Set(['tournament', 'battle', 'reward']);
-const ARENA_RUN_PHASES = new Set(['arena-battle', 'arena-result']);
 const REWARD_STATUSES = new Set(['active', 'won', 'champion']);
 
 export function activeTournamentState(activeRun) {
@@ -13,8 +12,7 @@ export function activeTournamentState(activeRun) {
 }
 
 export function activeRunDeckId(activeRun) {
-  const arenaDeckId = ARENA_RUN_PHASES.has(activeRun?.phase) ? activeRun.arena?.playerDeck?.deckId : null;
-  const deckId = arenaDeckId ?? activeTournamentState(activeRun)?.playerDeck?.deckId;
+  const deckId = activeTournamentState(activeRun)?.playerDeck?.deckId;
   return deckId == null || String(deckId).trim() === '' ? null : String(deckId);
 }
 

@@ -180,6 +180,49 @@ service cloud.firestore {
         && profile.economy.arenaProgress.losses == d.losses;
     }
 
+    function validSurvivalRanking(userId) {
+      let d = request.resource.data;
+      return d.keys().hasOnly([
+          'ownerUserId', 'ownerDisplayName', 'playerIconMasterId', 'sourceDeckId',
+          'representativeMonsterId', 'bestStreak', 'totalRuns', 'totalWins',
+          'schemaVersion', 'registeredAt', 'bestReachedAt', 'updatedAt'
+        ])
+        && d.ownerUserId == userId
+        && d.ownerUserId == request.auth.uid
+        && d.ownerDisplayName is string
+        && d.ownerDisplayName.size() > 0
+        && d.ownerDisplayName.size() <= 24
+        && (d.playerIconMasterId == null || d.playerIconMasterId is string)
+        && d.sourceDeckId is string
+        && (d.representativeMonsterId == null || d.representativeMonsterId is string)
+        && d.bestStreak is int
+        && d.bestStreak > 0
+        && d.totalRuns is int
+        && d.totalRuns > 0
+        && d.totalWins is int
+        && d.totalWins >= d.bestStreak
+        && d.schemaVersion == 1
+        && d.registeredAt is timestamp
+        && d.bestReachedAt is timestamp
+        && d.updatedAt is timestamp;
+    }
+
+    function validSurvivalRankingSource(d) {
+      let ownerId = request.auth.uid;
+      let source = get(/databases/$(database)/documents/users/$(ownerId)/savedDecks/$(d.sourceDeckId)).data;
+      let profile = get(/databases/$(database)/documents/users/$(ownerId)).data;
+      return source.ownerUserId == ownerId
+        && source.deckId == d.sourceDeckId
+        && source.representativeMonsterId == d.representativeMonsterId
+        && profile.displayName == d.ownerDisplayName
+        && profile.get('playerIconMasterId', null) == d.playerIconMasterId
+        && profile.economy is map
+        && profile.economy.survivalProgress is map
+        && profile.economy.survivalProgress.bestStreak == d.bestStreak
+        && profile.economy.survivalProgress.totalRuns == d.totalRuns
+        && profile.economy.survivalProgress.totalWins == d.totalWins;
+    }
+
     function validLegendArchive(archiveId) {
       let d = request.resource.data;
       let champion = getAfter(/databases/$(database)/documents/gameState/champion).data;
@@ -208,6 +251,18 @@ service cloud.firestore {
         allow read: if owns(userId);
         allow create, update: if owns(userId) && validDeck() && request.resource.data.deckId == deckId;
         allow delete: if owns(userId);
+      }
+
+      match /activeRuns/{mode} {
+        allow read: if owns(userId) && mode in ['tournament', 'arena', 'survival'];
+        allow create, update: if owns(userId)
+          && mode in ['tournament', 'arena', 'survival']
+          && request.resource.data.mode == mode
+          && request.resource.data.runId is string
+          && request.resource.data.revision is int
+          && request.resource.data.updatedAtMs is number
+          && request.resource.data.phase is string;
+        allow delete: if false;
       }
     }
 
@@ -294,6 +349,29 @@ service cloud.firestore {
         && request.resource.data.ratingReachedAt == (
           request.resource.data.arenaRating == resource.data.arenaRating
             ? resource.data.ratingReachedAt
+            : request.time
+        )
+        && request.resource.data.updatedAt == request.time;
+      allow delete: if false;
+    }
+
+    match /survivalRankings/{userId} {
+      allow read: if signedIn();
+      allow create: if owns(userId)
+        && validSurvivalRanking(userId)
+        && validSurvivalRankingSource(request.resource.data)
+        && request.resource.data.registeredAt == request.time
+        && request.resource.data.bestReachedAt == request.time
+        && request.resource.data.updatedAt == request.time;
+      allow update: if owns(userId)
+        && validSurvivalRanking(userId)
+        && validSurvivalRankingSource(request.resource.data)
+        && request.resource.data.ownerUserId == resource.data.ownerUserId
+        && request.resource.data.registeredAt == resource.data.registeredAt
+        && request.resource.data.bestStreak >= resource.data.bestStreak
+        && request.resource.data.bestReachedAt == (
+          request.resource.data.bestStreak == resource.data.bestStreak
+            ? resource.data.bestReachedAt
             : request.time
         )
         && request.resource.data.updatedAt == request.time;

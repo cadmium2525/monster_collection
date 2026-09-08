@@ -8,6 +8,15 @@
         { "fieldPath": "ratingReachedAt", "order": "ASCENDING" },
         { "fieldPath": "ownerUserId", "order": "ASCENDING" }
       ]
+    },
+    {
+      "collectionGroup": "survivalRankings",
+      "queryScope": "COLLECTION",
+      "fields": [
+        { "fieldPath": "bestStreak", "order": "DESCENDING" },
+        { "fieldPath": "bestReachedAt", "order": "ASCENDING" },
+        { "fieldPath": "ownerUserId", "order": "ASCENDING" }
+      ]
     }
   ],
   "fieldOverrides": []

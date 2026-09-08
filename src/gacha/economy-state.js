@@ -16,6 +16,7 @@ import {
   recordArenaResult,
 } from '../arena/arena-state.js';
 import { SHOWCASE_VARIANTS } from './pack-generator.js';
+import { normalizeSurvivalProgress, recordSurvivalCompletion } from '../survival/SurvivalReward.js';
 
 export const ECONOMY_SCHEMA_VERSION = 1;
 export const STARTER_DIAMONDS = 600;
@@ -110,6 +111,7 @@ export function defaultEconomyState(now = null) {
     archivedDecks: [],
     missionProgress: normalizeMissionProgress({}, { dateKey: now ? japanDateKey(now) : japanDateKey() }),
     arenaProgress: normalizeArenaProgress({}, { weekKey: now ? japanWeekKey(japanDateKey(now)) : japanWeekKey() }),
+    survivalProgress: normalizeSurvivalProgress({}),
     updatedAt: now,
   };
 }
@@ -139,6 +141,7 @@ export function normalizeEconomyState(value, now = null) {
     archivedDecks: Array.isArray(value.archivedDecks) ? clone(value.archivedDecks) : [],
     missionProgress: normalizeMissionProgress(value.missionProgress, { dateKey: now ? japanDateKey(now) : japanDateKey() }),
     arenaProgress: normalizeArenaProgress(value.arenaProgress, { weekKey: now ? japanWeekKey(japanDateKey(now)) : japanWeekKey() }),
+    survivalProgress: normalizeSurvivalProgress(value.survivalProgress),
     updatedAt: value.updatedAt ?? now,
   };
 }
@@ -317,6 +320,16 @@ export function applyProgressionOperation(current, operation, now = new Date().t
       state.arenaProgress.defenseDeckId = String(operation.deckId ?? '').trim() || null;
       state.arenaProgress.processedOperationIds = [...state.arenaProgress.processedOperationIds, operationId].slice(-320);
       state.arenaProgress.updatedAt = now;
+    }
+  } else if (operation.type === 'survival-result') {
+    const completed = recordSurvivalCompletion(state.survivalProgress, {
+      operationId,
+      streak: operation.streak,
+    }, now);
+    state.survivalProgress = completed.progress;
+    if (completed.reward) {
+      state.diamonds += completed.reward.diamonds;
+      state.freePackCredits += completed.reward.packCredits;
     }
   } else if (operation.type === 'claim-mission') {
     const progressBeforeClaim = normalizeMissionProgress(state.missionProgress, { dateKey });

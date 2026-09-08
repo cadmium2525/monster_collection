@@ -111,6 +111,7 @@ export class ArenaSession {
     this.checkpointRuntime = clone(runtime ?? {});
     return {
       schemaVersion: 1,
+      mode: 'arena',
       runId: this.runId,
       revision: this.checkpointRevision,
       updatedAtMs: this._nextCheckpointTime(),
@@ -124,13 +125,13 @@ export class ArenaSession {
 
   saveCheckpoint(phase = this.checkpointPhase, runtime = this.checkpointRuntime) {
     if (!phase || !this.repository.saveActiveRun) return null;
-    return this.repository.saveActiveRun(this.createCheckpoint(phase, runtime));
+    return this.repository.saveActiveRun(this.createCheckpoint(phase, runtime), 'arena');
   }
 
   async flushCheckpoint() {
     if (!this.checkpointPhase) return null;
     const result = await this.saveCheckpoint(this.checkpointPhase, this.checkpointRuntime);
-    await this.repository.flushActiveRunSync?.();
+    await this.repository.flushActiveRunSync?.('arena');
     return result;
   }
 
@@ -140,7 +141,7 @@ export class ArenaSession {
     this.checkpointPhase = null;
     return this.repository.clearActiveRun?.({
       schemaVersion: 1, runId: this.runId, revision: this.checkpointRevision,
-      updatedAtMs: this.checkpointClock, phase: 'cleared',
-    });
+      updatedAtMs: this.checkpointClock, phase: 'cleared', mode: 'arena',
+    }, 'arena');
   }
 }

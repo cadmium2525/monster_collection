@@ -17,6 +17,15 @@ import { normalizeHomeArtworkSelection } from '../profile/home-artwork.js';
 
 const USER_KEY = 'mc:v1:user';
 const CHAMPION_KEY = 'mc:v1:champion';
+const ACTIVE_RUN_MODES = Object.freeze(['tournament', 'arena', 'survival']);
+
+function activeRunMode(checkpoint, fallback = null) {
+  if (ACTIVE_RUN_MODES.includes(checkpoint?.mode)) return checkpoint.mode;
+  if (checkpoint?.survival || String(checkpoint?.phase ?? '').startsWith('survival')) return 'survival';
+  if (checkpoint?.arena || String(checkpoint?.phase ?? '').startsWith('arena')) return 'arena';
+  if (checkpoint?.tournament || ['tournament', 'battle', 'reward'].includes(checkpoint?.phase)) return 'tournament';
+  return fallback;
+}
 
 function clone(value) { return value == null ? value : structuredClone(value); }
 function parse(value, fallback) {
@@ -60,7 +69,9 @@ export class LocalGameRepository {
   _decksKey(scope = this._scope()) { return `mc:v1:decks:${scope}`; }
   _profileKey(scope = this._scope()) { return `mc:v1:profile:${scope}`; }
   _catalogKey(scope = this._scope()) { return `mc:v1:catalog:${scope}`; }
-  _activeRunKey(scope = this._scope()) { return `mc:v1:active-run:${scope}`; }
+  _activeRunKey(scope = this._scope(), mode = null) {
+    return mode ? `mc:v1:active-run:${scope}:${mode}` : `mc:v1:active-run:${scope}`;
+  }
   _economyKey(scope = this._scope()) { return `mc:v1:economy:${scope}`; }
   _statsKey(scope = this._scope()) { return `mc:v1:stats:${scope}`; }
   _syncQueueKey(scope = this._scope()) { return `mc:v1:sync-queue:${scope}`; }
@@ -110,6 +121,7 @@ export class LocalGameRepository {
         [this._decksKey(current), this._decksKey(next)],
         [this._catalogKey(current), this._catalogKey(next)],
         [this._activeRunKey(current), this._activeRunKey(next)],
+        ...ACTIVE_RUN_MODES.map((mode) => [this._activeRunKey(current, mode), this._activeRunKey(next, mode)]),
         [this._economyKey(current), this._economyKey(next)],
         [this._statsKey(current), this._statsKey(next)],
         [this._syncQueueKey(current), this._syncQueueKey(next)],
@@ -244,20 +256,40 @@ export class LocalGameRepository {
     return this.replaceEconomy(next);
   }
 
-  async getActiveRun() {
-    return clone(parse(this.storage.getItem(this._activeRunKey()), null));
+  async getActiveRuns() {
+    const result = {};
+    for (const mode of ACTIVE_RUN_MODES) {
+      const checkpoint = parse(this.storage.getItem(this._activeRunKey(this._scope(), mode)), null);
+      if (checkpoint) result[mode] = checkpoint;
+    }
+    const legacy = parse(this.storage.getItem(this._activeRunKey()), null);
+    const legacyMode = activeRunMode(legacy);
+    if (legacy && legacyMode && !result[legacyMode]) {
+      result[legacyMode] = legacy;
+      this.storage.setItem(this._activeRunKey(this._scope(), legacyMode), JSON.stringify(legacy));
+    }
+    return clone(result);
   }
 
-  async saveActiveRun(checkpoint) {
+  async getActiveRun(mode = null) {
+    const runs = await this.getActiveRuns();
+    if (mode) return clone(runs[mode] ?? null);
+    return clone(Object.values(runs).sort((a, b) => Number(b?.updatedAtMs ?? 0) - Number(a?.updatedAtMs ?? 0))[0] ?? null);
+  }
+
+  async saveActiveRun(checkpoint, requestedMode = null) {
     if (!checkpoint?.runId || !Number.isFinite(Number(checkpoint.updatedAtMs))) throw new Error('大会の再開データが不正です');
-    const current = await this.getActiveRun();
+    const mode = activeRunMode(checkpoint, requestedMode);
+    if (!mode) throw new Error('試合モードを判別できません');
+    const current = await this.getActiveRun(mode);
     if (current && Number(current.updatedAtMs) > Number(checkpoint.updatedAtMs)) return current;
-    this.storage.setItem(this._activeRunKey(), JSON.stringify(clone(checkpoint)));
+    this.storage.setItem(this._activeRunKey(this._scope(), mode), JSON.stringify(clone(checkpoint)));
     return clone(checkpoint);
   }
 
-  async clearActiveRun(tombstone) {
-    return this.saveActiveRun({ ...clone(tombstone), phase: 'cleared' });
+  async clearActiveRun(tombstone, requestedMode = null) {
+    const mode = activeRunMode(tombstone, requestedMode);
+    return this.saveActiveRun({ ...clone(tombstone), phase: 'cleared' }, mode);
   }
 
   async getCardCatalog() {
@@ -304,6 +336,12 @@ export class LocalGameRepository {
   async publishArenaRanking() { return null; }
 
   async getArenaLeaderboard() {
+    return { available: false, top: [], nearby: [], selfRank: null, total: 0 };
+  }
+
+  async publishSurvivalRanking() { return null; }
+
+  async getSurvivalLeaderboard() {
     return { available: false, top: [], nearby: [], selfRank: null, total: 0 };
   }
 

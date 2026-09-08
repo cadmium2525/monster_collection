@@ -2941,3 +2941,83 @@ body:has(.home-lobby) {
   .title-start-button span { opacity:1; filter:none; }
   .pack-particle-field { display:none; }
 }
+
+/* Survival — a compact, high-stakes run screen for landscape PWA play. */
+.app-shell:has(> .survival-screen),.app-shell:has(> .survival-result-screen),
+#app:has(.survival-screen),#app:has(.survival-result-screen) {
+  width:100%;
+  height:var(--app-viewport-height,100dvh);
+  min-height:0;
+  overflow:hidden;
+  padding:0;
+}
+body:has(.survival-screen),body:has(.survival-result-screen) { overflow:hidden; }
+.survival-screen,.survival-result-screen {
+  position:relative;
+  width:100%;
+  height:var(--app-viewport-height,100dvh);
+  min-height:0;
+  overflow:hidden;
+  padding:max(8px,var(--safe-top)) max(12px,var(--safe-right)) max(8px,var(--safe-bottom)) max(12px,var(--safe-left));
+  background:
+    linear-gradient(100deg,rgba(2,9,17,.96),rgba(4,17,28,.83) 56%,rgba(12,7,19,.9)),
+    url('./assets/images/backgrounds/tournament-colosseum.webp') center/cover no-repeat;
+}
+.survival-screen { display:grid; grid-template-rows:auto minmax(0,1fr); gap:9px; }
+.survival-header { display:grid; grid-template-columns:minmax(170px,1fr) auto auto; align-items:center; gap:12px; min-height:58px; }
+.survival-header-record,.survival-header-actions { display:flex; align-items:center; gap:7px; }
+.survival-header-record > span { min-width:86px; display:grid; grid-template-columns:auto auto; align-items:end; gap:4px; padding:6px 10px; border:1px solid rgba(104,211,207,.28); border-radius:10px 3px; background:rgba(5,18,30,.78); }
+.survival-header-record small { color:#74dcd7; font:800 6px/1 Georgia,serif; letter-spacing:.13em; }
+.survival-header-record strong { color:#f4d580; font-size:17px; line-height:1; }
+.survival-header-actions .text-button { min-width:88px; }
+.survival-entry-layout,.survival-run-layout { min-height:0; display:grid; grid-template-columns:minmax(0,.9fr) minmax(0,1.1fr); gap:10px; }
+.survival-intro-panel,.survival-deck-panel,.survival-streak-panel,.survival-next-panel {
+  min-height:0;
+  overflow:hidden;
+  border:1px solid rgba(98,165,181,.38);
+  border-radius:18px 5px;
+  background:linear-gradient(145deg,rgba(6,20,33,.94),rgba(7,12,23,.91));
+  box-shadow:0 14px 34px rgba(0,0,0,.34);
+}
+.survival-intro-panel { display:flex; flex-direction:column; justify-content:center; gap:8px; padding:15px 18px; }
+.survival-intro-panel h2 { margin:0; color:#f2d07b; font-size:clamp(20px,2.7vw,30px); }
+.survival-intro-panel > p:not(.eyebrow) { max-width:610px; margin:0; color:#c2d0d5; font-size:10px; line-height:1.65; }
+.survival-rule-chips { display:flex; flex-wrap:wrap; gap:5px; }
+.survival-rule-chips span { padding:5px 8px; border:1px solid rgba(102,221,213,.28); border-radius:14px; color:#a7e4df; background:rgba(15,67,72,.2); font-size:7px; }
+.survival-reward-preview { display:grid; grid-template-columns:auto repeat(4,minmax(0,1fr)); align-items:center; gap:5px; }
+.survival-reward-preview > strong { color:#f0ce78; font-size:9px; }
+.survival-reward-preview > span { min-width:0; display:grid; gap:2px; padding:5px 6px; border:1px solid rgba(227,184,89,.22); border-radius:8px 2px; background:rgba(67,43,14,.22); }
+.survival-reward-preview b { color:#f5d47e; font-size:8px; }.survival-reward-preview small { overflow:hidden; color:#b9c9ce; font-size:6px; white-space:nowrap; text-overflow:ellipsis; }
+.survival-deck-panel { display:grid; grid-template-rows:auto minmax(0,1fr) auto; gap:7px; padding:11px; }
+.survival-deck-list { min-height:0; display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); align-content:start; gap:6px; overflow:auto; }
+.survival-deck-choice { min-width:0; height:72px; display:grid; grid-template-columns:43px minmax(0,1fr); align-items:center; gap:8px; padding:5px 8px; border:1px solid rgba(103,158,173,.34); border-radius:10px 3px; color:#e9f0ef; background:rgba(5,18,30,.82); text-align:left; }
+.survival-deck-choice.selected { border-color:#e9bd5e; background:linear-gradient(110deg,rgba(81,54,17,.62),rgba(5,25,37,.9)); box-shadow:0 0 16px rgba(232,185,81,.12); }
+.survival-deck-choice .game-card { width:38px; pointer-events:none; }
+.survival-deck-choice > span { min-width:0; display:grid; gap:4px; }.survival-deck-choice strong { overflow:hidden; color:#f1d28a; font-size:10px; text-overflow:ellipsis; white-space:nowrap; }.survival-deck-choice small { overflow:hidden; color:#9fb4bc; font-size:7px; text-overflow:ellipsis; white-space:nowrap; }
+.survival-start-button { justify-self:end; min-width:190px; }
+.survival-streak-panel { display:grid; grid-template-rows:auto auto auto 1fr auto; gap:7px; padding:13px 16px; }
+.survival-streak-number { display:flex; align-items:end; gap:8px; color:#f5d37b; }.survival-streak-number strong { font:700 clamp(54px,8vw,86px)/.82 Georgia,serif; text-shadow:0 0 20px rgba(235,179,64,.25); }.survival-streak-number span { padding-bottom:5px; font-size:16px; }
+.survival-life-copy,.survival-growth-copy { display:grid; gap:5px; }
+.survival-life-copy > span { display:flex; justify-content:space-between; align-items:end; }.survival-life-copy small,.survival-growth-copy small { color:#86dad5; font:800 7px/1 Georgia,serif; letter-spacing:.13em; }.survival-life-copy strong { color:#fff0c0; font-size:15px; }
+.survival-life-track { height:8px; overflow:hidden; border:1px solid rgba(159,196,201,.32); border-radius:9px; background:#07101a; }.survival-life-track i { display:block; height:100%; background:linear-gradient(90deg,#c64444,#e78a4e,#ebcf6c); box-shadow:0 0 9px rgba(235,96,63,.58); }
+.survival-life-copy > small { color:#aabcc2; font:inherit; font-size:7px; letter-spacing:0; }.survival-growth-copy { align-content:center; padding:8px 10px; border:1px solid rgba(88,211,204,.2); border-radius:10px 3px; background:rgba(4,35,43,.24); }.survival-growth-copy strong { color:#8ce9e3; font-size:15px; }.survival-growth-copy span { color:#aabcc2; font-size:7px; }
+.survival-end-button { justify-self:start; color:#d9b7b7; }
+.survival-next-panel { display:grid; grid-template-rows:auto minmax(0,1fr) auto; gap:8px; padding:12px; border-color:rgba(229,181,75,.48); }
+.survival-next-heading { display:flex; align-items:center; justify-content:space-between; gap:10px; border-bottom:1px solid rgba(218,178,85,.24); padding-bottom:7px; }.survival-next-heading > span { display:grid; gap:2px; }.survival-next-heading small { color:#75dcd8; font:800 7px/1 Georgia,serif; letter-spacing:.15em; }.survival-next-heading strong { color:#f7df9d; font-size:17px; }.survival-next-heading > b { padding:5px 8px; border:1px solid rgba(237,191,84,.38); border-radius:12px; color:#f2cd77; font-size:8px; }
+.survival-opponent-card { min-height:0; display:grid; grid-template-columns:minmax(90px,150px) minmax(0,1fr); align-items:center; justify-content:center; gap:16px; overflow:hidden; padding:2px 10%; }.survival-opponent-card .game-card { width:min(110px,100%); justify-self:center; pointer-events:none; }.survival-opponent-card > div { min-width:0; display:grid; gap:7px; }.survival-opponent-card h2 { margin:0; color:#f1cf80; font-size:clamp(17px,2.3vw,25px); }.survival-opponent-card p:not(.eyebrow) { margin:0; color:#d6e0e0; font-size:10px; }.survival-opponent-card small { color:#9cafb6; font-size:8px; }
+.survival-battle-button { justify-self:end; min-width:180px; }
+.survival-result-screen { display:grid; place-items:center; }
+.survival-result-panel { width:min(630px,88vw); display:grid; justify-items:center; gap:10px; padding:22px 28px; border:1px solid rgba(231,187,87,.6); border-radius:22px 7px; background:linear-gradient(145deg,rgba(8,24,38,.98),rgba(12,10,22,.97)); box-shadow:0 20px 70px rgba(0,0,0,.7),0 0 36px rgba(229,177,58,.12); text-align:center; }.survival-result-panel h1 { margin:0; color:#f5d475; font-size:34px; letter-spacing:.08em; }.survival-result-streak { display:flex; align-items:end; gap:9px; color:#fff0b3; }.survival-result-streak strong { font:700 72px/.8 Georgia,serif; }.survival-result-streak span { font-size:16px; }.survival-new-record-copy { margin:0; color:#7aeee5; font-weight:800; }
+.survival-result-rewards { width:100%; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:7px; }.survival-result-rewards > span { display:grid; gap:4px; padding:8px; border:1px solid rgba(105,190,192,.25); border-radius:10px 3px; background:rgba(7,28,40,.68); }.survival-result-rewards small { color:#78dcd8; font:800 6px/1 Georgia,serif; letter-spacing:.12em; }.survival-result-rewards strong { color:#f5d688; font-size:13px; }
+.survival-ranking-board-inner { display:grid; gap:7px; }.survival-ranking-summary { display:grid; grid-template-columns:repeat(2,1fr); gap:7px; }.survival-ranking-summary > span { display:flex; justify-content:space-between; padding:7px 10px; border:1px solid rgba(96,177,188,.3); border-radius:9px 3px; }.survival-ranking-summary small { color:#77dcd7; font:800 7px/1 Georgia,serif; letter-spacing:.12em; }.survival-ranking-summary strong { color:#f2d17c; }
+.survival-ranking-tabs { display:flex; gap:6px; }.survival-ranking-tabs button { min-width:130px; padding:5px 12px; border:1px solid rgba(105,176,189,.26); border-radius:14px; color:#aebdc2; background:rgba(6,20,31,.74); }.survival-ranking-tabs button.selected { color:#f6df9f; border-color:#d3a94d; background:rgba(104,70,21,.5); }
+.survival-ranking-list { max-height:52vh; display:grid; gap:5px; overflow:auto; }.survival-ranking-row { min-height:48px; display:grid; grid-template-columns:34px 38px minmax(120px,1fr) minmax(80px,auto) 70px; align-items:center; gap:7px; padding:5px 9px; border:1px solid rgba(101,159,175,.25); border-radius:9px 3px; background:rgba(5,19,31,.82); }.survival-ranking-row.is-self { border-color:#d5aa50; background:linear-gradient(90deg,rgba(91,60,16,.62),rgba(5,25,35,.88)); }.survival-ranking-position { color:#f1cc70; font-size:16px; }.survival-ranking-avatar { width:34px; height:34px; overflow:hidden; border:1px solid rgba(113,213,208,.38); border-radius:50%; }.survival-ranking-avatar img { width:100%; height:100%; object-fit:cover; }.survival-ranking-player { min-width:0; display:grid; }.survival-ranking-player strong { overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }.survival-ranking-player small { color:#72d8d4; font-size:7px; }.survival-ranking-monster { overflow:hidden; color:#aebdc2; font-size:8px; text-overflow:ellipsis; white-space:nowrap; }.survival-ranking-streak { display:grid; justify-items:end; }.survival-ranking-streak strong { color:#f4d17b; font-size:20px; }.survival-ranking-streak small { color:#74dcd7; font-size:6px; }.survival-ranking-empty { min-height:140px; display:grid; place-items:center; color:#aebdc2; }
+
+@media (max-height:500px) {
+  .survival-screen { gap:6px; padding-top:max(5px,var(--safe-top)); padding-bottom:max(5px,var(--safe-bottom)); }
+  .survival-header { min-height:47px; padding:4px 9px; }.survival-header h1 { font-size:20px; }.survival-header-record > span { min-width:78px; padding:4px 7px; }.survival-header-record strong { font-size:14px; }
+  .survival-entry-layout,.survival-run-layout { gap:7px; }.survival-intro-panel { gap:5px; padding:9px 12px; }.survival-intro-panel h2 { font-size:20px; }.survival-intro-panel > p:not(.eyebrow) { font-size:8px; line-height:1.45; }.survival-rule-chips span { padding:3px 6px; }.survival-reward-preview > span { padding:3px 5px; }
+  .survival-deck-panel { gap:5px; padding:7px; }.survival-deck-choice { height:57px; grid-template-columns:34px minmax(0,1fr); padding:3px 5px; }.survival-deck-choice .game-card { width:31px; }.survival-start-button { min-width:165px; padding-block:7px; }
+  .survival-streak-panel { gap:5px; padding:9px 12px; }.survival-streak-number strong { font-size:55px; }.survival-growth-copy { padding:6px 8px; }.survival-next-panel { gap:5px; padding:8px; }.survival-next-heading { padding-bottom:4px; }.survival-next-heading strong { font-size:14px; }.survival-opponent-card { grid-template-columns:92px minmax(0,1fr); gap:10px; padding-inline:8%; }.survival-opponent-card .game-card { width:82px; }.survival-opponent-card h2 { font-size:17px; }.survival-battle-button { min-width:160px; padding-block:7px; }
+  .survival-result-panel { gap:7px; padding:14px 20px; }.survival-result-panel h1 { font-size:26px; }.survival-result-streak strong { font-size:56px; }
+}

@@ -74,6 +74,7 @@ export class GameSession {
     this.checkpointRuntime = structuredClone(runtime ?? {});
     return {
       schemaVersion: 1,
+      mode: 'tournament',
       runId: this.runId,
       revision: this.checkpointRevision,
       updatedAtMs: this._nextCheckpointTime(),
@@ -89,7 +90,7 @@ export class GameSession {
 
   async saveCheckpoint(phase = this.checkpointPhase, runtime = this.checkpointRuntime) {
     if (!phase || !this.repository.saveActiveRun) return null;
-    return this.repository.saveActiveRun(this.createCheckpoint(phase, runtime));
+    return this.repository.saveActiveRun(this.createCheckpoint(phase, runtime), 'tournament');
   }
 
   async clearCheckpoint() {
@@ -99,17 +100,18 @@ export class GameSession {
     if (!this.repository.clearActiveRun) return null;
     return this.repository.clearActiveRun({
       schemaVersion: 1,
+      mode: 'tournament',
       runId: this.runId,
       revision: this.checkpointRevision,
       updatedAtMs: this.checkpointClock,
       phase: 'cleared',
-    });
+    }, 'tournament');
   }
 
   async flushCheckpoint() {
     if (!this.checkpointPhase) return null;
     const result = await this.saveCheckpoint(this.checkpointPhase, this.checkpointRuntime);
-    await this.repository.flushActiveRunSync?.();
+    await this.repository.flushActiveRunSync?.('tournament');
     return result;
   }
 

@@ -121,6 +121,25 @@ test('local and Firebase login rewards are atomic and idempotent for the same Ja
   assert.ok(fake.transactionCount >= 2);
 });
 
+test('tournament, arena and survival checkpoints remain independently resumable', async () => {
+  const repository = new LocalGameRepository({ storage: new MemoryStorage(), idFactory: () => 'multi-resume-local' });
+  await repository.initialize();
+  const tournament = { schemaVersion: 1, mode: 'tournament', runId: 't-1', revision: 1, updatedAtMs: 100, phase: 'battle' };
+  const arena = { schemaVersion: 1, mode: 'arena', runId: 'a-1', revision: 1, updatedAtMs: 200, phase: 'arena-battle' };
+  const survival = { schemaVersion: 1, mode: 'survival', runId: 's-1', revision: 1, updatedAtMs: 300, phase: 'survival' };
+  await repository.saveActiveRun(tournament, 'tournament');
+  await repository.saveActiveRun(arena, 'arena');
+  await repository.saveActiveRun(survival, 'survival');
+  const runs = await repository.getActiveRuns();
+  assert.equal(runs.tournament.runId, 't-1');
+  assert.equal(runs.arena.runId, 'a-1');
+  assert.equal(runs.survival.runId, 's-1');
+  await repository.clearActiveRun({ ...arena, revision: 2, updatedAtMs: 400 }, 'arena');
+  assert.equal((await repository.getActiveRun('arena')).phase, 'cleared');
+  assert.equal((await repository.getActiveRun('tournament')).phase, 'battle');
+  assert.equal((await repository.getActiveRun('survival')).phase, 'survival');
+});
+
 test('registered Firebase accounts repair a missing same-day login mission before it is claimed', async () => {
   const fake = fakeFirebaseSdk();
   fake.auth.currentUser = {
@@ -687,6 +706,34 @@ test('Firebase publishes one arena ranking per player and returns top and nearby
   assert.deepEqual(withoutAggregate.nearby.map((entry) => entry.position), [2, 3, 4]);
 });
 
+test('Firebase publishes the best survival streak and orders the leaderboard deterministically', async () => {
+  const fake = fakeFirebaseSdk();
+  const repository = new FirebaseGameRepository({ config: { projectId: 'test' }, sdkLoader: async () => fake.sdk });
+  await repository.initialize();
+  const deck = savedDeck('survival-ranking');
+  await repository.saveDeck(deck);
+  const economy = await repository.commitProgression({
+    type: 'survival-result', operationId: 'survival:ranking:1', streak: 5, dateKey: '2026-09-08',
+  });
+  await repository.publishSurvivalRanking(economy.survivalProgress, deck);
+  const own = fake.docs.get('survivalRankings/firebase-user');
+  assert.equal(own.bestStreak, 5);
+  assert.equal(own.totalRuns, 1);
+  assert.equal(own.totalWins, 5);
+  assert.equal(own.representativeMonsterId, 'monster-003');
+
+  fake.docs.set('survivalRankings/rival', {
+    ownerUserId: 'rival', ownerDisplayName: '耐久王', playerIconMasterId: null,
+    sourceDeckId: 'rival-deck', representativeMonsterId: 'monster-004', bestStreak: 8,
+    totalRuns: 4, totalWins: 18, schemaVersion: 1,
+    registeredAt: '2026-09-08T00:00:00.000Z', bestReachedAt: '2026-09-08T00:10:00.000Z', updatedAt: '2026-09-08T00:10:00.000Z',
+  });
+  const leaderboard = await repository.getSurvivalLeaderboard({ topLimit: 50, nearbyRadius: 1 });
+  assert.equal(leaderboard.total, 2);
+  assert.equal(leaderboard.selfRank, 2);
+  assert.deepEqual(leaderboard.top.map((entry) => entry.ownerUserId), ['rival', 'firebase-user']);
+});
+
 test('local backup scopes isolate a recovered account from the temporary anonymous account', async () => {
   const storage = new MemoryStorage();
   const repository = new LocalGameRepository({ storage, idFactory: () => 'temporary' });
@@ -808,4 +855,15 @@ test('Firestore rules expose Legend snapshots read-only to authenticated opponen
   assert.match(rules, /allow delete: if signedIn\(\) && resource\.data\.ownerUserId == request\.auth\.uid/);
   assert.match(rules, /championGrowthSnapshot is map/);
   assert.match(rules, /championSnapshotVersion == 2/);
+});
+
+test('Firestore rules isolate mode checkpoints and validate survival ranking against private progress', () => {
+  const rules = fs.readFileSync(new URL('../../firestore.rules', import.meta.url), 'utf8');
+  const indexes = fs.readFileSync(new URL('../../firestore.indexes.json', import.meta.url), 'utf8');
+  assert.match(rules, /match \/activeRuns\/\{mode\}/);
+  assert.match(rules, /mode in \['tournament', 'arena', 'survival'\]/);
+  assert.match(rules, /match \/survivalRankings\/\{userId\}/);
+  assert.match(rules, /profile\.economy\.survivalProgress\.bestStreak == d\.bestStreak/);
+  assert.match(indexes, /"collectionGroup": "survivalRankings"/);
+  assert.match(indexes, /"fieldPath": "bestStreak", "order": "DESCENDING"/);
 });

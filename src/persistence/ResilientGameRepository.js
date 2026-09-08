@@ -29,6 +29,16 @@ function newerCheckpoint(left, right) {
   return Number(right.updatedAtMs) > Number(left.updatedAtMs) ? right : left;
 }
 
+const ACTIVE_RUN_MODES = Object.freeze(['tournament', 'arena', 'survival']);
+
+function activeRunMode(checkpoint, fallback = null) {
+  if (ACTIVE_RUN_MODES.includes(checkpoint?.mode)) return checkpoint.mode;
+  if (checkpoint?.survival || String(checkpoint?.phase ?? '').startsWith('survival')) return 'survival';
+  if (checkpoint?.arena || String(checkpoint?.phase ?? '').startsWith('arena')) return 'arena';
+  if (checkpoint?.tournament || ['tournament', 'battle', 'reward'].includes(checkpoint?.phase)) return 'tournament';
+  return fallback;
+}
+
 function updatedAtValue(record) {
   const parsed = Date.parse(String(record?.updatedAt ?? ''));
   return Number.isFinite(parsed) ? parsed : 0;
@@ -45,7 +55,7 @@ export class ResilientGameRepository {
     this.syncSequence = 0;
     this.pendingSyncFlush = null;
     this.activeRunDebounceMs = Math.max(0, Number(activeRunDebounceMs) || 0);
-    this.pendingActiveRun = null;
+    this.pendingActiveRuns = new Map();
     this.activeRunSyncTimer = null;
     this.activeRunSyncInFlight = null;
   }
@@ -164,9 +174,11 @@ export class ResilientGameRepository {
     }
   }
 
-  _scheduleActiveRunSync(checkpoint, { immediate = false } = {}) {
+  _scheduleActiveRunSync(checkpoint, { immediate = false, mode: requestedMode = null } = {}) {
     if (!this.activeCloud?.saveActiveRun) return null;
-    this.pendingActiveRun = newerCheckpoint(this.pendingActiveRun, checkpoint);
+    const mode = activeRunMode(checkpoint, requestedMode);
+    if (!mode) return null;
+    this.pendingActiveRuns.set(mode, newerCheckpoint(this.pendingActiveRuns.get(mode), checkpoint));
     if (this.activeRunSyncTimer != null) clearTimeout(this.activeRunSyncTimer);
     this.activeRunSyncTimer = null;
     if (immediate || this.activeRunDebounceMs === 0) return this._drainActiveRunSync();
@@ -184,14 +196,14 @@ export class ResilientGameRepository {
     this.activeRunSyncTimer = null;
     if (this.activeRunSyncInFlight) return this.activeRunSyncInFlight;
     this.activeRunSyncInFlight = (async () => {
-      while (this.activeCloud?.saveActiveRun && this.pendingActiveRun) {
-        const checkpoint = this.pendingActiveRun;
-        this.pendingActiveRun = null;
+      while (this.activeCloud?.saveActiveRun && this.pendingActiveRuns.size) {
+        const [mode, checkpoint] = this.pendingActiveRuns.entries().next().value;
+        this.pendingActiveRuns.delete(mode);
         try {
-          await this._cloud(this.activeCloud.saveActiveRun(checkpoint), '試合データの同期');
+          await this._cloud(this.activeCloud.saveActiveRun(checkpoint, mode), '試合データの同期');
         } catch (error) {
           this.lastError = error;
-          this.pendingActiveRun = newerCheckpoint(checkpoint, this.pendingActiveRun);
+          this.pendingActiveRuns.set(mode, newerCheckpoint(checkpoint, this.pendingActiveRuns.get(mode)));
           break;
         }
       }
@@ -199,15 +211,16 @@ export class ResilientGameRepository {
     try { await this.activeRunSyncInFlight; }
     finally {
       this.activeRunSyncInFlight = null;
-      if (this.activeCloud?.saveActiveRun && this.pendingActiveRun && this.activeRunSyncTimer == null) {
-        this._scheduleActiveRunSync(this.pendingActiveRun);
+      if (this.activeCloud?.saveActiveRun && this.pendingActiveRuns.size && this.activeRunSyncTimer == null) {
+        const [, checkpoint] = this.pendingActiveRuns.entries().next().value;
+        this._scheduleActiveRunSync(checkpoint);
       }
     }
   }
 
   async flushActiveRunSync() {
     await this._drainActiveRunSync();
-    if (this.activeCloud?.saveActiveRun && this.pendingActiveRun) await this._drainActiveRunSync();
+    if (this.activeCloud?.saveActiveRun && this.pendingActiveRuns.size) await this._drainActiveRunSync();
   }
 
   async initialize() {
@@ -497,41 +510,63 @@ export class ResilientGameRepository {
     }
   }
 
-  async getActiveRun() {
-    const localRun = await this.local.getActiveRun();
-    if (!this.activeCloud?.getActiveRun) return localRun;
+  async getActiveRuns() {
+    const localRuns = this.local.getActiveRuns
+      ? await this.local.getActiveRuns()
+      : Object.fromEntries([[activeRunMode(await this.local.getActiveRun()), await this.local.getActiveRun()]].filter(([mode]) => mode));
+    if (!this.activeCloud?.getActiveRun && !this.activeCloud?.getActiveRuns) return localRuns;
     try {
       await this.flushActiveRunSync();
-      if (!this.activeCloud?.getActiveRun) return localRun;
-      const cloudRun = await this._cloud(this.activeCloud.getActiveRun(), '試合データの同期');
-      const latest = newerCheckpoint(localRun, cloudRun);
-      if (latest === cloudRun && cloudRun) await this.local.saveActiveRun(cloudRun);
-      if (latest === localRun && localRun && Number(localRun.updatedAtMs) > Number(cloudRun?.updatedAtMs ?? 0)) {
-        await this._cloud(this.activeCloud.saveActiveRun(localRun), '試合データの同期');
+      if (!this.activeCloud) return localRuns;
+      let cloudRuns;
+      if (this.activeCloud.getActiveRuns) cloudRuns = await this._cloud(this.activeCloud.getActiveRuns(), '試合データの同期');
+      else {
+        const single = await this._cloud(this.activeCloud.getActiveRun(), '試合データの同期');
+        cloudRuns = single ? { [activeRunMode(single)]: single } : {};
       }
-      return latest;
+      const result = {};
+      for (const mode of ACTIVE_RUN_MODES) {
+        const localRun = localRuns[mode] ?? null;
+        const cloudRun = cloudRuns?.[mode] ?? null;
+        const latest = newerCheckpoint(localRun, cloudRun);
+        if (!latest) continue;
+        result[mode] = latest;
+        if (latest === cloudRun && cloudRun) await this.local.saveActiveRun(cloudRun, mode);
+        if (latest === localRun && localRun && Number(localRun.updatedAtMs) > Number(cloudRun?.updatedAtMs ?? 0)) {
+          await this._cloud(this.activeCloud.saveActiveRun(localRun, mode), '試合データの同期');
+        }
+      }
+      return result;
     } catch (error) {
       this.lastError = error;
-      return localRun;
+      return localRuns;
     }
   }
 
-  async saveActiveRun(checkpoint) {
-    const localResult = await this.local.saveActiveRun(checkpoint);
+  async getActiveRun(mode = null) {
+    const runs = await this.getActiveRuns();
+    if (mode) return runs[mode] ?? null;
+    return Object.values(runs).sort((a, b) => Number(b?.updatedAtMs ?? 0) - Number(a?.updatedAtMs ?? 0))[0] ?? null;
+  }
+
+  async saveActiveRun(checkpoint, requestedMode = null) {
+    const mode = activeRunMode(checkpoint, requestedMode);
+    const localResult = await this.local.saveActiveRun(checkpoint, mode);
     if (!this.activeCloud?.saveActiveRun) return localResult;
-    this._scheduleActiveRunSync(localResult);
+    this._scheduleActiveRunSync(localResult, { mode });
     return localResult;
   }
 
-  async clearActiveRun(tombstone) {
-    const localResult = await this.local.clearActiveRun(tombstone);
+  async clearActiveRun(tombstone, requestedMode = null) {
+    const mode = activeRunMode(tombstone, requestedMode);
+    const localResult = await this.local.clearActiveRun(tombstone, mode);
     if (!this.activeCloud?.clearActiveRun) return localResult;
     if (!this.activeCloud?.saveActiveRun) {
-      try { return await this._cloud(this.activeCloud.clearActiveRun(localResult), '試合データの同期'); }
+      try { return await this._cloud(this.activeCloud.clearActiveRun(localResult, mode), '試合データの同期'); }
       catch (error) { this.lastError = error; return localResult; }
     }
     try {
-      this.pendingActiveRun = newerCheckpoint(this.pendingActiveRun, localResult);
+      this.pendingActiveRuns.set(mode, newerCheckpoint(this.pendingActiveRuns.get(mode), localResult));
       await this.flushActiveRunSync();
       return localResult;
     }
@@ -634,6 +669,18 @@ export class ResilientGameRepository {
     if (!this.activeCloud?.getArenaLeaderboard) return this.local.getArenaLeaderboard(options);
     try { return await this._cloud(this.activeCloud.getArenaLeaderboard(options), 'アリーナランキングの取得'); }
     catch (error) { this.lastError = error; return this.local.getArenaLeaderboard(options); }
+  }
+
+  async publishSurvivalRanking(progress, deck) {
+    if (!this.activeCloud?.publishSurvivalRanking) return this.local.publishSurvivalRanking(progress, deck);
+    try { return await this._cloud(this.activeCloud.publishSurvivalRanking(progress, deck), 'サバイバルランキングの同期'); }
+    catch (error) { this.lastError = error; return this.local.publishSurvivalRanking(progress, deck); }
+  }
+
+  async getSurvivalLeaderboard(options = {}) {
+    if (!this.activeCloud?.getSurvivalLeaderboard) return this.local.getSurvivalLeaderboard(options);
+    try { return await this._cloud(this.activeCloud.getSurvivalLeaderboard(options), 'サバイバルランキングの取得'); }
+    catch (error) { this.lastError = error; return this.local.getSurvivalLeaderboard(options); }
   }
 
   async listLegendArchives(maxResults = 20) {

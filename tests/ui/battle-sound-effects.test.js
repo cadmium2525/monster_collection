@@ -67,7 +67,7 @@ test('battle screen wires turn, draw and hit sounds to their presentation moment
   assert.match(source, /STATUS_UP_SE_PATH[\s\S]*STATUS_DOWN_SE_PATH/);
 });
 
-test('both tournament and arena battles receive the common SE output', () => {
+test('tournament, arena and survival battles receive the common SE output', () => {
   const app = fs.readFileSync(new URL('../../src/app.js', import.meta.url), 'utf8');
-  assert.equal((app.match(/onPlaySe: \(source, options\) => this\.audio\.playSe\(source, options\)/g) ?? []).length, 2);
+  assert.equal((app.match(/onPlaySe: \(source, options\) => this\.audio\.playSe\(source, options\)/g) ?? []).length, 3);
 });

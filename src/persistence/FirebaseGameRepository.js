@@ -40,12 +40,23 @@ function normalizeRecord(data) {
     catalogUpdatedAt: normalizedTimestamp(data.catalogUpdatedAt),
     registeredAt: normalizedTimestamp(data.registeredAt),
     ratingReachedAt: normalizedTimestamp(data.ratingReachedAt),
+    bestReachedAt: normalizedTimestamp(data.bestReachedAt),
     archivedAt: normalizedTimestamp(data.archivedAt),
   };
 }
 
 function publicDeckId(userId, deckId) {
   return `${userId}--${encodeURIComponent(String(deckId))}`;
+}
+
+const ACTIVE_RUN_MODES = Object.freeze(['tournament', 'arena', 'survival']);
+
+function activeRunMode(checkpoint, fallback = null) {
+  if (ACTIVE_RUN_MODES.includes(checkpoint?.mode)) return checkpoint.mode;
+  if (checkpoint?.survival || String(checkpoint?.phase ?? '').startsWith('survival')) return 'survival';
+  if (checkpoint?.arena || String(checkpoint?.phase ?? '').startsWith('arena')) return 'arena';
+  if (checkpoint?.tournament || ['tournament', 'battle', 'reward'].includes(checkpoint?.phase)) return 'tournament';
+  return fallback;
 }
 
 export class FirebaseGameRepository {
@@ -91,12 +102,15 @@ export class FirebaseGameRepository {
   _profileRef() { this._requireUser(); return this.sdk.doc(this.db, 'users', this.user.uid); }
   _decksRef() { this._requireUser(); return this.sdk.collection(this.db, 'users', this.user.uid, 'savedDecks'); }
   _deckRef(deckId) { this._requireUser(); return this.sdk.doc(this.db, 'users', this.user.uid, 'savedDecks', deckId); }
+  _activeRunRef(mode) { this._requireUser(); return this.sdk.doc(this.db, 'users', this.user.uid, 'activeRuns', mode); }
   _legendDecksRef() { this._requireUser(); return this.sdk.collection(this.db, 'legendDecks'); }
   _legendDeckRef(deckId) { this._requireUser(); return this.sdk.doc(this.db, 'legendDecks', publicDeckId(this.user.uid, deckId)); }
   _arenaDecksRef() { this._requireUser(); return this.sdk.collection(this.db, 'arenaDecks'); }
   _arenaDeckRef(deckId) { this._requireUser(); return this.sdk.doc(this.db, 'arenaDecks', publicDeckId(this.user.uid, deckId)); }
   _arenaRankingsRef() { this._requireUser(); return this.sdk.collection(this.db, 'arenaRankings'); }
   _arenaRankingRef() { this._requireUser(); return this.sdk.doc(this.db, 'arenaRankings', this.user.uid); }
+  _survivalRankingsRef() { this._requireUser(); return this.sdk.collection(this.db, 'survivalRankings'); }
+  _survivalRankingRef() { this._requireUser(); return this.sdk.doc(this.db, 'survivalRankings', this.user.uid); }
   _legendArchivesRef() { return this.sdk.collection(this.db, 'legendArchives'); }
   _legendArchiveRef(version) { return this.sdk.doc(this.db, 'legendArchives', `champion-${String(version).padStart(8, '0')}`); }
   _championRef() { return this.sdk.doc(this.db, 'gameState', 'champion'); }
@@ -276,33 +290,46 @@ export class FirebaseGameRepository {
     return snapshots.docs.map((snapshot) => normalizeRecord({ ...snapshot.data(), deckId: snapshot.id }));
   }
 
-  async getActiveRun() {
-    const profile = await this.getProfile();
-    return clone(profile?.activeRun ?? null);
+  async getActiveRuns() {
+    const snapshots = await Promise.all(ACTIVE_RUN_MODES.map((mode) => this.sdk.getDoc(this._activeRunRef(mode))));
+    const result = {};
+    snapshots.forEach((snapshot, index) => {
+      if (snapshot.exists()) result[ACTIVE_RUN_MODES[index]] = clone(snapshot.data());
+    });
+    const legacy = this.profile?.activeRun ?? null;
+    const legacyMode = activeRunMode(legacy);
+    if (legacy && legacyMode && !result[legacyMode]) result[legacyMode] = clone(legacy);
+    return result;
   }
 
-  async saveActiveRun(checkpoint) {
+  async getActiveRun(mode = null) {
+    const runs = await this.getActiveRuns();
+    if (mode) return clone(runs[mode] ?? null);
+    return clone(Object.values(runs).sort((a, b) => Number(b?.updatedAtMs ?? 0) - Number(a?.updatedAtMs ?? 0))[0] ?? null);
+  }
+
+  async saveActiveRun(checkpoint, requestedMode = null) {
     if (!checkpoint?.runId || !Number.isFinite(Number(checkpoint.updatedAtMs))) throw new Error('大会の再開データが不正です');
-    const reference = this._profileRef();
+    const mode = activeRunMode(checkpoint, requestedMode);
+    if (!mode) throw new Error('試合モードを判別できません');
+    const reference = this._activeRunRef(mode);
+    const normalized = clone(checkpoint);
     let result = clone(checkpoint);
     await this.sdk.runTransaction(this.db, async (transaction) => {
       const snapshot = await transaction.get(reference);
-      const current = snapshot.exists() ? snapshot.data().activeRun : null;
+      const current = snapshot.exists() ? snapshot.data() : null;
       if (current && Number(current.updatedAtMs) > Number(checkpoint.updatedAtMs)) {
         result = clone(current);
         return;
       }
-      transaction.set(reference, {
-        activeRun: clone(checkpoint),
-        activeRunUpdatedAt: this.sdk.serverTimestamp(),
-        updatedAt: this.sdk.serverTimestamp(),
-      }, { merge: true });
+      transaction.set(reference, normalized);
     });
-    return normalizeRecord(result);
+    return clone(result);
   }
 
-  async clearActiveRun(tombstone) {
-    return this.saveActiveRun({ ...clone(tombstone), phase: 'cleared' });
+  async clearActiveRun(tombstone, requestedMode = null) {
+    const mode = activeRunMode(tombstone, requestedMode);
+    return this.saveActiveRun({ ...clone(tombstone), phase: 'cleared' }, mode);
   }
 
   async getCardCatalog() {
@@ -518,6 +545,92 @@ export class FirebaseGameRepository {
       return { available: true, top, nearby: [...above, ...fromSelf], selfRank, total };
     } catch (error) {
       console.warn('Arena nearby ranking could not be loaded', error);
+      return { available: true, top, nearby: [], selfRank: null, total };
+    }
+  }
+
+  async publishSurvivalRanking(progress = {}, deck) {
+    const bestStreak = Math.max(0, Math.trunc(Number(progress.bestStreak) || 0));
+    if (bestStreak <= 0) return null;
+    if (!deck?.deckId) throw new Error('ランキングに使用するデッキがありません');
+    const reference = this._survivalRankingRef();
+    const [existing, profile] = await Promise.all([this.sdk.getDoc(reference), this.getProfile()]);
+    const previous = existing.exists() ? existing.data() : null;
+    if (previous && Number(previous.bestStreak) > bestStreak) return normalizeRecord(previous);
+    const bestReachedAt = previous && Number(previous.bestStreak) === bestStreak
+      ? previous.bestReachedAt
+      : this.sdk.serverTimestamp();
+    await this.sdk.setDoc(reference, {
+      ownerUserId: this.user.uid,
+      ownerDisplayName: profile?.displayName ?? '名無しブリーダー',
+      playerIconMasterId: profile?.playerIconMasterId ?? null,
+      sourceDeckId: deck.deckId,
+      representativeMonsterId: deck.representativeMonsterId ?? null,
+      bestStreak,
+      totalRuns: Math.max(0, Math.trunc(Number(progress.totalRuns) || 0)),
+      totalWins: Math.max(0, Math.trunc(Number(progress.totalWins) || 0)),
+      schemaVersion: 1,
+      registeredAt: previous?.registeredAt ?? this.sdk.serverTimestamp(),
+      bestReachedAt,
+      updatedAt: this.sdk.serverTimestamp(),
+    });
+    return normalizeRecord((await this.sdk.getDoc(reference)).data());
+  }
+
+  async getSurvivalLeaderboard({ topLimit = 50, nearbyRadius = 5 } = {}) {
+    const topCount = Math.max(1, Math.min(50, Math.trunc(Number(topLimit) || 50)));
+    const radius = Math.max(1, Math.min(10, Math.trunc(Number(nearbyRadius) || 5)));
+    const base = this.sdk.query(
+      this._survivalRankingsRef(),
+      this.sdk.orderBy('bestStreak', 'desc'),
+      this.sdk.orderBy('bestReachedAt', 'asc'),
+      this.sdk.orderBy('ownerUserId', 'asc'),
+    );
+    const [topSnapshots, selfSnapshot, totalSnapshot] = await Promise.all([
+      this.sdk.getDocs(this.sdk.query(base, this.sdk.limit(topCount))),
+      this.sdk.getDoc(this._survivalRankingRef()),
+      this.sdk.getCountFromServer(base).catch(() => null),
+    ]);
+    const top = topSnapshots.docs.map((snapshot, index) => ({
+      ...normalizeRecord({ ...snapshot.data(), ownerUserId: snapshot.id }),
+      position: index + 1,
+      isSelf: snapshot.id === this.user.uid,
+    }));
+    const total = Number(totalSnapshot?.data?.().count) || top.length;
+    if (!selfSnapshot.exists()) return { available: true, top, nearby: [], selfRank: null, total };
+    const selfData = { ...selfSnapshot.data(), ownerUserId: selfSnapshot.id };
+    const topSelfIndex = top.findIndex((entry) => entry.ownerUserId === this.user.uid);
+    if (topSelfIndex >= 0) {
+      return {
+        available: true,
+        top,
+        nearby: top.slice(Math.max(0, topSelfIndex - radius), topSelfIndex + radius + 1),
+        selfRank: topSelfIndex + 1,
+        total,
+      };
+    }
+    const cursor = [selfData.bestStreak, selfData.bestReachedAt, selfData.ownerUserId];
+    try {
+      const before = this.sdk.query(base, this.sdk.endBefore(...cursor));
+      const [beforeCountSnapshot, aboveSnapshots, fromSelfSnapshots] = await Promise.all([
+        this.sdk.getCountFromServer(before),
+        this.sdk.getDocs(this.sdk.query(before, this.sdk.limitToLast(radius))),
+        this.sdk.getDocs(this.sdk.query(base, this.sdk.startAt(...cursor), this.sdk.limit(radius + 1))),
+      ]);
+      const selfRank = (Number(beforeCountSnapshot.data().count) || 0) + 1;
+      const above = aboveSnapshots.docs.map((snapshot, index) => ({
+        ...normalizeRecord({ ...snapshot.data(), ownerUserId: snapshot.id }),
+        position: selfRank - aboveSnapshots.docs.length + index,
+        isSelf: false,
+      }));
+      const fromSelf = fromSelfSnapshots.docs.map((snapshot, index) => ({
+        ...normalizeRecord({ ...snapshot.data(), ownerUserId: snapshot.id }),
+        position: selfRank + index,
+        isSelf: snapshot.id === this.user.uid,
+      }));
+      return { available: true, top, nearby: [...above, ...fromSelf], selfRank, total };
+    } catch (error) {
+      console.warn('Survival nearby ranking could not be loaded', error);
       return { available: true, top, nearby: [], selfRank: null, total };
     }
   }

@@ -25,8 +25,8 @@ const HOME_BGM_SCREENS = new Set([
   'assets',
   'card-catalog',
 ]);
-const PREBATTLE_SCREENS = new Set(['setup', 'tournament', 'arena']);
-const BATTLE_SCREENS = new Set(['battle', 'arena-battle']);
+const PREBATTLE_SCREENS = new Set(['setup', 'tournament', 'arena', 'survival']);
+const BATTLE_SCREENS = new Set(['battle', 'arena-battle', 'survival-battle']);
 
 export function normalizeAudioVolume(value, fallback = BGM_DEFAULT_VOLUME) {
   const numeric = Number(value);

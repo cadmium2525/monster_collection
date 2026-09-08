@@ -33,6 +33,9 @@ import { defaultHomeArtworkSelection, homeArtworkSelectionKey, normalizeHomeArtw
 import { renderTitleScreen } from './ui/title-screen.js';
 import { GameAudioController } from './audio/game-audio.js';
 import { installAppViewportSync } from './ui/app-viewport.js';
+import { SurvivalSession } from './survival/SurvivalSession.js';
+import { normalizeSurvivalProgress, survivalRewardForStreak } from './survival/SurvivalReward.js';
+import { SurvivalResultScreen, SurvivalScreen, openSurvivalRankingModal } from './ui/survival/survival-screen.js';
 
 const AI_BUDGET = Object.freeze({ bronze: 4, silver: 8, gold: 22, legend: 85, champion: 240 });
 
@@ -45,10 +48,13 @@ class MonsterConstructionApp {
     this.seed = this.seedSource.sessionSeed;
     this.currentScreen = 'boot';
     this.session = null;
-    this.activeRun = null;
+    this.activeRuns = { tournament: null, arena: null, survival: null };
     this.arenaLeaderboard = null;
     this.arenaLeaderboardKey = null;
     this.arenaLeaderboardLoading = false;
+    this.survivalLeaderboard = null;
+    this.survivalLeaderboardKey = null;
+    this.survivalLeaderboardLoading = false;
     this.installPromptEvent = null;
     globalThis.__MC_DEBUG_MODE__ = params.get('debug') === '1' && ['localhost', '127.0.0.1', '::1'].includes(location.hostname);
     globalThis.__MC_ADMIN_MODE__ = params.get('admin') === '1';
@@ -116,12 +122,16 @@ class MonsterConstructionApp {
       if (document.visibilityState === 'hidden') flushCheckpoint();
     });
     this.showStartupProgress(88, '王座と試合データを確認しています…');
-    const [champion, activeRun] = await Promise.all([
+    const [champion, activeRuns] = await Promise.all([
       this.repository.getChampion(),
-      this.repository.getActiveRun?.(),
+      this.repository.getActiveRuns?.() ?? {},
     ]);
     this.champion = champion;
-    this.activeRun = ['tournament', 'battle', 'reward', 'arena-battle', 'arena-result'].includes(activeRun?.phase) ? activeRun : null;
+    this.activeRuns = {
+      tournament: ['tournament', 'battle', 'reward'].includes(activeRuns?.tournament?.phase) ? activeRuns.tournament : null,
+      arena: ['arena-battle', 'arena-result'].includes(activeRuns?.arena?.phase) ? activeRuns.arena : null,
+      survival: ['survival', 'survival-battle', 'survival-result'].includes(activeRuns?.survival?.phase) ? activeRuns.survival : null,
+    };
     this.unsubscribeChampion = this.repository.subscribeChampion((champion) => {
       this.champion = champion;
       if (this.currentScreen === 'home') this.showHome();
@@ -233,14 +243,15 @@ class MonsterConstructionApp {
       seed: this.seed,
       debugMode: globalThis.__MC_DEBUG_MODE__,
       adminMode: globalThis.__MC_ADMIN_MODE__,
-      activeRun: this.activeRun,
+      activeRuns: this.activeRuns,
       bgmVolume: this.audio.bgmVolume,
       seVolume: this.audio.seVolume,
       onBgmVolumeChange: (volume) => this.audio.setBgmVolume(volume),
       onSeVolumeChange: (volume) => this.audio.setSeVolume(volume),
-      onResume: () => this.resumeTournament(),
+      onResumeTournament: () => this.resumeTournament(),
       onTournament: () => this.showTournamentSetup(),
-      onArena: () => ['arena-battle', 'arena-result'].includes(this.activeRun?.phase) ? this.resumeArena() : this.showArena(),
+      onSurvival: () => this.activeRuns.survival ? this.resumeSurvival() : this.showSurvival(),
+      onArena: () => this.activeRuns.arena ? this.resumeArena() : this.showArena(),
       onDecks: () => this.showDeckList(),
       onBoosters: () => this.showBoosterShop(),
       onMissions: () => this.showMissions(),
@@ -317,7 +328,7 @@ class MonsterConstructionApp {
         catalogProgress: catalogProgress(catalog, this.masterIndex),
         qualification: this.economy.tournamentQualification,
         champion: this.champion,
-        hasActiveRun: Boolean(this.activeRun),
+        hasActiveRun: Object.values(this.activeRuns).some(Boolean),
         onBack: () => this.showHome(),
         onRename: () => this.renameProfile('profile'),
         onSelectIcon: (masterId) => this.selectPlayerIcon(masterId),
@@ -396,7 +407,7 @@ class MonsterConstructionApp {
   }
 
   openRecoverySignIn() {
-    if (this.activeRun) return this.showError(new Error('大会を終了してから別のアカウントを復旧してください'), '復旧できません');
+    if (Object.values(this.activeRuns).some(Boolean)) return this.showError(new Error('進行中の対戦コンテンツを終了してから別のアカウントを復旧してください'), '復旧できません');
     const playerId = el('input', { attrs: { type: 'text', inputmode: 'text', autocomplete: 'username', autocapitalize: 'none', spellcheck: 'false', maxlength: '20', placeholder: '復旧ID', 'aria-label': '登録済み復旧ID' } });
     const password = el('input', { attrs: { type: 'password', autocomplete: 'current-password', placeholder: 'パスワード', 'aria-label': '登録パスワード' } });
     let modal = null;
@@ -426,7 +437,7 @@ class MonsterConstructionApp {
       root: this.root,
       collection: this.decks,
       masterIndex: this.masterIndex,
-      lockedDeckId: activeRunDeckId(this.activeRun),
+      lockedDeckId: activeRunDeckId(this.activeRuns.tournament),
       onBack: () => this.showHome(),
       onSelect: (deck) => this.showDeckDetail(deck.deckId),
       onCatalog: () => this.showCardCatalog(),
@@ -693,7 +704,7 @@ class MonsterConstructionApp {
   }
 
   isDeckEditingLocked(deckId) {
-    return isDeckLockedByActiveRun(this.activeRun, deckId);
+    return isDeckLockedByActiveRun(this.activeRuns.tournament, deckId);
   }
 
   showMissions() {
@@ -866,7 +877,7 @@ class MonsterConstructionApp {
       });
       this.arenaBefore = normalizeArenaProgress(this.economy.arenaProgress);
       const engine = this.session.createBattle();
-      this.activeRun = await this.session.saveCheckpoint('arena-battle');
+      this.activeRuns.arena = await this.session.saveCheckpoint('arena-battle');
       this.showArenaBattle(engine);
     } catch (error) {
       this.showError(error, 'アリーナ戦を開始できません');
@@ -892,7 +903,7 @@ class MonsterConstructionApp {
 
   persistArenaCheckpoint(runtime) {
     void this.session?.saveCheckpoint('arena-battle', runtime)
-      .then((checkpoint) => { if (checkpoint?.phase === 'arena-battle') this.activeRun = checkpoint; })
+      .then((checkpoint) => { if (checkpoint?.phase === 'arena-battle') this.activeRuns.arena = checkpoint; })
       .catch((error) => console.error('Arena checkpoint failed', error));
   }
 
@@ -928,7 +939,7 @@ class MonsterConstructionApp {
       this.arenaLeaderboard = null;
       this.arenaLeaderboardKey = null;
       await this.session.saveCheckpoint('arena-result');
-      this.activeRun = await this.repository.getActiveRun?.();
+      this.activeRuns.arena = await this.repository.getActiveRun?.('arena');
       this.showArenaResult(result);
     } catch (error) {
       this.showError(error, 'アリーナ結果を保存できません');
@@ -966,7 +977,7 @@ class MonsterConstructionApp {
         });
       }
       await this.session.clearCheckpoint();
-      this.activeRun = null;
+      this.activeRuns.arena = null;
       this.arenaMatch = null;
       this.session = null;
       this.showArena();
@@ -979,11 +990,11 @@ class MonsterConstructionApp {
   async resumeArena() {
     this.showLoading('中断したアリーナを復元しています…');
     try {
-      const checkpoint = await this.repository.getActiveRun?.();
+      const checkpoint = await this.repository.getActiveRun?.('arena');
       this.session = ArenaSession.restore({
         masterData: this.masterData, repository: this.repository, user: this.user, checkpoint,
       });
-      this.activeRun = checkpoint;
+      this.activeRuns.arena = checkpoint;
       if (checkpoint.phase === 'arena-battle' && this.session.activeBattle.state.status === 'active') {
         this.showArenaBattle(this.session.activeBattle, checkpoint.runtime);
       } else if (checkpoint.phase === 'arena-battle') {
@@ -991,7 +1002,255 @@ class MonsterConstructionApp {
       } else this.showArenaResult(this.session.result);
     } catch (error) {
       this.showError(error, 'アリーナを再開できません');
-      this.activeRun = null;
+      this.activeRuns.arena = null;
+      this.showHome();
+    }
+  }
+
+  showSurvival(run = this.session instanceof SurvivalSession ? this.session.run : null) {
+    this.currentScreen = 'survival';
+    const progress = normalizeSurvivalProgress(this.economy.survivalProgress);
+    this.survivalScreen = new SurvivalScreen({
+      root: this.root,
+      collection: this.decks,
+      masterIndex: this.masterIndex,
+      progress,
+      run,
+      leaderboard: this.survivalLeaderboard,
+      leaderboardLoading: this.survivalLeaderboardLoading,
+      onBack: () => this.showHome(),
+      onStart: (deck) => this.startSurvival(deck),
+      onStartBattle: () => this.startSurvivalBattle(),
+      onEndRun: () => this.confirmEndSurvival(),
+      onOpenRanking: () => this.openSurvivalLeaderboard(),
+    });
+    const rankingKey = `${progress.bestStreak}:${progress.totalRuns}:${this.user?.displayName}:${this.user?.playerIconMasterId ?? ''}`;
+    if (!run && !this.survivalLeaderboardLoading && this.survivalLeaderboardKey !== rankingKey) {
+      void this.refreshSurvivalLeaderboard();
+    }
+  }
+
+  async refreshSurvivalLeaderboard({ open = false } = {}) {
+    if (this.survivalLeaderboardLoading) return;
+    this.survivalLeaderboardLoading = true;
+    if (this.currentScreen === 'survival' && !(this.session instanceof SurvivalSession)) {
+      this.survivalScreen?.setLeaderboard(this.survivalLeaderboard, true);
+    }
+    const progress = normalizeSurvivalProgress(this.economy.survivalProgress);
+    try {
+      this.survivalLeaderboard = await this.repository.getSurvivalLeaderboard?.({ topLimit: 50, nearbyRadius: 5 })
+        ?? { available: false, top: [], nearby: [], selfRank: null, total: 0 };
+      this.survivalLeaderboardKey = this.survivalLeaderboard.available
+        ? `${progress.bestStreak}:${progress.totalRuns}:${this.user?.displayName}:${this.user?.playerIconMasterId ?? ''}`
+        : null;
+    } catch (error) {
+      console.warn('Survival leaderboard could not be loaded', error);
+      this.survivalLeaderboard = { available: false, top: [], nearby: [], selfRank: null, total: 0 };
+      this.survivalLeaderboardKey = null;
+    } finally {
+      this.survivalLeaderboardLoading = false;
+    }
+    if (this.currentScreen === 'survival' && !(this.session instanceof SurvivalSession)) {
+      this.survivalScreen?.setLeaderboard(this.survivalLeaderboard, false);
+    }
+    if (open) openSurvivalRankingModal({ leaderboard: this.survivalLeaderboard, masterIndex: this.masterIndex });
+  }
+
+  openSurvivalLeaderboard() {
+    if (this.survivalLeaderboard) {
+      openSurvivalRankingModal({ leaderboard: this.survivalLeaderboard, masterIndex: this.masterIndex });
+      return;
+    }
+    void this.refreshSurvivalLeaderboard({ open: true });
+  }
+
+  async startSurvival(deck) {
+    this.showLoading('サバイバルランを準備しています…');
+    try {
+      this.session = new SurvivalSession({
+        masterData: this.masterData,
+        repository: this.repository,
+        user: this.user,
+        playerDeck: deck,
+        seed: `${this.seedSource.next()}:survival:${deck.deckId}`,
+      });
+      this.activeRuns.survival = await this.session.saveCheckpoint('survival');
+      this.showSurvival(this.session.run);
+    } catch (error) {
+      this.showError(error, 'サバイバルランを開始できません');
+      this.session = null;
+      this.showSurvival();
+    }
+  }
+
+  startSurvivalBattle() {
+    try {
+      const engine = this.session.createBattle();
+      this.showSurvivalBattle(engine);
+    } catch (error) {
+      this.showError(error, 'サバイバル戦を開始できません');
+      this.showSurvival(this.session?.run ?? null);
+    }
+  }
+
+  showSurvivalBattle(engine = this.session.activeBattle, runtime = {}) {
+    const level = this.session.run.getCurrentAiLevel();
+    this.currentScreen = 'survival-battle';
+    new BattleScreen({
+      root: this.root,
+      engine,
+      humanPlayerId: 'player',
+      chooseCpuAction: createAiPolicy(level, { timeBudgetMs: AI_BUDGET[level] ?? AI_BUDGET.legend }),
+      onComplete: (_result, completedEngine) => this.handleSurvivalBattleComplete(completedEngine),
+      onCheckpoint: (battleRuntime) => this.persistSurvivalCheckpoint(battleRuntime),
+      onRetire: () => this.confirmEndSurvival(),
+      onPlaySe: (source, options) => this.audio.playSe(source, options),
+      cpuRngState: runtime.cpuRng ?? null,
+      speed: runtime.speed ?? 'standard',
+    });
+  }
+
+  persistSurvivalCheckpoint(runtime) {
+    void this.session?.saveCheckpoint('survival-battle', runtime)
+      .then((checkpoint) => { if (checkpoint?.phase === 'survival-battle') this.activeRuns.survival = checkpoint; })
+      .catch((error) => console.error('Survival checkpoint failed', error));
+  }
+
+  async handleSurvivalBattleComplete(engine) {
+    this.showLoading('連戦結果を保存しています…');
+    try {
+      const battleNumber = this.session.run.state.currentStreak + 1;
+      const result = this.session.completeBattle(engine);
+      const operationId = `survival:${this.session.runId}:battle:${battleNumber}`;
+      if (result.discoveredFusionIds.length) {
+        this.catalog = await this.repository.recordCardCatalog({ discoveredFusionIds: result.discoveredFusionIds });
+      }
+      await this.repository.recordPlayerStats?.({
+        type: 'battle-result', operationId: `stats:${operationId}`,
+        result: result.won ? 'win' : result.draw ? 'draw' : 'loss',
+        tournamentFinished: false, tournamentWon: false,
+      });
+      this.economy = await this.repository.commitProgression({
+        type: 'mission-event', operationId: `mission:${operationId}`,
+        event: { type: 'battle-result', mode: 'survival', won: result.won },
+        dateKey: japanDateKey(),
+      });
+      if (result.won) {
+        this.activeRuns.survival = await this.session.saveCheckpoint('survival');
+        this.showSurvival(this.session.run);
+      } else {
+        await this.settleSurvivalRun();
+      }
+    } catch (error) {
+      this.showError(error, 'サバイバル結果を保存できません');
+      this.showHome();
+    }
+  }
+
+  confirmEndSurvival() {
+    if (!(this.session instanceof SurvivalSession)) return;
+    let modal = null;
+    const content = el('div', {}, [
+      el('p', { text: `現在の${this.session.run.state.currentStreak}連勝でランを終了し、到達報酬を受け取ります。` }),
+      el('p', { className: 'account-switch-warning', text: '終了すると、このランの育成状態と残りLIFEには戻れません。' }),
+      el('div', { className: 'modal-actions' }, [
+        el('button', { className: 'text-button', text: '続ける', onclick: () => modal.close() }),
+        el('button', { className: 'primary-button', text: 'ランを終了', onclick: async () => {
+          modal.close();
+          this.session.retire();
+          await this.settleSurvivalRun();
+        } }),
+      ]),
+    ]);
+    modal = openModal({ title: 'サバイバルを終了しますか？', content });
+  }
+
+  async settleSurvivalRun() {
+    this.showLoading('到達報酬と自己ベストを保存しています…');
+    try {
+      const result = this.session.result ?? { streak: this.session.run.state.currentStreak, retired: true };
+      const progressBefore = result.settlement?.progressBefore
+        ? normalizeSurvivalProgress(result.settlement.progressBefore)
+        : normalizeSurvivalProgress(this.economy.survivalProgress);
+      const reward = result.settlement?.reward
+        ?? survivalRewardForStreak(result.streak ?? this.session.run.state.currentStreak, progressBefore.bestStreak);
+      this.session.result = { ...result, streak: result.streak ?? this.session.run.state.currentStreak, settlement: { progressBefore, reward } };
+      this.activeRuns.survival = await this.session.saveCheckpoint('survival-result');
+      this.economy = await this.repository.commitProgression({
+        type: 'survival-result',
+        operationId: `survival:${this.session.runId}:result`,
+        streak: this.session.result.streak,
+        dateKey: japanDateKey(),
+      });
+      const progressAfter = normalizeSurvivalProgress(this.economy.survivalProgress);
+      this.session.result.settlement = { progressBefore, progressAfter, reward };
+      const rankingDeck = this.decks.get(this.session.run.state.playerDeck.deckId) ?? this.session.run.state.playerDeck;
+      await this.repository.publishSurvivalRanking?.(progressAfter, rankingDeck);
+      this.survivalLeaderboard = null;
+      this.survivalLeaderboardKey = null;
+      this.activeRuns.survival = await this.session.saveCheckpoint('survival-result');
+      this.showSurvivalResult();
+    } catch (error) {
+      this.showError(error, 'サバイバル報酬を保存できません');
+      this.showHome();
+    }
+  }
+
+  showSurvivalResult() {
+    const settlement = this.session?.result?.settlement;
+    if (!settlement) return void this.settleSurvivalRun();
+    this.currentScreen = 'survival-result';
+    new SurvivalResultScreen({
+      root: this.root,
+      result: this.session.result,
+      progressBefore: settlement.progressBefore,
+      progressAfter: settlement.progressAfter,
+      reward: settlement.reward,
+      onFinish: () => this.finishSurvivalResult(),
+    });
+  }
+
+  async finishSurvivalResult() {
+    try {
+      await this.session.clearCheckpoint();
+      this.activeRuns.survival = null;
+      this.session = null;
+      this.showSurvival();
+    } catch (error) {
+      this.showError(error, 'サバイバルの終了状態を保存できません');
+      this.showSurvivalResult();
+    }
+  }
+
+  async resumeSurvival() {
+    this.showLoading('中断したサバイバルを復元しています…');
+    let checkpoint = null;
+    try {
+      checkpoint = await this.repository.getActiveRun?.('survival');
+      this.session = SurvivalSession.restore({
+        masterData: this.masterData, repository: this.repository, user: this.user, checkpoint,
+      });
+      this.activeRuns.survival = checkpoint;
+      if (checkpoint.phase === 'survival-battle' && this.session.activeBattle.state.status === 'active') {
+        this.showSurvivalBattle(this.session.activeBattle, checkpoint.runtime);
+      } else if (checkpoint.phase === 'survival-battle') {
+        await this.handleSurvivalBattleComplete(this.session.activeBattle);
+      } else if (checkpoint.phase === 'survival-result') {
+        await this.settleSurvivalRun();
+      } else {
+        this.showSurvival(this.session.run);
+      }
+    } catch (error) {
+      this.showError(error, 'サバイバルを再開できません');
+      if (checkpoint?.runId) {
+        void this.repository.clearActiveRun?.({
+          schemaVersion: 1, mode: 'survival', runId: checkpoint.runId,
+          revision: Number(checkpoint.revision || 0) + 1,
+          updatedAtMs: Math.max(Date.now(), Number(checkpoint.updatedAtMs || 0) + 1), phase: 'cleared',
+        }, 'survival').catch((clearError) => console.error('Invalid survival checkpoint cleanup failed', clearError));
+      }
+      this.activeRuns.survival = null;
+      this.session = null;
       this.showHome();
     }
   }
@@ -1020,7 +1279,7 @@ class MonsterConstructionApp {
         seed: this.seedSource.next(),
       });
       await this.session.startTournament(deck.deckId, rank);
-      this.activeRun = await this.repository.getActiveRun?.();
+      this.activeRuns.tournament = await this.repository.getActiveRun?.('tournament');
       this.showTournament();
     } catch (error) {
       this.showError(error, '大会を開始できません');
@@ -1063,7 +1322,7 @@ class MonsterConstructionApp {
 
   persistBattleCheckpoint(runtime) {
     void this.session?.saveCheckpoint('battle', runtime)
-      .then((checkpoint) => { if (checkpoint?.phase === 'battle') this.activeRun = checkpoint; })
+      .then((checkpoint) => { if (checkpoint?.phase === 'battle') this.activeRuns.tournament = checkpoint; })
       .catch((error) => console.error('Battle checkpoint failed', error));
   }
 
@@ -1071,7 +1330,7 @@ class MonsterConstructionApp {
     this.showLoading('中断した大会を復元しています…');
     let checkpoint = null;
     try {
-      checkpoint = await this.repository.getActiveRun?.();
+      checkpoint = await this.repository.getActiveRun?.('tournament');
       if (!['tournament', 'battle', 'reward'].includes(checkpoint?.phase)) throw new Error('再開できる大会データがありません');
       const deckId = checkpoint.tournament?.state?.playerDeck?.deckId;
       if (!deckId || !this.decks.get(deckId)) throw new Error('大会で使用していた保存デッキが見つかりません');
@@ -1084,7 +1343,7 @@ class MonsterConstructionApp {
         champion: this.champion,
         checkpoint,
       });
-      this.activeRun = checkpoint;
+      this.activeRuns.tournament = checkpoint;
       if (checkpoint.phase === 'battle' && this.session.activeBattle.state.status === 'active') {
         this.showBattle(this.session.activeBattle, checkpoint.runtime);
       } else if (checkpoint.phase === 'battle') {
@@ -1105,13 +1364,14 @@ class MonsterConstructionApp {
         const updatedAtMs = Math.max(Date.now(), Number(checkpoint.updatedAtMs || 0) + 1);
         void this.repository.clearActiveRun?.({
           schemaVersion: 1,
+          mode: 'tournament',
           runId: checkpoint.runId,
           revision: Number(checkpoint.revision || 0) + 1,
           updatedAtMs,
           phase: 'cleared',
-        }).catch((clearError) => console.error('Invalid checkpoint cleanup failed', clearError));
+        }, 'tournament').catch((clearError) => console.error('Invalid checkpoint cleanup failed', clearError));
       }
-      this.activeRun = null;
+      this.activeRuns.tournament = null;
       this.showHome();
     }
   }
@@ -1135,10 +1395,10 @@ class MonsterConstructionApp {
         event: { type: 'battle-result', mode: 'tournament', won },
       });
       if (outcome.type === 'reward') {
-        this.activeRun = await this.repository.getActiveRun?.();
+        this.activeRuns.tournament = await this.repository.getActiveRun?.('tournament');
         this.showReward(outcome);
       }
-      else { this.activeRun = null; this.showTournament(); }
+      else { this.activeRuns.tournament = null; this.showTournament(); }
     } catch (error) {
       this.showError(error, '試合結果を保存できません');
       this.showTournament();
@@ -1165,8 +1425,8 @@ class MonsterConstructionApp {
     try {
       const outcome = await this.session.completeReward(cards);
       this.economy = await this.repository.getEconomy();
-      if (outcome.type === 'tournament-end') this.activeRun = null;
-      else this.activeRun = await this.repository.getActiveRun?.();
+      if (outcome.type === 'tournament-end') this.activeRuns.tournament = null;
+      else this.activeRuns.tournament = await this.repository.getActiveRun?.('tournament');
       this.showTournament();
     } catch (error) {
       if (error?.code === 'champion/version-conflict') {

@@ -73,13 +73,14 @@ export function statChangeSoundDirection({ changes = [], action = null, newLogs 
 }
 
 export class BattleScreen {
-  constructor({ root, engine, humanPlayerId, chooseCpuAction, onComplete, onCheckpoint = null, onPlaySe = null, cpuRngState = null, speed = 'standard' }) {
+  constructor({ root, engine, humanPlayerId, chooseCpuAction, onComplete, onCheckpoint = null, onRetire = null, onPlaySe = null, cpuRngState = null, speed = 'standard' }) {
     this.root = root;
     this.engine = engine;
     this.humanPlayerId = humanPlayerId;
     this.chooseCpuAction = chooseCpuAction;
     this.onComplete = onComplete;
     this.onCheckpoint = onCheckpoint;
+    this.onRetire = onRetire;
     this.onPlaySe = onPlaySe;
     this.speed = speed;
     this.selection = null;
@@ -287,6 +288,12 @@ export class BattleScreen {
             text: this.speed === 'fast' ? '▶▶ 高速' : '▶ 標準',
             onclick: () => { this.speed = this.speed === 'fast' ? 'standard' : 'fast'; this.emitCheckpoint(); this.render(); },
           }),
+          this.onRetire ? el('button', {
+            className: 'utility-button survival-retire-button',
+            text: 'ラン終了',
+            disabled: this.busy || state.status !== 'active',
+            onclick: this.onRetire,
+          }) : null,
           globalThis.__MC_DEBUG_MODE__ ? el('button', {
             className: 'utility-button seed-button',
             text: `Seed ${state.seed.slice(0, 8)}`,
