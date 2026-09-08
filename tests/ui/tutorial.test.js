@@ -63,6 +63,13 @@ test('home chooses one leader illustration and calculates collection progress sa
   assert.equal(homeCollectionLevel({ ownedCardMasterIds: ['a', 'a'], discoveredFusionIds: [] }, masterIndex), 25);
 });
 
+test('home notice announces survival and its one-time gift without implying an expiry', () => {
+  const homeSource = fs.readFileSync(new URL('../../src/ui/home-screen.js', import.meta.url), 'utf8');
+  assert.match(homeSource, /サバイバルモード開幕/);
+  assert.match(homeSource, /1,500ダイヤ/);
+  assert.match(homeSource, /受取期限なし/);
+});
+
 test('active tournament checkpoint is summarized as a player-facing continue action', () => {
   const base = {
     phase: 'battle',

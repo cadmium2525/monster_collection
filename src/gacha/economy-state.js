@@ -29,6 +29,9 @@ export const HOME_RENEWAL_GIFT_ID = 'home-renewal-2026';
 export const HOME_RENEWAL_GIFT_DIAMONDS = 3000;
 export const HOME_RENEWAL_GIFT_START = '2026-09-01';
 export const HOME_RENEWAL_GIFT_END = '2026-09-04';
+export const SURVIVAL_RELEASE_GIFT_ID = 'survival-release-2026';
+export const SURVIVAL_RELEASE_GIFT_DIAMONDS = 1500;
+export const SURVIVAL_RELEASE_GIFT_START = '2026-09-08';
 
 const CAMPAIGN_GIFTS = Object.freeze([
   Object.freeze({
@@ -39,6 +42,15 @@ const CAMPAIGN_GIFTS = Object.freeze([
     description: '新しいホーム画面の公開を記念した期間限定プレゼントです。',
     startsAt: HOME_RENEWAL_GIFT_START,
     endsAt: HOME_RENEWAL_GIFT_END,
+  }),
+  Object.freeze({
+    id: SURVIVAL_RELEASE_GIFT_ID,
+    type: 'gift',
+    amount: SURVIVAL_RELEASE_GIFT_DIAMONDS,
+    label: 'サバイバルモード開幕記念',
+    description: '完成した保存デッキで挑む新コンテンツの公開を記念したプレゼントです。',
+    startsAt: SURVIVAL_RELEASE_GIFT_START,
+    endsAt: null,
   }),
 ]);
 
@@ -210,7 +222,7 @@ export function availableCampaignGifts(current, { loginDate = japanDateKey() } =
   const state = normalizeEconomyState(current);
   return CAMPAIGN_GIFTS
     .filter((gift) => loginDate >= gift.startsAt
-      && loginDate <= gift.endsAt
+      && (gift.endsAt == null || loginDate <= gift.endsAt)
       && !state.claimedCampaignIds.includes(gift.id))
     .map((gift) => clone(gift));
 }
@@ -224,7 +236,7 @@ export function applyCampaignGiftClaim(current, {
   const gift = CAMPAIGN_GIFTS.find((entry) => entry.id === giftId);
   if (!gift) throw new Error('ギフトが見つかりません');
   if (state.claimedCampaignIds.includes(gift.id)) return { state, reward: null };
-  if (claimDate < gift.startsAt || claimDate > gift.endsAt) throw new Error('このギフトの受取期間は終了しました');
+  if (claimDate < gift.startsAt || (gift.endsAt != null && claimDate > gift.endsAt)) throw new Error('このギフトの受取期間は終了しました');
   state.diamonds += gift.amount;
   state.claimedCampaignIds = [...state.claimedCampaignIds, gift.id].slice(-32);
   state.updatedAt = now;

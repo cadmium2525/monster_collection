@@ -18,6 +18,7 @@ import {
   HIT_SE_PATH,
   STATUS_DOWN_SE_PATH,
   STATUS_UP_SE_PATH,
+  TURN_SE_GAIN,
   TURN_SE_PATH,
   ZERO_DAMAGE_SE_PATH,
 } from '../audio/game-audio.js';
@@ -216,7 +217,7 @@ export class BattleScreen {
     const key = `${current.id}:${current.turnNumber}`;
     if (this.turnAnnouncementKey === key) return;
     this.turnAnnouncementKey = key;
-    this.playSe(TURN_SE_PATH);
+    this.playSe(TURN_SE_PATH, { volume: TURN_SE_GAIN });
     await playTurnTransition({
       humanTurn: current.id === this.humanPlayerId,
       turnNumber: current.turnNumber,
@@ -1689,13 +1690,8 @@ export class BattleScreen {
     }
   }
 
-  async showStatDirections(before, commitNumbers, action = null, newLogs = []) {
+  statChangeSound(before, action = null, newLogs = []) {
     const changes = this.statChanges(before, action, newLogs);
-    if (!changes.length) {
-      commitNumbers();
-      return;
-    }
-    const timing = statChangeTimings({ speed: this.speed, reducedMotion: this.prefersReducedMotion() });
     const direction = statChangeSoundDirection({
       changes,
       action,
@@ -1703,8 +1699,18 @@ export class BattleScreen {
       humanPlayerId: this.humanPlayerId,
       actingPlayerId: before.currentPlayerId,
     });
-    const sound = direction === 'up' ? STATUS_UP_SE_PATH : direction === 'down' ? STATUS_DOWN_SE_PATH : null;
-    if (sound) setTimeout(() => this.playSe(sound), timing.lead);
+    return direction === 'up' ? STATUS_UP_SE_PATH : direction === 'down' ? STATUS_DOWN_SE_PATH : null;
+  }
+
+  async showStatDirections(before, commitNumbers, action = null, newLogs = [], { soundPlayed = false } = {}) {
+    const changes = this.statChanges(before, action, newLogs);
+    if (!changes.length) {
+      commitNumbers();
+      return;
+    }
+    const timing = statChangeTimings({ speed: this.speed, reducedMotion: this.prefersReducedMotion() });
+    const sound = this.statChangeSound(before, action, newLogs);
+    if (sound && !soundPlayed) this.playSe(sound);
     const removed = changes.filter((change) => change.removed);
     if (removed.length) await Promise.all(removed.map((change) => this.animateChange(change, timing)));
     commitNumbers();
@@ -1747,6 +1753,13 @@ export class BattleScreen {
     if (!cardUseModel) await this.animateActionStart(action, { impactSound });
     this.engine.applyAction(action);
     const newLogs = this.engine.state.log.slice(beforeLogLength);
+    const statSound = this.statChangeSound(before, action, newLogs);
+    let statSoundPlayed = false;
+    const playStatSound = () => {
+      if (!statSound || statSoundPlayed) return;
+      statSoundPlayed = true;
+      this.playSe(statSound);
+    };
     this.prepareNormalTurnDraw(action, beforeHumanHandIds, newLogs);
     this.prepareFrontlineRedraw(action, beforeHumanHandIds);
     this.prepareEffectDraw(action, beforeHumanHandIds, newLogs);
@@ -1756,6 +1769,7 @@ export class BattleScreen {
       model: cardUseModel,
       speed: this.speed,
       targetNode: this.cardUseTargetNode(cardUseModel),
+      onImpact: playStatSound,
     });
     if (materialSearchResolution) await materialSearchResolution();
     if (frontlineAction) await this.animateFrontlineReturns(frontlineReturnNodes);
@@ -1781,7 +1795,7 @@ export class BattleScreen {
     if (awakeningModel) await playAwakeningAnimation({ model: awakeningModel, speed: this.speed, onReveal: commitNumbers });
     const turnStarted = before.currentPlayerId !== this.engine.state.currentPlayerId;
     if (turnStarted) await this.showCurrentTurnTransition();
-    await this.showStatDirections(before, commitNumbers, action, newLogs);
+    await this.showStatDirections(before, commitNumbers, action, newLogs, { soundPlayed: statSoundPlayed });
     commitNumbers();
     if (!turnStarted) await this.showCurrentTurnTransition();
     await this.playPreparedNormalTurnDraw();

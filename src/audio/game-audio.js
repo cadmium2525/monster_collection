@@ -9,12 +9,14 @@ export const STATUS_UP_SE_PATH = './assets/audio/status03.mp3';
 export const STATUS_DOWN_SE_PATH = './assets/audio/status04.mp3';
 export const AUDIO_MASTER_GAIN = 0.5;
 export const BATTLE_BGM_TRIM_GAIN = 0.5;
+export const TURN_SE_GAIN = 1.3;
 export const BGM_DEFAULT_VOLUME = 100;
 export const SE_DEFAULT_VOLUME = 100;
 export const BGM_VOLUME_STORAGE_KEY = 'mc-bgm-volume-v2';
 export const SE_VOLUME_STORAGE_KEY = 'mc-se-volume-v1';
 
 const LEGACY_HOME_BGM_VOLUME_STORAGE_KEY = 'mc-home-bgm-volume-v1';
+const MAX_SE_VOICES_PER_SOURCE = 3;
 const HOME_BGM_SCREENS = new Set([
   'home',
   'boosters',
@@ -100,6 +102,7 @@ export class GameAudioController {
     this.mediaSources = [];
     this.trackGainNodes = {};
     this.activeEffects = new Set();
+    this.effectPools = new Map();
     this.tracks = {
       home: this._createAudio(homeSource, { loop: true }),
       arena: this._createAudio(arenaSource, { loop: true }),
@@ -166,44 +169,96 @@ export class GameAudioController {
     if (!source || !this.AudioCtor || !this.unlocked || !this.pageVisible || this.seVolume === 0 || this.safetyMuted) return false;
     this._ensurePipeline();
     if (this.safetyMuted) return false;
-    const effect = this._createAudio(source, { loop: false, preload: 'auto' });
-    if (!effect) return false;
-    const localVolume = Math.max(0, Math.min(1, Number(volume) || 0));
-    let sourceNode = null;
-    let localGain = null;
-    if (this.audioContext && this.seGainNode) {
-      try {
-        sourceNode = this.audioContext.createMediaElementSource(effect);
-        localGain = this.audioContext.createGain();
-        localGain.gain.value = localVolume;
-        sourceNode.connect(localGain);
-        localGain.connect(this.seGainNode);
-      } catch {
-        if (isIosDevice(this.navigatorRef)) return false;
-        effect.volume = AUDIO_MASTER_GAIN * (this.seVolume / 100) * localVolume;
-      }
-    } else {
-      effect.volume = AUDIO_MASTER_GAIN * (this.seVolume / 100) * localVolume;
-    }
-    const release = () => {
-      this.activeEffects.delete(effect);
-      try { sourceNode?.disconnect?.(); } catch { /* Already disconnected. */ }
-      try { localGain?.disconnect?.(); } catch { /* Already disconnected. */ }
-    };
-    effect.addEventListener?.('ended', release, { once: true });
-    effect.addEventListener?.('error', release, { once: true });
+    const localVolume = Math.max(0, Math.min(2, Number(volume) || 0));
+    if (localVolume === 0) return false;
+    const voice = this._acquireEffectVoice(source);
+    if (!voice) return false;
+    const effect = voice.audio;
+    voice.playToken += 1;
+    const token = voice.playToken;
+    voice.busy = true;
+    voice.startedAt = globalThis.performance?.now?.() ?? Date.now();
+    voice.localVolume = localVolume;
+    if (voice.localGain?.gain) voice.localGain.gain.value = localVolume;
+    else effect.volume = Math.min(1, AUDIO_MASTER_GAIN * (this.seVolume / 100) * localVolume);
     this.activeEffects.add(effect);
     this._configureAmbientSession();
     if (this.audioContext && this.audioContext.state !== 'running' && this.audioContext.state !== 'closed') {
-      try { await this.audioContext.resume(); } catch { release(); return false; }
+      try { await this.audioContext.resume(); } catch { this._releaseEffectVoice(voice, token); return false; }
     }
     try {
+      try { effect.currentTime = 0; } catch { /* Metadata may not be ready yet. */ }
       await effect.play();
-      return true;
+      return voice.playToken === token;
     } catch {
-      release();
+      this._discardEffectVoice(voice, token);
       return false;
     }
+  }
+
+  _createEffectVoice(source) {
+    const audio = this._createAudio(source, { loop: false, preload: 'auto' });
+    if (!audio) return null;
+    const voice = {
+      audio,
+      source,
+      sourceNode: null,
+      localGain: null,
+      localVolume: 1,
+      busy: false,
+      startedAt: 0,
+      playToken: 0,
+    };
+    if (this.audioContext && this.seGainNode) {
+      try {
+        voice.sourceNode = this.audioContext.createMediaElementSource(audio);
+        voice.localGain = this.audioContext.createGain();
+        voice.sourceNode.connect(voice.localGain);
+        voice.localGain.connect(this.seGainNode);
+      } catch {
+        if (isIosDevice(this.navigatorRef)) return null;
+        voice.sourceNode = null;
+        voice.localGain = null;
+      }
+    }
+    audio.addEventListener?.('ended', () => this._releaseEffectVoice(voice, voice.playToken));
+    audio.addEventListener?.('error', () => this._discardEffectVoice(voice, voice.playToken));
+    return voice;
+  }
+
+  _acquireEffectVoice(source) {
+    const pool = this.effectPools.get(source) ?? [];
+    this.effectPools.set(source, pool);
+    let voice = pool.find((candidate) => !candidate.busy);
+    if (!voice && pool.length < MAX_SE_VOICES_PER_SOURCE) {
+      voice = this._createEffectVoice(source);
+      if (voice) pool.push(voice);
+    }
+    if (!voice && pool.length) {
+      voice = [...pool].sort((left, right) => left.startedAt - right.startedAt)[0];
+      voice.audio.pause?.();
+      this._releaseEffectVoice(voice, voice.playToken);
+    }
+    return voice ?? null;
+  }
+
+  _releaseEffectVoice(voice, token) {
+    if (!voice || voice.playToken !== token) return;
+    voice.busy = false;
+    this.activeEffects.delete(voice.audio);
+  }
+
+  _discardEffectVoice(voice, token) {
+    if (!voice || voice.playToken !== token) return;
+    voice.audio.pause?.();
+    this._releaseEffectVoice(voice, token);
+    try { voice.sourceNode?.disconnect?.(); } catch { /* Already disconnected. */ }
+    try { voice.localGain?.disconnect?.(); } catch { /* Already disconnected. */ }
+    const pool = this.effectPools.get(voice.source);
+    if (!pool) return;
+    const index = pool.indexOf(voice);
+    if (index >= 0) pool.splice(index, 1);
+    if (!pool.length) this.effectPools.delete(voice.source);
   }
 
   _createAudio(source, { loop = false, preload = 'none' } = {}) {
@@ -286,10 +341,24 @@ export class GameAudioController {
       audio.volume = this.directFallback ? AUDIO_MASTER_GAIN * trackGain * (this.bgmVolume / 100) : 1;
       audio.muted = this.safetyMuted;
     }
+    for (const pool of this.effectPools.values()) {
+      for (const voice of pool) {
+        if (!voice.localGain) {
+          voice.audio.volume = Math.min(1, AUDIO_MASTER_GAIN * (this.seVolume / 100) * voice.localVolume);
+        }
+        voice.audio.muted = this.safetyMuted;
+      }
+    }
   }
 
   _stopActiveEffects() {
-    for (const effect of this.activeEffects) effect.pause?.();
+    for (const pool of this.effectPools.values()) {
+      for (const voice of pool) {
+        if (!voice.busy) continue;
+        voice.audio.pause?.();
+        this._releaseEffectVoice(voice, voice.playToken);
+      }
+    }
     this.activeEffects.clear();
   }
 

@@ -198,7 +198,7 @@ function impactNode(model) {
   ]);
 }
 
-export async function playCardUseAnimation({ model, speed = 'standard', targetNode = null } = {}) {
+export async function playCardUseAnimation({ model, speed = 'standard', targetNode = null, onImpact = null } = {}) {
   if (!model || typeof document === 'undefined') return;
   const reducedMotion = globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches === true;
   const timing = cardUseAnimationTimings({ speed, reducedMotion });
@@ -251,6 +251,7 @@ export async function playCardUseAnimation({ model, speed = 'standard', targetNo
   ], { duration: timing.travel, easing: 'cubic-bezier(.46,.02,.74,.34)', fill: 'forwards' });
 
   await delay(Math.round(timing.travel * .7));
+  onImpact?.();
   let impact = null;
   if (targetNode?.isConnected) {
     impact = impactNode(model);

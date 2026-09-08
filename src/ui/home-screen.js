@@ -223,7 +223,7 @@ function openGiftBox(economy, gifts, onClaimGift) {
         ? el('div', { className: 'home-gift-list' }, gifts.map((gift) => el('article', { className: 'home-gift-entry' }, [
           diamondIcon('home-gift-diamond'),
           el('div', {}, [
-            el('small', { text: `受取期限 ${gift.endsAt.replaceAll('-', '/')}` }),
+            el('small', { text: gift.endsAt ? `受取期限 ${gift.endsAt.replaceAll('-', '/')}` : '受取期限なし' }),
             el('strong', { text: gift.label }),
             el('p', { text: gift.description }),
             el('b', { text: `ダイヤ ${gift.amount.toLocaleString('ja-JP')}` }),
@@ -232,7 +232,7 @@ function openGiftBox(economy, gifts, onClaimGift) {
         ])))
         : el('p', { className: 'home-gift-empty', text: '現在、未受取のギフトはありません。' }),
       pending ? el('p', { className: 'home-pending-pack-note', text: '未確認のブースターパックがあります。ショップから開封できます。' }) : null,
-      el('small', { text: 'デイリーログインボーナスは、その日の初回ログイン後にミッション画面から受け取れます。期間限定ギフトは受取期限までにここから受け取ってください。' }),
+      el('small', { text: 'デイリーログインボーナスは、その日の初回ログイン後にミッション画面から受け取れます。期限付きギフトは表示された受取期限までに受け取ってください。' }),
     ]),
   });
 }
@@ -242,6 +242,9 @@ function openHomeNotices(champion) {
     title: 'お知らせ',
     content: el('div', { className: 'home-lobby-modal-copy' }, [
       el('p', { className: 'eyebrow', text: `VERSION ${APP_VERSION}` }),
+      el('h3', { text: 'サバイバルモード開幕' }),
+      el('p', { text: 'トーナメントやアリーナで作り上げた保存デッキで、成長と残りLIFEを引き継ぎながらCPUとの連戦へ挑めます。最高連勝ランキングにも対応しました。' }),
+      el('small', { text: '公開記念として、ギフトボックスで1,500ダイヤを配布中です。' }),
       el('h3', { text: '王座とデッキを巡る、新しいホームへ' }),
       el('p', { text: 'マイページで選んだモンスターイラストを中心に、王者情報・大会・カード・ショップへ直接移動できるホーム画面です。' }),
       champion?.championDisplayName ? el('small', { text: `現在のレジェンド王者：${champion.championDisplayName}` }) : null,

@@ -8,6 +8,8 @@ import {
   HOME_RENEWAL_GIFT_DIAMONDS,
   HOME_RENEWAL_GIFT_END,
   HOME_RENEWAL_GIFT_ID,
+  SURVIVAL_RELEASE_GIFT_DIAMONDS,
+  SURVIVAL_RELEASE_GIFT_ID,
   applyCampaignGiftClaim,
   applyLoginRewards,
   applyProgressionOperation,
@@ -213,6 +215,25 @@ test('home renewal gift stays in the gift box through September 4 and can be cla
   assert.equal(claimed.reward.label, 'ホーム画面刷新記念');
   assert.deepEqual(availableCampaignGifts(claimed.state, { loginDate: '2026-09-04' }), []);
   const repeated = applyCampaignGiftClaim(claimed.state, { giftId: HOME_RENEWAL_GIFT_ID, claimDate: '2026-09-04' });
+  assert.equal(repeated.state.diamonds, claimed.state.diamonds);
+  assert.equal(repeated.reward, null);
+});
+
+test('survival release gift grants 1,500 diamonds once without an expiry date', () => {
+  const initial = defaultEconomyState();
+  assert.deepEqual(availableCampaignGifts(initial, { loginDate: '2026-09-07' }), []);
+  const available = availableCampaignGifts(initial, { loginDate: '2026-09-08' });
+  assert.equal(available.length, 1);
+  assert.equal(available[0].id, SURVIVAL_RELEASE_GIFT_ID);
+  assert.equal(available[0].amount, SURVIVAL_RELEASE_GIFT_DIAMONDS);
+  assert.equal(available[0].endsAt, null);
+  assert.equal(availableCampaignGifts(initial, { loginDate: '2099-12-31' })[0].id, SURVIVAL_RELEASE_GIFT_ID);
+
+  const claimed = applyCampaignGiftClaim(initial, { giftId: SURVIVAL_RELEASE_GIFT_ID, claimDate: '2026-09-08' });
+  assert.equal(claimed.state.diamonds, STARTER_DIAMONDS + 1500);
+  assert.equal(claimed.reward.label, 'サバイバルモード開幕記念');
+  assert.deepEqual(availableCampaignGifts(claimed.state, { loginDate: '2099-12-31' }), []);
+  const repeated = applyCampaignGiftClaim(claimed.state, { giftId: SURVIVAL_RELEASE_GIFT_ID, claimDate: '2099-12-31' });
   assert.equal(repeated.state.diamonds, claimed.state.diamonds);
   assert.equal(repeated.reward, null);
 });

@@ -59,12 +59,14 @@ test('ordinary TP spending does not masquerade as a status-down effect', () => {
 
 test('battle screen wires turn, draw and hit sounds to their presentation moments', () => {
   const source = fs.readFileSync(new URL('../../src/ui/battle-screen.js', import.meta.url), 'utf8');
-  assert.match(source, /this\.playSe\(TURN_SE_PATH\);\s*await playTurnTransition/);
+  assert.match(source, /this\.playSe\(TURN_SE_PATH, \{ volume: TURN_SE_GAIN \}\);\s*await playTurnTransition/);
   assert.match(source, /this\.playSe\(CARD_DRAW_SE_PATH\);\s*this\.mulliganAnimatingCardId/);
   assert.match(source, /this\.playSe\(CARD_DRAW_SE_PATH\);\s*this\.turnDrawAnimatingCardId/);
   assert.match(source, /if \(impactSound\) this\.playSe\(impactSound\)/);
   assert.match(source, /const impactSound = this\.moveImpactSound\(action\)/);
   assert.match(source, /STATUS_UP_SE_PATH[\s\S]*STATUS_DOWN_SE_PATH/);
+  assert.match(source, /playCardUseAnimation\(\{[\s\S]*?onImpact: playStatSound/);
+  assert.match(source, /showStatDirections\([^\n]+\{ soundPlayed: statSoundPlayed \}\)/);
 });
 
 test('tournament, arena and survival battles receive the common SE output', () => {

@@ -15,6 +15,7 @@ import {
   CARD_DRAW_SE_PATH,
   STATUS_UP_SE_PATH,
   STATUS_DOWN_SE_PATH,
+  TURN_SE_GAIN,
   SE_DEFAULT_VOLUME,
   SE_VOLUME_STORAGE_KEY,
   isIosDevice,
@@ -122,6 +123,7 @@ test('master gain halves every BGM scene and SE while both controls default to 1
   assert.equal(CARD_DRAW_SE_PATH, './assets/audio/card-se.mp3');
   assert.equal(STATUS_UP_SE_PATH, './assets/audio/status03.mp3');
   assert.equal(STATUS_DOWN_SE_PATH, './assets/audio/status04.mp3');
+  assert.equal(TURN_SE_GAIN, 1.3);
   assert.equal(controller.bgmVolume, BGM_DEFAULT_VOLUME);
   assert.equal(controller.seVolume, SE_DEFAULT_VOLUME);
   controller.setScreen('home');
@@ -254,6 +256,23 @@ test('future sound effects have an independent channel under the same half-volum
 
   controller.setSeVolume(0);
   assert.equal(await controller.playSe('./assets/audio/muted-effect.mp3'), false);
+});
+
+test('repeated sound effects reuse a bounded voice pool instead of exhausting audio elements', async () => {
+  FakeAudio.instances = [];
+  const controller = new GameAudioController({
+    storage: memoryStorage(), documentRef: new FakeEvents(), windowRef: new FakeEvents(), navigatorRef: { userAgent: 'Desktop' },
+    AudioCtor: FakeAudio, AudioContextCtor: FakeAudioContext,
+  });
+  controller.setScreen('battle');
+  await controller.unlockFromGesture();
+  for (let index = 0; index < 8; index += 1) {
+    assert.equal(await controller.playSe(TURN_SE_PATH, { volume: TURN_SE_GAIN }), true);
+  }
+  const voices = FakeAudio.instances.filter((audio) => audio.source === TURN_SE_PATH);
+  assert.equal(voices.length, 3);
+  assert.equal(voices.reduce((sum, audio) => sum + audio.playCalls, 0), 8);
+  assert.ok(controller.audioContext.gains.some((gain) => gain.gain.value === TURN_SE_GAIN));
 });
 
 test('iOS remains safely muted instead of bypassing silent mode without Web Audio', async () => {
