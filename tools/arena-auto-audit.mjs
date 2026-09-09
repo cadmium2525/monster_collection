@@ -66,10 +66,14 @@ function emptyRecord() {
     rounds: 0,
     specialFusions: 0,
     breederUses: 0,
+    aceSpecialFusions: 0,
+    comboSetupUses: 0,
+    comboPayoffUses: 0,
+    comboConversions: 0,
   };
 }
 
-function recordResult(record, completed, candidateId, forcedFirstPlayerId) {
+function recordResult(record, completed, candidateId, forcedFirstPlayerId, plan = {}) {
   record.games += 1;
   record.rounds += completed.result.round;
   const won = completed.result.winnerId === candidateId;
@@ -87,6 +91,16 @@ function recordResult(record, completed, candidateId, forcedFirstPlayerId) {
   const player = completed.state.players[candidateId];
   record.specialFusions += player.metrics.specialFusions ?? 0;
   record.breederUses += player.metrics.breederUses ?? 0;
+  let comboSetupUses = 0;
+  let comboPayoffUses = 0;
+  for (const event of completed.state.log.filter((entry) => entry.playerId === candidateId)) {
+    if (event.type === 'fusion-special' && event.fusionId === plan.aceFusionId) record.aceSpecialFusions += 1;
+    if (event.type === 'breeder' && event.breederId === plan.comboIds?.[0]) comboSetupUses += 1;
+    if (event.type === 'breeder' && event.breederId === plan.comboIds?.[1]) comboPayoffUses += 1;
+  }
+  record.comboSetupUses += comboSetupUses;
+  record.comboPayoffUses += comboPayoffUses;
+  record.comboConversions += Math.min(comboSetupUses, comboPayoffUses);
   return won ? 'win' : draw ? 'draw' : 'loss';
 }
 
@@ -101,6 +115,10 @@ function summarize(record) {
     averageRound: Number(rate(record.rounds, record.games).toFixed(2)),
     specialFusionPerGame: Number(rate(record.specialFusions, record.games).toFixed(3)),
     breederUsesPerGame: Number(rate(record.breederUses, record.games).toFixed(2)),
+    aceSpecialFusionPerGame: Number(rate(record.aceSpecialFusions, record.games).toFixed(3)),
+    comboSetupUsesPerGame: Number(rate(record.comboSetupUses, record.games).toFixed(3)),
+    comboPayoffUsesPerGame: Number(rate(record.comboPayoffUses, record.games).toFixed(3)),
+    comboConversionRate: percent(rate(record.comboConversions, record.comboSetupUses)),
   };
 }
 
@@ -240,14 +258,18 @@ for (const candidateFaction of selectedCandidateFactions) {
       const opponent = benchmarkDecks[opponentFaction][(variant + 1) % variants].cards;
       for (const candidateFirst of [true, false]) {
         const pairedSeed = `${seed}:field:${candidateFaction}:${opponentFaction}:${game + 1}:${candidateFirst ? 'first' : 'second'}`;
+        const plan = {
+          aceFusionId: ACE_ROUTE_BY_FACTION[candidateFaction],
+          comboIds: COMBO_PAIR_BY_FACTION[candidateFaction],
+        };
         const outcomes = {};
         for (const maturity of ['mature', 'starter']) {
           const candidateCards = maturity === 'mature' ? candidateMature : starterDecks[candidateFaction];
           const result = play({ candidateCards, opponentCards: opponent, gameSeed: pairedSeed, candidateFirst });
           outcomes[maturity] = recordResult(
-            fieldByFaction[candidateFaction][maturity], result.completed, result.candidateId, result.firstPlayerId,
+            fieldByFaction[candidateFaction][maturity], result.completed, result.candidateId, result.firstPlayerId, plan,
           );
-          recordResult(fieldOverall[maturity], result.completed, result.candidateId, result.firstPlayerId);
+          recordResult(fieldOverall[maturity], result.completed, result.candidateId, result.firstPlayerId, plan);
         }
         const pairedKey = outcomes.mature === 'win'
           ? outcomes.starter === 'win' ? 'bothWin' : 'matureOnlyWins'
@@ -267,8 +289,9 @@ for (const faction of selectedCandidateFactions) {
     for (const candidateFirst of [true, false]) {
       const gameSeed = `${seed}:direct:${faction}:${game + 1}:${candidateFirst ? 'first' : 'second'}`;
       const result = play({ candidateCards, opponentCards: starterDecks[faction], gameSeed, candidateFirst });
-      recordResult(directByFaction[faction], result.completed, result.candidateId, result.firstPlayerId);
-      recordResult(directOverall, result.completed, result.candidateId, result.firstPlayerId);
+      const plan = { aceFusionId: ACE_ROUTE_BY_FACTION[faction], comboIds: COMBO_PAIR_BY_FACTION[faction] };
+      recordResult(directByFaction[faction], result.completed, result.candidateId, result.firstPlayerId, plan);
+      recordResult(directOverall, result.completed, result.candidateId, result.firstPlayerId, plan);
     }
   }
 }

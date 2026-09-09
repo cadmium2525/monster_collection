@@ -1,3 +1,7 @@
+import { RULES } from '../battle/rules.js';
+import { resolvedMoveTp } from '../battle/effects.js';
+import { effectiveAtk, effectiveDef } from '../battle/state.js';
+
 export const AI_FACTIONS = Object.freeze(['機鋼', '神造', '幻霊', '魔族', '獣族', '怪物']);
 
 export const COMBO_PACKAGES = Object.freeze({
@@ -38,6 +42,7 @@ function fusionRoutes(masterIndex, monsterCounts) {
     const mainCopies = monsterCounts[main?.id] ?? 0;
     const materialCopies = monsterCounts[material?.id] ?? 0;
     const copies = Math.min(mainCopies, materialCopies);
+    const powerIndex = Number(fusion.powerIndex) || 100;
     return {
       id: fusion.id,
       name: fusion.name,
@@ -47,10 +52,15 @@ function fusionRoutes(masterIndex, monsterCounts) {
       mainCopies,
       materialCopies,
       copies,
-      score: copies * 24 + Math.min(3, mainCopies + materialCopies) * 2,
+      powerIndex,
+      score: copies * 24 + Math.min(3, mainCopies + materialCopies) * 2
+        + Math.max(0, powerIndex - 90) * 1.5,
     };
   }).filter((route) => route.copies > 0)
-    .sort((a, b) => b.score - a.score || b.copies - a.copies || a.id.localeCompare(b.id));
+    .sort((a, b) => b.copies - a.copies
+      || b.powerIndex - a.powerIndex
+      || b.score - a.score
+      || a.id.localeCompare(b.id));
 }
 
 export function analyzeDeckStrategy(cards, masterIndex) {
@@ -148,29 +158,257 @@ function handCard(player, instanceId) {
   return player.hand.find((card) => card.instanceId === instanceId) ?? null;
 }
 
-function availableCopies(player, masterId) {
-  return (player.deck ?? []).filter((card) => card.masterId === masterId).length
-    + (player.hand ?? []).filter((card) => card.masterId === masterId).length
-    + (player.board ?? []).filter((unit) => unit?.sourceMasterId === masterId).length;
+function accessibleFusionCopies(player, masterId, role) {
+  const hiddenCopies = (player.deck ?? []).filter((card) => card.masterId === masterId).length
+    + (player.hand ?? []).filter((card) => card.masterId === masterId).length;
+  if (role !== 'main') return hiddenCopies;
+  return hiddenCopies + (player.board ?? []).filter((unit) => (
+    unit?.sourceMasterId === masterId && !unit.awakened && unit.fusionStage < RULES.maxFusionStage
+  )).length;
+}
+
+function committedMasterId(player, action) {
+  if (action.type === 'summon') return handCard(player, action.cardInstanceId)?.masterId ?? null;
+  if (['fusion-normal', 'fusion-special'].includes(action.type)) {
+    return handCard(player, action.materialCardInstanceId)?.masterId ?? null;
+  }
+  if (action.type === 'breeder' && action.materialCardInstanceId) {
+    return handCard(player, action.materialCardInstanceId)?.masterId ?? null;
+  }
+  if (action.type === 'awaken') return unitById(player, action.materialUnitId)?.sourceMasterId ?? null;
+  return null;
 }
 
 function protectedUsePenalty(player, strategy, action) {
   const ace = strategy.ace;
   if (!ace) return 0;
   if (action.type === 'fusion-special' && action.fusionId === ace.id) return 0;
-  let consumedId = null;
+  const consumedId = committedMasterId(player, action);
+  if (action.type === 'summon' && consumedId === ace.mainId) return 0;
   if (['fusion-normal', 'fusion-special'].includes(action.type)) {
-    consumedId = handCard(player, action.materialCardInstanceId)?.masterId ?? null;
     const main = unitById(player, action.unitId);
     if (main?.sourceMasterId === ace.mainId && main.fusionStage >= 1) return -100;
   }
-  if (action.type === 'breeder' && action.materialCardInstanceId) {
-    consumedId = handCard(player, action.materialCardInstanceId)?.masterId ?? null;
-  }
-  if (action.type === 'awaken') consumedId = unitById(player, action.materialUnitId)?.sourceMasterId ?? null;
   if (![ace.mainId, ace.materialId].includes(consumedId)) return 0;
-  const remaining = availableCopies(player, consumedId);
-  return remaining <= 1 ? -140 : remaining === 2 ? -55 : -18;
+  const role = consumedId === ace.mainId ? 'main' : 'material';
+  const remaining = accessibleFusionCopies(player, consumedId, role) - 1;
+  return remaining <= 0 ? -170 : remaining === 1 ? -70 : -22;
+}
+
+function canUnitAttack(engine, playerId, unit) {
+  if (!unit || unit.actionPoints <= 0 || unit.summonedThisTurn || unit.stunnedThisTurn) return false;
+  const player = engine.player(playerId);
+  const sealed = unit.statuses.attackSeal?.playerId === player.id
+    && unit.statuses.attackSeal?.activeTurn === player.turnNumber;
+  return !sealed && unit.equippedMoveIds.some((moveId) => engine.masterIndex.moves.get(moveId)?.power != null);
+}
+
+function minimumDamagingMoveCost(engine, playerId, unit) {
+  if (!unit) return Number.POSITIVE_INFINITY;
+  const player = engine.player(playerId);
+  const opponent = engine.opponent(playerId);
+  const targets = opponent.board.filter(Boolean);
+  const costs = unit.equippedMoveIds.map((moveId) => engine.masterIndex.moves.get(moveId))
+    .filter((move) => move?.power != null)
+    .flatMap((move) => (targets.length ? targets : [null])
+      .map((target) => resolvedMoveTp(player, unit, target, move, opponent)));
+  return costs.length ? Math.min(...costs) : Number.POSITIVE_INFINITY;
+}
+
+function minimumAttackCost(engine, playerId, unit) {
+  return canUnitAttack(engine, playerId, unit)
+    ? minimumDamagingMoveCost(engine, playerId, unit)
+    : Number.POSITIVE_INFINITY;
+}
+
+function canAttackAfterExtraAction(engine, playerId, unit) {
+  if (!unit || unit.summonedThisTurn || unit.stunnedThisTurn) return false;
+  const player = engine.player(playerId);
+  const sealed = unit.statuses.attackSeal?.playerId === player.id
+    && unit.statuses.attackSeal?.activeTurn === player.turnNumber;
+  return !sealed && Number.isFinite(minimumDamagingMoveCost(engine, playerId, unit));
+}
+
+function projectedAttackDamage(engine, playerId, unit, additionalBonus = 0) {
+  if (!unit) return 0;
+  const opponent = engine.opponent(playerId);
+  const targets = opponent.board.filter(Boolean);
+  const multiplier = 1 + Math.max(0, Number(unit.statuses.nextDamageBonus) || 0) + additionalBonus;
+  return unit.equippedMoveIds.reduce((best, moveId) => {
+    const move = engine.masterIndex.moves.get(moveId);
+    if (move?.power == null) return best;
+    const attack = effectiveAtk(unit);
+    if (!targets.length) return Math.max(best, Math.floor(attack * (move.power / 100) * multiplier));
+    return Math.max(best, ...targets.map((target) => {
+      const base = Math.max(0, Math.floor(attack * (move.power / 100) - Math.max(1, effectiveDef(target))));
+      return Math.floor(base * multiplier);
+    }));
+  }, 0);
+}
+
+function payoffInHand(player, combo) {
+  return player.hand.some((card) => card.masterId === combo.payoffId);
+}
+
+function enemyCanThreaten(engine, playerId) {
+  return engine.opponent(playerId).board.some((unit) => unit?.equippedMoveIds.some(
+    (moveId) => engine.masterIndex.moves.get(moveId)?.power != null,
+  ));
+}
+
+function visibleDurability(unit) {
+  const timedDef = (unit?.timedDefBuffs ?? []).reduce((sum, buff) => sum + (Number(buff.amount) || 0), 0);
+  return Math.max(0, Number(unit?.life) || 0)
+    + Math.max(0, (Number(unit?.defBase) || 0) + (Number(unit?.defMod) || 0)
+      + (Number(unit?.temporaryDef) || 0) + timedDef) * 0.35;
+}
+
+function isLikelyAttackTarget(player, target) {
+  if (!target) return false;
+  const candidates = player.board.filter(Boolean);
+  const weakest = Math.min(...candidates.map(visibleDurability));
+  return visibleDurability(target) <= weakest + 5;
+}
+
+function canBuildPressure(engine, playerId, target) {
+  if (!target) return false;
+  const defense = effectiveDef(target);
+  return engine.opponent(playerId).board.some((attacker) => attacker?.equippedMoveIds.some((moveId) => {
+    const move = engine.masterIndex.moves.get(moveId);
+    if (move?.power == null) return false;
+    const unarmoredDamage = Math.max(0, Math.floor(effectiveAtk(attacker) * (move.power / 100) - defense));
+    return unarmoredDamage >= 5;
+  }));
+}
+
+function comboSetupIsTimely(engine, playerId, action, combo, strategy) {
+  const player = engine.player(playerId);
+  const target = unitById(player, action.targetUnitId);
+  const setupCost = action.cost ?? 0;
+  const payoffCost = engine.masterIndex.cards.get(combo.payoffId)?.tp ?? 0;
+  const attackCost = minimumAttackCost(engine, playerId, target);
+  const canFinishWithAttack = payoffInHand(player, combo)
+    && Number.isFinite(attackCost)
+    && player.tp >= setupCost + payoffCost + attackCost;
+
+  switch (combo.faction) {
+    case '機鋼':
+      return payoffInHand(player, combo) && enemyCanThreaten(engine, playerId)
+        && isLikelyAttackTarget(player, target) && !target?.statuses.pressureArmor
+        && canBuildPressure(engine, playerId, target)
+        && (target?.life ?? 0) + (target?.defBase ?? 0) >= 15;
+    case '神造': {
+      const missing = target ? target.maxLife - target.life : 0;
+      const empoweredAttackCost = minimumDamagingMoveCost(engine, playerId, target);
+      return missing >= 5 && missing <= 10 && payoffInHand(player, combo)
+        && canAttackAfterExtraAction(engine, playerId, target)
+        && player.tp >= setupCost + payoffCost + empoweredAttackCost;
+    }
+    case '幻霊':
+      return payoffInHand(player, combo) && enemyCanThreaten(engine, playerId)
+        && isLikelyAttackTarget(player, target) && !target?.statuses.ghostLink && !target?.statuses.evadeNext;
+    case '魔族':
+      return player.life > 3 && payoffInHand(player, combo) && Number.isFinite(attackCost)
+        && player.tp >= setupCost + payoffCost + Math.max(1, attackCost - 1)
+        // 自傷3を血債回収の30%吸収で取り戻せない小ダメージでは
+        // コンボを始動しない。ゼロダメージで自滅する判断も防ぐ。
+        && projectedAttackDamage(engine, playerId, target, 0.45) >= 10;
+    case '獣族': {
+      const ready = player.board.filter((unit) => unit?.faction === '獣族' && canUnitAttack(engine, playerId, unit));
+      const twoAttackCost = ready.map((unit) => minimumAttackCost(engine, playerId, unit))
+        .sort((a, b) => a - b).slice(0, 2).reduce((sum, cost) => sum + cost, 0);
+      return ready.length >= 2 && player.tp >= setupCost + twoAttackCost + payoffCost;
+    }
+    case '怪物':
+      return canFinishWithAttack && protectedUsePenalty(player, strategy, action) > -50;
+    default:
+      return false;
+  }
+}
+
+function comboPayoffIsTimely(engine, playerId, action, combo) {
+  const player = engine.player(playerId);
+  const target = unitById(player, action.targetUnitId);
+  const regularAttackCost = minimumAttackCost(engine, playerId, target);
+  const bonusAttackCost = minimumDamagingMoveCost(engine, playerId, target);
+  const canAttackAfter = Number.isFinite(regularAttackCost) && player.tp >= (action.cost ?? 0) + regularAttackCost;
+  const canAttackAfterGrantedAction = canAttackAfterExtraAction(engine, playerId, target)
+    && player.tp >= (action.cost ?? 0) + bonusAttackCost;
+  switch (combo.faction) {
+    case '機鋼': return (target?.statuses.pressureCharge ?? 0) >= 5 && canAttackAfter;
+    case '神造': return Boolean(target?.statuses.tuningReady) && canAttackAfterGrantedAction;
+    case '幻霊': return Boolean(target?.statuses.afterimageReady) && canAttackAfterGrantedAction;
+    case '魔族': return (player.effects.comboTurn?.selfLifeLost ?? 0) > 0
+      && (target?.statuses.nextDamageBonus ?? 0) > 0
+      && canAttackAfter;
+    case '獣族': return Boolean(player.effects.comboTurn?.beastKill);
+    case '怪物': return Boolean(player.effects.comboTurn?.monsterDiscarded);
+    default: return false;
+  }
+}
+
+function acePlan(engine, playerId, strategy, actions = null) {
+  const ace = strategy.ace;
+  if (!ace) return null;
+  const player = engine.player(playerId);
+  const unlockTurn = player.isFirst ? RULES.firstFusionTurn : RULES.secondFusionTurn;
+  const fusionLocked = (player.effects.nextTurnFusionLocks ?? [])
+    .some((effect) => effect.activeFromTurn <= player.turnNumber && effect.remaining > 0);
+  if (player.turnNumber < unlockTurn || fusionLocked) return null;
+  const legalActions = actions ?? [];
+  const material = player.hand.find((card) => card.masterId === ace.materialId);
+  const mainUnit = player.board.find((unit) => (
+    unit?.sourceMasterId === ace.mainId && !unit.awakened && unit.fusionStage < RULES.maxFusionStage
+  ));
+  const fusion = actions
+    ? legalActions.find((action) => action.type === 'fusion-special' && action.fusionId === ace.id)
+    : material && mainUnit && player.tp >= RULES.specialFusionTp ? {
+        type: 'fusion-special',
+        unitId: mainUnit.id,
+        materialCardInstanceId: material.instanceId,
+        fusionId: ace.id,
+        cost: RULES.specialFusionTp,
+      } : null;
+  if (fusion) {
+    const boostCard = player.hand.find((card) => card.masterId === 'breeder-023');
+    const boostDefinition = engine.masterIndex.cards.get('breeder-023');
+    const boost = !player.effects.nextFusionBuff && boostCard
+      ? actions
+        ? legalActions.find((action) => action.type === 'breeder' && action.breederId === 'breeder-023')
+        : {
+            type: 'breeder',
+            cardInstanceId: boostCard.instanceId,
+            breederId: 'breeder-023',
+            cost: boostDefinition?.tp ?? 0,
+          }
+      : null;
+    const boostedCost = (boost?.cost ?? 0) + (fusion.cost ?? RULES.specialFusionTp);
+    if (boost && player.tp >= boostedCost) {
+      return { type: 'fusion-boost', action: boost, requiredTp: boostedCost };
+    }
+    return { type: 'fusion', action: fusion, requiredTp: fusion.cost ?? RULES.specialFusionTp };
+  }
+
+  const main = player.hand.find((card) => card.masterId === ace.mainId);
+  if (!material || !main) return null;
+  const emptySlot = player.board.findIndex((unit) => !unit);
+  const summon = actions
+    ? legalActions.find((action) => action.type === 'summon' && action.cardInstanceId === main.instanceId)
+    : emptySlot >= 0 && player.tp >= (engine.masterIndex.cards.get(ace.mainId)?.summonTp ?? Number.POSITIVE_INFINITY) ? {
+        type: 'summon',
+        cardInstanceId: main.instanceId,
+        slot: emptySlot,
+        cost: engine.masterIndex.cards.get(ace.mainId)?.summonTp ?? 0,
+      } : null;
+  if (!summon) return null;
+  const boostCard = player.hand.find((card) => card.masterId === 'breeder-023');
+  const boostCost = boostCard && !player.effects.nextFusionBuff
+    ? engine.masterIndex.cards.get('breeder-023')?.tp ?? 0
+    : 0;
+  const baseRequiredTp = (summon.cost ?? 0) + RULES.specialFusionTp;
+  const boostedRequiredTp = baseRequiredTp + boostCost;
+  const requiredTp = boostCost > 0 && player.tp >= boostedRequiredTp ? boostedRequiredTp : baseRequiredTp;
+  return player.tp >= requiredTp ? { type: 'summon-main', action: summon, requiredTp } : null;
 }
 
 function comboAdjustment(engine, playerId, action, strategy) {
@@ -180,32 +418,27 @@ function comboAdjustment(engine, playerId, action, strategy) {
   const player = engine.player(playerId);
   const target = unitById(player, action.targetUnitId);
   const isSetup = action.breederId === combo.setupId;
-  const payoffInHand = player.hand.some((card) => card.masterId === combo.payoffId);
+  if (isSetup) {
+    if (!comboSetupIsTimely(engine, playerId, action, combo, strategy)) return -115;
+    const targetValue = combo.faction === '魔族'
+      ? Math.min(40, projectedAttackDamage(engine, playerId, target, 0.45))
+      : 0;
+    return 86 + targetValue;
+  }
+  if (comboPayoffIsTimely(engine, playerId, action, combo)) {
+    const targetValue = combo.faction === '魔族'
+      ? Math.min(40, projectedAttackDamage(engine, playerId, target, 0.25))
+      : 0;
+    return 120 + targetValue;
+  }
   switch (combo.faction) {
     case '機鋼':
-      if (isSetup) return target?.statuses.pressureArmor ? -25 : 26;
-      return (target?.statuses.pressureCharge ?? 0) >= 5
-        ? 55 + target.statuses.pressureCharge * 2
-        : (target?.statuses.pressureCharge ?? 0) > 0 ? 24 : -48;
-    case '神造': {
-      if (!isSetup) return target?.statuses.tuningReady ? 68 : -38;
-      const missing = target ? target.maxLife - target.life : 0;
-      return missing >= 5 && missing <= 10 ? 42 : -30;
-    }
-    case '幻霊':
-      if (isSetup) return target?.statuses.ghostLink ? -20 : 32;
-      return target?.statuses.afterimageReady ? 72 : -48;
-    case '魔族':
-      if (isSetup) return payoffInHand && player.tp >= 3 ? 46 : 12;
-      return (player.effects.comboTurn?.selfLifeLost ?? 0) > 0 ? 78 : -55;
-    case '獣族': {
-      if (!isSetup) return (player.effects.comboTurn?.beastKill ?? false) ? 65 : -30;
-      const ready = player.board.filter((unit) => unit?.faction === '獣族' && unit.actionPoints > 0 && !unit.stunnedThisTurn).length;
-      return ready >= 2 ? 36 : ready === 1 ? 10 : -20;
-    }
-    case '怪物':
-      if (!isSetup) return (player.effects.comboTurn?.monsterDiscarded ?? false) ? 70 : -45;
-      return payoffInHand && player.tp >= 3 ? 62 : 12;
+      return (target?.statuses.pressureCharge ?? 0) > 0 ? -22 : -75;
+    case '神造': return -65;
+    case '幻霊': return -75;
+    case '魔族': return -95;
+    case '獣族': return -55;
+    case '怪物': return -60;
     default:
       return 0;
   }
@@ -215,69 +448,96 @@ export function strategyActionAdjustment(engine, playerId, action, strategy) {
   if (!strategy || strategy.playerId !== playerId) return 0;
   const player = engine.player(playerId);
   let score = protectedUsePenalty(player, strategy, action);
+  const plan = acePlan(engine, playerId, strategy);
+  if (plan && actionKeyForPlan(action) !== actionKeyForPlan(plan.action)) {
+    const remainingTp = player.tp - (action.cost ?? 0);
+    if (remainingTp < plan.requiredTp || ['end-turn', 'fusion-normal'].includes(action.type)) score -= 180;
+  }
   if (action.type === 'fusion-special') {
     const index = strategy.preferredFusionIds.indexOf(action.fusionId);
     if (index >= 0) score += index === 0 ? 125 : 55 - index * 10;
   }
+  if (action.type === 'breeder' && action.breederId === 'breeder-022' && strategy.ace) {
+    const chosen = player.deck.find((card) => card.instanceId === action.chosenCardInstanceId)?.masterId;
+    const mainReady = player.hand.some((card) => card.masterId === strategy.ace.mainId)
+      || player.board.some((unit) => unit?.sourceMasterId === strategy.ace.mainId && unit.fusionStage < RULES.maxFusionStage);
+    const materialReady = player.hand.some((card) => card.masterId === strategy.ace.materialId);
+    if (chosen === strategy.ace.mainId && !mainReady) score += 115;
+    if (chosen === strategy.ace.materialId && !materialReady) score += 125;
+  }
+  if (action.type === 'breeder' && action.breederId === 'breeder-023' && plan?.type === 'fusion-boost') score += 145;
   if (action.type === 'summon' && strategy.ace) {
     const masterId = handCard(player, action.cardInstanceId)?.masterId;
     const hasMain = player.board.some((unit) => unit?.sourceMasterId === strategy.ace.mainId && unit.fusionStage < 2);
-    if (masterId === strategy.ace.mainId && !hasMain) score += 38;
-    if (masterId === strategy.ace.materialId && hasMain) score -= 75;
+    if (masterId === strategy.ace.mainId && !hasMain) score += plan?.type === 'summon-main' ? 150 : 38;
+    if (masterId === strategy.ace.materialId) score -= hasMain ? 120 : 75;
   }
   score += comboAdjustment(engine, playerId, action, strategy);
   return score;
 }
 
+function actionKeyForPlan(action) {
+  if (!action) return '';
+  return [action.type, action.cardInstanceId, action.unitId, action.materialCardInstanceId, action.fusionId]
+    .filter((value) => value != null).join(':');
+}
+
+function missingAceSearchAction(player, strategy, actions) {
+  if (!strategy.ace) return null;
+  const mainReady = player.hand.some((card) => card.masterId === strategy.ace.mainId)
+    || player.board.some((unit) => unit?.sourceMasterId === strategy.ace.mainId
+      && !unit.awakened && unit.fusionStage < RULES.maxFusionStage);
+  const materialReady = player.hand.some((card) => card.masterId === strategy.ace.materialId);
+  const wantedId = mainReady && !materialReady ? strategy.ace.materialId
+    : materialReady && !mainReady ? strategy.ace.mainId
+      : null;
+  if (!wantedId) return null;
+  return actions.find((action) => action.type === 'breeder' && action.breederId === 'breeder-022'
+    && player.deck.some((card) => card.instanceId === action.chosenCardInstanceId && card.masterId === wantedId)) ?? null;
+}
+
 function enhancedComboAction(engine, playerId, strategy, actions) {
-  const player = engine.player(playerId);
   return actions.find((action) => {
     const combo = strategy.combos.find((entry) => entry.payoffId === action.breederId);
     if (!combo || combo.completeCopies <= 0) return false;
-    const target = unitById(player, action.targetUnitId);
-    if (combo.faction === '機鋼') return (target?.statuses.pressureCharge ?? 0) >= 5;
-    if (combo.faction === '神造') return Boolean(target?.statuses.tuningReady);
-    if (combo.faction === '幻霊') return Boolean(target?.statuses.afterimageReady);
-    if (combo.faction === '魔族') return (player.effects.comboTurn?.selfLifeLost ?? 0) > 0;
-    if (combo.faction === '獣族') return Boolean(player.effects.comboTurn?.beastKill);
-    if (combo.faction === '怪物') return Boolean(player.effects.comboTurn?.monsterDiscarded);
-    return false;
+    return comboPayoffIsTimely(engine, playerId, action, combo);
   }) ?? null;
 }
 
 function preparatoryComboAction(engine, playerId, strategy, actions) {
-  const player = engine.player(playerId);
   const candidates = actions.filter((action) => {
     const combo = strategy.combos.find((entry) => entry.setupId === action.breederId);
     if (!combo || combo.completeCopies <= 0) return false;
-    const payoff = player.hand.find((card) => card.masterId === combo.payoffId);
-    if (!payoff) return false;
-    const payoffCost = engine.masterIndex.cards.get(combo.payoffId)?.tp ?? 0;
-    if (player.tp < (action.cost ?? 0) + payoffCost) return false;
-    const target = unitById(player, action.targetUnitId);
-    if (combo.faction === '魔族') return true;
-    if (combo.faction === '怪物') return protectedUsePenalty(player, strategy, action) > -50;
-    if (combo.faction === '神造') {
-      const missing = target ? target.maxLife - target.life : 0;
-      return missing >= 5 && missing <= 10 && target.actionPoints > 0;
-    }
-    return false;
+    return comboSetupIsTimely(engine, playerId, action, combo, strategy);
   });
   return candidates.sort((a, b) => strategyActionAdjustment(engine, playerId, b, strategy)
     - strategyActionAdjustment(engine, playerId, a, strategy))[0] ?? null;
 }
 
+function untimelyComboAction(engine, playerId, action, strategy) {
+  if (action.type !== 'breeder') return false;
+  const combo = strategy.combos.find((entry) => [entry.setupId, entry.payoffId].includes(action.breederId));
+  if (!combo || combo.completeCopies <= 0) return false;
+  return action.breederId === combo.setupId
+    ? !comboSetupIsTimely(engine, playerId, action, combo, strategy)
+    : !comboPayoffIsTimely(engine, playerId, action, combo);
+}
+
 export function applyStrategyGuardrails(engine, playerId, selected, strategy, scoreAction) {
   if (!strategy || strategy.playerId !== playerId) return selected;
   const actions = engine.getLegalActions(playerId).filter((action) => !action.meta?.aiAvoid);
+  const plan = acePlan(engine, playerId, strategy, actions);
+  if (plan) return plan.action;
   const payoff = enhancedComboAction(engine, playerId, strategy, actions);
   if (payoff) return payoff;
-  const fusion = actions.find((action) => action.type === 'fusion-special' && action.fusionId === strategy.ace?.id);
-  if (fusion) return fusion;
+  const search = missingAceSearchAction(engine.player(playerId), strategy, actions);
+  if (search) return search;
   const setup = preparatoryComboAction(engine, playerId, strategy, actions);
   if (setup) return setup;
-  if (protectedUsePenalty(engine.player(playerId), strategy, selected) > -50) return selected;
-  const safe = actions.filter((action) => protectedUsePenalty(engine.player(playerId), strategy, action) > -50);
+  if (protectedUsePenalty(engine.player(playerId), strategy, selected) > -50
+    && !untimelyComboAction(engine, playerId, selected, strategy)) return selected;
+  const safe = actions.filter((action) => protectedUsePenalty(engine.player(playerId), strategy, action) > -50
+    && !untimelyComboAction(engine, playerId, action, strategy));
   if (!safe.length) return selected;
   return safe.map((action) => ({ action, score: scoreAction(action) }))
     .sort((a, b) => b.score - a.score)[0].action;
