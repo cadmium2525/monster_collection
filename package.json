@@ -17,6 +17,7 @@
     "test:engine": "node --test tests/battle tests/deck",
     "sim": "node tools/ai-lab.mjs",
     "sim:awakening": "node tools/awakening-audit.mjs",
+    "sim:arena-auto": "node tools/arena-auto-audit.mjs",
     "sim:decks": "node tools/deck-lab.mjs",
     "sim:factions": "node tools/faction-ai-audit.mjs",
     "sim:tournament": "node tools/tournament-lab.mjs",
