@@ -49,12 +49,17 @@ function chooseTargetRecipes(masterIndex, theme, count, rng) {
     isNormalCpuEligible(monsterDefinitionByName(masterIndex, fusion.main))
     && isNormalCpuEligible(monsterDefinitionByName(masterIndex, fusion.material))
   ));
-  const themed = theme === '混合' ? all : all.filter((fusion) => {
-    const main = monsterDefinitionByName(masterIndex, fusion.main);
-    const material = monsterDefinitionByName(masterIndex, fusion.material);
-    return main.faction === theme || material.faction === theme;
-  });
-  return rng.shuffle(themed).slice(0, Math.min(count, themed.length));
+  if (theme === '混合') return rng.shuffle(all).slice(0, Math.min(count, all.length));
+  // A special fusion keeps the main monster's classification. Prioritising a
+  // route merely because its material matched the theme produced misleading
+  // faction decks and diluted the targets of classification-specific cards.
+  const primary = all.filter((fusion) => monsterDefinitionByName(masterIndex, fusion.main).faction === theme);
+  const secondary = all.filter((fusion) => (
+    monsterDefinitionByName(masterIndex, fusion.main).faction !== theme
+    && monsterDefinitionByName(masterIndex, fusion.material).faction === theme
+  ));
+  const themed = [...rng.shuffle(primary), ...rng.shuffle(secondary)];
+  return themed.slice(0, Math.min(count, themed.length));
 }
 
 function fillMonsterCounts(masterIndex, theme, config, recipes, rng) {
@@ -99,8 +104,22 @@ function fillMonsterCounts(masterIndex, theme, config, recipes, rng) {
     const removable = [...counts.entries()].filter(([id, copies]) => {
       const minimum = requiredNames.has(masterIndex.monsters.get(id).name) ? 1 : 0;
       return copies > minimum;
-    }).reverse();
-    const entry = removable.find(([id]) => !requiredNames.has(masterIndex.monsters.get(id).name)) ?? removable[0];
+    }).sort(([leftId, leftCopies], [rightId, rightCopies]) => {
+      const left = masterIndex.monsters.get(leftId);
+      const right = masterIndex.monsters.get(rightId);
+      const leftOffTheme = theme !== '混合' && left.faction !== theme ? 1 : 0;
+      const rightOffTheme = theme !== '混合' && right.faction !== theme ? 1 : 0;
+      const leftOptional = requiredNames.has(left.name) ? 0 : 1;
+      const rightOptional = requiredNames.has(right.name) ? 0 : 1;
+      // First trim surplus copies of cross-classification fusion materials.
+      // Only then touch optional/theme monsters, preserving the promised
+      // classification density without breaking any targeted recipe.
+      return rightOffTheme - leftOffTheme
+        || rightOptional - leftOptional
+        || rightCopies - leftCopies
+        || leftId.localeCompare(rightId);
+    });
+    const entry = removable[0];
     if (!entry) throw new Error('Unable to trim monster slots without breaking a targeted fusion recipe');
     counts.set(entry[0], entry[1] - 1);
     if (!counts.get(entry[0])) counts.delete(entry[0]);

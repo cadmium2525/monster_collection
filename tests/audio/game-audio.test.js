@@ -182,11 +182,11 @@ test('home, tournament/arena prebattle and battle screens switch tracks at their
   controller.setScreen('reward');
   await tick();
   assert.equal(controller.tracks.home.paused, true);
-  assert.equal(controller.tracks.arena.paused, true);
+  assert.equal(controller.tracks.arena.paused, false);
   assert.equal(controller.tracks.battle.paused, true);
 });
 
-test('shop and card management keep the home BGM playing continuously', async () => {
+test('all utility screens keep the home BGM playing continuously', async () => {
   const controller = new GameAudioController({
     storage: memoryStorage(), documentRef: new FakeEvents(), windowRef: new FakeEvents(), navigatorRef: { userAgent: 'Desktop' },
     AudioCtor: FakeAudio, AudioContextCtor: FakeAudioContext,
@@ -194,12 +194,38 @@ test('shop and card management keep the home BGM playing continuously', async ()
   controller.setScreen('home');
   await controller.unlockFromGesture();
   const playCalls = controller.tracks.home.playCalls;
-  for (const screen of ['boosters', 'pack-opening', 'decks', 'deck-detail', 'deck-builder', 'assets', 'card-catalog']) {
+  for (const screen of [
+    'boosters', 'pack-opening', 'decks', 'deck-detail', 'deck-builder', 'assets', 'card-catalog',
+    'missions', 'profile', 'admin', 'admin-pack-preview',
+  ]) {
     controller.setScreen(screen);
     await tick();
     assert.equal(controller.tracks.home.paused, false, `${screen} should retain home BGM`);
   }
   assert.equal(controller.tracks.home.playCalls, playCalls);
+});
+
+test('loading preserves its current mode BGM and returning home restarts home BGM', async () => {
+  const controller = new GameAudioController({
+    storage: memoryStorage(), documentRef: new FakeEvents(), windowRef: new FakeEvents(), navigatorRef: { userAgent: 'iPhone' },
+    AudioCtor: FakeAudio, AudioContextCtor: FakeAudioContext,
+  });
+  controller.setScreen('home');
+  const unlock = controller.unlockFromGesture();
+  assert.equal(controller.tracks.home.playCalls, 1, 'play must start before WebKit consumes the gesture at an await');
+  await unlock;
+
+  controller.setScreen('arena');
+  await tick();
+  controller.setScreen('loading');
+  await tick();
+  assert.equal(controller.tracks.arena.paused, false);
+  assert.equal(controller.tracks.home.paused, true);
+
+  controller.setScreen('home');
+  await tick();
+  assert.equal(controller.tracks.arena.paused, true);
+  assert.equal(controller.tracks.home.paused, false);
 });
 
 test('visibility pauses the active track and resumes it without resetting its position', async () => {

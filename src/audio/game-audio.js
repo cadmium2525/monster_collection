@@ -17,17 +17,15 @@ export const SE_VOLUME_STORAGE_KEY = 'mc-se-volume-v1';
 
 const LEGACY_HOME_BGM_VOLUME_STORAGE_KEY = 'mc-home-bgm-volume-v1';
 const MAX_SE_VOICES_PER_SOURCE = 3;
-const HOME_BGM_SCREENS = new Set([
-  'home',
-  'boosters',
-  'pack-opening',
-  'decks',
-  'deck-detail',
-  'deck-builder',
-  'assets',
-  'card-catalog',
+const MODE_BGM_SCREENS = new Set([
+  'setup',
+  'tournament',
+  'reward',
+  'arena',
+  'arena-result',
+  'survival',
+  'survival-result',
 ]);
-const PREBATTLE_SCREENS = new Set(['setup', 'tournament', 'arena', 'survival']);
 const BATTLE_SCREENS = new Set(['battle', 'arena-battle', 'survival-battle']);
 
 export function normalizeAudioVolume(value, fallback = BGM_DEFAULT_VOLUME) {
@@ -61,11 +59,15 @@ export function isIosDevice(navigatorRef = globalThis.navigator) {
     || (navigatorRef?.platform === 'MacIntel' && Number(navigatorRef?.maxTouchPoints) > 1);
 }
 
-function sceneForScreen(screen) {
-  if (HOME_BGM_SCREENS.has(screen)) return 'home';
-  if (PREBATTLE_SCREENS.has(screen)) return 'arena';
+function sceneForScreen(screen, currentScene = null) {
+  if (MODE_BGM_SCREENS.has(screen)) return 'arena';
   if (BATTLE_SCREENS.has(screen)) return 'battle';
-  return null;
+  // Loading overlays belong to the screen that opened them. Keeping the
+  // current scene prevents a short home-BGM burst while a mode saves/loads.
+  if (screen === 'loading') return currentScene ?? 'home';
+  // Missions, profile, shop, card management and future utility screens all
+  // share the home scene unless explicitly assigned above.
+  return 'home';
 }
 
 export class GameAudioController {
@@ -133,7 +135,7 @@ export class GameAudioController {
   }
 
   setScreen(screen) {
-    const nextScene = sceneForScreen(screen);
+    const nextScene = sceneForScreen(screen, this.scene);
     if (nextScene === 'battle' && this.scene !== 'battle') {
       try { this.tracks.battle.currentTime = 0; } catch { /* Metadata may not be loaded yet. */ }
     }
@@ -377,16 +379,28 @@ export class GameAudioController {
       return false;
     }
     this._configureAmbientSession();
+    let resumePromise = null;
     if (this.audioContext && this.audioContext.state !== 'running' && this.audioContext.state !== 'closed') {
-      try { await this.audioContext.resume(); } catch { return false; }
+      try { resumePromise = this.audioContext.resume(); } catch { return false; }
     }
-    if (sequence !== this.syncSequence || target !== this.tracks[this.scene] || !this.pageVisible || this.bgmVolume === 0) return false;
-    if (target.paused === false) return true;
+    // WebKit can consume the user-activation token at the first await. Start
+    // both resume() and play() synchronously, then await their completion.
+    let playPromise = null;
     try {
-      await target.play();
-      return true;
+      if (target.paused !== false) playPromise = target.play();
     } catch {
       return false;
     }
+    try {
+      if (resumePromise) await resumePromise;
+      if (playPromise) await playPromise;
+    } catch {
+      return false;
+    }
+    if (sequence !== this.syncSequence || target !== this.tracks[this.scene] || !this.pageVisible || this.bgmVolume === 0) {
+      if (target !== this.tracks[this.scene]) target.pause?.();
+      return false;
+    }
+    return target.paused === false;
   }
 }

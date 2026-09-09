@@ -28,6 +28,7 @@ test('title gesture unlocks audio and screen changes select the scene BGM', () =
   const app = read('../../src/app.js');
   assert.match(app, /new GameAudioController\(\)/);
   assert.match(app, /onStart:[\s\S]*audio\.unlockFromGesture\(\)[\s\S]*showHome\(\)/);
+  assert.match(app, /showHome\(\)\s*\{[\s\S]*currentScreen = 'home';[\s\S]*audio\.unlockFromGesture\(\)/);
   assert.match(app, /set currentScreen\(value\)[\s\S]*audio\?\.setScreen\(value\)/);
   assert.match(app, /bgmVolume: this\.audio\.bgmVolume/);
   assert.match(app, /seVolume: this\.audio\.seVolume/);

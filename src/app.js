@@ -230,6 +230,9 @@ class MonsterConstructionApp {
 
   showHome() {
     this.currentScreen = 'home';
+    // A mode may return here after an asynchronous save. Retry while a back
+    // tap still supplies user activation so iOS/PWA reliably resumes home BGM.
+    void this.audio.unlockFromGesture();
     this.session = null;
     new HomeScreen({
       root: this.root,

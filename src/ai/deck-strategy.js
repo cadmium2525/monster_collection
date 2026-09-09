@@ -308,11 +308,11 @@ function comboSetupIsTimely(engine, playerId, action, combo, strategy) {
       return payoffInHand(player, combo) && enemyCanThreaten(engine, playerId)
         && isLikelyAttackTarget(player, target) && !target?.statuses.ghostLink && !target?.statuses.evadeNext;
     case '魔族':
-      return player.life > 3 && payoffInHand(player, combo) && Number.isFinite(attackCost)
+      return player.life > 2 && payoffInHand(player, combo) && Number.isFinite(attackCost)
         && player.tp >= setupCost + payoffCost + Math.max(1, attackCost - 1)
-        // 自傷3を血債回収の30%吸収で取り戻せない小ダメージでは
+        // 自傷2を血債回収の40%吸収で取り戻せない小ダメージでは
         // コンボを始動しない。ゼロダメージで自滅する判断も防ぐ。
-        && projectedAttackDamage(engine, playerId, target, 0.45) >= 10;
+        && projectedAttackDamage(engine, playerId, target, 0.5) >= 8;
     case '獣族': {
       const ready = player.board.filter((unit) => unit?.faction === '獣族' && canUnitAttack(engine, playerId, unit));
       const twoAttackCost = ready.map((unit) => minimumAttackCost(engine, playerId, unit))
@@ -335,7 +335,9 @@ function comboPayoffIsTimely(engine, playerId, action, combo) {
   const canAttackAfterGrantedAction = canAttackAfterExtraAction(engine, playerId, target)
     && player.tp >= (action.cost ?? 0) + bonusAttackCost;
   switch (combo.faction) {
-    case '機鋼': return (target?.statuses.pressureCharge ?? 0) >= 5 && canAttackAfter;
+    // Even a partial charge should be converted before the target is removed;
+    // the TP discount remains reserved for 5+ charge in the battle rules.
+    case '機鋼': return (target?.statuses.pressureCharge ?? 0) > 0 && canAttackAfter;
     case '神造': return Boolean(target?.statuses.tuningReady) && canAttackAfterGrantedAction;
     case '幻霊': return Boolean(target?.statuses.afterimageReady) && canAttackAfterGrantedAction;
     case '魔族': return (player.effects.comboTurn?.selfLifeLost ?? 0) > 0
@@ -421,7 +423,7 @@ function comboAdjustment(engine, playerId, action, strategy) {
   if (isSetup) {
     if (!comboSetupIsTimely(engine, playerId, action, combo, strategy)) return -115;
     const targetValue = combo.faction === '魔族'
-      ? Math.min(40, projectedAttackDamage(engine, playerId, target, 0.45))
+      ? Math.min(40, projectedAttackDamage(engine, playerId, target, 0.5))
       : 0;
     return 86 + targetValue;
   }

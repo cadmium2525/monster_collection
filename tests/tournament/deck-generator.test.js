@@ -53,3 +53,19 @@ test('Gold and Legend faction decks carry both halves of their new combo package
     }
   }
 });
+
+test('Machine and Demon Legend decks target fusions led by their own classification', () => {
+  for (const theme of ['機鋼', '魔族']) {
+    const generated = generateCpuDeck({ masterIndex, rank: 'legend', theme, rng: new SeededRng(`primary-routes:${theme}`) });
+    assert.equal(generated.targetedFusionIds.length, GENERATOR_CONFIG.legend.targetedRecipes);
+    // Normal CPU decks intentionally exclude booster-only monsters, so the
+    // three core monsters cap these classifications at 9/15 copies.
+    assert.ok(generated.analysis.themePurity >= 0.6);
+    for (const fusionId of generated.targetedFusionIds) {
+      const fusion = masterIndex.data.fusions.find((candidate) => candidate.id === fusionId);
+      assert.ok(fusion);
+      const main = masterIndex.monstersByName.get(fusion.main);
+      assert.equal(main.faction, theme, `${theme} deck should be led by ${theme}, not only use it as material`);
+    }
+  }
+});

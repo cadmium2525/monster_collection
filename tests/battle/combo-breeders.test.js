@@ -14,21 +14,26 @@ function playOn(battle, breederId, unit, extra = []) {
   battle.applyAction(breederAction(battle, breederId, (action) => action.targetUnitId === unit.id));
 }
 
-test('machine armor stores only prevented damage and releases it with the capped TP discount', () => {
+test('machine armor accumulates prevented damage across attacks and releases it with the TP discount', () => {
   const battle = engine();
   const machine = placeUnit(battle, 'p1', 'ギアセンチネル', 0);
   playOn(battle, 'breeder-056', machine);
-  assert.deepEqual(machine.statuses.pressureArmor, { armed: true, defAmount: 5, remaining: 2 });
-  assert.deepEqual(machine.timedDefBuffs.at(-1), { amount: 5, remaining: 2 });
+  assert.deepEqual(machine.statuses.pressureArmor, { armed: true, defAmount: 10, remaining: 3 });
+  assert.deepEqual(machine.timedDefBuffs.at(-1), { amount: 10, remaining: 3 });
 
-  battle._damageUnit(battle.player('p1'), machine, 18, null, { pressurePrevented: 12 });
+  battle._damageUnit(battle.player('p1'), machine, 0, null, { pressurePrevented: 0 });
+  assert.equal(machine.statuses.pressureArmor.armed, true, 'a zero-damage poke must not consume the armor');
+  battle._damageUnit(battle.player('p1'), machine, 1, null, { pressurePrevented: 3 });
+  assert.equal(machine.statuses.pressureCharge, 3);
+  assert.equal(machine.statuses.pressureArmor.armed, true);
+  battle._damageUnit(battle.player('p1'), machine, 1, null, { pressurePrevented: 7 });
   assert.equal(machine.statuses.pressureCharge, 10);
   assert.equal(machine.statuses.pressureArmor.armed, false);
 
   playOn(battle, 'breeder-057', machine);
   assert.equal(machine.statuses.pressureCharge, 0);
   assert.equal(machine.statuses.pressureRelease, 10);
-  assert.equal(machine.statuses.nextDamageBonus, 0.1);
+  assert.equal(machine.statuses.nextDamageBonus, 0.15);
   assert.equal(machine.statuses.nextMoveTpDiscount, 1);
 });
 
@@ -77,12 +82,16 @@ test('bloodline ignition always discounts the attack and enables enhanced blood-
   battle.player('p1').life = 100;
 
   playOn(battle, 'breeder-062', demon);
-  assert.equal(battle.player('p1').life, 97);
+  assert.equal(battle.player('p1').life, 98);
   assert.equal(demon.statuses.nextMoveTpDiscount, 1);
   setHand(battle, 'p1', [card('breeder-063', 'blood-debt')]);
   battle.applyAction(breederAction(battle, 'breeder-063', (action) => action.targetUnitId === demon.id));
-  assert.equal(demon.statuses.nextDamageBonus, 0.45);
-  assert.deepEqual(demon.statuses.nextDamageLifesteal, { ratio: 0.3, cap: 12 });
+  assert.equal(demon.statuses.nextDamageBonus, 0.5);
+  assert.deepEqual(demon.statuses.nextDamageLifesteal, { ratio: 0.4, cap: 12 });
+  assert.equal(demon.actionPoints, 2);
+  setHand(battle, 'p1', [card('breeder-063', 'second-blood-debt')]);
+  assert.equal(battle.getLegalActions().some((candidate) => candidate.breederId === 'breeder-063'), false);
+  setHand(battle, 'p1', []);
 
   const action = battle.getLegalActions().find((candidate) => candidate.type === 'move'
     && candidate.unitId === demon.id && candidate.targetUnitId === target.id);

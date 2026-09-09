@@ -1119,15 +1119,17 @@ export class BattleEngine {
     const { damage, triggers } = applyIncomingModifiers(unit, adjustedRawDamage);
     if (triggerAttacked && unit.statuses.pressureArmor?.armed) {
       const stored = Math.min(10, Math.max(0, Math.floor(Number(pressurePrevented) || 0)));
-      unit.statuses.pressureCharge = Math.min(10, Math.max(0, Number(unit.statuses.pressureCharge) || 0) + stored);
-      unit.statuses.pressureArmor.armed = false;
-      triggers.push(`蓄圧+${stored}`);
-      this._log('combo', `${unit.name}が軽減した${stored}ダメージを蓄圧`, {
-        playerId: owner.id,
-        unitId: unit.id,
-        combo: 'pressure-charge',
-        amount: stored,
-      });
+      if (stored > 0) {
+        unit.statuses.pressureCharge = Math.min(10, Math.max(0, Number(unit.statuses.pressureCharge) || 0) + stored);
+        unit.statuses.pressureArmor.armed = unit.statuses.pressureCharge < 10;
+        triggers.push(`蓄圧+${stored}`);
+        this._log('combo', `${unit.name}が軽減した${stored}ダメージを蓄圧`, {
+          playerId: owner.id,
+          unitId: unit.id,
+          combo: 'pressure-charge',
+          amount: stored,
+        });
+      }
     }
     if (markTriggered) triggers.push(`呪印+${flatMark.amount}`);
     const before = unit.life;
@@ -2047,9 +2049,9 @@ export class BattleEngine {
       case '幻霊・残像追撃':
         return comboUnused('afterimage-pursuit') ? factionTargets('幻霊') : [];
       case '魔族・血脈点火':
-        return player.life > 3 && comboUnused('blood-ignition') ? factionTargets('魔族') : [];
+        return player.life > 2 && comboUnused('blood-ignition') ? factionTargets('魔族') : [];
       case '魔族・血債回収':
-        return factionTargets('魔族');
+        return comboUnused('blood-debt-recovery') ? factionTargets('魔族') : [];
       case '獣族・狩場指定':
         return targetActions(enemy);
       case '獣族・戦果分配':
@@ -2292,15 +2294,15 @@ export class BattleEngine {
         break;
       }
       case '機鋼・蓄圧装甲':
-        ownTarget.timedDefBuffs.push({ amount: 5, remaining: 2 });
-        ownTarget.statuses.pressureArmor = { armed: true, defAmount: 5, remaining: 2 };
+        ownTarget.timedDefBuffs.push({ amount: 10, remaining: 3 });
+        ownTarget.statuses.pressureArmor = { armed: true, defAmount: 10, remaining: 3 };
         break;
       case '機鋼・装甲解放': {
         const pressure = Math.min(10, Math.max(0, Number(ownTarget.statuses.pressureCharge) || 0));
-        ownTarget.statuses.nextDamageBonus += 0.1;
+        ownTarget.statuses.nextDamageBonus += 0.15;
         ownTarget.statuses.pressureRelease = pressure;
         ownTarget.statuses.pressureCharge = 0;
-        if (pressure >= 10) ownTarget.statuses.nextMoveTpDiscount = Math.max(1, ownTarget.statuses.nextMoveTpDiscount ?? 0);
+        if (pressure >= 5) ownTarget.statuses.nextMoveTpDiscount = Math.max(1, ownTarget.statuses.nextMoveTpDiscount ?? 0);
         break;
       }
       case '神造・聖域調律': {
@@ -2333,15 +2335,20 @@ export class BattleEngine {
         break;
       }
       case '魔族・血脈点火':
-        this._losePlayerLife(player, 3);
-        ownTarget.statuses.nextDamageBonus += 0.2;
+        this._losePlayerLife(player, 2);
+        ownTarget.statuses.nextDamageBonus += 0.25;
         ownTarget.statuses.nextMoveTpDiscount = Math.max(1, ownTarget.statuses.nextMoveTpDiscount ?? 0);
         this._markComboUsed(player, 'blood-ignition');
         break;
-      case '魔族・血債回収':
-        ownTarget.statuses.nextDamageLifesteal = { ratio: 0.3, cap: 12 };
-        if ((player.effects.comboTurn?.selfLifeLost ?? 0) > 0) ownTarget.statuses.nextDamageBonus += 0.25;
+      case '魔族・血債回収': {
+        ownTarget.statuses.nextDamageLifesteal = { ratio: 0.4, cap: 12 };
+        if ((player.effects.comboTurn?.selfLifeLost ?? 0) > 0) {
+          ownTarget.statuses.nextDamageBonus += 0.25;
+          ownTarget.actionPoints += 1;
+        }
+        this._markComboUsed(player, 'blood-debt-recovery');
         break;
+      }
       case '獣族・狩場指定':
         enemyTarget.statuses.huntingMark = {
           sourcePlayerId: player.id,

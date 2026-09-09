@@ -254,4 +254,9 @@ test('Legend AI only arms pressure armor when a visible attack can build its pay
   action = chooseAiAction('legend', strongBattle, 'p1', new SeededRng('pressure-arm'), { strategy, timeBudgetMs: 1 });
   assert.equal(action.breederId, 'breeder-056');
   assert.equal(action.targetUnitId, machine.id);
+  strongBattle.applyAction(action);
+  machine.statuses.pressureCharge = 3;
+  action = chooseAiAction('legend', strongBattle, 'p1', new SeededRng('pressure-release-partial'), { strategy, timeBudgetMs: 1 });
+  assert.equal(action.breederId, 'breeder-057');
+  assert.equal(action.targetUnitId, machine.id);
 });

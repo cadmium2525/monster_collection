@@ -157,22 +157,23 @@ function createFocusedMatureDeck(faction, variant) {
     .sort((a, b) => ((b.base.life + b.base.atk + b.base.def) / b.summonTp)
       - ((a.base.life + a.base.atk + a.base.def) / a.summonTp)
       || a.id.localeCompare(b.id));
-  const excludedIndex = variant % sameFaction.length;
-  const supportingMonsters = sameFaction.filter((_, index) => index !== excludedIndex).slice(0, 3);
+  const offset = variant % sameFaction.length;
+  const supportingMonsters = [...sameFaction.slice(offset), ...sameFaction.slice(0, offset)].slice(0, 4);
+  const supportCopies = [3, 3, 2, 2];
   const [setupId, payoffId] = COMBO_PAIR_BY_FACTION[faction];
   const ids = [
     ...Array(3).fill(main.id),
     ...Array(3).fill(material.id),
-    ...supportingMonsters.flatMap((monster) => Array(3).fill(monster.id)),
-    ...Array(3).fill(setupId),
-    ...Array(3).fill(payoffId),
-    ...Array(2).fill('breeder-022'),
-    ...Array(2).fill('breeder-023'),
-    ...Array(3).fill('training-life'),
-    ...Array(3).fill('training-atk'),
-    ...Array(3).fill('training-def'),
-    ...Array(3).fill('shugyo-attack'),
-    ...Array(3).fill('shugyo-defense'),
+    ...supportingMonsters.flatMap((monster, index) => Array(supportCopies[index]).fill(monster.id)),
+    setupId,
+    payoffId,
+    'breeder-022',
+    'breeder-023',
+    ...Array(4).fill('training-life'),
+    ...Array(4).fill('training-atk'),
+    ...Array(4).fill('training-def'),
+    ...Array(4).fill('shugyo-attack'),
+    ...Array(4).fill('shugyo-defense'),
   ];
   const cards = normalizeDeckCards(
     new SeededRng(`${seed}:focused:${faction}:${variant + 1}`).shuffle(ids),
@@ -347,7 +348,7 @@ const result = {
     forcedInitiative: '各条件を候補先攻・候補後攻で1回ずつ実行',
     fieldDefinition: '6分類の独立生成Legend成熟デッキ群',
     matureDefinition: matureMode === 'focused'
-      ? '主分類80%・分類コンボ各3枚・エース特殊合体素材各3枚の焦点型40枚'
+      ? '主分類81%・モンスター16枚・分類コンボ各1枚・探索/融合強化各1枚・育成20枚の焦点型40枚'
       : '主分類・分類コンボ・狙い特殊合体を持つLegend生成40枚',
     starterDefinition: '同じ分類の初期40枚',
   },
