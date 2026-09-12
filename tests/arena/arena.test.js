@@ -94,6 +94,7 @@ test('one arena result advances daily and weekly missions exactly once', () => {
   assert.equal(entries.find((entry) => entry.id === 'weekly-arena-plays').actualProgress, 1);
   assert.equal(entries.find((entry) => entry.id === 'weekly-arena-wins').actualProgress, 1);
   assert.equal(economy.arenaProgress.wins, 1);
+  assert.equal(economy.arenaProgress.battleHistory[0].battleMode, 'manual');
   assert.equal(economy.arenaProgress.battleHistory.length, 1);
 });
 

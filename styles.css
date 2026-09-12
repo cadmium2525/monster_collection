@@ -2832,10 +2832,15 @@ body:has(.home-lobby) {
 .arena-versus small { color:#8fdedb; font-size:7px; }.arena-versus strong { max-width:100%; overflow:hidden; color:#f2dfa5; font-size:13px; text-overflow:ellipsis; white-space:nowrap; }.arena-versus span { color:#b8c8cd; font-size:8px; }
 .arena-versus > i { color:#e1bd63; font:italic 800 23px/1 Georgia,serif; text-align:center; }
 .arena-match-preview > p { margin:0; color:#9fb1b8; font-size:8px; text-align:center; }
-.arena-match-choices { min-height:0; display:grid; grid-template-rows:auto minmax(0,1fr); gap:8px; padding:10px; overflow:hidden; border:1px solid rgba(108,163,184,.32); border-radius:17px 6px; background:linear-gradient(145deg,rgba(5,16,29,.95),rgba(10,29,43,.9)); }
+.arena-match-choices { min-height:0; display:grid; grid-template-rows:auto auto minmax(0,1fr); gap:8px; padding:10px; overflow:hidden; border:1px solid rgba(108,163,184,.32); border-radius:17px 6px; background:linear-gradient(145deg,rgba(5,16,29,.95),rgba(10,29,43,.9)); }
 .arena-match-heading { min-width:0; display:flex; align-items:center; justify-content:space-between; gap:12px; }
 .arena-match-heading .section-title { min-width:0; }
+.arena-match-tools { flex:none; display:flex; align-items:center; gap:7px; }
+.arena-battle-mode { display:flex; padding:3px; border:1px solid rgba(104,190,198,.34); border-radius:999px; background:rgba(1,10,18,.72); }
+.arena-battle-mode button { min-width:88px; padding:6px 10px; border:0; border-radius:999px; color:#9fb4bb; background:transparent; cursor:pointer; font-size:8px; font-weight:800; }
+.arena-battle-mode button.selected { color:#fff0bd; background:linear-gradient(110deg,rgba(22,112,119,.9),rgba(105,71,24,.82)); box-shadow:0 0 11px rgba(88,224,217,.2); }
 .arena-refresh-button { flex:none; }
+.arena-auto-mode-note { margin:0; padding:5px 9px; border-left:3px solid #67ddd7; color:#c8e8e7; background:rgba(52,196,190,.06); font-size:8px; }
 .arena-opponent-choice-list { min-height:0; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:10px; }
 .arena-opponent-choice { min-width:0; display:grid; grid-template-rows:auto auto minmax(0,1fr) auto; gap:8px; padding:11px; border:1px solid rgba(106,169,187,.34); border-radius:14px 5px; background:linear-gradient(155deg,rgba(7,23,37,.96),rgba(3,12,22,.94)); box-shadow:0 10px 24px rgba(0,0,0,.22); }
 .arena-opponent-choice > header { display:flex; align-items:baseline; justify-content:space-between; gap:6px; border-bottom:1px solid rgba(125,169,182,.2); padding-bottom:7px; }
@@ -2856,6 +2861,28 @@ body:has(.home-lobby) {
 .arena-loot-offer { display:grid; justify-items:center; gap:4px; padding:6px; border:1px solid rgba(120,164,180,.28); border-radius:9px; color:#dce8e9; background:rgba(4,13,23,.8); cursor:pointer; }
 .arena-loot-offer.selected { border-color:#e4bd63; box-shadow:0 0 18px rgba(228,189,99,.27); transform:translateY(-3px); }
 .arena-loot-offer .game-card { width:92px; pointer-events:none; }.arena-loot-offer > span { font-size:8px; }
+
+/* Arena auto battle keeps the expensive simulation compact while showing the
+   player-LIFE race requested by the mode. The full board remains available in replay. */
+.app-shell:has(> .arena-auto-battle-screen),#app:has(.arena-auto-battle-screen) { width:100%; height:var(--app-viewport-height,100dvh); min-height:0; overflow:hidden; padding:0; }
+.arena-auto-battle-screen { width:100%; height:var(--app-viewport-height,100dvh); min-height:0; display:grid; grid-template-rows:auto minmax(0,1fr); gap:8px; padding:max(8px,var(--safe-top)) max(12px,var(--safe-right)) max(8px,var(--safe-bottom)) max(12px,var(--safe-left)); overflow:hidden; background:radial-gradient(circle at 50% 48%,rgba(60,182,190,.16),transparent 31%),linear-gradient(120deg,rgba(4,13,25,.78),rgba(20,11,23,.72)),url('./assets/images/battle-arena.webp') center/cover; }
+.arena-auto-header { display:flex; align-items:center; justify-content:space-between; gap:12px; padding:7px 13px; border:1px solid rgba(112,180,197,.38); border-radius:17px 5px; background:rgba(3,13,24,.9); }
+.arena-auto-header h1,.arena-auto-header p { margin:0; }.arena-auto-header h1 { color:#f0ce75; font-size:22px; }.arena-auto-header > div:last-child { display:flex; gap:7px; }
+.arena-auto-stage { min-height:0; display:grid; grid-template-columns:minmax(230px,1fr) 150px minmax(230px,1fr); align-items:center; gap:16px; padding:10px 7%; overflow:hidden; }
+.arena-auto-side { min-width:0; min-height:0; height:100%; display:grid; grid-template-rows:auto minmax(0,1fr) auto; justify-items:center; gap:7px; padding:10px; border:1px solid rgba(112,186,198,.35); border-radius:22px 7px; background:linear-gradient(160deg,rgba(8,29,44,.94),rgba(2,10,19,.9)); box-shadow:0 20px 45px rgba(0,0,0,.42); }
+.arena-auto-side.is-opponent { border-color:rgba(216,150,110,.42); background:linear-gradient(200deg,rgba(52,19,26,.91),rgba(4,11,20,.94)); }
+.arena-auto-side > strong { max-width:100%; overflow:hidden; color:#f3dea1; font-size:12px; text-overflow:ellipsis; white-space:nowrap; }
+.arena-auto-leader { min-height:0; display:grid; place-items:center; }
+.arena-auto-leader .game-card { width:min(23vw,190px); max-height:100%; pointer-events:none; filter:drop-shadow(0 13px 20px rgba(0,0,0,.46)); }
+.arena-auto-life { width:100%; display:grid; gap:5px; }
+.arena-auto-life > span { display:flex; justify-content:space-between; gap:10px; }.arena-auto-life strong { overflow:hidden; color:#eaf5f5; font-size:10px; text-overflow:ellipsis; white-space:nowrap; }.arena-auto-life b { color:#8df2e8; font:800 15px/1 Georgia,serif; white-space:nowrap; }
+.arena-auto-life-track { height:12px; overflow:hidden; border:1px solid rgba(139,222,219,.5); border-radius:999px; background:#030912; box-shadow:inset 0 0 8px rgba(0,0,0,.65); }
+.arena-auto-life-track i { display:block; height:100%; border-radius:inherit; background:linear-gradient(90deg,#168a99,#70eee1 68%,#e8ffd3); box-shadow:0 0 13px rgba(93,235,225,.6); transition:width .45s ease; }
+.arena-auto-life.opponent .arena-auto-life-track i { background:linear-gradient(90deg,#972a42,#e36f68 68%,#ffd89b); box-shadow:0 0 13px rgba(235,103,99,.5); }
+.arena-auto-life.changed-down b,.arena-auto-life.changed-down .arena-auto-life-track { animation:arena-auto-hit .48s ease; }
+.arena-auto-versus { display:grid; place-items:center; gap:11px; text-align:center; }.arena-auto-versus b { color:#f4d786; font:italic 900 42px/1 Georgia,serif; text-shadow:0 0 22px rgba(231,184,79,.5); }.arena-auto-versus span { min-height:42px; display:grid; place-items:center; color:#c5dbdf; font-size:9px; line-height:1.45; }
+.battle-screen.is-replay::before { content:'REPLAY'; position:fixed; z-index:30; top:max(5px,var(--safe-top)); left:50%; translate:-50% 0; padding:4px 14px; border:1px solid rgba(241,199,99,.58); border-radius:999px; color:#ffe7a2; background:rgba(8,19,30,.9); font:800 7px/1 system-ui,sans-serif; letter-spacing:.2em; pointer-events:none; }
+@keyframes arena-auto-hit { 35% { border-color:#87dfff; color:#9fe7ff; filter:brightness(1.65); transform:scale(1.035); } }
 @keyframes home-lobby-arrive { from { opacity:0; filter:saturate(.7) contrast(1.08) brightness(.55); } to { opacity:1; } }
 @keyframes home-lobby-foil { 0%,22% { transform:translateX(-42%); } 62%,100% { transform:translateX(42%); } }
 
@@ -2925,6 +2952,9 @@ body:has(.home-lobby) {
   .arena-screen.is-match .screen-header h1 { font-size:20px; }
   .arena-match-choices { gap:5px; padding:7px; }
   .arena-match-heading .section-title p { margin-top:1px; }
+  .arena-match-tools { gap:4px; }
+  .arena-battle-mode button { min-width:72px; padding:5px 7px; font-size:7px; }
+  .arena-auto-mode-note { padding-block:3px; font-size:7px; }
   .arena-opponent-choice-list { gap:6px; }
   .arena-opponent-choice { gap:5px; padding:7px; }
   .arena-opponent-choice > header { padding-bottom:4px; }
@@ -2934,6 +2964,13 @@ body:has(.home-lobby) {
   .arena-deck-list { grid-template-columns:repeat(3,minmax(0,1fr)); gap:4px; }
   .arena-deck-choice { grid-template-columns:36px minmax(0,1fr); padding:3px; }.arena-deck-choice .game-card { width:34px; }
   .arena-result-panel { padding:9px; gap:5px; }.arena-result-panel h1 { font-size:25px; }.arena-loot-offer .game-card { width:73px; }
+  .arena-auto-battle-screen { gap:4px; padding-top:max(4px,var(--safe-top)); padding-bottom:max(4px,var(--safe-bottom)); }
+  .arena-auto-header { padding:4px 9px; }.arena-auto-header h1 { font-size:17px; }.arena-auto-header .text-button { padding:6px 9px; font-size:7px; }
+  .arena-auto-stage { grid-template-columns:minmax(180px,1fr) 96px minmax(180px,1fr); gap:8px; padding:4px 9%; }
+  .arena-auto-side { gap:4px; padding:6px; }
+  .arena-auto-leader .game-card { width:min(17vw,130px); }
+  .arena-auto-life { gap:3px; }.arena-auto-life-track { height:8px; }.arena-auto-life b { font-size:12px; }
+  .arena-auto-versus { gap:6px; }.arena-auto-versus b { font-size:29px; }.arena-auto-versus span { min-height:32px; font-size:7px; }
 }
 
 @media (prefers-reduced-motion:reduce) {

@@ -32,6 +32,8 @@ export class ArenaSession {
     session.runId = checkpoint.runId;
     session.playerDeck = clone(checkpoint.arena.playerDeck);
     session.opponent = clone(checkpoint.arena.opponent);
+    session.battleMode = checkpoint.arena.battleMode === 'auto' ? 'auto' : 'manual';
+    session.autoReplay = clone(checkpoint.arena.autoReplay ?? checkpoint.arena.result?.replay ?? null);
     session.result = clone(checkpoint.arena.result ?? null);
     session.activeBattle = checkpoint.activeBattle
       ? BattleEngine.fromCheckpoint({ masterData, checkpoint: checkpoint.activeBattle })
@@ -45,12 +47,14 @@ export class ArenaSession {
     return session;
   }
 
-  constructor({ masterData, repository, user, playerDeck, opponent, seed = 'arena-session' }) {
+  constructor({ masterData, repository, user, playerDeck, opponent, battleMode = 'manual', seed = 'arena-session' }) {
     this.masterData = masterData;
     this.repository = repository;
     this.user = user;
     this.playerDeck = clone(playerDeck);
     this.opponent = clone(opponent);
+    this.battleMode = battleMode === 'auto' ? 'auto' : 'manual';
+    this.autoReplay = null;
     this.seed = String(seed);
     this.runId = globalThis.crypto?.randomUUID?.() ?? `${this.seed}:${Date.now().toString(36)}`;
     this.activeBattle = null;
@@ -66,9 +70,8 @@ export class ArenaSession {
     return this.checkpointClock;
   }
 
-  createBattle() {
-    if (this.activeBattle?.state.status === 'active') return this.activeBattle;
-    this.activeBattle = new BattleEngine({
+  _newBattle() {
+    return new BattleEngine({
       masterData: this.masterData,
       seed: `${this.seed}:battle`,
       players: [
@@ -84,11 +87,26 @@ export class ArenaSession {
         },
       ],
     });
+  }
+
+  createBattle() {
+    if (this.activeBattle?.state.status === 'active') return this.activeBattle;
+    this.activeBattle = this._newBattle();
     void this.saveCheckpoint('arena-battle');
     return this.activeBattle;
   }
 
-  completeBattle(engine = this.activeBattle) {
+  createReplayBattle() {
+    const replay = this.result?.replay ?? this.autoReplay;
+    if (replay?.schemaVersion !== 1) throw new Error('再生できるアリーナ試合がありません');
+    const engine = this._newBattle();
+    for (const playerId of engine.state.playerOrder) {
+      engine.submitMulligan(playerId, replay.mulligans?.[playerId] ?? []);
+    }
+    return engine;
+  }
+
+  completeBattle(engine = this.activeBattle, { replay = this.autoReplay } = {}) {
     if (!engine || engine.state.status !== 'finished') throw new Error('終了済みのアリーナ試合がありません');
     const won = engine.state.winnerId === 'player';
     const draw = engine.state.winnerId == null;
@@ -96,6 +114,8 @@ export class ArenaSession {
       won,
       draw,
       opponent: clone(this.opponent),
+      battleMode: this.battleMode,
+      replay: this.battleMode === 'auto' ? clone(replay) : null,
       lootOffers: won ? arenaLootOffers(this.opponent.cards, `${this.seed}:loot`) : [],
       discoveredFusionIds: [...new Set((engine.state.log ?? [])
         .filter((event) => event.type === 'fusion-special' && event.playerId === 'player' && event.fusionId)
@@ -118,7 +138,13 @@ export class ArenaSession {
       seed: this.seed,
       phase,
       runtime: clone(this.checkpointRuntime),
-      arena: { playerDeck: clone(this.playerDeck), opponent: clone(this.opponent), result: clone(this.result) },
+      arena: {
+        playerDeck: clone(this.playerDeck),
+        opponent: clone(this.opponent),
+        battleMode: this.battleMode,
+        autoReplay: clone(this.autoReplay),
+        result: clone(this.result),
+      },
       activeBattle: phase === 'arena-battle' && this.activeBattle ? this.activeBattle.toCheckpoint() : null,
     };
   }

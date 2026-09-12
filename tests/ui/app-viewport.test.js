@@ -91,5 +91,6 @@ test('mission and arena shells fit inside the synchronized landscape viewport', 
   assert.match(css, /\.mission-screen,\.arena-screen,\.arena-result-screen\s*\{[^}]*height:calc\(var\(--app-viewport-height,100dvh\)[^}]*min-height:0/s);
   assert.match(css, /\.arena-screen\.is-match\s*\{[^}]*height:var\(--app-viewport-height,100dvh\)/s);
   assert.match(css, /\.app-shell:has\(> \.arena-screen\.is-match\)\s*\{[^}]*height:var\(--app-viewport-height,100dvh\)/s);
+  assert.match(css, /\.arena-auto-battle-screen\s*\{[^}]*height:var\(--app-viewport-height,100dvh\)[^}]*overflow:hidden/s);
   assert.doesNotMatch(css, /\.mission-screen,\.arena-screen,\.arena-result-screen\s*\{[^}]*min-height:100dvh/s);
 });

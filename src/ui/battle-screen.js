@@ -74,7 +74,7 @@ export function statChangeSoundDirection({ changes = [], action = null, newLogs 
 }
 
 export class BattleScreen {
-  constructor({ root, engine, humanPlayerId, chooseCpuAction, onComplete, onCheckpoint = null, onSuspend = null, onPlaySe = null, cpuRngState = null, speed = 'standard' }) {
+  constructor({ root, engine, humanPlayerId, chooseCpuAction, onComplete, onCheckpoint = null, onSuspend = null, onPlaySe = null, cpuRngState = null, speed = 'standard', replayActions = null, onReplayExit = null }) {
     this.root = root;
     this.engine = engine;
     this.humanPlayerId = humanPlayerId;
@@ -83,6 +83,10 @@ export class BattleScreen {
     this.onCheckpoint = onCheckpoint;
     this.onSuspend = onSuspend;
     this.onPlaySe = onPlaySe;
+    this.replayActions = Array.isArray(replayActions) ? structuredClone(replayActions) : null;
+    this.replayMode = Boolean(this.replayActions);
+    this.onReplayExit = onReplayExit;
+    this.replayCancelled = false;
     this.speed = speed;
     this.selection = null;
     this.pendingMove = null;
@@ -120,7 +124,9 @@ export class BattleScreen {
       ? new SeededRng(cpuRngState.seed, cpuRngState.state)
       : new SeededRng(`${engine.state.seed}:ui-cpu`);
     this.render();
-    if (engine.state.pendingMoveChoice?.playerId === humanPlayerId) {
+    if (this.replayMode) {
+      setTimeout(() => { void this.runReplay(); }, 0);
+    } else if (engine.state.pendingMoveChoice?.playerId === humanPlayerId) {
       this.busy = false;
       setTimeout(() => { void this.resumePendingHumanChoice(); }, 0);
     } else {
@@ -245,7 +251,7 @@ export class BattleScreen {
   }
 
   isHumanTurn() {
-    return this.engine.state.status === 'active'
+    return !this.replayMode && this.engine.state.status === 'active'
       && this.engine.state.mulligan?.status !== 'selecting'
       && this.engine.state.currentPlayerId === this.humanPlayerId;
   }
@@ -263,7 +269,7 @@ export class BattleScreen {
     if (this.breederSelection && !own.hand.some((card) => card.instanceId === this.breederSelection.sourceCardInstanceId)) this.breederSelection = null;
     if (this.pendingMove && !this.pendingMoveStillLegal()) this.pendingMove = null;
 
-    const screen = el('main', { className: 'battle-screen' }, [
+    const screen = el('main', { className: `battle-screen${this.replayMode ? ' is-replay' : ''}` }, [
       this.renderStatusRail(own, opponent),
       el('section', { className: 'battle-table' }, [
         this.renderOpponentHand(opponent),
@@ -295,6 +301,14 @@ export class BattleScreen {
             text: '中断してホーム',
             disabled: this.busy || state.status !== 'active',
             onclick: () => this.onSuspend(this.checkpointRuntime()),
+          }) : null,
+          this.replayMode ? el('button', {
+            className: 'utility-button battle-replay-exit-button',
+            text: 'リプレイ終了',
+            onclick: () => {
+              this.replayCancelled = true;
+              this.onReplayExit?.();
+            },
           }) : null,
           globalThis.__MC_DEBUG_MODE__ ? el('button', {
             className: 'utility-button seed-button',
@@ -1841,6 +1855,30 @@ export class BattleScreen {
     }
   }
 
+  async runReplay() {
+    this.busy = true;
+    this.render();
+    try {
+      await this.showCurrentTurnTransition();
+      for (const recordedAction of this.replayActions) {
+        if (this.replayCancelled) return;
+        await delay(this.speed === 'fast' ? 70 : 360);
+        if (this.replayCancelled) return;
+        await this.executeEngineAction(structuredClone(recordedAction));
+      }
+      if (!this.replayCancelled && this.engine.state.status !== 'finished') {
+        throw new Error('リプレイが終了局面まで到達しませんでした');
+      }
+    } catch (error) {
+      if (!this.replayCancelled) {
+        openModal({ title: 'リプレイを再生できません', content: el('p', { text: error.message }) });
+      }
+    } finally {
+      this.busy = false;
+      if (!this.replayCancelled) this.render();
+    }
+  }
+
   async runCpuIfNeeded() {
     if (this.cpuRunning || this.engine.state.status !== 'active' || this.engine.state.currentPlayerId === this.humanPlayerId) return;
     this.cpuRunning = true;
@@ -1900,7 +1938,7 @@ export class BattleScreen {
     const content = el('div', { className: 'result-card' }, [
       el('h2', { text: draw ? 'DRAW' : won ? 'VICTORY' : 'DEFEAT' }),
       el('p', { text: `ROUND ${state.result.round} / 自分 LIFE ${Math.max(0, state.players[this.humanPlayerId].life)} / 相手 LIFE ${Math.max(0, state.players[state.playerOrder.find((id) => id !== this.humanPlayerId)].life)}` }),
-      el('button', { className: 'primary-button', text: '結果へ進む', onclick: () => { modal.close(); this.onComplete?.(state.result, this.engine); } }),
+      el('button', { className: 'primary-button', text: this.replayMode ? '結果画面へ戻る' : '結果へ進む', onclick: () => { modal.close(); this.onComplete?.(state.result, this.engine); } }),
     ]);
     const modal = openModal({ title: '試合終了', content, className: 'result-card', dismissible: false });
   }

@@ -28,6 +28,7 @@ import { ArenaSession } from './arena/ArenaSession.js';
 import { normalizeArenaProgress } from './arena/arena-state.js';
 import { deckSignature, selectArenaOpponents } from './arena/matchmaker.js';
 import { ArenaResultScreen, ArenaScreen, openArenaRankingModal } from './ui/arena-screen.js';
+import { ArenaAutoBattleScreen } from './ui/arena-auto-battle-screen.js';
 import { MissionScreen } from './ui/mission-screen.js';
 import { defaultHomeArtworkSelection, homeArtworkSelectionKey, normalizeHomeArtworkSelection, ownedHomeArtworkSelections } from './profile/home-artwork.js';
 import { renderTitleScreen } from './ui/title-screen.js';
@@ -760,8 +761,8 @@ class MonsterConstructionApp {
       match,
       onBack: () => { this.arenaMatch = null; this.showHome(); },
       onBackToDeckSelection: () => { this.arenaMatch = null; this.showArena(); },
-      onFindMatch: (deck) => this.findArenaOpponent(deck),
-      onStartMatch: (deck, opponent) => this.startArenaBattle(deck, opponent),
+      onFindMatch: (deck, battleMode) => this.findArenaOpponent(deck, battleMode),
+      onStartMatch: (deck, opponent, battleMode) => this.startArenaBattle(deck, opponent, battleMode),
       onRegisterDefense: (deck) => this.registerArenaDefense(deck),
       onClaimRankReward: (rank) => this.claimArenaRankReward(rank),
       onOpenRanking: (deck) => this.openArenaLeaderboard(deck),
@@ -809,7 +810,7 @@ class MonsterConstructionApp {
     if (open) openArenaRankingModal({ leaderboard: this.arenaLeaderboard, masterIndex: this.masterIndex });
   }
 
-  async findArenaOpponent(deck) {
+  async findArenaOpponent(deck, battleMode = 'manual') {
     this.showLoading('対戦履歴とレートから相手を選出しています…');
     try {
       const arena = normalizeArenaProgress(this.economy.arenaProgress);
@@ -829,7 +830,7 @@ class MonsterConstructionApp {
         legendArchives: archivePool,
         seed: `${this.seedSource.next()}:arena:${deck.deckId}:${Date.now()}`,
       });
-      this.arenaMatch = { deckId: deck.deckId, opponents };
+      this.arenaMatch = { deckId: deck.deckId, opponents, battleMode: battleMode === 'auto' ? 'auto' : 'manual' };
       this.showArena(this.arenaMatch);
     } catch (error) {
       this.showError(error, '対戦相手を選出できません');
@@ -867,7 +868,7 @@ class MonsterConstructionApp {
     }
   }
 
-  async startArenaBattle(deck, opponent) {
+  async startArenaBattle(deck, opponent, battleMode = 'manual') {
     this.showLoading('アリーナを準備しています…');
     try {
       this.session = new ArenaSession({
@@ -876,12 +877,14 @@ class MonsterConstructionApp {
         user: this.user,
         playerDeck: deck,
         opponent,
+        battleMode,
         seed: `${this.seedSource.next()}:arena-battle:${deck.deckId}:${opponent.id}`,
       });
       this.arenaBefore = normalizeArenaProgress(this.economy.arenaProgress);
       const engine = this.session.createBattle();
       this.activeRuns.arena = await this.session.saveCheckpoint('arena-battle');
-      this.showArenaBattle(engine);
+      if (this.session.battleMode === 'auto') this.showArenaAutoBattle(engine);
+      else this.showArenaBattle(engine);
     } catch (error) {
       this.showError(error, 'アリーナ戦を開始できません');
       this.showArena();
@@ -905,16 +908,42 @@ class MonsterConstructionApp {
     });
   }
 
+  showArenaAutoBattle(engine = this.session.activeBattle) {
+    const level = this.session.opponent.aiLevel ?? 'gold';
+    const chooseAction = createAiPolicy(level, { timeBudgetMs: AI_BUDGET[level] ?? AI_BUDGET.gold });
+    this.currentScreen = 'arena-battle';
+    new ArenaAutoBattleScreen({
+      root: this.root,
+      engine,
+      playerDeck: this.session.playerDeck,
+      opponent: this.session.opponent,
+      masterIndex: this.masterIndex,
+      chooseAction,
+      onResolved: async (replay) => {
+        this.session.autoReplay = structuredClone(replay);
+        const checkpoint = await this.session.saveCheckpoint('arena-battle', { battleMode: 'auto' });
+        if (checkpoint?.phase === 'arena-battle') this.activeRuns.arena = checkpoint;
+      },
+      onComplete: (completedEngine, replay) => this.handleArenaBattleComplete(completedEngine, { replay }),
+      onSuspend: () => this.suspendBattle('arena', 'arena-battle', { battleMode: 'auto' }),
+      onError: (error) => {
+        this.showError(error, 'オートバトルを実行できません');
+        void this.suspendBattle('arena', 'arena-battle', { battleMode: 'auto' });
+      },
+      onPlaySe: (source, options) => this.audio.playSe(source, options),
+    });
+  }
+
   persistArenaCheckpoint(runtime) {
     void this.session?.saveCheckpoint('arena-battle', runtime)
       .then((checkpoint) => { if (checkpoint?.phase === 'arena-battle') this.activeRuns.arena = checkpoint; })
       .catch((error) => console.error('Arena checkpoint failed', error));
   }
 
-  async handleArenaBattleComplete(engine) {
+  async handleArenaBattleComplete(engine, { replay = this.session?.autoReplay ?? null } = {}) {
     this.showLoading('アリーナ結果を保存しています…');
     try {
-      const result = this.session.completeBattle(engine);
+      const result = this.session.completeBattle(engine, { replay });
       const opponent = result.opponent;
       const operationId = `arena:${this.session.runId}:result`;
       if (result.discoveredFusionIds.length) {
@@ -933,6 +962,7 @@ class MonsterConstructionApp {
           opponentId: opponent.id,
           ownerUserId: opponent.ownerUserId,
           sourceType: opponent.sourceType,
+          battleMode: result.battleMode,
           opponentRating: opponent.rating,
           deckSignature: opponent.deckSignature ?? deckSignature(opponent.cards),
         },
@@ -963,7 +993,30 @@ class MonsterConstructionApp {
       arenaBefore,
       arenaAfter,
       onFinish: (offer) => this.finishArenaResult(offer),
+      onReplay: result.replay ? () => this.showArenaReplay() : null,
     });
+  }
+
+  showArenaReplay() {
+    try {
+      const replay = this.session?.result?.replay;
+      const engine = this.session.createReplayBattle();
+      this.currentScreen = 'arena-battle';
+      new BattleScreen({
+        root: this.root,
+        engine,
+        humanPlayerId: 'player',
+        chooseCpuAction: () => null,
+        replayActions: replay.actions,
+        onComplete: () => this.showArenaResult(),
+        onReplayExit: () => this.showArenaResult(),
+        onPlaySe: (source, options) => this.audio.playSe(source, options),
+        speed: 'standard',
+      });
+    } catch (error) {
+      this.showError(error, '試合内容を再生できません');
+      this.showArenaResult();
+    }
   }
 
   async finishArenaResult(offer) {
@@ -1000,9 +1053,10 @@ class MonsterConstructionApp {
       });
       this.activeRuns.arena = checkpoint;
       if (checkpoint.phase === 'arena-battle' && this.session.activeBattle.state.status === 'active') {
-        this.showArenaBattle(this.session.activeBattle, checkpoint.runtime);
+        if (this.session.battleMode === 'auto') this.showArenaAutoBattle(this.session.activeBattle);
+        else this.showArenaBattle(this.session.activeBattle, checkpoint.runtime);
       } else if (checkpoint.phase === 'arena-battle') {
-        await this.handleArenaBattleComplete(this.session.activeBattle);
+        await this.handleArenaBattleComplete(this.session.activeBattle, { replay: this.session.autoReplay });
       } else this.showArenaResult(this.session.result);
     } catch (error) {
       this.showError(error, 'アリーナを再開できません');

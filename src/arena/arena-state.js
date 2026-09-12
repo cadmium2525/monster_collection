@@ -73,6 +73,7 @@ export function recordArenaResult(current, result, now = new Date().toISOString(
     opponentId: String(result.opponentId ?? 'unknown'),
     ownerUserId: result.ownerUserId == null ? null : String(result.ownerUserId),
     sourceType: String(result.sourceType ?? 'OFFICIAL_AI'),
+    battleMode: result.battleMode === 'auto' ? 'auto' : 'manual',
     deckSignature: String(result.deckSignature ?? ''),
     won,
     ratingDelta: delta,

@@ -86,6 +86,7 @@ export class ArenaScreen {
     this.onRegisterDefense = onRegisterDefense;
     this.onClaimRankReward = onClaimRankReward;
     this.onOpenRanking = onOpenRanking;
+    this.battleMode = match?.battleMode === 'auto' ? 'auto' : 'manual';
     const matchedDeckId = match?.deckId && collection.get(match.deckId) ? match.deckId : null;
     const defenseDeckId = arena.defenseDeckId && collection.get(arena.defenseDeckId) ? arena.defenseDeckId : null;
     this.selectedDeckId = matchedDeckId ?? defenseDeckId ?? collection.list()[0]?.deckId ?? null;
@@ -127,7 +128,11 @@ export class ArenaScreen {
           representative ? renderCard({ definition: representative, cardAsset: opponent.cards.find((card) => card.masterId === representativeId), interactive: false, label: representative.name }) : null,
           el('div', {}, [el('strong', { text: opponent.displayName }), el('span', { text: opponent.deckName }), el('small', { text: `RATING ${opponent.rating}` })]),
       ]),
-      el('button', { className: 'primary-button', text: 'この相手と対戦', onclick: () => this.onStartMatch?.(deck, opponent) }),
+      el('button', {
+        className: 'primary-button',
+        text: this.battleMode === 'auto' ? 'オートで対戦' : '自分で対戦',
+        onclick: () => this.onStartMatch?.(deck, opponent, this.battleMode),
+      }),
     ]);
   }
 
@@ -135,8 +140,15 @@ export class ArenaScreen {
     return el('section', { className: 'arena-match-choices' }, [
       el('div', { className: 'arena-match-heading' }, [
         el('div', { className: 'section-title' }, [el('span', { className: 'step-number', text: '2' }), el('div', {}, [el('h2', { text: '対戦相手を選択' }), el('p', { text: `${deck.deckName}で挑戦します。相手の強さを選んでください。` })])]),
-        el('button', { className: 'text-button arena-refresh-button', text: '候補を更新', onclick: () => this.onFindMatch?.(deck) }),
+        el('div', { className: 'arena-match-tools' }, [
+          el('div', { className: 'arena-battle-mode', attrs: { role: 'group', 'aria-label': '対戦方法' } }, [
+          el('button', { className: this.battleMode === 'manual' ? 'selected' : '', text: '自分で操作', onclick: () => { this.battleMode = 'manual'; if (this.match) this.match.battleMode = 'manual'; this.render(); } }),
+          el('button', { className: this.battleMode === 'auto' ? 'selected' : '', text: 'オートバトル', onclick: () => { this.battleMode = 'auto'; if (this.match) this.match.battleMode = 'auto'; this.render(); } }),
+          ]),
+          el('button', { className: 'text-button arena-refresh-button', text: '候補を更新', onclick: () => this.onFindMatch?.(deck, this.battleMode) }),
+        ]),
       ]),
+      this.battleMode === 'auto' ? el('p', { className: 'arena-auto-mode-note', text: '自分と相手を同じランクのAIが操作します。オート向けのデッキ構築も勝敗を分けます。' }) : null,
       el('div', { className: 'arena-opponent-choice-list' }, this.match.opponents.map((opponent) => this.renderOpponentChoice(deck, opponent))),
     ]);
   }
@@ -230,13 +242,14 @@ export class ArenaScreen {
 }
 
 export class ArenaResultScreen {
-  constructor({ root, masterIndex, result, arenaBefore, arenaAfter, onFinish }) {
+  constructor({ root, masterIndex, result, arenaBefore, arenaAfter, onFinish, onReplay = null }) {
     this.root = root;
     this.masterIndex = masterIndex;
     this.result = result;
     this.arenaBefore = arenaBefore;
     this.arenaAfter = arenaAfter;
     this.onFinish = onFinish;
+    this.onReplay = onReplay;
     this.selectedOfferId = null;
     this.render();
   }
@@ -264,6 +277,7 @@ export class ArenaResultScreen {
           })),
         ]) : el('p', { text: '次の1試合で取り返しましょう。連戦する必要はありません。' }),
         el('div', { className: 'modal-actions' }, [
+          this.result.replay ? el('button', { className: 'text-button arena-replay-button', text: '試合内容を見る', onclick: () => this.onReplay?.() }) : null,
           this.result.won ? el('button', { className: 'text-button', text: '今回は保管しない', onclick: () => this.onFinish?.(null) }) : null,
           el('button', { className: 'primary-button', text: this.result.won ? '選んだカードを保管' : 'アリーナへ', disabled: this.result.won && !this.selectedOfferId, onclick: () => this.onFinish?.(this.result.lootOffers.find((offer) => offer.offerId === this.selectedOfferId) ?? null) }),
         ]),
