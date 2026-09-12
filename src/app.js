@@ -33,6 +33,7 @@ import { MissionScreen } from './ui/mission-screen.js';
 import { defaultHomeArtworkSelection, homeArtworkSelectionKey, normalizeHomeArtworkSelection, ownedHomeArtworkSelections } from './profile/home-artwork.js';
 import { renderTitleScreen } from './ui/title-screen.js';
 import { GameAudioController } from './audio/game-audio.js';
+import { installUiSoundFeedback, playSoundCue } from './audio/sound-cues.js';
 import { installAppViewportSync } from './ui/app-viewport.js';
 import { SurvivalSession } from './survival/SurvivalSession.js';
 import { normalizeSurvivalProgress, survivalRewardForStreak } from './survival/SurvivalReward.js';
@@ -44,6 +45,7 @@ class MonsterConstructionApp {
   constructor(root) {
     this.root = root;
     this.audio = new GameAudioController();
+    installUiSoundFeedback(document, (source, options) => this.audio.playSe(source, options), () => this.currentScreen);
     const params = new URLSearchParams(location.search);
     this.seedSource = new TournamentSeedSource({ fixedSeed: params.has('seed') ? params.get('seed') : null });
     this.seed = this.seedSource.sessionSeed;
@@ -303,7 +305,10 @@ class MonsterConstructionApp {
       const result = await this.repository.claimCampaignGift({ giftId, claimDate: japanDateKey() });
       this.economy = result.state;
       this.showHome();
-      if (result.reward) this.showLoginBonus([result.reward]);
+      if (result.reward) {
+        playSoundCue((source, options) => this.audio.playSe(source, options), 'reward');
+        this.showLoginBonus([result.reward]);
+      }
     } catch (error) {
       this.showHome();
       this.showError(error, 'ギフトを受け取れません');
@@ -501,6 +506,7 @@ class MonsterConstructionApp {
       masterIndex: this.masterIndex,
       reducedMotion: globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false,
       previewMode: true,
+      onPlaySe: (source, options) => this.audio.playSe(source, options),
       completionLabel: '管理者ツールへ戻る',
       onComplete: () => this.showAdminTools(),
     });
@@ -582,6 +588,7 @@ class MonsterConstructionApp {
       new PackOpeningScreen({
         root: this.root,
         pendingPack: pending,
+        onPlaySe: (source, options) => this.audio.playSe(source, options),
         masterIndex: this.masterIndex,
         reducedMotion: globalThis.matchMedia?.('(prefers-reduced-motion: reduce)').matches ?? false,
         onComplete: () => this.finishBoosterOpening(pending.operationId),
@@ -741,6 +748,7 @@ class MonsterConstructionApp {
       if (selectedLoot) {
         this.catalog = await this.repository.recordCardCatalog({ ownedCardMasterIds: [selectedLoot.masterId] });
       }
+      playSoundCue((source, options) => this.audio.playSe(source, options), 'reward');
       this.showMissions();
     } catch (error) {
       this.showError(error, 'ミッション報酬を受け取れません');
@@ -861,6 +869,7 @@ class MonsterConstructionApp {
       this.economy = await this.repository.commitProgression({
         type: 'claim-arena-rank', operationId: `arena-rank:${rank}`, rank,
       });
+      playSoundCue((source, options) => this.audio.playSe(source, options), 'reward');
       this.showArena();
     } catch (error) {
       this.showError(error, 'ランク到達報酬を受け取れません');

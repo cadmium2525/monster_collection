@@ -114,6 +114,11 @@ function howToPlayContent(onTutorial) {
       el('li', { text: '敗退しても確定済みの交換カードは保存。上位大会を一度解禁すれば、ほかの保存デッキでも挑戦できます。' }),
     ]),
     el('button', { className: 'primary-button tutorial-start', text: `${TUTORIAL_STEPS.length}ステップのチュートリアルを始める`, onclick: onTutorial }),
+    el('p', { className: 'legacy-note' }, [
+      '追加効果音：',
+      el('a', { text: '効果音ラボ', attrs: { href: 'https://soundeffect-lab.info/', target: '_blank', rel: 'noopener noreferrer' } }),
+      '（音声・台詞は使用していません）',
+    ]),
     el('p', { className: 'legacy-note', text: 'アプリとして遊ぶ場合は「アプリに追加」を使用します。iPhone/iPadはSafariの共有メニューから「ホーム画面に追加」を選んでください。' }),
   ]);
 }

@@ -1,4 +1,6 @@
 import { BOOSTER_PACKS } from '../gacha/pack-catalog.js';
+import { CARD_DRAW_SE_PATH } from '../audio/game-audio.js';
+import { playSoundCue } from '../audio/sound-cues.js';
 import { acquisitionLabel } from '../gacha/acquisition.js';
 import { assetStackKey } from '../gacha/economy-state.js';
 import { boosterPackDisclosure, SHOWCASE_VARIANTS } from '../gacha/pack-generator.js';
@@ -319,9 +321,10 @@ export class BoosterShopScreen {
 }
 
 export class PackOpeningScreen {
-  constructor({ root, pendingPack, masterIndex, reducedMotion = false, previewMode = false, completionLabel = '資産へ受け取る', onComplete }) {
+  constructor({ root, pendingPack, masterIndex, reducedMotion = false, previewMode = false, completionLabel = '資産へ受け取る', onPlaySe = null, onComplete }) {
     this.root = root;
     this.pendingPack = pendingPack;
+    this.onPlaySe = onPlaySe;
     this.masterIndex = masterIndex;
     this.reducedMotion = reducedMotion;
     this.previewMode = previewMode;
@@ -346,6 +349,7 @@ export class PackOpeningScreen {
     if (this.phase !== 'sealed' || this.revealLocked) return;
     this.revealLocked = true;
     this.phase = 'breaking';
+    playSoundCue(this.onPlaySe, 'packOpen');
     this.render();
     await this.wait(this.reducedMotion ? 180 : 1180);
     if (this.disposed) return;
@@ -372,6 +376,7 @@ export class PackOpeningScreen {
     this.burstToken += 1;
     this.burst = null;
     this.revealing.add(index);
+    try { this.onPlaySe?.(CARD_DRAW_SE_PATH)?.catch?.(() => {}); } catch { /* Optional sound. */ }
     this.render();
     await this.wait(this.reducedMotion ? 70 : 560);
     if (this.disposed) return;
@@ -379,6 +384,7 @@ export class PackOpeningScreen {
     this.revealed.add(index);
     const asset = this.pendingPack.cards[index];
     if (asset.rarity === 'showcase' || asset.rarity === 'rare' || asset.finish === 'foil') {
+      playSoundCue(this.onPlaySe, 'rareReveal');
       const definition = this.masterIndex.cards.get(asset.masterId);
       const token = ++this.burstToken;
       this.burst = { asset, definition };

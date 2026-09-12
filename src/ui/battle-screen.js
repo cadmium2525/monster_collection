@@ -3,6 +3,7 @@ import { effectiveAtk, effectiveDef } from '../battle/state.js';
 import { el, replace } from './dom.js';
 import { renderCard, openCardDetails } from './card-renderer.js';
 import { createFusionAnimationModel, playFusionAnimation } from './fusion-animation.js';
+import { playSoundCue, resultSoundCue } from '../audio/sound-cues.js';
 import { playFusionUnlockAnimation } from './fusion-unlock-animation.js';
 import { playAwakeningUnlockAnimation } from './awakening-unlock-animation.js';
 import { createAwakeningAnimationModel, playAwakeningAnimation } from './awakening-animation.js';
@@ -1767,6 +1768,7 @@ export class BattleScreen {
     if (hadInteractionSelection && !frontlineAction) this.render();
     if (!cardUseModel) await this.animateActionStart(action, { impactSound });
     this.engine.applyAction(action);
+    if (action.type === 'summon') playSoundCue(this.onPlaySe, 'summon');
     const newLogs = this.engine.state.log.slice(beforeLogLength);
     const statSound = this.statChangeSound(before, action, newLogs);
     let statSoundPlayed = false;
@@ -1806,8 +1808,18 @@ export class BattleScreen {
       numbersCommitted = true;
       this.render();
     };
-    if (fusionModel) await playFusionAnimation({ model: fusionModel, speed: this.speed, onReveal: commitNumbers });
-    if (awakeningModel) await playAwakeningAnimation({ model: awakeningModel, speed: this.speed, onReveal: commitNumbers });
+    if (fusionModel) {
+      await playFusionAnimation({ model: fusionModel, speed: this.speed, onReveal: () => {
+        playSoundCue(this.onPlaySe, 'fusion');
+        commitNumbers();
+      } });
+    }
+    if (awakeningModel) {
+      await playAwakeningAnimation({ model: awakeningModel, speed: this.speed, onReveal: () => {
+        playSoundCue(this.onPlaySe, 'awaken');
+        commitNumbers();
+      } });
+    }
     const turnStarted = before.currentPlayerId !== this.engine.state.currentPlayerId;
     if (turnStarted) await this.showCurrentTurnTransition();
     await this.showStatDirections(before, commitNumbers, action, newLogs, { soundPlayed: statSoundPlayed });
@@ -1933,6 +1945,7 @@ export class BattleScreen {
   }
 
   showResult(state) {
+    playSoundCue(this.onPlaySe, resultSoundCue(state.winnerId, this.humanPlayerId));
     const won = state.winnerId === this.humanPlayerId;
     const draw = state.winnerId == null;
     const content = el('div', { className: 'result-card' }, [

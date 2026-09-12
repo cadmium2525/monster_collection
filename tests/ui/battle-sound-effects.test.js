@@ -69,7 +69,7 @@ test('battle screen wires turn, draw and hit sounds to their presentation moment
   assert.match(source, /showStatDirections\([^\n]+\{ soundPlayed: statSoundPlayed \}\)/);
 });
 
-test('tournament, manual/auto/replay arena and survival battles receive the common SE output', () => {
+test('battles and both pack-opening routes receive the common SE output', () => {
   const app = fs.readFileSync(new URL('../../src/app.js', import.meta.url), 'utf8');
-  assert.equal((app.match(/onPlaySe: \(source, options\) => this\.audio\.playSe\(source, options\)/g) ?? []).length, 5);
+  assert.equal((app.match(/onPlaySe: \(source, options\) => this\.audio\.playSe\(source, options\)/g) ?? []).length, 7);
 });

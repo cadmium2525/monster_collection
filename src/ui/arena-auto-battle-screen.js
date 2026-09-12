@@ -1,4 +1,5 @@
 import { HIT_SE_PATH } from '../audio/game-audio.js';
+import { playSoundCue, resultSoundCue } from '../audio/sound-cues.js';
 import { runArenaAutoBattle } from '../arena/auto-battle.js';
 import { el, replace } from './dom.js';
 import { renderCard } from './card-renderer.js';
@@ -95,6 +96,7 @@ export class ArenaAutoBattleScreen {
         return;
       }
       this.phase = 'complete';
+      playSoundCue(this.onPlaySe, resultSoundCue(outcome.engine.state.winnerId, 'player'));
       this.changed = null;
       this.status = outcome.engine.state.winnerId == null
         ? 'DRAW'
