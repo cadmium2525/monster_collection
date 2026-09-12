@@ -48,15 +48,24 @@ class FakeAudio {
     this.muted = false;
     this.playCalls = 0;
     this.pauseCalls = 0;
+    this.ended = false;
+    this.listeners = new Map();
     FakeAudio.instances.push(this);
   }
 
   setAttribute() {}
-  addEventListener() {}
+  addEventListener(type, listener) {
+    this.listeners.set(type, [...(this.listeners.get(type) ?? []), listener]);
+  }
+
+  dispatch(type) {
+    for (const listener of this.listeners.get(type) ?? []) listener();
+  }
 
   async play() {
     this.playCalls += 1;
     this.paused = false;
+    this.ended = false;
   }
 
   pause() {
@@ -249,6 +258,25 @@ test('visibility pauses the active track and resumes it without resetting its po
   await tick();
   assert.equal(controller.tracks.battle.paused, false);
   assert.equal(controller.tracks.battle.currentTime, 48);
+});
+
+test('an ended BGM track restarts from the beginning even when native WebKit looping stops', async () => {
+  const controller = new GameAudioController({
+    storage: memoryStorage(), documentRef: new FakeEvents(), windowRef: new FakeEvents(), navigatorRef: { userAgent: 'iPhone' },
+    AudioCtor: FakeAudio, AudioContextCtor: FakeAudioContext,
+  });
+  controller.setScreen('home');
+  await controller.unlockFromGesture();
+  const track = controller.tracks.home;
+  assert.equal(track.loop, true);
+  track.currentTime = 128;
+  track.ended = true;
+  track.paused = true;
+  track.dispatch('ended');
+  await tick();
+  assert.equal(track.currentTime, 0);
+  assert.equal(track.paused, false);
+  assert.equal(track.playCalls, 2);
 });
 
 test('legacy mute is preserved but the former default 50 is replaced by BGM 100', () => {

@@ -110,6 +110,13 @@ export class GameAudioController {
       arena: this._createAudio(arenaSource, { loop: true }),
       battle: this._createAudio(battleSource, { loop: true }),
     };
+    for (const [trackName, audio] of Object.entries(this.tracks)) {
+      audio?.addEventListener?.('ended', () => {
+        if (this.scene !== trackName || !this.pageVisible || this.bgmVolume === 0 || this.safetyMuted) return;
+        try { audio.currentTime = 0; } catch { /* Metadata may be unavailable while WebKit restores the page. */ }
+        void this._syncPlayback({ restartEndedTrack: true });
+      });
+    }
 
     this._onVisibilityChange = () => {
       this.pageVisible = this.documentRef?.visibilityState !== 'hidden';
@@ -267,6 +274,7 @@ export class GameAudioController {
     if (!this.AudioCtor) return null;
     const audio = new this.AudioCtor(source);
     audio.loop = loop;
+    if (loop) audio.setAttribute?.('loop', '');
     audio.preload = preload;
     audio.playsInline = true;
     audio.setAttribute?.('playsinline', '');
@@ -364,7 +372,7 @@ export class GameAudioController {
     this.activeEffects.clear();
   }
 
-  async _syncPlayback({ suspendWhenHidden = false } = {}) {
+  async _syncPlayback({ suspendWhenHidden = false, restartEndedTrack = false } = {}) {
     const sequence = ++this.syncSequence;
     const target = this.scene ? this.tracks[this.scene] : null;
     const shouldPlay = Boolean(target && this.unlocked && this.pageVisible && this.bgmVolume > 0 && !this.safetyMuted);
@@ -387,7 +395,12 @@ export class GameAudioController {
     // both resume() and play() synchronously, then await their completion.
     let playPromise = null;
     try {
-      if (target.paused !== false) playPromise = target.play();
+      // Safari/PWA can stop a MediaElementAudioSource at EOF even with the
+      // loop property set. The ended handler enters here with an explicit
+      // restart so playback does not depend on WebKit's native loop behavior.
+      target.loop = true;
+      target.setAttribute?.('loop', '');
+      if (restartEndedTrack || target.ended || target.paused !== false) playPromise = target.play();
     } catch {
       return false;
     }
