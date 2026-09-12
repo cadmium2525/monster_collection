@@ -1,7 +1,6 @@
 import { RepositoryUnavailableError } from './errors.js';
 import { mergeCardCatalogs } from './card-catalog.js';
 import { japanDateKey } from '../gacha/economy-state.js';
-import { missionTrace, diagnosticOperation } from '../progression/mission-diagnostics.js';
 
 export const DEFAULT_CLOUD_TIMEOUT_MS = 10_000;
 
@@ -60,19 +59,6 @@ export class ResilientGameRepository {
     this.pendingActiveRuns = new Map();
     this.activeRunSyncTimer = null;
     this.activeRunSyncInFlight = null;
-    // Observe storage boundaries without changing the data or reward decisions.
-    for (const name of ['getEconomy', 'replaceEconomy', 'commitProgression', 'useAccountScope']) {
-      const original = local[name]?.bind(local);
-      if (!original) continue;
-      local[name] = async (...args) => {
-        if (name === 'replaceEconomy') missionTrace('local.replaceEconomy.input', args[0]);
-        if (name === 'useAccountScope') missionTrace('account.scope-change', null, { copyCurrent: Boolean(args[1]?.copyCurrent) });
-        if (name === 'commitProgression') missionTrace('local.operation', null, { operation: diagnosticOperation(args[0]) });
-        const result = await original(...args);
-        if (name !== 'useAccountScope') missionTrace(`local.${name}.result`, result);
-        return result;
-      };
-    }
   }
 
   async _cloud(promise, label) {
@@ -131,12 +117,7 @@ export class ResilientGameRepository {
       case 'progression': {
         const operationDate = payload.operation?.dateKey
           ?? (operation.queuedAt ? japanDateKey(operation.queuedAt) : japanDateKey());
-        missionTrace('cloud.queue-replay', null, { queuedAt: operation.queuedAt ?? null,
-          operation: diagnosticOperation(payload.operation), effectiveDate: operationDate });
-        return this.activeCloud.commitProgression({ ...payload.operation, dateKey: operationDate }).then(result => {
-          missionTrace('cloud.queue-result', result);
-          return result;
-        });
+        return this.activeCloud.commitProgression({ ...payload.operation, dateKey: operationDate });
       }
       case 'catalog': return this.activeCloud.recordCardCatalog(payload.update);
       case 'deck-save': return this.activeCloud.saveDeck(payload.deck);
