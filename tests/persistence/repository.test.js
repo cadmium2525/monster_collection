@@ -177,7 +177,7 @@ test('registered Firebase accounts repair a missing same-day login mission befor
   assert.deepEqual(claimed.missionProgress.daily.claimedIds, ['daily-login']);
 });
 
-test('registered Firebase restart cannot restore v3 cumulative totals as today daily progress', async () => {
+test('registered Firebase restart cannot restore v5 polluted totals as today daily progress', async () => {
   const today = japanDateKey();
   const fake = fakeFirebaseSdk();
   fake.auth.currentUser = {
@@ -187,7 +187,7 @@ test('registered Firebase restart cannot restore v3 cumulative totals as today d
   };
   const polluted = defaultEconomyState(`${today}T00:00:00.000Z`);
   polluted.lastDailyLoginDate = today;
-  polluted.missionProgress.schemaVersion = 3;
+  polluted.missionProgress.schemaVersion = 5;
   polluted.missionProgress.daily.counters = { login: 1, battles: 72, wins: 41 };
   polluted.missionProgress.daily.claimedIds = ['daily-login'];
   fake.docs.set('users/firebase-user', {
@@ -198,13 +198,33 @@ test('registered Firebase restart cannot restore v3 cumulative totals as today d
   await firstLaunch.initialize();
   const repaired = await firstLaunch.claimLoginRewards({ loginDate: today, campaignId: null });
   assert.deepEqual(repaired.state.missionProgress.daily.counters, { login: 1 });
-  assert.equal(repaired.state.missionProgress.schemaVersion, 5);
+  assert.equal(repaired.state.missionProgress.schemaVersion, 6);
 
   const restarted = new FirebaseGameRepository({ config: { projectId: 'test' }, sdkLoader: async () => fake.sdk });
   await restarted.initialize();
   const reloaded = await restarted.getEconomy();
   assert.deepEqual(reloaded.missionProgress.daily.counters, { login: 1 });
   assert.deepEqual(reloaded.missionProgress.daily.claimedIds, ['daily-login']);
+});
+
+test('Firebase new-day login replaces old counters while preserving genuine same-day wins and profile', async () => {
+  const today = japanDateKey();
+  const fake = fakeFirebaseSdk();
+  const old = defaultEconomyState();
+  old.missionProgress.daily = { key: '2020-01-01', counters: { login: 1, battles: 7, wins: 7 }, claimedIds: [] };
+  old.lastDailyLoginDate = '2020-01-01';
+  fake.docs.set('users/firebase-user', { displayName: 'Keep me', economy: old });
+  const repo = new FirebaseGameRepository({ config: { projectId: 'test' }, sdkLoader: async () => fake.sdk });
+  await repo.initialize();
+  await repo.claimLoginRewards({ loginDate: today, campaignId: null });
+  assert.deepEqual((await repo.getEconomy()).missionProgress.daily.counters, { login: 1 });
+  assert.equal(fake.docs.get('users/firebase-user').displayName, 'Keep me');
+  await repo.commitProgression({ type: 'arena-result', operationId: 'real-battle-today', dateKey: today,
+    result: { won: true, opponentRating: 1000 } });
+  await repo.claimLoginRewards({ loginDate: today, campaignId: null });
+  const reloaded = await repo.getEconomy();
+  assert.equal(reloaded.missionProgress.daily.counters.battles, 1);
+  assert.equal(reloaded.missionProgress.daily.counters.wins, 1);
 });
 
 test('local and Firebase repositories claim the home renewal gift atomically once', async () => {
@@ -462,6 +482,17 @@ test('cloud delete failure leaves the recoverable local deck intact', async () =
 });
 
 function fakeFirebaseSdk() {
+  const mergeMaps = (old, next) => {
+    const result = { ...old };
+    for (const [key, value] of Object.entries(next)) {
+      result[key] = value && typeof value === 'object' && !Array.isArray(value) && Object.keys(value).length
+        ? mergeMaps(old?.[key] ?? {}, value) : value;
+    }
+    return result;
+  };
+  const setData = (old, next, options = {}) => options.mergeFields
+    ? { ...old, ...Object.fromEntries(options.mergeFields.map(key => [key, next[key]])) }
+    : options.merge ? mergeMaps(old ?? {}, next) : next;
   const docs = new Map();
   const listeners = new Map();
   let transactionCount = 0;
@@ -525,7 +556,7 @@ function fakeFirebaseSdk() {
     getDoc: async (reference) => snapshot(reference.path),
     setDoc: async (reference, data, options = {}) => {
       const next = resolveTimestamps(data);
-      docs.set(reference.path, options.merge ? { ...(docs.get(reference.path) ?? {}), ...next } : next);
+      docs.set(reference.path, setData(docs.get(reference.path), next, options));
       notify(reference.path);
     },
     deleteDoc: async (reference) => { docs.delete(reference.path); notify(reference.path); },
@@ -572,9 +603,9 @@ function fakeFirebaseSdk() {
       const result = await updateFunction(transaction);
       for (const write of writes) {
         const data = resolveTimestamps(write.data);
-        docs.set(write.reference.path, write.kind === 'update' || write.options?.merge
+        docs.set(write.reference.path, write.kind === 'update'
           ? { ...docs.get(write.reference.path), ...data }
-          : data);
+          : setData(docs.get(write.reference.path), data, write.options));
         notify(write.reference.path);
       }
       return result;

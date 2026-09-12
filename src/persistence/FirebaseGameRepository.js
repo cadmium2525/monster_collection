@@ -214,7 +214,7 @@ export class FirebaseGameRepository {
       await this.sdk.setDoc(this._profileRef(), {
         economy: normalized,
         updatedAt: this.sdk.serverTimestamp(),
-      }, { merge: true });
+      }, { mergeFields: ['economy', 'updatedAt'] });
     }
     return normalized;
   }
@@ -224,7 +224,7 @@ export class FirebaseGameRepository {
     await this.sdk.setDoc(this._profileRef(), {
       economy: normalized,
       updatedAt: this.sdk.serverTimestamp(),
-    }, { merge: true });
+    }, { mergeFields: ['economy', 'updatedAt'] });
     return normalized;
   }
 
@@ -238,7 +238,7 @@ export class FirebaseGameRepository {
       transaction.set(reference, {
         economy: clone(result),
         updatedAt: this.sdk.serverTimestamp(),
-      }, { merge: true });
+      }, { mergeFields: ['economy', 'updatedAt'] });
     });
     return clone(result);
   }
@@ -388,7 +388,7 @@ export class FirebaseGameRepository {
       transaction.set(profileReference, {
         economy: normalized,
         updatedAt: this.sdk.serverTimestamp(),
-      }, { merge: true });
+      }, { mergeFields: ['economy', 'updatedAt'] });
     });
     await this.recordCardCatalog({ ownedCardMasterIds: deck.cards.map((card) => card.masterId) });
     if (deck.qualification === 'legend') await this._publishLegendDeck(deck);

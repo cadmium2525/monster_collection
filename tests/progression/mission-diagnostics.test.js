@@ -10,7 +10,7 @@ test('diagnostics retain bounded storage history and report the exact daily deci
     getItem: key => values.get(key) ?? null, setItem: (key, value) => values.set(key, value),
   } });
   try {
-    const economy = { missionProgress: { schemaVersion: 5, daily: {
+    const economy = { missionProgress: { schemaVersion: 6, daily: {
       key: japanDateKey(), counters: { login: 1, battles: 2, wins: 1 }, claimedIds: ['daily-login'],
     } }, email: 'private@example.com' };
     const before = structuredClone(economy);

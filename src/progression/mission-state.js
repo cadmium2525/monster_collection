@@ -1,4 +1,4 @@
-export const MISSION_SCHEMA_VERSION = 5;
+export const MISSION_SCHEMA_VERSION = 6;
 
 const MONTHLY_OBJECTIVE_IDS = Object.freeze([
   'monthly-login',
@@ -77,7 +77,8 @@ export function normalizeMissionProgress(value = {}, { dateKey = japanDateKey() 
   // next login date because the queued operation had no explicit dateKey. That
   // made a registered player's first login incorrectly complete play/win. Run
   // one final repair for unclaimed counters; already-paid rewards stay claimed.
-  if (sourceSchemaVersion < 5) {
+  // Recursive cloud merge retained omitted counters through v5. Repair once.
+  if (sourceSchemaVersion < 6) {
     if (!daily.claimedIds.includes('daily-play')) delete daily.counters.battles;
     if (!daily.claimedIds.includes('daily-win')) delete daily.counters.wins;
   }

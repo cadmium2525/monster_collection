@@ -90,7 +90,7 @@ test('v3 cloud pollution is repaired again before a registered player restarts',
   }, '2026-09-08T01:00:00.000Z');
   assert.deepEqual(startup.state.missionProgress.daily.counters, { login: 1 });
   assert.deepEqual(startup.state.missionProgress.daily.claimedIds, ['daily-login']);
-  assert.equal(startup.state.missionProgress.schemaVersion, 5);
+  assert.equal(startup.state.missionProgress.schemaVersion, 6);
 
   const restarted = applyLoginRewards(startup.state, {
     loginDate: '2026-09-08', campaignId: null,
