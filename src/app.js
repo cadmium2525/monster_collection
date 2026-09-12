@@ -29,6 +29,7 @@ import { normalizeArenaProgress } from './arena/arena-state.js';
 import { deckSignature, selectArenaOpponents } from './arena/matchmaker.js';
 import { ArenaResultScreen, ArenaScreen, openArenaRankingModal } from './ui/arena-screen.js';
 import { ArenaAutoBattleScreen } from './ui/arena-auto-battle-screen.js';
+import { missionDiagnosticReport, missionTrace } from './progression/mission-diagnostics.js';
 import { MissionScreen } from './ui/mission-screen.js';
 import { defaultHomeArtworkSelection, homeArtworkSelectionKey, normalizeHomeArtworkSelection, ownedHomeArtworkSelections } from './profile/home-artwork.js';
 import { renderTitleScreen } from './ui/title-screen.js';
@@ -713,12 +714,14 @@ class MonsterConstructionApp {
 
   showMissions() {
     this.currentScreen = 'missions';
+    missionTrace('screen.missions', this.economy);
     new MissionScreen({
       root: this.root,
       economy: this.economy,
       masterIndex: this.masterIndex,
       onBack: () => this.showHome(),
       onClaim: (mission, lootId) => this.claimMission(mission, lootId),
+      onDiagnostics: () => missionDiagnosticReport(this.economy, this.repository),
     });
   }
 

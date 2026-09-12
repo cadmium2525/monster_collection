@@ -1,6 +1,7 @@
 import { missionEntries } from '../progression/mission-state.js';
 import { el, replace } from './dom.js';
 import { diamondIcon } from './currency-icon.js';
+import { openModal } from './modal.js';
 
 export const MISSION_DETAILS = Object.freeze({
   'daily-login': Object.freeze({ title: 'ゲームにログインする', description: '毎日0:00以降、その日の初回ログインを完了すると達成です。' }),
@@ -33,12 +34,13 @@ function rewardLabel(reward) {
 }
 
 export class MissionScreen {
-  constructor({ root, economy, masterIndex, onBack, onClaim, initialTab = 'daily' }) {
+  constructor({ root, economy, masterIndex, onBack, onClaim, onDiagnostics = null, initialTab = 'daily' }) {
     this.root = root;
     this.economy = economy;
     this.masterIndex = masterIndex;
     this.onBack = onBack;
     this.onClaim = onClaim;
+    this.onDiagnostics = onDiagnostics;
     this.activeTab = PERIODS[initialTab] ? initialTab : 'daily';
     this.render();
   }
@@ -82,7 +84,21 @@ export class MissionScreen {
     replace(this.root, el('main', { className: 'mission-screen' }, [
       el('header', { className: 'screen-header mission-header' }, [
         el('div', {}, [el('p', { className: 'eyebrow', text: 'MISSION' }), el('h1', { text: 'ミッション' })]),
-        el('button', { className: 'text-button', text: 'ホームへ', onclick: this.onBack }),
+        el('div', { style: 'display:flex;gap:8px' }, [
+          this.onDiagnostics ? el('button', { className: 'text-button', text: '判定情報', onclick: () => {
+            const report = this.onDiagnostics();
+            const field = el('textarea', { attrs: { readonly: '', 'aria-label': 'ミッション判定情報' }, style: 'width:100%;height:45vh;font-size:12px;user-select:text' });
+            field.value = report;
+            const copy = el('button', { className: 'primary-button', text: '報告用にコピー', onclick: async () => {
+              try { await navigator.clipboard.writeText(report); copy.textContent = 'コピーしました'; }
+              catch { field.focus(); field.select(); copy.textContent = '本文を選択しました。コピーしてください'; }
+            } });
+            openModal({ title: 'ミッションの判定情報', content: el('div', {}, [
+              el('p', { text: '不具合発生時にコピーして報告してください。日付・判定値と直近80件の保存／同期履歴を含みます。' }), field, copy,
+            ]) });
+          } }) : null,
+          el('button', { className: 'text-button', text: 'ホームへ', onclick: this.onBack }),
+        ]),
       ]),
       el('nav', { className: 'mission-tabs', attrs: { role: 'tablist', 'aria-label': 'ミッション種別' } }, Object.entries(PERIODS).map(([key, item]) => el('button', {
         className: key === this.activeTab ? 'is-active' : '', onclick: () => selectTab(key),
